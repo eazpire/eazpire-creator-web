@@ -6,7 +6,7 @@
 
   if (!global.__CREATOR_PORTAL_HOST__) return;
 
-  var toggles = document.querySelectorAll(".creator-toggle");
+  var toggles = document.querySelectorAll(".creator-toggle, .creator-drawer-toggle");
   if (!toggles.length) return;
 
   var raf =

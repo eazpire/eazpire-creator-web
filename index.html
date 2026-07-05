@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="/vendor/theme/creator-automations.css?v=6">
   <link rel="stylesheet" href="/vendor/theme/creator-audio-modal.css?v=6">
   <link rel="stylesheet" media="(min-width: 992px)" href="/vendor/theme/creator-desktop.css?v=6">
-  <link rel="stylesheet" href="/css/creator-portal.css?v=9">
+  <link rel="stylesheet" href="/css/creator-portal.css?v=10">
   <script>
     window.__CREATOR_PORTAL_HOST__ = true;
     window.__CREATOR_DASHBOARD_EMBED_PAGE = true;
@@ -30,14 +30,15 @@
 <body class="creator-mobile-page is-boot-loading" data-role="guest">
 
 <div class="creator-boot" id="creatorBoot" role="status" aria-live="polite" aria-label="Loading Eazpire Creator">
-  <div class="creator-boot__card">
-    <div class="creator-boot__visual" aria-hidden="true">
-      <div class="creator-boot__orbit"></div>
-      <div class="creator-boot__orbit creator-boot__orbit--delay"></div>
-      <div class="creator-boot__pulse"></div>
-      <img class="creator-boot__logo" src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950" alt="" width="320" height="112" decoding="async">
+  <div class="creator-boot__center">
+    <img class="creator-boot__logo" src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950" alt="" width="320" height="112" decoding="async">
+    <div class="creator-boot__bar-wrap" aria-hidden="true">
+      <div class="creator-boot__bar">
+        <div class="creator-boot__bar-fill"></div>
+        <div class="creator-boot__bar-stars"></div>
+      </div>
     </div>
-    <p class="creator-boot__status" id="creatorBootStatus">Loading Creator Hub</p>
+    <span class="creator-boot__status" id="creatorBootStatus">Loading Creator Hub</span>
   </div>
 </div>
 

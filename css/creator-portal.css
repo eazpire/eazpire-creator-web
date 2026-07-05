@@ -86,73 +86,95 @@ body.is-boot-loading #creatorPortalApp {
   position: fixed;
   inset: 0;
   z-index: 20000;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 24px;
   margin: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124, 92, 255, 0.22), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(45, 212, 191, 0.12), transparent),
-    var(--portal-shell-bg);
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(88, 28, 135, 0.28), transparent 55%),
+    radial-gradient(ellipse 80% 60% at 80% 100%, rgba(14, 116, 144, 0.18), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 10% 80%, rgba(124, 58, 237, 0.14), transparent 45%),
+    #030508;
 }
 
-.creator-boot__card {
-  width: min(420px, 100%);
+.creator-boot__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: min(360px, 100%);
   text-align: center;
-  padding: 32px 24px;
-  border-radius: 18px;
-  background: var(--portal-boot-panel);
-  border: 1px solid var(--portal-boot-border);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
 .creator-boot__logo {
   position: relative;
   z-index: 2;
-  max-width: 200px;
+  max-width: min(240px, 72vw);
   height: auto;
   margin: 0 auto;
   display: block;
   animation: creatorBootLogoBreathe 2.4s ease-in-out infinite;
 }
 
-.creator-boot__visual {
+.creator-boot__bar-wrap {
+  width: min(280px, 78vw);
+}
+
+.creator-boot__bar {
   position: relative;
-  width: 220px;
-  height: 140px;
-  margin: 0 auto 16px;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 0 12px rgba(0, 0, 0, 0.55),
+    0 0 24px rgba(124, 92, 255, 0.12);
 }
 
-.creator-boot__orbit,
-.creator-boot__orbit--delay {
+.creator-boot__bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 38%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgba(56, 189, 248, 0.15) 0%,
+    #7c3aed 18%,
+    #c026d3 42%,
+    #f97316 68%,
+    #fde68a 100%
+  );
+  box-shadow:
+    0 0 18px rgba(192, 38, 211, 0.55),
+    0 0 32px rgba(124, 58, 237, 0.35);
+  animation: creatorBootUniverseBar 2.1s ease-in-out infinite;
+}
+
+.creator-boot__bar-stars {
   position: absolute;
   inset: 0;
-  margin: auto;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  border: 1px solid rgba(124, 92, 255, 0.35);
-  box-shadow: 0 0 24px rgba(124, 92, 255, 0.15);
-  animation: creatorBootOrbitSpin 3.2s linear infinite;
+  background:
+    radial-gradient(circle at 12% 50%, rgba(255, 255, 255, 0.95) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 34% 35%, rgba(255, 255, 255, 0.75) 0 0.8px, transparent 1.2px),
+    radial-gradient(circle at 58% 65%, rgba(255, 255, 255, 0.85) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 78% 40%, rgba(255, 255, 255, 0.7) 0 0.8px, transparent 1.2px),
+    radial-gradient(circle at 92% 55%, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.5px);
+  opacity: 0.65;
+  animation: creatorBootStarsTwinkle 2.8s ease-in-out infinite;
+  pointer-events: none;
 }
 
-.creator-boot__orbit--delay {
-  width: 150px;
-  height: 150px;
-  border-color: rgba(45, 212, 191, 0.28);
-  animation-duration: 4.6s;
-  animation-direction: reverse;
-}
-
-.creator-boot__pulse {
+.creator-boot__status {
   position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(124, 92, 255, 0.35) 0%, transparent 70%);
-  animation: creatorBootPulse 2s ease-in-out infinite;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @keyframes creatorBootLogoBreathe {
@@ -160,25 +182,15 @@ body.is-boot-loading #creatorPortalApp {
   50% { transform: scale(1.04); opacity: 1; }
 }
 
-@keyframes creatorBootOrbitSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes creatorBootUniverseBar {
+  0% { transform: translateX(-105%); width: 42%; }
+  50% { transform: translateX(85%); width: 52%; }
+  100% { transform: translateX(260%); width: 42%; }
 }
 
-@keyframes creatorBootPulse {
-  0%, 100% { transform: scale(0.92); opacity: 0.45; }
-  50% { transform: scale(1.08); opacity: 0.85; }
-}
-
-.creator-boot__bar-wrap,
-.creator-boot__bar {
-  display: none;
-}
-
-.creator-boot__status {
-  margin: 0;
-  color: var(--portal-boot-muted);
-  font-size: 14px;
+@keyframes creatorBootStarsTwinkle {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.95; }
 }
 
 .creator-login-bg {
@@ -295,7 +307,8 @@ body.creator-mobile-page .creator-toggle__track {
   overflow: hidden;
 }
 
-body.creator-mobile-page .creator-toggle__label {
+body.creator-mobile-page .creator-toggle__label,
+body.creator-mobile-page .creator-drawer-toggle .creator-toggle__label {
   position: relative;
   z-index: 1;
   flex: 1;
@@ -317,6 +330,7 @@ body.creator-mobile-page .creator-toggle__thumb {
   height: calc(100% - 4px);
   z-index: 2;
   touch-action: none;
+  cursor: pointer;
 }
 
 body.creator-mobile-page .creator-toggle__thumb-label {
@@ -334,13 +348,68 @@ body.creator-mobile-page .creator-toggle__tutorial-hand {
   position: absolute;
   top: 50%;
   left: 20%;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   transform: translateY(-50%);
   pointer-events: none;
-  z-index: 3;
+  z-index: 10;
   opacity: 0;
-  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M9 11V6a1 1 0 0 1 2 0v5h5a1 1 0 0 1 0 2h-6a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0'/%3E%3Cpath d='M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2'/%3E%3Cpath d='M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8'/%3E%3Cpath d='M18 8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-1'/%3E%3Cpath d='M6 12v3'/%3E%3Cpath d='M10 10v2'/%3E%3Cpath d='M14 10v1'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+body.creator-mobile-page .creator-toggle__tutorial-hand.is-pushing-right,
+body.creator-mobile-page .creator-drawer-toggle .creator-toggle__tutorial-hand.is-pushing-right {
+  animation: creator-toggle-hand-push-right 1.2s ease-in-out;
+}
+
+body.creator-mobile-page .creator-toggle__tutorial-hand.is-pushing-left,
+body.creator-mobile-page .creator-drawer-toggle .creator-toggle__tutorial-hand.is-pushing-left {
+  animation: creator-toggle-hand-push-left 1.2s ease-in-out;
+}
+
+body.creator-mobile-page .creator-toggle.is-tutorial-pushing-right .creator-toggle__thumb,
+body.creator-mobile-page .creator-drawer-toggle.is-tutorial-pushing-right .creator-toggle__thumb {
+  animation: creator-toggle-thumb-push-right 1.2s ease-in-out;
+}
+
+body.creator-mobile-page .creator-toggle.is-tutorial-pushing-left .creator-toggle__thumb,
+body.creator-mobile-page .creator-drawer-toggle.is-tutorial-pushing-left .creator-toggle__thumb {
+  animation: creator-toggle-thumb-push-left 1.2s ease-in-out;
+}
+
+@keyframes creator-toggle-hand-push-right {
+  0% { opacity: 0; left: 20%; transform: translateY(-50%) scale(0.8); }
+  15% { opacity: 1; left: 20%; transform: translateY(-50%) scale(1); }
+  50% { left: 55%; opacity: 1; transform: translateY(-50%) scale(1); }
+  85% { left: 55%; opacity: 1; transform: translateY(-50%) scale(1); }
+  100% { opacity: 0; left: 55%; transform: translateY(-50%) scale(0.9); }
+}
+
+@keyframes creator-toggle-hand-push-left {
+  0% { opacity: 0; left: 55%; transform: translateY(-50%) scaleX(-1) scale(0.8); }
+  15% { opacity: 1; left: 55%; transform: translateY(-50%) scaleX(-1) scale(1); }
+  50% { left: 20%; opacity: 1; transform: translateY(-50%) scaleX(-1) scale(1); }
+  85% { left: 20%; opacity: 1; transform: translateY(-50%) scaleX(-1) scale(1); }
+  100% { opacity: 0; left: 20%; transform: translateY(-50%) scaleX(-1) scale(0.9); }
+}
+
+@keyframes creator-toggle-thumb-push-right {
+  0% { left: 2px; }
+  20% { left: 2px; }
+  55% { left: calc(50% + 1px); }
+  70% { left: calc(50% + 1px); }
+  100% { left: 2px; }
+}
+
+@keyframes creator-toggle-thumb-push-left {
+  0% { left: calc(50% + 1px); }
+  20% { left: calc(50% + 1px); }
+  55% { left: 2px; }
+  70% { left: 2px; }
+  100% { left: calc(50% + 1px); }
 }
 
 /* Remove header / switch shimmer on portal */
@@ -427,10 +496,16 @@ body.creator-mobile-page .cj-overlay {
   inset: 0 !important;
   z-index: 26000 !important;
   display: none;
-  align-items: center;
-  justify-content: center;
-  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
-  overflow: auto;
+  align-items: flex-end;
+  justify-content: stretch;
+  box-sizing: border-box;
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
+  background: rgba(0, 0, 0, 0.42);
+  overflow: hidden;
 }
 
 body.creator-mobile-page .cj-overlay.is-open {
@@ -438,8 +513,27 @@ body.creator-mobile-page .cj-overlay.is-open {
 }
 
 body.creator-mobile-page .cj-overlay .cj-modal {
-  margin: auto;
-  max-height: min(92vh, 920px);
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  border-radius: 0;
+  transform: translateY(102%);
+}
+
+body.creator-mobile-page .cj-overlay.is-open .cj-modal {
+  transform: translateY(0);
+}
+
+body.creator-mobile-page .cj-overlay .cj-main,
+body.creator-mobile-page .cj-overlay .cj-content-scroll {
+  min-height: 0;
+}
+
+body.creator-mobile-page .cj-overlay .cj-panel.is-active {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 body.creator-mobile-page .creator-desktop-xp-hint-modal {
