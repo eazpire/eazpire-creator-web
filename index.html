@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" type="image/png" href="/assets/eaz-app-favicon.png">
+  <title>Eazpire Creator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/creator-portal.css?v=1">
+</head>
+<body class="is-boot-loading" data-role="guest">
+
+<div class="creator-boot" id="creatorBoot" role="status" aria-live="polite" aria-label="Loading Eazpire Creator">
+  <div class="creator-boot__card">
+    <img class="creator-boot__logo" src="/assets/eazpire-creator-logo.png" alt="" width="320" height="112" decoding="async">
+    <div class="creator-boot__bar-wrap">
+      <div class="creator-boot__bar" id="creatorBootBar" aria-hidden="true"></div>
+    </div>
+    <p class="creator-boot__status" id="creatorBootStatus">Loading Creator Hub</p>
+  </div>
+</div>
+
+<div class="creator-shell" id="creatorShell" hidden>
+  <header class="creator-top">
+    <div class="creator-top__brand">
+      <img class="creator-top__logo" src="/assets/eazpire-creator-logo.png" alt="Eazpire Creator" width="200" height="70" decoding="async">
+      <div class="creator-top__kicker">creator.eazpire.com · Creator Workspace</div>
+    </div>
+    <div class="creator-top__actions guest-only">
+      <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener">Back to Shop</a>
+      <button type="button" class="btn primary sm" data-login>Sign in</button>
+    </div>
+    <div class="creator-top__actions owner-only">
+      <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener">Back to Shop</a>
+      <span class="creator-top__owner" id="creatorOwnerLabel">Creator</span>
+      <button type="button" class="btn ghost sm" data-logout>Logout</button>
+    </div>
+  </header>
+
+  <main class="creator-main">
+    <section class="creator-hero panel">
+      <span class="pill">Phase 1 · Portal skeleton</span>
+      <h1 id="creatorHeroTitle">Welcome to Eazpire Creator</h1>
+      <p class="creator-hero__lead">
+        Your creator workspace is moving here — separate from the Shopify theme, powered by our own worker.
+        Dashboard, designs, and tools will arrive in the next phases.
+      </p>
+      <div class="creator-hero__actions guest-only">
+        <button type="button" class="btn primary" data-login>Sign in with Eazpire account</button>
+      </div>
+      <div class="creator-hero__actions owner-only">
+        <p class="creator-hero__signed-in">Signed in as creator <strong id="creatorOwnerId">—</strong></p>
+        <button type="button" class="btn primary" id="creatorPingBtn">Test API connection</button>
+        <pre class="creator-hero__ping" id="creatorPingOut" hidden></pre>
+      </div>
+    </section>
+
+    <section class="creator-grid">
+      <article class="panel creator-card">
+        <div class="creator-card__ico" aria-hidden="true">🎨</div>
+        <h2>Designs &amp; Creations</h2>
+        <p>Generate, edit, and publish — coming in Phase 3.</p>
+        <span class="badge">Planned</span>
+      </article>
+      <article class="panel creator-card">
+        <div class="creator-card__ico" aria-hidden="true">📣</div>
+        <h2>Marketing &amp; Content</h2>
+        <p>Hero images, videos, and social tools — coming in Phase 3.</p>
+        <span class="badge">Planned</span>
+      </article>
+      <article class="panel creator-card">
+        <div class="creator-card__ico" aria-hidden="true">⚙️</div>
+        <h2>Settings &amp; Payouts</h2>
+        <p>Creator profile, payout details, automations — coming in Phase 3.</p>
+        <span class="badge">Planned</span>
+      </article>
+    </section>
+  </main>
+</div>
+
+<div class="creator-login-bg" id="creatorLoginModal" aria-hidden="true">
+  <div class="creator-login panel" role="dialog" aria-modal="true" aria-labelledby="creatorLoginTitle">
+    <div class="creator-login__head">
+      <h2 id="creatorLoginTitle">Sign in to Creator</h2>
+      <button type="button" class="creator-login__close" id="creatorLoginClose" aria-label="Close">✕</button>
+    </div>
+    <p class="creator-login__sub">Use your Eazpire shop account. You will return here after login at account.eazpire.com.</p>
+    <button type="button" class="btn primary creator-login__btn" data-oauth-start>
+      Continue with Shop account
+    </button>
+    <p class="creator-login__foot">Secure login via <strong>account.eazpire.com</strong></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"><strong id="tTitle">Done</strong><span id="tText">OK</span></div>
+
+<script src="/js/api.js?v=1"></script>
+<script src="/js/auth.js?v=1"></script>
+<script src="/js/app.js?v=1"></script>
+</body>
+</html>
