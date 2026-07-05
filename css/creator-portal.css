@@ -45,6 +45,40 @@ body.creator-mobile-page {
   background: transparent;
 }
 
+/* Desktop CSS loads only >=992px — hide desktop shell on mobile here */
+@media (max-width: 991px) {
+  body.creator-mobile-page #creatorPortalShell > .creator-desktop-app {
+    display: none !important;
+  }
+
+  body.creator-mobile-page #creatorPortalShell > .creator-mobile-app {
+    display: flex !important;
+    flex-direction: column;
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}
+
+@media (min-width: 992px) {
+  body.creator-mobile-page #creatorPortalShell > .creator-mobile-app {
+    display: none !important;
+  }
+
+  body.creator-mobile-page #creatorPortalShell > .creator-desktop-app {
+    display: block !important;
+    min-height: 100dvh;
+    height: 100dvh;
+  }
+}
+
+/* Galaxy background — avoid relative asset 404 before theme-background.js applies CDN URL */
+body.creator-mobile-page .creator-mobile-app {
+  --creator-mobile-galaxy: url("https://cdn.shopify.com/s/files/1/0739/5203/5098/files/galaxy-nebula-bg.png");
+}
+
 body.creator-mobile-page #creatorPortalShell > .creator-desktop-app,
 body.creator-mobile-page #creatorPortalShell > .creator-mobile-app {
   flex: 1 1 auto;

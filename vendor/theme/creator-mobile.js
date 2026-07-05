@@ -454,18 +454,6 @@
   function parseCreatorShellHashSlide() {
     if (!creatorShellPathSupportsDashboardTabHash()) return null;
     try {
-      if (window.__CREATOR_PORTAL_HOST__) {
-        var path = (window.location.pathname || '').replace(/\/$/, '') || '/';
-        var pathMap = {
-          '/': 0,
-          '/dashboard': 0,
-          '/generator': 1,
-          '/creations': 2,
-          '/marketing': 3,
-          '/automations': 4
-        };
-        if (pathMap[path] !== undefined) return pathMap[path];
-      }
       var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();
       if (!raw) return null;
       if (raw === 'settings') return null;
@@ -483,22 +471,12 @@
     if (!name) return;
     try {
       var cur = (window.location.hash || '').replace(/^#/, '').toLowerCase();
-      if (!window.__CREATOR_PORTAL_HOST__) {
-        if (name === 'dashboard' && !cur) return;
-        if (cur === name) return;
-        if (index === 3 && name === 'marketing' && cur === 'promotions') return;
-        var legacyUrl = new URL(window.location.href);
-        legacyUrl.hash = name;
-        window.history.replaceState(window.history.state, '', legacyUrl.pathname + legacyUrl.search + legacyUrl.hash);
-        return;
-      }
-      var path = name === 'dashboard' ? '/dashboard' : '/' + name;
-      var currentPath = (window.location.pathname || '').replace(/\/$/, '') || '/';
-      if (currentPath === path) return;
+      if (name === 'dashboard' && !cur) return;
+      if (cur === name) return;
+      if (index === 3 && name === 'marketing' && cur === 'promotions') return;
       var u = new URL(window.location.href);
-      u.pathname = path;
-      u.hash = '';
-      window.history.replaceState(window.history.state, '', u.pathname + u.search);
+      u.hash = name;
+      window.history.replaceState(window.history.state, '', u.pathname + u.search + u.hash);
     } catch (_e3) {}
   }
 
@@ -822,15 +800,6 @@
   })();
 
   window.addEventListener('hashchange', function () {
-    if (window.__CREATOR_PORTAL_HOST__) return;
-    var idx = parseCreatorShellHashSlide();
-    if (idx !== null && idx !== currentIndex) {
-      goTo(idx);
-    }
-  });
-
-  window.addEventListener('popstate', function () {
-    if (!window.__CREATOR_PORTAL_HOST__) return;
     var idx = parseCreatorShellHashSlide();
     if (idx !== null && idx !== currentIndex) {
       goTo(idx);

@@ -304,15 +304,18 @@
     if (state.dashboard) return state.dashboard;
 
     state.dashboard = (async function () {
+      loadCss("/vendor/theme/sales-modal.css");
       loadCss("/vendor/theme/creator-journey-modal.css");
       loadCss("/vendor/theme/creator-level-celebration.css");
 
       await Promise.all([
+        injectPartial("creator-sales-modal.html"),
         injectPartial("creator-journey-modal.html"),
         injectPartial("creator-level-celebration-overlay.html"),
       ]);
 
       await loadScriptsSequential([
+        asset("sales-modal.js"),
         asset("creator-journey-modal.js"),
         asset("creator-level-celebration.js"),
       ]);

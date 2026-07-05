@@ -20,6 +20,42 @@
   global.__EAZ_SKIP_SHOP_LIST_JOBS__ = true;
   global.__EAZ_DEFER_CREATOR_DESIGN_MODAL__ = true;
 
+  (function patchStorageWhenBlocked() {
+    ["localStorage", "sessionStorage"].forEach(function (name) {
+      try {
+        var store = global[name];
+        store.setItem("__eaz_storage_probe__", "1");
+        store.removeItem("__eaz_storage_probe__");
+      } catch (e) {
+        var mem = {};
+        global[name] = {
+          getItem: function (k) {
+            return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null;
+          },
+          setItem: function (k, v) {
+            mem[k] = String(v);
+          },
+          removeItem: function (k) {
+            delete mem[k];
+          },
+          key: function (i) {
+            return Object.keys(mem)[i] || null;
+          },
+          clear: function () {
+            mem = {};
+          },
+        };
+        try {
+          Object.defineProperty(global[name], "length", {
+            get: function () {
+              return Object.keys(mem).length;
+            },
+          });
+        } catch (_e) {}
+      }
+    });
+  })();
+
   global.Shopify = global.Shopify || {};
   if (!global.Shopify.shop) global.Shopify.shop = "allyoucanpink.myshopify.com";
 

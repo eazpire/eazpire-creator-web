@@ -532,6 +532,8 @@
       "?op=" +
       encodeURIComponent(op) +
       "&owner_id=" +
+      encodeURIComponent(ownerId) +
+      "&customer_id=" +
       encodeURIComponent(ownerId);
     if (extraParams) {
       for (var key in extraParams) {

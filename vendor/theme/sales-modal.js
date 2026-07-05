@@ -291,13 +291,15 @@
     });
   });
 
-  overlay.querySelectorAll('[data-nav]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      const screen = el.dataset.nav;
-      if (screen) navigateTo(screen);
+  if (overlay) {
+    overlay.querySelectorAll('[data-nav]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        const screen = el.dataset.nav;
+        if (screen) navigateTo(screen);
+      });
     });
-  });
+  }
 
   const networkListEl = document.getElementById('slmNetworkList');
 
