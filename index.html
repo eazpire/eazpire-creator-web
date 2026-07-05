@@ -33,6 +33,7 @@
     </div>
     <div class="creator-top__actions owner-only">
       <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener" data-shop-link>Back to Shop</a>
+      <button type="button" class="btn ghost sm" data-open-settings>Settings</button>
       <span class="creator-top__owner" id="creatorOwnerLabel">Creator</span>
       <button type="button" class="btn ghost sm" data-logout>Logout</button>
     </div>
@@ -183,21 +184,21 @@
     </section>
 
     <section class="creator-screen" data-screen="marketing" id="creatorScreenMarketing" hidden>
-      <div class="panel creator-placeholder">
-        <span class="pill">Phase 3</span>
+      <div class="panel creator-placeholder guest-only">
         <h2>Marketing &amp; Content</h2>
-        <p>Hero images, videos, and publish tools will appear here.</p>
-        <span class="badge">Coming soon</span>
+        <p>Sign in to create hero images, videos, and promotions.</p>
+        <button type="button" class="btn primary" data-login>Sign in</button>
       </div>
+      <div class="creator-screen__body owner-only" id="creatorMarketingHost"></div>
     </section>
 
     <section class="creator-screen" data-screen="automations" id="creatorScreenAutomations" hidden>
-      <div class="panel creator-placeholder">
-        <span class="pill">Phase 3</span>
+      <div class="panel creator-placeholder guest-only">
         <h2>Automations</h2>
-        <p>Design generator automations and scheduled publish flows.</p>
-        <span class="badge">Coming soon</span>
+        <p>Sign in to manage design automations.</p>
+        <button type="button" class="btn primary" data-login>Sign in</button>
       </div>
+      <div class="creator-screen__body owner-only" id="creatorAutomationsHost"></div>
     </section>
 
     <section class="creator-screen" data-screen="generator" id="creatorScreenGenerator" hidden>
@@ -330,13 +331,13 @@
 
 <div id="creatorPortalModals"></div>
 
-<script src="/js/creator-i18n.js?v=3"></script>
-<script src="/js/api.js?v=3"></script>
-<script src="/js/auth.js?v=3"></script>
-<script src="/js/theme-bridge.js?v=3"></script>
-<script src="/js/router.js?v=3"></script>
-<script src="/js/feature-loader.js?v=3"></script>
-<script src="/js/dashboard.js?v=3"></script>
-<script src="/js/app.js?v=3"></script>
+<script src="/js/creator-i18n.js?v=4"></script>
+<script src="/js/api.js?v=4"></script>
+<script src="/js/auth.js?v=4"></script>
+<script src="/js/theme-bridge.js?v=4"></script>
+<script src="/js/router.js?v=4"></script>
+<script src="/js/feature-loader.js?v=4"></script>
+<script src="/js/dashboard.js?v=4"></script>
+<script src="/js/app.js?v=4"></script>
 </body>
 </html>

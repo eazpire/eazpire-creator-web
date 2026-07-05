@@ -1,0 +1,368 @@
+<script>
+  window.CreatorI18n = window.CreatorI18n || {};
+  window.CreatorI18n.automations = Object.assign({}, window.CreatorI18n.automations || {}, {
+    tab_design_generator: "Design Generator",
+    tab_publish: "Publish",
+    tab_marketing: "Marketing",
+    status_active: "Active",
+    status_scheduled: "Scheduled",
+    status_expired: "Expired",
+    add_tile: "Add automation",
+    no_designs_yet: "No design generated yet",
+    stat_created: "Created",
+    stat_last_run: "Last run",
+    stat_generations: "Generations",
+    coming_soon_publish: "Publish automations coming soon.",
+    coming_soon_marketing: "Marketing automations coming soon.",
+    modal_title: "New design automation",
+    modal_title_label: "Title",
+    modal_prompt_label: "Prompt",
+    modal_prompt_placeholder: "Type a prompt, then tap Add to save it to the list.",
+    modal_workflow_label: "Workflow",
+    workflow_generate_only: "Generate only",
+    workflow_generate_publish: "Generate & publish",
+    modal_per_day_label: "Designs per day (1–10)",
+    modal_starts_label: "Starts",
+    modal_ends_label: "Ends",
+    modal_submit: "Create automation",
+    modal_cancel: "Cancel",
+    prompt_add: "Add",
+    prompts_section: "Saved prompts",
+    prompt_edit_title: "Edit prompt",
+    prompt_save: "Save",
+    prompt_delete: "Delete",
+    prompts_max: "You can add up to 10 prompts.",
+    ref_upload_aria: "Add reference image",
+    ref_images_section: "Reference images (optional)",
+    end_automation: "End",
+    load_error: "Could not load automations.",
+    list_loading: "Loading automations…",
+    create_error: "Could not create automation.",
+    login_required: "Log in to manage automations.",
+    empty_list: "No automations in this tab.",
+    pool_section: "More options (random pool)",
+    pool_hint: "Select one or more values per row. Each run picks a random combination.",
+    pool_ratio: "Ratio",
+    pool_content: "Content type",
+    pool_design_type: "Design type",
+    pool_target: "Target product",
+    pool_styles_btn: "Styles",
+    pool_add_language: "Add language",
+    pool_add_colors: "Add color preset",
+    pool_ref_strength: "Reference influence %",
+    pool_clear: "Clear options",
+    pool_styles_selected: "styles selected",
+    pool_summary_empty: "No extra options selected.",
+    pool_summary_ratio: "Ratio",
+    pool_summary_content: "Content",
+    pool_summary_design: "Design",
+    pool_summary_target: "Product",
+    pool_summary_styles: "Styles",
+    pool_summary_lang: "Lang",
+    pool_summary_colors: "Color presets",
+    pool_summary_ref: "Ref %"
+  });
+</script>
+<div class="creator-automations" id="creatorAutomations" data-automations-maintab="design-generator">
+  <div class="creator-automations-tabs">
+    <div class="creator-automations-tabs-nav">
+      <button type="button" class="creator-automations-tab is-active" data-maintab="design-generator">Design Generator</button>
+      <button type="button" class="creator-automations-tab" data-maintab="publish">Publish</button>
+      <button type="button" class="creator-automations-tab" data-maintab="marketing">Marketing</button>
+    </div>
+  </div>
+
+  <div class="creator-automations-panel is-active" id="creatorAutomationsPanelDesign" data-maintab="design-generator">
+    <div class="creator-automations-status-tabs">
+      <button type="button" class="creator-automations-status-tab is-active" data-statusfilter="active">Active</button>
+      <button type="button" class="creator-automations-status-tab" data-statusfilter="scheduled">Scheduled</button>
+      <button type="button" class="creator-automations-status-tab" data-statusfilter="expired">Expired</button>
+    </div>
+    <div class="creator-automations-list-wrap">
+      <p class="creator-automations-list-msg" id="creatorAutomationsListMsg" hidden></p>
+      <div class="creator-automations-grid" id="creatorAutomationsGrid"></div>
+      <div
+        class="creator-automations-grid-loading"
+        id="creatorAutomationsGridLoading"
+        hidden
+        aria-busy="false"
+      >
+        <div class="creator-automations-grid-loading__inner">
+          <div class="creator-automations-skeleton-grid" aria-hidden="true">
+            
+          </div>
+          <p class="creator-automations-grid-loading__text" data-t="creator.automations.list_loading">
+            Loading automations…
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="creator-automations-panel creator-automations-panel--hidden" id="creatorAutomationsPanelPublish" data-maintab="publish" hidden>
+    <div class="creator-automations-coming-soon">
+      <span class="creator-automations-coming-soon-label">Coming soon</span>
+      <p>Publish automations coming soon.</p>
+    </div>
+  </div>
+
+  <div class="creator-automations-panel creator-automations-panel--hidden" id="creatorAutomationsPanelMarketing" data-maintab="marketing" hidden>
+    <div class="creator-automations-coming-soon">
+      <span class="creator-automations-coming-soon-label">Coming soon</span>
+      <p>Marketing automations coming soon.</p>
+    </div>
+  </div>
+
+  <dialog class="creator-automations-modal" id="creatorAutomationsModal" aria-labelledby="creatorAutomationsModalTitle">
+    <div class="creator-automations-modal__inner">
+      <div class="creator-automations-modal__head">
+        <h2 id="creatorAutomationsModalTitle">New design automation</h2>
+        <button type="button" class="creator-automations-modal__close" id="creatorAutomationsModalClose" aria-label="Close">×</button>
+      </div>
+      <form class="creator-automations-modal__form" id="creatorAutomationsModalForm">
+        <label class="creator-automations-field creator-automations-field--full">
+          <span>Title</span>
+          <input type="text" name="title" id="creatorAutoTitle" required maxlength="120" autocomplete="off">
+        </label>
+        <div class="creator-automations-field creator-automations-field--full">
+          <span>Prompt</span>
+          <div class="creator-automations-prompt-input-row">
+            <textarea id="creatorAutoPromptDraft" rows="3" maxlength="2000" placeholder="Type a prompt, then tap Add to save it to the list." class="creator-automations-prompt-draft"></textarea>
+            <button type="button" class="creator-automations-btn creator-automations-btn--primary creator-automations-prompt-add" id="creatorAutoPromptAdd">Add</button>
+          </div>
+          <details class="creator-automations-prompts-details" id="creatorAutoPromptsDetails">
+            <summary class="creator-automations-prompts-summary" id="creatorAutoPromptsSummary">Saved prompts</summary>
+            <div class="creator-automations-mini-grid" id="creatorAutoPromptsGrid" aria-live="polite"></div>
+          </details>
+        </div>
+        <div class="creator-automations-field creator-automations-field--full creator-automations-ref-block">
+          <span>Reference images (optional)</span>
+          <div class="creator-automations-ref-toolbar">
+            <button type="button" class="creator-automations-ref-upload-btn" id="creatorAutoRefUploadBtn" aria-label="Add reference image">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+          </div>
+          <div class="creator-automations-ref-grid-wrap" id="creatorAutoRefGrid" aria-live="polite"></div>
+          <input type="file" id="creatorAutoImageInput" accept="image/*" hidden>
+        </div>
+
+        <div class="creator-automations-field creator-automations-field--full creator-automations-gen-pool" id="creatorAutomationsGenPool">
+          <span class="creator-automations-gen-pool__title">More options (random pool)</span>
+          <p class="creator-automations-gen-pool__hint">Select one or more values per row. Each run picks a random combination.</p>
+
+          <div class="creator-automations-gen-pool__row">
+            <span class="creator-automations-gen-pool__label">Ratio</span>
+            <div class="creator-automations-gen-pool__ratio-row">
+              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="square" title="Square" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+              </button>
+              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="portrait" title="Portrait" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+              </button>
+              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="landscape" title="Landscape" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="creator-automations-gen-pool__row">
+            <span class="creator-automations-gen-pool__label">Content type</span>
+            <div class="gen-options-content-type-grid creator-automations-gen-pool__content-grid">
+              <button type="button" class="gen-options-content-type-card" data-auto-pool-content="design-text">Design + Text</button>
+              <button type="button" class="gen-options-content-type-card" data-auto-pool-content="design-only">Design only</button>
+              <button type="button" class="gen-options-content-type-card" data-auto-pool-content="text-only">Text only</button>
+            </div>
+          </div>
+
+          <div class="creator-automations-gen-pool__row">
+            <span class="creator-automations-gen-pool__label">Design type</span>
+            <div class="creator-automations-gen-pool__chips">
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-design="classic">Classic</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-design="pattern">Pattern</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-design="all-over">All-over</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-design="full-coverage">Full-coverage</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-design="panorama">Panorama</button>
+            </div>
+          </div>
+
+          <div class="creator-automations-gen-pool__row">
+            <span class="creator-automations-gen-pool__label">Target product</span>
+            <div class="creator-automations-gen-pool__chips">
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-target="all">Anything</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-target="unisex-softstyle-cotton-tee">Unisex Softstyle Tee</button>
+            </div>
+          </div>
+
+          <div class="creator-automations-gen-pool__row">
+            <span class="creator-automations-gen-pool__label">Styles</span>
+            <button type="button" class="creator-automations-gen-pool__modal-btn" id="creatorAutoPoolStylesBtn">
+              <span id="creatorAutoPoolStylesSummary">0 styles selected</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+          </div>
+
+          <div class="creator-automations-gen-pool__row creator-automations-gen-pool__row--split">
+            <button type="button" class="creator-automations-btn creator-automations-btn--ghost" id="creatorAutoPoolLangBtn">Add language</button>
+            <button type="button" class="creator-automations-btn creator-automations-btn--ghost" id="creatorAutoPoolColorBtn">Add color preset</button>
+          </div>
+
+          <div class="creator-automations-gen-pool__row">
+            <span class="creator-automations-gen-pool__label">Reference influence %</span>
+            <div class="creator-automations-gen-pool__chips">
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-refstr="50">50</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-refstr="65">65</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-refstr="70">70</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-refstr="80">80</button>
+              <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-refstr="90">90</button>
+            </div>
+          </div>
+
+          <p class="creator-automations-gen-pool__summary" id="creatorAutoPoolSummary" aria-live="polite"></p>
+          <button type="button" class="creator-automations-btn creator-automations-btn--ghost creator-automations-gen-pool__clear" id="creatorAutoPoolClearBtn">Clear options</button>
+        </div>
+
+        <fieldset class="creator-automations-field creator-automations-field--full">
+          <legend>Workflow</legend>
+          <label class="creator-automations-radio"><input type="radio" name="workflow" value="generate_only" checked> Generate only</label>
+          <label class="creator-automations-radio"><input type="radio" name="workflow" value="generate_publish"> Generate & publish</label>
+        </fieldset>
+        <label class="creator-automations-field creator-automations-field--full">
+          <span>Designs per day (1–10)</span>
+          <input type="number" name="designs_per_day" id="creatorAutoPerDay" min="1" max="10" value="1">
+        </label>
+        <label class="creator-automations-field">
+          <span>Starts</span>
+          <input type="datetime-local" name="starts" id="creatorAutoStarts" required>
+        </label>
+        <label class="creator-automations-field">
+          <span>Ends</span>
+          <input type="datetime-local" name="ends" id="creatorAutoEnds" required>
+        </label>
+        <div class="creator-automations-modal__actions">
+          <button type="button" class="creator-automations-btn creator-automations-btn--ghost" id="creatorAutomationsModalCancel">Cancel</button>
+          <button type="submit" class="creator-automations-btn creator-automations-btn--primary" id="creatorAutomationsModalSubmit">Create automation</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="creator-automations-prompt-edit" id="creatorAutoPromptEditDlg" aria-labelledby="creatorAutoPromptEditTitle">
+    <div class="creator-automations-prompt-edit__inner">
+      <div class="creator-automations-modal__head">
+        <h2 id="creatorAutoPromptEditTitle">Edit prompt</h2>
+        <button type="button" class="creator-automations-modal__close" id="creatorAutoPromptEditClose" aria-label="Close">×</button>
+      </div>
+      <div class="creator-automations-prompt-edit__body">
+        <textarea id="creatorAutoPromptEditText" rows="8" maxlength="2000" class="creator-automations-prompt-edit__textarea"></textarea>
+      </div>
+      <div class="creator-automations-prompt-edit__footer">
+        <button type="button" class="creator-automations-btn creator-automations-btn--ghost" id="creatorAutoPromptEditDelete">Delete</button>
+        <button type="button" class="creator-automations-btn creator-automations-btn--primary" id="creatorAutoPromptEditSave">Save</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="gen-select-overlay creator-automations-ref-dialog" id="autoRefImageOverlay" aria-labelledby="autoRefImageTitle">
+    <div class="gen-select-modal gen-ref-image-modal">
+      <div class="gen-select-modal__header">
+        <h3 class="gen-select-modal__title" id="autoRefImageTitle">Select reference</h3>
+        <button type="button" class="gen-select-modal__close" id="autoRefImageClose" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="gen-ref-image-options">
+        <button type="button" class="gen-ref-image-card" data-auto-source="device">
+          <span class="gen-ref-image-card__icon gen-ref-image-card__icon--device">
+            <span class="gen-ref-image-card__phone">
+              <span class="gen-ref-image-card__grid">
+                <span style="--c:#f97316"></span><span style="--c:#eab308"></span><span style="--c:#22c55e"></span><span style="--c:#3b82f6"></span>
+              </span>
+            </span>
+          </span>
+          <span class="gen-ref-image-card__text">
+            <span class="gen-ref-image-card__title">Source device</span>
+            <span class="gen-ref-image-card__desc">Source device desc</span>
+          </span>
+        </button>
+        <button type="button" class="gen-ref-image-card" data-auto-source="camera">
+          <span class="gen-ref-image-card__icon gen-ref-image-card__icon--camera">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 8a2 2 0 0 1 2-2h2l1.2-1.6A1 1 0 0 1 10 4h4a1 1 0 0 1 .8.4L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/>
+              <circle cx="12" cy="13" r="3.2"/>
+            </svg>
+          </span>
+          <span class="gen-ref-image-card__text">
+            <span class="gen-ref-image-card__title">Source camera</span>
+            <span class="gen-ref-image-card__desc">Source camera desc</span>
+          </span>
+        </button>
+        <button type="button" class="gen-ref-image-card" data-auto-source="phone">
+          <span class="gen-ref-image-card__icon gen-ref-image-card__icon--phone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="7" y="3" width="10" height="18" rx="2"/>
+              <path d="M10 18h4"/>
+            </svg>
+          </span>
+          <span class="gen-ref-image-card__text">
+            <span class="gen-ref-image-card__title">Source phone</span>
+            <span class="gen-ref-image-card__desc">Source phone desc</span>
+          </span>
+        </button>
+        <button type="button" class="gen-ref-image-card" data-auto-source="inspirations">
+          <span class="gen-ref-image-card__icon gen-ref-image-card__icon--star">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </span>
+          <span class="gen-ref-image-card__text">
+            <span class="gen-ref-image-card__title">Inspirations</span>
+            <span class="gen-ref-image-card__desc">Inspirations desc</span>
+          </span>
+        </button>
+        <button type="button" class="gen-ref-image-card" data-auto-source="designs">
+          <span class="gen-ref-image-card__icon gen-ref-image-card__icon--folder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          <span class="gen-ref-image-card__text">
+            <span class="gen-ref-image-card__title">Source designs</span>
+            <span class="gen-ref-image-card__desc">Source designs desc</span>
+          </span>
+        </button>
+        <button type="button" class="gen-ref-image-card" data-auto-source="canvas">
+          <span class="gen-ref-image-card__icon gen-ref-image-card__icon--canvas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          </span>
+          <span class="gen-ref-image-card__text">
+            <span class="gen-ref-image-card__title">Source canvas</span>
+            <span class="gen-ref-image-card__desc">Source canvas desc</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="creator-automations-modal" id="creatorAutomationEditDlg" aria-labelledby="creatorAutomationEditTitle">
+    <div class="creator-automations-modal__inner creator-automations-modal__inner--edit">
+      <div class="creator-automations-modal__head creator-automations-modal__head--edit">
+        <h2 id="creatorAutomationEditTitle">Edit automation</h2>
+        <button type="button" class="creator-automations-modal__close" id="creatorAutomationEditClose" aria-label="Close">×</button>
+      </div>
+      <div id="creatorAutomationEditBody" class="creator-automations-edit-body"></div>
+      <div class="creator-automations-modal__actions creator-automations-modal__actions--edit">
+        <button type="button" class="creator-automations-btn creator-automations-btn--primary" id="creatorAutomationEditSave">Save</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="creator-automations-modal" id="creatorAutomationOverviewDlg" aria-labelledby="creatorAutomationOverviewTitle">
+    <div class="creator-automations-modal__inner creator-automations-modal__inner--wide">
+      <div class="creator-automations-modal__head">
+        <h2 id="creatorAutomationOverviewTitle">Automation designs</h2>
+        <button type="button" class="creator-automations-modal__close" id="creatorAutomationOverviewClose" aria-label="Close">×</button>
+      </div>
+      <div class="creator-automations-overview-tabs">
+        <button type="button" class="creator-automations-overview-tab is-active" id="creatorAutomationOverviewTabGen" data-ov-tab="generated">Inactive</button>
+        <button type="button" class="creator-automations-overview-tab" id="creatorAutomationOverviewTabSaved" data-ov-tab="saved">Active</button>
+      </div>
+      <div id="creatorAutomationOverviewGrid" class="creator-automations-overview-grid"></div>
+    </div>
+  </dialog>
+</div>

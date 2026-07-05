@@ -1,0 +1,3541 @@
+<div class="csm-overlay" id="csmOverlay" aria-hidden="true" style="display:none" data-customer-email="">
+  <div class="csm-modal" role="dialog" aria-modal="true" aria-labelledby="csmTitle">
+
+    <!-- Header -->
+    <header class="csm-header">
+      <div class="csm-header__left">
+        <button type="button" class="csm-mobile-menu-btn" id="csmMobileMenuBtn" aria-label="Menu open" title="Menu open">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 12h18M3 6h18M3 18h18"></path>
+          </svg>
+        </button>
+        <div class="csm-header__text">
+          <h3 class="csm-title" id="csmTitle">Title</h3>
+          <p class="csm-subtitle">Subtitle</p>
+        </div>
+      </div>
+
+      <button type="button" class="csm-close" id="csmClose" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Mobile Sidebar Drawer Overlay -->
+    <div class="csm-mobile-drawer-overlay" id="csmMobileDrawerOverlay" aria-hidden="true"></div>
+
+    <!-- Main Content -->
+    <div class="csm-main">
+
+      <!-- Sidebar Navigation (Desktop) / Drawer (Mobile) -->
+      <nav class="csm-sidebar" id="csmSidebar" aria-label="Nav aria">
+        <div class="csm-sidebar__inner">
+
+          <!-- Profile Tab -->
+          <button type="button" class="csm-nav-item is-active" data-csm-nav="profile">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <span class="csm-nav-text">Nav profile</span>
+          </button>
+
+          <!-- Notifications Tab -->
+          <button type="button" class="csm-nav-item" data-csm-nav="notifications">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
+            </svg>
+            <span class="csm-nav-text">Notifications</span>
+          </button>
+
+          <!-- Creator Codes Tab -->
+          <button type="button" class="csm-nav-item" data-csm-nav="creator-codes">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z"/>
+            </svg>
+            <span class="csm-nav-text">Nav creator codes</span>
+            <span class="cc-available-dot" data-cc-dot style="display:none"></span>
+          </button>
+
+          <!-- Community Tab -->
+          <button type="button" class="csm-nav-item" data-csm-nav="community">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+            </svg>
+            <span class="csm-nav-text">Nav community</span>
+          </button>
+
+          <!-- Creator Names Tab -->
+          <button type="button" class="csm-nav-item" data-csm-nav="creator-names">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="csm-nav-text">Nav creator names</span>
+          </button>
+
+          <button type="button" class="csm-nav-item creator-journey-trigger" data-cj-open="level" title="Nav level">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="csm-nav-text">Title</span>
+          </button>
+
+          <!-- EAZ Tab -->
+          <button type="button" class="csm-nav-item" data-csm-nav="eaz">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="csm-nav-text">Nav eaz</span>
+          </button>
+
+          <!-- Payout Tab -->
+          <button type="button" class="csm-nav-item" data-csm-nav="payout">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+            </svg>
+            <span class="csm-nav-text">Nav payout</span>
+          </button>
+
+          <!-- Interests Tab -->
+          <button type="button" class="csm-nav-item" data-csm-nav="interests">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <span class="csm-nav-text">Nav interests</span>
+          </button>
+
+
+          <!-- Creator Wear Tab (web mobile only; Android uses native settings) -->
+          <button type="button" class="csm-nav-item csm-nav-item--wear" data-csm-nav="creator-wear">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V20c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-5.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zm-1 13v-2h2v2h-2z"/>
+            </svg>
+            <span class="csm-nav-text">Creator Wear</span>
+          </button>
+
+        </div>
+      </nav>
+
+      <!-- Content Panels -->
+      <div class="csm-content" id="csmContent">
+
+        <!-- Notifications Panel -->
+        <section class="csm-panel" data-csm-panel="notifications">
+          <div class="csm-panel-header">
+            <h4 class="csm-panel-title">Notifications</h4>
+            <p class="csm-panel-subtitle">Manage creator notification channels.</p>
+          </div>
+          <div class="csm-panel-content">
+            <div id="csm-notifications-mount" data-notification-prefs-scope="creator" data-notification-prefs-dark="1"></div>
+          </div>
+        </section>
+
+        <!-- Profile Panel -->
+        <section class="csm-panel" data-csm-panel="profile">
+          <div class="csm-panel-header">
+            <h4 class="csm-panel-title">Profile title</h4>
+            <p class="csm-panel-subtitle">Profile subtitle</p>
+          </div>
+          <div class="csm-panel-body csm-panel-body--profile">
+            <div class="csm-panel-content csm-panel-content--profile">
+              
+
+
+  
+
+
+
+  
+
+
+Profile settings saved.
+Profile settings could not be saved.
+Profile settings could not be loaded.
+You need to be logged in to manage your profile settings.
+Login required
+Log in now
+Email
+Log out
+Your account email (from Shopify)
+Username
+English handle, unique across Eazpire
+Checking availability…
+Available
+Already taken
+3–20 characters: letters, numbers, underscore only
+Could not save username.
+Profile picture (1:1, JPG/PNG/WebP)
+Upload profile picture
+Could not upload profile picture.
+First name
+Last name
+Address
+City
+Country
+Select country
+Birth date
+Share your birth date to unlock a birthday surprise.
+Gender
+Female
+Male
+Save profile settings
+
+
+
+  Deletion is scheduled for __DATE__. We sent a confirmation email. You can cancel from that email until then.
+  Could not schedule account deletion. Try again or contact support.
+  Email does not match your account.
+  Schedule permanent deletion of your account in 7 days? You can cancel from the confirmation email until then.
+  Check your inbox for the confirmation link. Optional app data is removed only after you open it.
+  Optional app data was removed. Your account remains active.
+  Could not send the confirmation email. Try again or contact support.
+  Email does not match your account.
+  Send a confirmation email to remove optional app data? Your Shopify login and customer account will stay active until you confirm from the email.
+  Please confirm the required statement above to continue.
+  Please confirm the required statements above to continue.
+
+
+<div
+  class="cps-root cps-root--creator cps-root--account"
+  data-customer-profile-settings-root
+  data-context=""
+  data-customer-email=""
+  data-msg-saved=""
+  data-msg-save-failed=""
+  data-msg-load-failed=""
+  data-msg-login-required=""
+  data-msg-username-checking=""
+  data-msg-username-available=""
+  data-msg-username-taken=""
+  data-msg-username-invalid=""
+  data-msg-username-save-failed=""
+  data-msg-avatar-failed=""
+  data-label-first-name=""
+  data-label-last-name=""
+  data-label-address=""
+  data-label-city=""
+  data-label-country=""
+  data-label-birth-date=""
+  data-label-gender=""
+  data-label-username=""
+  
+    data-msg-delete-success-scheduled=""
+    data-msg-delete-error=""
+    data-msg-delete-email-mismatch=""
+    data-msg-delete-confirm-dialog=""
+    data-msg-erase-email-sent=""
+    data-msg-erase-success=""
+    data-msg-erase-error=""
+    data-msg-erase-email-mismatch=""
+    data-msg-erase-confirm-dialog=""
+    data-msg-erase-consent-required=""
+    data-msg-delete-consent-required=""
+  
+>
+  <div
+    class="cps-login-required"
+    id="csmProfileLoginRequired"
+    style="display:none"
+    data-cps-login-required
+  >
+    <div class="cps-login-required-content">
+      <h3 class="cps-login-required-title"></h3>
+      <p class="cps-login-required-text"></p>
+      <button type="button" class="cps-login-required-btn" id="csmProfileLoginBtn" data-cps-login-btn>
+        
+      </button>
+    </div>
+  </div>
+
+  <div
+    class="cps-form-wrap"
+    id="csmProfileForm"
+    style="display:none"
+    data-cps-form-wrap
+  >
+    <form class="cps-form" data-cps-form>
+      
+      <div class="cps-avatar-field" data-cps-avatar-field>
+        <button type="button" class="cps-avatar-btn" data-cps-avatar-btn aria-label="">
+          <img class="cps-avatar-img" data-cps-avatar-img alt="" width="96" height="96" hidden>
+          <span class="cps-avatar-placeholder" data-cps-avatar-placeholder aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          </span>
+        </button>
+        <input type="file" data-cps-avatar-input accept="image/jpeg,image/png,image/webp" hidden>
+        <p class="cps-hint" data-t="creator.settings.profile_picture_hint"></p>
+      </div>
+      
+      <div class="cps-field cps-field--email">
+        <label class="cps-label" for=""></label>
+        <div class="cps-email-row">
+          <input id="" type="text" class="cps-input cps-input--email-inline" data-cps-email readonly aria-readonly="true">
+          <a href="" class="cps-logout-btn"></a>
+        </div>
+        <p class="cps-hint"></p>
+      </div>
+
+      <div class="cps-field">
+        <label class="cps-label" for="cpsUsername-" data-t="creator.settings.profile_username_label"></label>
+        <input id="cpsUsername-" type="text" class="cps-input" name="username" maxlength="20" autocomplete="username" spellcheck="false" data-cps-input="username" data-cps-username-input>
+        <p class="cps-hint" data-t="creator.settings.profile_username_hint"></p>
+        <p class="cps-username-status" data-cps-username-status aria-live="polite"></p>
+      </div>
+
+      <div class="cps-grid">
+        <div class="cps-field">
+          <label class="cps-label" for="cpsFirstName-"></label>
+          <input id="cpsFirstName-" type="text" class="cps-input" name="first_name" maxlength="100" data-cps-input="first_name">
+        </div>
+        <div class="cps-field">
+          <label class="cps-label" for="cpsLastName-"></label>
+          <input id="cpsLastName-" type="text" class="cps-input" name="last_name" maxlength="100" data-cps-input="last_name">
+        </div>
+      </div>
+
+      <div class="cps-field">
+        <label class="cps-label" for="cpsAddress-"></label>
+        <input id="cpsAddress-" type="text" class="cps-input" name="address_line" maxlength="255" data-cps-input="address_line">
+      </div>
+
+      <div class="cps-grid">
+        <div class="cps-field">
+          <label class="cps-label" for="cpsCity-"></label>
+          <input id="cpsCity-" type="text" class="cps-input" name="city" maxlength="120" data-cps-input="city">
+        </div>
+        <div class="cps-field">
+          <label class="cps-label" for="cpsCountry-"></label>
+          <select id="cpsCountry-" class="cps-input" name="country" data-cps-input="country">
+            <option value=""></option>
+            
+          </select>
+        </div>
+      </div>
+
+      <div class="cps-grid">
+        <div class="cps-field">
+          <label class="cps-label" for="cpsBirthDate-"></label>
+          <input id="cpsBirthDate-" type="date" class="cps-input" name="birth_date" data-cps-input="birth_date" max="">
+          <p class="cps-hint"></p>
+        </div>
+
+        <div class="cps-field">
+          <span class="cps-label"></span>
+          <div class="cps-gender-grid" role="group" aria-label="">
+            <button type="button" class="cps-gender-option" data-cps-gender-btn="female" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M12 12v8M9 16h6M9.5 20h5"></path></svg>
+              <span></span>
+            </button>
+            <button type="button" class="cps-gender-option" data-cps-gender-btn="male" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="15" r="4"></circle><path d="M13 11l6-6M15 5h4v4"></path></svg>
+              <span></span>
+            </button>
+          </div>
+          <input type="hidden" name="gender" value="" data-cps-input="gender">
+        </div>
+      </div>
+
+      <div class="cps-actions cps-actions--hidden">
+        <button type="submit" class="cps-save-btn" data-cps-save-btn></button>
+      </div>
+      <p class="cps-status" data-cps-status></p>
+    </form>
+
+    
+      <details class="cps-delete-account cps-erase-optional cps-delete-account-disclosure cps-delete-account-disclosure--first" data-cps-erase-optional>
+        <summary class="cps-delete-account__summary">
+          <span class="cps-delete-account__summary-text" id="cps-erase-optional-heading-">Remove optional app data (keep account)</span>
+          <span class="cps-delete-account__summary-chevron" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </span>
+        </summary>
+        <div class="cps-delete-account__panel">
+          <p class="cps-delete-account__text">You can remove profile and app data we store outside Shopify without closing your customer account. Your login and Shopify order history stay with Shopify as required.</p>
+          <ul class="cps-delete-account__list" id="cps-erase-optional-details-">
+            <li>Removes: profile fields saved in our app database, uploaded photos, design limits and in-app notifications, and cancels a pending scheduled account deletion if any.</li>
+            <li>Does not remove: your Shopify customer login, or order records kept for legal retention. Your saved designs, wardrobe, favorites, mockups, and size profile data are not removed by this action — those are removed only when you fully delete your account after the grace period.</li>
+          </ul>
+          
+            <div class="cps-delete-account__api" data-cps-erase-api>
+              <div class="cps-delete-account__consents" role="group" aria-labelledby="cps-erase-optional-heading-" aria-describedby="cps-erase-optional-details-">
+                <label class="cps-delete-account__check">
+                  <input type="checkbox" data-cps-erase-consent-scope>
+                  <span>I understand which data will be removed and that my Shopify login and customer account stay active.</span>
+                </label>
+                <label class="cps-delete-account__check">
+                  <input type="checkbox" data-cps-erase-consent-privacy>
+                  <span>I have read the privacy policy (optional).</span>
+                </label>
+              </div>
+              <label class="cps-delete-account__label" for="cps-erase-confirm-email-">Confirm your account email</label>
+              <input
+                id="cps-erase-confirm-email-"
+                type="email"
+                class="cps-delete-account__email-input"
+                autocomplete="email"
+                data-cps-erase-confirm-email
+                aria-describedby="cps-erase-optional-details-"
+                placeholder=""
+              >
+              <p class="cps-delete-account__warn">We will email you a confirmation link. Optional data is removed only after you open that link. The link expires in 72 hours.</p>
+              <button type="button" class="cps-delete-account__btn cps-delete-account__btn--outline" data-cps-erase-optional-btn disabled>
+                Email me a confirmation link
+              </button>
+              <p class="cps-delete-account__api-status" data-cps-erase-status aria-live="polite"></p>
+            </div>
+          
+        </div>
+      </details>
+      <details class="cps-delete-account cps-delete-account-disclosure" data-cps-delete-account>
+        <summary class="cps-delete-account__summary">
+          <span class="cps-delete-account__summary-text" id="cps-delete-account-heading-">Delete account & data</span>
+          <span class="cps-delete-account__summary-chevron" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </span>
+        </summary>
+        <div class="cps-delete-account__panel">
+          <p class="cps-delete-account__text">You can request deletion of your customer account and associated personal data. We process requests within a reasonable time and as required by law. Some information may be kept where the law requires (for example tax or fraud prevention).</p>
+          <ul class="cps-delete-account__list" id="cps-delete-account-details-">
+            <li>Send an email request using the button below (includes your account email), or write to the shop contact address from the email you used to register.</li>
+            <li>We verify ownership of the account before deletion.</li>
+            <li>After the grace period: private and user-uploaded designs and products are removed from our systems (including public listings created from uploads). Public generated designs and products may stay in the shop and be reassigned to the Eazpire creator account. You may lose access to orders and app data in the usual way.</li>
+            <li>Billing balances, gift cards, and creator-linked data are not automatically removed by the standard shop customer deletion flow; they may be retained or handled under internal policy. Order records may remain archived where the law requires.</li>
+          </ul>
+          
+            <div class="cps-delete-account__api" data-cps-delete-api>
+              <div class="cps-delete-account__consents" role="group" aria-labelledby="cps-delete-account-heading-" aria-describedby="cps-delete-account-details-">
+                <label class="cps-delete-account__check">
+                  <input type="checkbox" data-cps-delete-consent-irreversible>
+                  <span>I understand that after the grace period my shop customer account will be permanently deleted and I will not have access to orders and app data in the usual way, except where the law requires retention.</span>
+                </label>
+                <label class="cps-delete-account__check">
+                  <input type="checkbox" data-cps-delete-consent-retention>
+                  <span>I understand that order and tax records may be kept as required by law, and that billing balances, gift cards, and creator-linked data may be retained or handled under internal policy.</span>
+                </label>
+                <label class="cps-delete-account__check">
+                  <input type="checkbox" data-cps-delete-consent-public>
+                  <span>I understand that public generated designs (not user uploads) may remain visible in the shop under the Eazpire creator account, and that uploaded designs are removed even if they were public.</span>
+                </label>
+              </div>
+              <label class="cps-delete-account__label" for="cps-delete-confirm-email-">Confirm your account email to delete</label>
+              <input
+                id="cps-delete-confirm-email-"
+                type="email"
+                class="cps-delete-account__email-input"
+                autocomplete="email"
+                data-cps-delete-confirm-email
+                aria-describedby="cps-delete-account-details-"
+                placeholder=""
+              >
+              <p class="cps-delete-account__warn">We will schedule your account for permanent deletion in 7 days and send a confirmation email. You can cancel from that email until then. Orders may remain archived for legal retention where required.</p>
+              <button type="button" class="cps-delete-account__btn cps-delete-account__btn--danger" data-cps-delete-permanent-btn disabled>
+                Schedule account deletion
+              </button>
+              <p class="cps-delete-account__api-status" data-cps-delete-status aria-live="polite"></p>
+            </div>
+          
+          <div class="cps-delete-account__actions">
+            <a class="cps-delete-account__link" href="pages/account-data-deletion">
+              Full details & steps
+            </a>
+            
+              Account and data deletion request
+              
+
+
+Please delete my customer account and associated personal data for this shop.
+
+Account email: 
+
+Thank you.
+
+
+
+              
+              <a
+                class="cps-delete-account__btn"
+                href="mailto:?subject=&body="
+              >
+                Request deletion by email
+              </a>
+            
+              <a class="cps-delete-account__btn" href="pages/account-data-deletion">
+                How to request deletion
+              </a>
+            
+          </div>
+        </div>
+      </details>
+    
+  </div>
+</div>
+
+            </div>
+            <footer class="csm-profile-footer" data-csm-profile-footer>
+              <p class="cps-status cps-status--footer" data-cps-footer-status aria-live="polite"></p>
+              <button type="button" class="cps-save-btn cps-save-btn--footer" data-cps-save-btn disabled>
+                Save profile settings
+              </button>
+            </footer>
+          </div>
+        </section>
+
+        <!-- Creator Codes Panel -->
+        <section class="csm-panel" data-csm-panel="creator-codes">
+          
+
+<div class="cc-panel" data-cc-root>
+
+  <!-- Loading -->
+  <div class="cc-loading" data-cc-loading>
+    <div class="cc-spinner"></div>
+  </div>
+
+  <!-- Not Creator: Redeem Section -->
+  <div class="cc-section cc-redeem-section" data-cc-redeem-section style="display:none">
+    <div class="csm-panel-header">
+      <h4 class="csm-panel-title" data-t="creator.settings.creator_codes_redeem_title">Become a Creator</h4>
+      <p class="csm-panel-subtitle" data-t="creator.settings.creator_codes_redeem_subtitle">Enter a Creator Code to unlock all Creator features.</p>
+    </div>
+    <div class="cc-redeem-form">
+      <div class="cc-input-group">
+        <input
+          type="text"
+          class="cc-input"
+          data-cc-redeem-input
+          placeholder="EAZ-XXXXXX"
+          maxlength="10"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="button" class="cc-btn cc-btn--primary" data-cc-redeem-btn>
+          <span data-t="creator.settings.creator_codes_redeem_btn">Redeem now</span>
+        </button>
+      </div>
+      <div class="cc-message" data-cc-redeem-message style="display:none"></div>
+    </div>
+    <div class="cc-not-creator-hint" data-cc-not-creator-hint style="display:none">
+      <p data-t="creator.settings.creator_codes_not_creator">Complete your quests to become a Creator first.</p>
+    </div>
+  </div>
+
+  <!-- Creator: Code Generate + Share Section -->
+  <div class="cc-section cc-creator-section" data-cc-creator-section style="display:none">
+    <div class="csm-panel-header">
+      <h4 class="csm-panel-title" data-t="creator.settings.creator_codes_title">Creator Codes</h4>
+      <p class="csm-panel-subtitle" data-t="creator.settings.creator_codes_subtitle">Your key to the Creator Community</p>
+    </div>
+
+    <!-- Generate Button (visible when can_generate) -->
+    <div class="cc-generate-section" data-cc-generate-section style="display:none">
+      <button type="button" class="cc-btn cc-btn--generate" data-cc-generate-btn>
+        <svg viewBox="0 0 24 24" class="cc-btn-icon"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        <span data-t="creator.settings.creator_codes_generate_btn">Unlock new Creator Code</span>
+      </button>
+    </div>
+
+    <!-- Pending sale entitlement -->
+    <div class="cc-pending-banner cc-pending-sale" data-cc-pending-sale style="display:none">
+      <div class="cc-pending-banner__glow"></div>
+      <h5 class="cc-pending-banner__title" data-t="creator.settings.creator_codes_pending_sale_title">First sale unlocked!</h5>
+      <p class="cc-pending-banner__text" data-t="creator.settings.creator_codes_pending_sale_subtitle">You earned a Creator Code from your first sale. Reveal it here — it is not shown in notifications.</p>
+      <button type="button" class="cc-btn cc-btn--generate cc-btn--reveal" data-cc-reveal-sale-btn>
+        <span data-t="creator.settings.creator_codes_reveal_btn">Show Creator Code</span>
+      </button>
+    </div>
+
+    <!-- Pending purchase entitlement -->
+    <div class="cc-pending-banner cc-pending-purchase" data-cc-pending-purchase style="display:none">
+      <div class="cc-pending-banner__glow"></div>
+      <h5 class="cc-pending-banner__title" data-t="creator.settings.creator_codes_pending_purchase_title">Purchase unlocked!</h5>
+      <p class="cc-pending-banner__text" data-t="creator.settings.creator_codes_pending_purchase_subtitle">Your order qualifies for a Creator Code. Follow the steps below to reveal it.</p>
+      <p class="cc-pending-banner__qr-hint" data-cc-purchase-qr-hint data-t="creator.settings.creator_codes_pending_purchase_qr_hint" style="display:none">Scan the QR code on your product to continue.</p>
+      <div class="cc-qr-actions" data-cc-qr-actions style="display:none">
+        <button type="button" class="cc-btn cc-btn--action" data-cc-scan-qr-btn><span data-t="creator.settings.creator_codes_scan_qr_btn">Scan QR code</span></button>
+        <button type="button" class="cc-btn cc-btn--copy" data-cc-upload-qr-btn><span data-t="creator.settings.creator_codes_scan_qr_upload_btn">Upload QR image</span></button>
+        <button type="button" class="cc-btn cc-btn--copy" data-cc-phone-qr-btn><span data-t="creator.settings.creator_codes_scan_phone_btn">Scan with phone</span></button>
+        <input type="file" accept="image/*" data-cc-qr-file-input hidden />
+      </div>
+      <div class="cc-qr-scanner" data-cc-qr-scanner hidden>
+        <video data-cc-qr-video playsinline muted></video>
+      </div>
+      <p class="cc-message" data-cc-qr-message style="display:none"></p>
+      <button type="button" class="cc-btn cc-btn--generate cc-btn--reveal" data-cc-reveal-purchase-btn style="display:none">
+        <span data-t="creator.settings.creator_codes_reveal_btn">Show Creator Code</span>
+      </button>
+    </div>
+
+    <!-- Active Code Display -->
+    <div class="cc-active-code" data-cc-active-code style="display:none">
+      <div class="cc-code-card">
+        <div class="cc-code-label" data-t="creator.settings.creator_codes_generate_subtitle">Share this code to invite others to become Creators.</div>
+        <div class="cc-code-display" data-cc-code-display></div>
+      </div>
+
+      <input type="hidden" data-cc-ref-link />
+
+      <div class="cc-action-buttons">
+        <button type="button" class="cc-btn cc-btn--action" data-cc-copy-code>
+          <svg viewBox="0 0 24 24" class="cc-btn-icon" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          <span data-cc-copy-text data-t="creator.settings.creator_codes_copy_btn">Copy</span>
+        </button>
+        <button type="button" class="cc-btn cc-btn--action" data-cc-send-user-btn style="display:none">
+          <svg viewBox="0 0 24 24" class="cc-btn-icon" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <span data-t="creator.settings.creator_codes_send_user_btn">Send to user</span>
+        </button>
+        <button type="button" class="cc-btn cc-btn--action" data-cc-pool-btn style="display:none">
+          <svg viewBox="0 0 24 24" class="cc-btn-icon" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          <span data-t="creator.settings.creator_codes_eazy_pool_btn">Eazy pool</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="cc-stats" data-cc-stats style="display:none">
+      <div class="cc-stat-card">
+        <div class="cc-stat-value" data-cc-stat-generated>0</div>
+        <div class="cc-stat-label" data-t="creator.settings.creator_codes_stats_generated">Generated</div>
+      </div>
+      <div class="cc-stat-card">
+        <div class="cc-stat-value" data-cc-stat-redeemed>0</div>
+        <div class="cc-stat-label" data-t="creator.settings.creator_codes_stats_redeemed">Redeemed</div>
+      </div>
+      <div class="cc-stat-card">
+        <div class="cc-stat-value" data-cc-stat-community>0</div>
+        <div class="cc-stat-label" data-t="creator.settings.creator_codes_stats_community">Community</div>
+      </div>
+    </div>
+
+    <!-- Creator Community (opt-in, members, bonus designs) -->
+    <div class="cc-community" data-cc-community style="display:none">
+      <div class="cc-community-header">
+        <h5 class="cc-community-title" data-t="creator.settings.creator_community_title">Creator Community</h5>
+        <p class="cc-community-subtitle" data-t="creator.settings.creator_community_subtitle">Bonus designs and 70/30 revenue split when both sides opt in.</p>
+      </div>
+
+      <label class="cc-community-toggle" data-cc-recruiter-opt-in-wrap style="display:none">
+        <input type="checkbox" data-cc-recruiter-opt-in />
+        <span data-t="creator.settings.creator_community_recruiter_opt_in">Enable community features for my recruits</span>
+      </label>
+
+      <div class="cc-community-member-optins" data-cc-member-optins style="display:none"></div>
+
+      <div class="cc-stats cc-community-stats" data-cc-community-stats style="display:none">
+        <div class="cc-stat-card">
+          <div class="cc-stat-value" data-cc-stat-active>0</div>
+          <div class="cc-stat-label" data-t="creator.settings.creator_community_stats_active">Active</div>
+        </div>
+        <div class="cc-stat-card">
+          <div class="cc-stat-value" data-cc-stat-pending>0</div>
+          <div class="cc-stat-label" data-t="creator.settings.creator_community_stats_pending">Pending designs</div>
+        </div>
+        <div class="cc-stat-card">
+          <div class="cc-stat-value" data-cc-stat-revenue>0</div>
+          <div class="cc-stat-label" data-t="creator.settings.creator_community_stats_revenue">Revenue</div>
+        </div>
+      </div>
+
+      <div class="cc-community-members" data-cc-members-section style="display:none">
+        <h6 class="cc-community-section-title" data-t="creator.settings.creator_community_members_title">Community members</h6>
+        <div class="cc-community-members-list" data-cc-members-list></div>
+      </div>
+
+      <div class="cc-community-designs" data-cc-designs-section style="display:none">
+        <h6 class="cc-community-section-title" data-t="creator.settings.creator_community_designs_title">Bonus designs</h6>
+        <div class="cc-community-designs-list" data-cc-designs-list></div>
+        <p class="cc-community-empty" data-cc-designs-empty style="display:none" data-t="creator.settings.creator_community_designs_empty">No pending bonus designs.</p>
+      </div>
+    </div>
+
+    <!-- Redeemed History -->
+    <div class="cc-history" data-cc-history style="display:none">
+      <h5 class="cc-history-title" data-t="creator.settings.creator_codes_redeemed_title">Redeemed Codes</h5>
+      <div class="cc-history-list" data-cc-history-list></div>
+      <div class="cc-history-empty" data-cc-history-empty style="display:none" data-t="creator.settings.creator_codes_redeemed_empty">
+        No codes have been redeemed yet.
+      </div>
+    </div>
+  </div>
+
+  <!-- User Picker Modal -->
+  Search by username
+  <dialog class="cc-picker-modal" data-cc-picker-modal>
+    <div class="cc-picker-modal__inner">
+      <h4 class="cc-picker-modal__title" data-t="creator.settings.creator_codes_picker_title">Send Creator Code</h4>
+      <input type="search" class="cc-picker-modal__search" data-cc-picker-search autocomplete="off" placeholder="" />
+      <p class="cc-picker-modal__hint" data-t="creator.settings.creator_codes_picker_search_hint">Type at least 2 characters to search</p>
+      <div class="cc-picker-modal__loading" data-cc-picker-loading style="display:none" data-t="creator.common.loading">Loading…</div>
+      <div class="cc-picker-modal__list" data-cc-picker-list></div>
+      <p class="cc-picker-modal__empty" data-cc-picker-empty style="display:none" data-t="creator.settings.creator_codes_picker_empty">No eligible users found</p>
+      <div class="cc-picker-modal__confirm" data-cc-picker-confirm style="display:none">
+        <p class="cc-picker-modal__confirm-text" data-cc-picker-confirm-text></p>
+        <label class="cc-picker-modal__confirm-check">
+          <input type="checkbox" data-cc-picker-confirm-check />
+          <span data-t="creator.settings.creator_codes_gift_confirm">I understand I will lose this code</span>
+        </label>
+        <div class="cc-picker-modal__confirm-actions">
+          <button type="button" class="cc-btn cc-btn--primary" data-cc-picker-send disabled>
+            <span data-t="creator.settings.creator_codes_send_user_btn">Send to user</span>
+          </button>
+          <button type="button" class="cc-btn cc-btn--danger" data-cc-picker-cancel>
+            <span data-t="creator.settings.creator_codes_gift_cancel_btn">Cancel</span>
+          </button>
+        </div>
+      </div>
+      <button type="button" class="cc-btn cc-btn--danger cc-picker-modal__close" data-cc-picker-close>
+        <span data-t="creator.settings.creator_codes_gift_cancel_btn">Cancel</span>
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Creator Community opt-in confirm -->
+  <dialog class="cc-pool-modal" data-cc-community-opt-in-modal>
+    <div class="cc-pool-modal__inner">
+      <h4 class="cc-pool-modal__title" data-cc-community-opt-in-title></h4>
+      <p class="cc-pool-modal__text" data-cc-community-opt-in-text></p>
+      <div class="cc-pool-modal__footer">
+        <button type="button" class="cc-btn cc-btn--primary" data-cc-community-opt-in-confirm>
+          <span data-t="creator.settings.creator_community_opt_in_confirm_btn">Activate</span>
+        </button>
+        <button type="button" class="cc-btn cc-btn--danger" data-cc-community-opt-in-cancel>
+          <span data-t="creator.common.cancel">Cancel</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Eazy Pool Confirm Modal -->
+  <dialog class="cc-pool-modal" data-cc-pool-modal>
+    <div class="cc-pool-modal__inner">
+      <h4 class="cc-pool-modal__title" data-t="creator.settings.creator_codes_pool_confirm_title">Eazy pool</h4>
+      <p class="cc-pool-modal__text" data-cc-pool-confirm-text></p>
+      <label class="cc-pool-modal__confirm">
+        <input type="checkbox" data-cc-pool-confirm-check />
+        <span data-t="creator.settings.creator_codes_gift_confirm">I understand I will lose this code</span>
+      </label>
+      <div class="cc-pool-modal__footer">
+        <button type="button" class="cc-btn cc-btn--primary" data-cc-pool-send disabled>
+          <span data-t="creator.settings.creator_codes_eazy_pool_btn">Eazy pool</span>
+        </button>
+        <button type="button" class="cc-btn cc-btn--danger" data-cc-pool-cancel>
+          <span data-t="creator.settings.creator_codes_gift_cancel_btn">Cancel</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Code Reveal Animation Overlay -->
+  <div class="cc-reveal-overlay" data-cc-reveal-overlay style="display:none">
+    <div class="cc-reveal-container">
+      <div class="cc-reveal-particles" data-cc-particles></div>
+      <div class="cc-reveal-flash" data-cc-flash></div>
+      <div class="cc-reveal-code" data-cc-reveal-code></div>
+      <div class="cc-reveal-text" data-t="creator.settings.creator_codes_reveal_text">Your new Creator Code</div>
+    </div>
+  </div>
+</div>
+
+        </section>
+
+        <!-- Community Panel -->
+        <section class="csm-panel" data-csm-panel="community">
+          
+
+
+<div class="community-panel community-panel--" data-community-root data-community-skin="">
+  <div class="cp-wrap">
+    <header class="cp-header">
+      <div class="cp-title">
+        <h1 class="cp-title__h1">Title</h1>
+        <p class="cp-title__sub">Subtitle</p>
+      </div>
+    </header>
+
+    <div class="cp-subtabs" role="tablist" aria-label="Analytics tabs aria">
+      <button type="button" class="cp-subtab cp-subtab--active" data-cp-subtab="overview" role="tab" aria-selected="true">
+        Overview tab
+      </button>
+      <button type="button" class="cp-subtab" data-cp-subtab="analytics" role="tab" aria-selected="false">
+        Analytics tab
+      </button>
+    </div>
+
+    <section class="cp-subpanel cp-subpanel--overview is-active" data-cp-subpanel="overview">
+
+    <div class="cp-referral cp-referral-section" data-cp-referral-section style="display:none;">
+      <div class="cp-referral-header">
+        <h2 class="cp-referral-title">Referral link title</h2>
+        <p class="cp-referral-hint">Referral link hint</p>
+      </div>
+      <div class="cp-referral-row">
+        <input type="text" class="cp-referral-input" data-cp-referral-input readonly aria-label="Referral link title">
+        <button type="button" class="cp-referral-copy button button--secondary" data-cp-referral-copy aria-label="Copy link">
+          Copy link
+        </button>
+        
+<button
+  type="button"
+  class="share-button button button--plain share-button--card"
+  data-share-button
+  aria-label="Share"
+  data-share-product-url=""
+  data-share-product-title=""
+>
+  <span class="share-button__icon" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+    </svg>
+  </span>
+</button>
+
+      </div>
+    </div>
+
+    <dialog class="cp-ref-links-modal" data-cp-ref-links-modal>
+      <div class="cp-ref-links-modal__content">
+        <div class="cp-ref-links-modal__header">
+          <div>
+            <h3 class="cp-ref-links-modal__title">Ref links manage title</h3>
+            <p class="cp-ref-links-modal__subtitle">Ref links manage subtitle</p>
+          </div>
+          <button type="button" class="cp-ref-links-modal__close" data-cp-ref-links-close aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="cp-ref-links-modal__list" data-cp-ref-links-list></div>
+
+        <div class="cp-ref-links-modal__add">
+          <label class="cp-ref-links-modal__label" for="cpRefLinkSlugInput">Ref links slug label</label>
+          <input
+            id="cpRefLinkSlugInput"
+            type="text"
+            class="cp-ref-links-modal__input cp-ref-links-modal__input--slug"
+            data-cp-ref-links-slug
+            maxlength="24"
+            placeholder="Ref links slug placeholder"
+            autocomplete="off"
+          >
+          <p class="cp-ref-links-modal__preview" data-cp-ref-links-preview></p>
+          <p class="cp-ref-links-modal__hint">Ref links slug hint</p>
+
+          <label class="cp-ref-links-modal__label" for="cpRefLinkNameInput">Ref links name label</label>
+          <input
+            id="cpRefLinkNameInput"
+            type="text"
+            class="cp-ref-links-modal__input"
+            data-cp-ref-links-name
+            maxlength="80"
+            placeholder="Ref links name placeholder"
+          >
+
+          <label class="cp-ref-links-modal__label" for="cpRefLinkDescInput">Ref links description label</label>
+          <textarea
+            id="cpRefLinkDescInput"
+            class="cp-ref-links-modal__textarea"
+            data-cp-ref-links-description
+            rows="3"
+            maxlength="200"
+            placeholder="Ref links description placeholder"
+          ></textarea>
+
+          <button type="button" class="cp-ref-links-modal__add-btn" data-cp-ref-links-add>
+            Ref links add button
+          </button>
+          <p class="cp-ref-links-modal__error" data-cp-ref-links-error hidden></p>
+        </div>
+      </div>
+    </dialog>
+
+    <details class="cp-netinfo" open>
+      <summary>
+        <div class="cp-ni-left">
+          <div class="cp-ni-badge">i</div>
+          <div class="cp-ni-meta">
+            <div class="cp-ni-title">Network info</div>
+            <div class="cp-ni-sub">Network info sub</div>
+          </div>
+        </div>
+        <div class="cp-ni-chev" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </summary>
+      <div class="cp-ni-body">
+        <div class="cp-ni-kv cp-net-kv">
+          <div class="cp-kvc cp-kvc--partners">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12Z"/><path d="M4.5 20.2c1.8-4.1 5.2-6.2 7.5-6.2s5.7 2.1 7.5 6.2" stroke-linecap="round"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Partners 1 10</span><span class="cp-v" data-cp-stat="partners">0</span></div>
+          </div>
+          <div class="cp-kvc cp-kvc--designs">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Designs</span><span class="cp-v" data-cp-stat="designs">0</span></div>
+          </div>
+          <div class="cp-kvc cp-kvc--products">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Products</span><span class="cp-v" data-cp-stat="products">0</span></div>
+          </div>
+          <div class="cp-kvc cp-kvc--sales">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Sales</span><span class="cp-v" data-cp-stat="sales">0</span></div>
+          </div>
+          <div class="cp-kvc cp-kvc--profit">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Profit</span><span class="cp-v" data-cp-stat="profit">–</span></div>
+          </div>
+        </div>
+        <div class="cp-footnote">Stats hint</div>
+      </div>
+    </details>
+
+    <details class="cp-netinfo cp-du-section" data-cp-du-section>
+      <summary>
+        <div class="cp-ni-left">
+          <div class="cp-ni-badge">👤</div>
+          <div class="cp-ni-meta">
+            <div class="cp-ni-title cp-du-title">You</div>
+            <div class="cp-ni-sub cp-du-sub">You stats hint</div>
+          </div>
+        </div>
+        <div class="cp-ni-chev" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </summary>
+      <div class="cp-ni-body cp-du-body">
+        <div class="cp-ni-kv cp-du-kv">
+          <div class="cp-kvc cp-kvc--designs">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Designs</span><span class="cp-v" data-cp-du-stat="designs">0</span></div>
+          </div>
+          <div class="cp-kvc cp-kvc--products">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Products</span><span class="cp-v" data-cp-du-stat="products">0</span></div>
+          </div>
+          <div class="cp-kvc cp-kvc--sales">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Sales</span><span class="cp-v" data-cp-du-stat="sales">0</span></div>
+          </div>
+          <div class="cp-kvc cp-kvc--profit">
+            <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+            <div class="cp-kvc-inner"><span class="cp-k">Profit</span><span class="cp-v" data-cp-du-stat="profit">–</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="cp-loading cp-loading-el">Loading</div>
+    <div class="cp-empty cp-empty-el" style="display:none;">Empty</div>
+    <div class="cp-card cp-levels-el" style="display:none;"></div>
+
+    <p class="cp-footnote cp-footnote--bottom">Level hint</p>
+    </section>
+
+    <section class="cp-subpanel cp-subpanel--analytics" data-cp-subpanel="analytics" hidden>
+      <div class="cp-analytics" data-cp-analytics-root>
+        <div class="cp-analytics__header">
+          <h2 class="cp-analytics__title">Analytics title</h2>
+          <p class="cp-analytics__subtitle">Analytics subtitle</p>
+        </div>
+
+        <div class="cp-analytics-filters" data-cp-analytics-filters>
+          <div class="cp-af-row">
+            <label class="cp-af-field">
+              <span class="cp-af-label">Analytics period</span>
+              <select class="cp-af-select" data-cp-af-period>
+                <option value="7">Analytics last 7 days</option>
+                <option value="30" selected>Analytics last 30 days</option>
+                <option value="90">Analytics last 90 days</option>
+                <option value="365">Analytics last year</option>
+              </select>
+            </label>
+            <label class="cp-af-field">
+              <span class="cp-af-label">Analytics compare</span>
+              <select class="cp-af-select" data-cp-af-compare>
+                <option value="0">Analytics compare off</option>
+                <option value="1" selected>Analytics compare previous</option>
+              </select>
+            </label>
+          </div>
+          <div class="cp-af-row">
+            <label class="cp-af-field">
+              <span class="cp-af-label">Analytics link</span>
+              <select class="cp-af-select" data-cp-af-link>
+                <option value="">Analytics all links</option>
+              </select>
+            </label>
+            <label class="cp-af-field">
+              <span class="cp-af-label">Analytics source</span>
+              <select class="cp-af-select" data-cp-af-source>
+                <option value="">Analytics all sources</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="cp-analytics-kpis" data-cp-analytics-kpis>
+          <div class="cp-analytics-kpi" data-kpi="clicks"><span class="cp-ak-label">Analytics clicks</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="unique_clicks"><span class="cp-ak-label">Analytics unique clicks</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="new_users"><span class="cp-ak-label">Analytics new users</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="sales"><span class="cp-ak-label">Analytics sales</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="revenue"><span class="cp-ak-label">Analytics revenue</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="new_creators"><span class="cp-ak-label">Analytics new creators</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+        </div>
+
+        <div class="cp-analytics-card">
+          <div class="cp-analytics-card__title">Analytics funnel</div>
+          <div class="cp-funnel-list" data-cp-funnel-list></div>
+        </div>
+
+        <div class="cp-analytics-grid2">
+          <div class="cp-analytics-card">
+            <div class="cp-analytics-card__title">Analytics top links</div>
+            <div class="cp-bar-list" data-cp-top-links-bars></div>
+          </div>
+          <div class="cp-analytics-card">
+            <div class="cp-analytics-card__title">Analytics top sources</div>
+            <div class="cp-bar-list" data-cp-top-sources-bars></div>
+          </div>
+        </div>
+
+        <div class="cp-analytics-card">
+          <div class="cp-analytics-card__title">Analytics event feed</div>
+          <div class="cp-analytics-table-wrap">
+            <table class="cp-analytics-table">
+              <thead>
+                <tr>
+                  <th>Analytics col time</th>
+                  <th>Analytics col link</th>
+                  <th>Analytics col source</th>
+                  <th>Analytics col outcome</th>
+                  <th>Analytics col value</th>
+                </tr>
+              </thead>
+              <tbody data-cp-analytics-events-body></tbody>
+            </table>
+          </div>
+          <button type="button" class="cp-analytics-load-more" data-cp-analytics-load-more hidden>
+            Analytics load more
+          </button>
+        </div>
+
+        <div class="cp-loading cp-analytics-loading" data-cp-analytics-loading>Loading</div>
+        <div class="cp-empty cp-analytics-empty" data-cp-analytics-empty hidden>Analytics empty</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="cp-modal-backdrop cp-modal-backdrop-el" aria-hidden="true">
+    <div class="cp-modal" role="dialog" aria-modal="true" aria-label="Partner">
+      <div class="cp-modal-header">
+        <div class="cp-modal-title">
+          <h2 class="cp-modal-title-h2">Partner</h2>
+          <div class="cp-modal-subtitle cp-modal-subtitle-el"></div>
+        </div>
+        <button class="cp-xbtn cp-close-modal-btn" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="cp-tabs" role="tablist" aria-label="Partner tabs aria">
+        <button class="cp-tab cp-tab--active" data-cp-tab="info" role="tab" aria-selected="true">Partner info</button>
+        <button class="cp-tab" data-cp-tab="designs" role="tab" aria-selected="false">Designs</button>
+        <button class="cp-tab" data-cp-tab="products" role="tab" aria-selected="false">Products</button>
+      </div>
+
+      <div class="cp-modal-body">
+        <div class="cp-panel cp-panel--active" data-cp-panel="info">
+          <div class="cp-kv cp-kv-grid"></div>
+          <div class="cp-section-title">Creator names</div>
+          <div class="cp-list cp-creator-list"></div>
+          <details class="cp-downline cp-downline-el">
+            <summary>
+              <div class="cp-dl-left">
+                <div class="cp-dl-title cp-downline-title"></div>
+                <div class="cp-dl-sub">Downline sub</div>
+              </div>
+              <div class="cp-dl-chev" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </summary>
+            <div class="cp-dl-body cp-downline-body"></div>
+          </details>
+        </div>
+        <div class="cp-panel" data-cp-panel="designs">
+          <div class="cp-toolbar">
+            <div class="cp-label">Filter creator</div>
+            <select class="cp-select cp-design-creator-filter"></select>
+          </div>
+          <div class="cp-grid cp-design-grid"></div>
+        </div>
+        <div class="cp-panel" data-cp-panel="products">
+          <div class="cp-toolbar">
+            <div class="cp-label">Filter creator</div>
+            <select class="cp-select cp-product-creator-filter"></select>
+          </div>
+          <div class="cp-grid cp-product-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <template class="cp-person-icon-tpl">
+    <svg class="cp-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 12a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12Z" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M4.5 20.2c1.8-4.1 5.2-6.2 7.5-6.2s5.7 2.1 7.5 6.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+  </template>
+</div>
+
+        </section>
+
+          <!-- Creator Names Panel -->
+        <section class="csm-panel" data-csm-panel="creator-names">
+          
+
+<div class="creator-names-panel creator-names-panel--compact" id="creator-names-panel" data-no-translate="true">
+
+  <div class="creator-names-panel__content">
+
+    <label class="creator-names-panel__field">
+      <span>New name</span>
+      <input
+        type="text"
+        id="creator-settings-name"
+        class="creator-names-panel__input"
+        placeholder="Placeholder"
+      >
+    </label>
+
+    <div class="creator-names-panel__actions">
+      <button
+        type="button"
+        id="creator-settings-save"
+        class="creator-names-panel__btn creator-names-panel__btn--primary"
+      >
+        Add
+      </button>
+    </div>
+
+    <div class="creator-names-panel__available-wrap">
+      <p class="creator-names-panel__available-title">
+        Your names short
+        <span class="creator-names-panel__available-counter" id="creator-available-count"></span>
+      </p>
+      <div class="creator-names-panel__available-list" id="creator-available-list" data-no-translate="true">
+      </div>
+      <div class="creator-names-panel__available-loading" id="creator-available-loading">
+        Loading
+      </div>
+    </div>
+
+    <p id="creator-settings-status" class="creator-names-panel__note" style="display:none;"></p>
+
+  </div>
+
+  <div style="display:none;" data-creator-names-storage></div>
+
+  <script type="application/json" data-creator-names-data style="display:none;">
+    {}
+  </script>
+
+  <script>
+    window.CreatorI18n = window.CreatorI18n || {};
+    window.CreatorI18n.settings_names_usage = Usage label;
+    window.CreatorI18n.settings_names_empty = Empty list;
+    window.CreatorI18n.settings_names_loading = Loading;
+    window.CreatorI18n.settings_names_added_ok = Added ok;
+    window.CreatorI18n.settings_names_add_error = Add error;
+    window.CreatorI18n.settings_names_invalid_chars = Invalid chars;
+    window.CreatorI18n.settings_names_name_taken = Name taken;
+    window.CreatorI18n.settings_names_too_short = Too short;
+    window.CreatorI18n.settings_names_limit_reached = Limit reached;
+    window.CreatorI18n.settings_names_already_added = Already added;
+    window.CreatorI18n.editCreatorProfile = Edit profile;
+  </script>
+
+</div>
+
+<style>
+  .creator-names-panel--compact{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .creator-names-panel__content{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .creator-names-panel__field{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    font-size:14px;
+  }
+
+  .creator-names-panel__field span{
+    font-weight:600;
+    color:var(--csm-text);
+  }
+
+  .creator-names-panel__input{
+    border-radius:8px;
+    border:1px solid var(--csm-border-2);
+    padding:10px 12px;
+    font-size:14px;
+    width:100%;
+    background:var(--csm-modal-bg-2);
+    color:var(--csm-text);
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+
+  .creator-names-panel__input:focus{
+    outline:none;
+    border-color:var(--csm-accent);
+    box-shadow:0 0 0 2px var(--csm-accent-soft);
+  }
+
+  .creator-names-panel__input::placeholder{
+    color:var(--csm-muted);
+  }
+
+  .creator-names-panel__actions{
+    display:flex;
+    justify-content:flex-start;
+    gap:12px;
+  }
+
+  .creator-names-panel__btn{
+    border-radius:8px;
+    padding:10px 20px;
+    font-size:14px;
+    cursor:pointer;
+    border:1px solid transparent;
+    font-weight:500;
+    transition:background-color .15s ease, border-color .15s ease, color .15s ease;
+  }
+
+  .creator-names-panel__btn--primary{
+    background:var(--csm-accent);
+    color:#111827;
+    border-color:var(--csm-accent);
+  }
+
+  .creator-names-panel__btn--primary:hover:enabled{
+    background:var(--csm-accent-hover);
+    border-color:var(--csm-accent-hover);
+  }
+
+  .creator-names-panel__btn--primary:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+  }
+
+  .creator-names-panel__available-wrap{
+    margin-top:4px;
+    border-top:1px solid var(--csm-border);
+    padding-top:12px;
+  }
+
+  .creator-names-panel__available-title{
+    margin:0 0 10px;
+    font-size:14px;
+    font-weight:600;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    color:var(--csm-text);
+  }
+
+  .creator-names-panel__available-counter{
+    font-weight:400;
+    font-size:12px;
+    color:var(--csm-muted);
+  }
+
+  .creator-names-panel__available-list{
+    margin-bottom:0;
+    max-height:220px;
+    overflow-y:auto;
+    border:1px solid var(--csm-border-2);
+    border-radius:8px;
+    background:var(--csm-modal-bg-2);
+  }
+
+  .creator-names-panel__available-loading{
+    padding:16px;
+    text-align:center;
+    font-size:13px;
+    color:var(--csm-muted);
+  }
+
+  .creator-names-panel__available-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 16px;
+    border-bottom:1px solid var(--csm-border-2);
+    cursor:pointer;
+    font-size:13px;
+    transition:background-color .15s ease;
+  }
+
+  .creator-names-panel__available-item:last-child{
+    border-bottom:none;
+  }
+
+  .creator-names-panel__available-item:hover{
+    background:var(--csm-modal-bg-1);
+  }
+
+  .creator-names-panel__available-item.is-owned{
+    background:var(--csm-accent-soft);
+    border-left:3px solid var(--csm-accent);
+  }
+
+  .creator-names-panel__edit-icon{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--csm-muted);
+    opacity:0.6;
+    transition:opacity .15s ease, color .15s ease;
+  }
+
+  .creator-names-panel__available-item:hover .creator-names-panel__edit-icon{
+    opacity:1;
+    color:var(--csm-accent);
+  }
+
+  .creator-names-panel__available-name{
+    font-weight:500;
+    color:var(--csm-text);
+  }
+
+  .creator-names-panel__note{
+    margin:8px 0 0;
+    font-size:13px;
+    color:var(--csm-muted);
+  }
+
+  .creator-names-panel__note--error{ color:#fca5a5; }
+  .creator-names-panel__note--success{ color:#6ee7b7; }
+
+  [data-no-translate],
+  [data-no-translate] * { }
+
+  @media (max-width: 767px){
+    .creator-names-panel__actions{ flex-direction:column; gap:8px; }
+    .creator-names-panel__btn{ width:100%; padding:12px; }
+    .creator-names-panel__available-list{ max-height:180px; }
+    .creator-names-panel__available-item{ padding:8px 12px; font-size:12px; }
+  }
+</style>
+
+        </section>
+
+        <section class="csm-panel" data-csm-panel="level" hidden aria-hidden="true" style="display:none !important">
+          
+        </section>
+
+        <!-- EAZ Panel -->
+        <section class="csm-panel" data-csm-panel="eaz">
+          <div class="csm-panel-content csm-panel-content--eaz">
+            
+
+
+
+
+  
+  
+  
+  
+
+
+<div class="creator-eaz-panel" id="creatorEazPanel" data-free-cap="50" data-cost-design-generate="" data-cost-design-upload="" data-eaz-admin-test="true">
+  <div class="creator-eaz-tabs" role="tablist" aria-label="Eaz tabs aria">
+    <button type="button" class="creator-eaz-tab" role="tab" id="eaz-tab-starter" aria-selected="false" aria-controls="eaz-panel-starter" data-eaz-subtab="starter" hidden>
+      <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <span class="creator-eaz-tab__label">Eaz tab starter</span>
+    </button>
+    <button type="button" class="creator-eaz-tab is-active" role="tab" id="eaz-tab-balance" aria-selected="true" aria-controls="eaz-panel-balance" data-eaz-subtab="balance">
+      <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      <span class="creator-eaz-tab__label">Eaz tab balance</span>
+    </button>
+    <button type="button" class="creator-eaz-tab" role="tab" id="eaz-tab-logs" aria-selected="false" aria-controls="eaz-panel-logs" data-eaz-subtab="logs">
+      <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+      <span class="creator-eaz-tab__label">Eaz tab logs</span>
+    </button>
+    <button type="button" class="creator-eaz-tab" role="tab" id="eaz-tab-buy" aria-selected="false" aria-controls="eaz-panel-buy" data-eaz-subtab="buy">
+      <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span class="creator-eaz-tab__label">Eaz tab buy</span>
+    </button>
+    <button type="button" class="creator-eaz-tab" role="tab" id="eaz-tab-costs" aria-selected="false" aria-controls="eaz-panel-costs" data-eaz-subtab="costs">
+      <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      <span class="creator-eaz-tab__label">Eaz tab costs</span>
+    </button>
+  </div>
+
+  <div class="creator-eaz-panels">
+    <div class="creator-eaz-panel-pane" id="eaz-panel-starter" role="tabpanel" aria-labelledby="eaz-tab-starter" data-eaz-pane="starter" hidden>
+      <div class="creator-eaz-wallet-lock-banner" role="status" hidden data-eaz-lock-banner>
+        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Eaz wallet locked hint</p>
+      </div>
+      <div class="creator-eaz-starter-head">
+        <h3 class="creator-eaz-starter-title">Eaz starter heading</h3>
+        <button type="button" class="creator-eaz-starter-info-btn" id="eazStarterInfoBtn" aria-expanded="false" aria-controls="eazStarterInfoPanel" aria-label="Eaz starter info btn aria">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 16v-4M12 8h.01"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="creator-eaz-starter-info-panel" id="eazStarterInfoPanel" hidden role="region" aria-label="Eaz starter info title">
+        <p class="creator-eaz-starter-info-body" data-t="creator.settings.eaz_starter_info_body">Eaz starter info body</p>
+      </div>
+      <div class="creator-eaz-starter-summary">
+        <div class="creator-eaz-starter-summary-card">
+          <span class="creator-eaz-starter-summary-label">Eaz starter generate label</span>
+          <span class="creator-eaz-starter-summary-val" id="eazStarterGenLine">—</span>
+        </div>
+        <div class="creator-eaz-starter-summary-card">
+          <span class="creator-eaz-starter-summary-label">Eaz starter upload label</span>
+          <span class="creator-eaz-starter-summary-val" id="eazStarterUploadLine">—</span>
+        </div>
+      </div>
+      <p class="creator-eaz-starter-loading" id="eazStarterLoading" hidden>Eaz starter loading</p>
+      <div class="creator-eaz-starter-kind" role="tablist" aria-label="Eaz starter kind tabs aria">
+        <button type="button" class="creator-eaz-starter-kind-btn is-active" role="tab" id="eazStarterKindGenerated" aria-selected="true" aria-controls="eazStarterGrid" data-starter-kind="generated">Eaz starter kind generated</button>
+        <button type="button" class="creator-eaz-starter-kind-btn" role="tab" id="eazStarterKindUploaded" aria-selected="false" aria-controls="eazStarterGrid" data-starter-kind="uploaded">Eaz starter kind uploaded</button>
+      </div>
+      <div class="creator-eaz-starter-grid-shell">
+        <div class="creator-eaz-starter-grid" id="eazStarterGrid" role="list" aria-labelledby="eazStarterKindGenerated"></div>
+        <p class="creator-eaz-starter-empty" id="eazStarterEmpty" hidden>Eaz starter grid empty</p>
+      </div>
+    </div>
+
+    <div class="creator-eaz-panel-pane is-active" id="eaz-panel-balance" role="tabpanel" aria-labelledby="eaz-tab-balance" data-eaz-pane="balance">
+      <div class="creator-eaz-wallet-lock-banner" role="status" hidden data-eaz-lock-banner>
+        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Eaz wallet locked hint</p>
+      </div>
+      <div class="creator-eaz-balance-starter-view" id="eazBalanceStarterView" hidden>
+        <h3 class="creator-eaz-starter-title">Eaz starter heading</h3>
+        <div class="creator-eaz-starter-summary">
+          <div class="creator-eaz-starter-summary-card">
+            <span class="creator-eaz-starter-summary-label">Eaz starter generate label</span>
+            <span class="creator-eaz-starter-summary-val" id="eazBalanceGenLine">—</span>
+          </div>
+          <div class="creator-eaz-starter-summary-card">
+            <span class="creator-eaz-starter-summary-label">Eaz starter upload label</span>
+            <span class="creator-eaz-starter-summary-val" id="eazBalanceUploadLine">—</span>
+          </div>
+        </div>
+        <p class="creator-eaz-starter-info-body creator-eaz-balance-starter-info" data-t="creator.settings.eaz_starter_info_body">Eaz starter info body</p>
+      </div>
+      <div class="creator-eaz-balance-wallet-view" id="eazBalanceWalletView">
+      <div class="creator-eaz-wallet-cards">
+        <article class="creator-eaz-wallet-card creator-eaz-wallet-card--eazg">
+          <header class="creator-eaz-wallet-card__head">
+            <span class="creator-eaz-wallet-card__title">Eazg title</span>
+            <span class="creator-eaz-wallet-card__hint">Eazg subtitle</span>
+          </header>
+          <p class="creator-eaz-wallet-card__amount"><span id="creatorEazEazgTotal">—</span> <span class="creator-eaz-wallet-card__unit">EAZG</span></p>
+          <div class="creator-eaz-wallet-card__rows">
+            <div class="creator-eaz-wallet-card__row">
+              <span class="creator-eaz-wallet-card__row-label">Eazg free label</span>
+              <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazFree">—</span> / <span class="creator-eaz-free-cap">50</span></span>
+            </div>
+            <div class="creator-eaz-wallet-card__row">
+              <span class="creator-eaz-wallet-card__row-label">Eazg purchased label</span>
+              <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazPurchased">—</span> EAZG</span>
+            </div>
+          </div>
+          <p class="creator-eaz-refill" id="creatorEazRefill">Eaz refill loading</p>
+          <div class="creator-eaz-reset-countdown-wrap">
+            <div class="creator-eaz-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="" id="creatorEazProgressBar" aria-label="Eaz progress aria">
+              <div class="creator-eaz-progress-fill" id="creatorEazProgressFill"></div>
+            </div>
+            <p class="creator-eaz-countdown-label" id="creatorEazCountdown" aria-live="polite"></p>
+          </div>
+        </article>
+
+        <article class="creator-eaz-wallet-card creator-eaz-wallet-card--eazc" id="creatorEazEazcCard">
+          <header class="creator-eaz-wallet-card__head">
+            <span class="creator-eaz-wallet-card__title">Eazc title</span>
+            <span class="creator-eaz-wallet-card__hint">Eazc subtitle</span>
+          </header>
+          <div class="creator-eaz-wallet-card__rows">
+            <div class="creator-eaz-wallet-card__row">
+              <span class="creator-eaz-wallet-card__row-label">Eazc total label</span>
+              <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazEarnedTotal">—</span> EAZC</span>
+            </div>
+            <div class="creator-eaz-wallet-card__row">
+              <span class="creator-eaz-wallet-card__row-label">Eazc available label</span>
+              <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazEarnedAvailable">—</span> EAZC</span>
+            </div>
+            <div class="creator-eaz-wallet-card__row">
+              <span class="creator-eaz-wallet-card__row-label">Eazc locked label</span>
+              <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazEarnedLocked">—</span> EAZC</span>
+            </div>
+          </div>
+
+          <div class="creator-eaz-earned-convert creator-eaz-earned-convert--to-eazg" id="creatorEazcToEazgConvert" hidden>
+            <h4 class="creator-eaz-earned-convert__section-title">Eazc convert to eazg title</h4>
+            <p class="creator-eaz-earned-convert__hint">Eazc convert to eazg hint</p>
+            <div class="creator-eaz-earned-convert__amount-row">
+              <div class="creator-eaz-earned-convert__field">
+                <label class="creator-eaz-earned-convert__label" for="creatorEazcToEazgAmount">Eazc convert amount label</label>
+                <input type="number" class="creator-eaz-earned-convert__input" id="creatorEazcToEazgAmount" min="1" step="0.01" inputmode="decimal">
+              </div>
+              <div class="creator-eaz-earned-convert__avail" aria-live="polite">
+                <span class="creator-eaz-earned-convert__avail-label">Eazc convert available label</span>
+                <span class="creator-eaz-earned-convert__avail-value" id="creatorEazcConvertAvail">— EAZC</span>
+              </div>
+            </div>
+            <p class="creator-eaz-earned-convert__preview" id="creatorEazcToEazgPreview" aria-live="polite"></p>
+            <div class="creator-eaz-earned-convert__actions">
+              <button type="button" class="creator-eaz-earned-convert__btn" id="creatorEazcToEazgBtn">Eazc convert to eazg btn</button>
+            </div>
+          </div>
+
+          <div class="creator-eaz-earned-convert creator-eaz-earned-convert--cashout" id="creatorEazEarnedConvert" hidden>
+            <h4 class="creator-eaz-earned-convert__section-title">Eazc cashout title</h4>
+            <p class="creator-eaz-earned-convert__hint" data-t="creator.settings.eaz_convert_hint">Eaz convert hint</p>
+            <div class="creator-eaz-earned-convert__amount-row">
+              <div class="creator-eaz-earned-convert__field">
+                <label class="creator-eaz-earned-convert__label" for="creatorEazConvertAmount">Eaz convert amount label</label>
+                <input type="number" class="creator-eaz-earned-convert__input" id="creatorEazConvertAmount" min="100" step="1" inputmode="numeric">
+              </div>
+              <div class="creator-eaz-earned-convert__avail" aria-live="polite">
+                <span class="creator-eaz-earned-convert__avail-label" data-t="creator.settings.eaz_convert_available_label">Eaz convert available label</span>
+                <span class="creator-eaz-earned-convert__avail-value" id="creatorEazConvertAvail">— EAZC</span>
+              </div>
+            </div>
+            <div class="creator-eaz-earned-convert__actions">
+              <button type="button" class="creator-eaz-earned-convert__btn" id="creatorEazConvertFiatBtn" data-t="creator.settings.eaz_convert_fiat">Eaz convert fiat</button>
+              <button type="button" class="creator-eaz-earned-convert__btn creator-eaz-earned-convert__btn--secondary" id="creatorEazConvertGcBtn" data-t="creator.settings.eaz_convert_gift_card">Eaz convert gift card</button>
+            </div>
+            <p class="creator-eaz-earned-convert__preview" id="creatorEazConvertPreview" aria-live="polite"></p>
+          </div>
+        </article>
+      </div>
+      </div>
+    </div>
+
+    <div class="creator-eaz-panel-pane" id="eaz-panel-logs" role="tabpanel" aria-labelledby="eaz-tab-logs" data-eaz-pane="logs" hidden>
+      <div class="creator-eaz-wallet-lock-banner" role="status" hidden data-eaz-lock-banner>
+        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Eaz wallet locked hint</p>
+      </div>
+      <div class="creator-eaz-log-subtabs" role="tablist" aria-label="Eaz logs sub aria">
+        <button type="button" class="creator-eaz-log-subtab is-active" role="tab" aria-selected="true" data-eaz-log-filter="all">Eaz logs sub all</button>
+        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="purchased">Eaz logs sub purchased</button>
+        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="free">Eaz logs sub free</button>
+        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="usage">Eaz logs sub usage</button>
+      </div>
+      <ul class="creator-eaz-logs" id="creatorEazLogsList"></ul>
+      <p class="creator-eaz-logs-empty" id="creatorEazLogsEmpty" hidden>Eaz logs empty</p>
+    </div>
+
+    <div class="creator-eaz-panel-pane" id="eaz-panel-buy" role="tabpanel" aria-labelledby="eaz-tab-buy" data-eaz-pane="buy" hidden>
+      <div class="creator-eaz-wallet-lock-banner" role="status" hidden data-eaz-lock-banner>
+        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Eaz wallet locked hint</p>
+      </div>
+      <p class="creator-eaz-buy-intro">Eaz buy intro</p>
+      <div class="creator-eaz-grid" id="creatorEazGrid" role="list"></div>
+    </div>
+
+    <div class="creator-eaz-panel-pane" id="eaz-panel-costs" role="tabpanel" aria-labelledby="eaz-tab-costs" data-eaz-pane="costs" hidden>
+      <p class="creator-eaz-costs-intro">Eaz costs intro</p>
+      <ul class="creator-eaz-costs-list" id="creatorEazCostsList" role="list"></ul>
+      <p class="creator-eaz-costs-loading" id="creatorEazCostsLoading" hidden>Eaz costs loading</p>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="creator-eaz-packages-json">
+[
+  {"eaz":150,"priceUSD":19.99,"recommended":false,"label":"150 EAZG"},
+  {"eaz":410,"priceUSD":44.99,"recommended":false,"label":"410 EAZG"},
+  {"eaz":1050,"priceUSD":99.99,"recommended":true,"label":"1050 EAZG"}
+]
+</script>
+
+<script>
+  window.CreatorI18n = window.CreatorI18n || {};
+  window.CreatorI18n.eazRefillPrefix = Eaz refill prefix;
+  window.CreatorI18n.eazUntilReset = Eaz until reset;
+  window.CreatorI18n.eaz_wallet_locked_hint = Eaz wallet locked hint;
+  window.CreatorI18n.eaz_enter_creator_code_cta = Eaz enter creator code cta;
+  window.CreatorI18n.eazShopCta = Eaz shop cta;
+  window.CreatorI18n.eazPkgGensTpl = Eaz pkg gens tpl;
+  window.CreatorI18n.eazPkgDiscount = Eaz pkg discount;
+  window.CreatorI18n.eazPkgPriceUsd = Eaz pkg price usd;
+  window.CreatorI18n.eazPkgRecommended = Eaz pkg recommended badge;
+  window.CreatorI18n.eazPkgPer10Tpl = Eaz pkg per 10 tpl;
+  window.CreatorI18n.eazPkgBaseline = Eaz pkg baseline comparison;
+  window.CreatorI18n.eazStripeFailed = Eaz stripe failed;
+  window.CreatorI18n.eazCheckoutNeedAccount = Eaz checkout need account;
+  window.CreatorI18n.eazLogsEmptyFiltered = Eaz logs empty filtered;
+  window.CreatorI18n.eazLogsEmptyDefault = Eaz logs empty;
+  window.CreatorI18n.eazLogDebitSplitTpl = Eaz log debit split;
+  window.CreatorI18n.eazLedgerReasonEazPackDryRun = Eaz ledger reason eaz pack dry run;
+  window.CreatorI18n.eazAdminTestBuy = Eaz admin test buy;
+  window.CreatorI18n.eazAdminTestBuyConfirm = Eaz admin test buy confirm;
+  window.CreatorI18n.eazAdminTestBuyFail = Eaz admin test buy fail;
+  window.CreatorI18n.eazAdminTestBuyForbidden = Eaz admin test buy forbidden;
+  window.CreatorI18n.eaz_tab_starter = Eaz tab starter;
+  window.CreatorI18n.eaz_starter_summary_tpl = Eaz starter summary tpl;
+  window.CreatorI18n.eaz_starter_loading = Eaz starter loading;
+  window.CreatorI18n.eaz_starter_not_applicable = Eaz starter not applicable;
+  window.CreatorI18n.eaz_tab_costs = Eaz tab costs;
+  window.CreatorI18n.eaz_costs_intro = Eaz costs intro;
+  window.CreatorI18n.eaz_costs_loading = Eaz costs loading;
+  window.CreatorI18n.eaz_cost_free = Eaz cost free;
+  window.CreatorI18n.eazCostDesignGenerate = Eaz cost design generate;
+  window.CreatorI18n.eazCostDesignUpload = Eaz cost design upload;
+  window.CreatorI18n.eazCostBgRemove = Eaz cost bg remove;
+  window.CreatorI18n.eazCostDesignEdit = Eaz cost design edit;
+  window.CreatorI18n.eazCostDesignVariation = Eaz cost design variation;
+  window.CreatorI18n.eazCostMockupGenerate = Eaz cost mockup generate;
+  window.CreatorI18n.eazCostMockupSave = Eaz cost mockup save;
+  window.CreatorI18n.eazCostHeroGenerate = Eaz cost hero generate;
+  window.CreatorI18n.eazCostHeroImpression = Eaz cost hero impression;
+  window.CreatorI18n.eazCostVideoGenerate = Eaz cost video generate;
+  window.CreatorI18n.eazCostWardrobeGenerate = Eaz cost wardrobe generate;
+  window.CreatorI18n.eazCostCreatorImage = Eaz cost creator image;
+  window.CreatorI18n.eazCostExportHighRes = Eaz cost export high res;
+  window.CreatorI18n.eazCostExportPrint = Eaz cost export print;
+  window.CreatorI18n.eaz_convert_hint = Eaz convert hint;
+  window.CreatorI18n.eaz_convert_available_label = Eaz convert available label;
+  window.CreatorI18n.eaz_convert_min_tpl = Eaz convert min tpl;
+  window.CreatorI18n.eaz_convert_success = Eaz convert success;
+  window.CreatorI18n.eaz_convert_fail = Eaz convert fail;
+  window.CreatorI18n.eaz_convert_preview = Eaz convert preview;
+  window.CreatorI18n.eazc_convert_to_eazg_confirm = Eazc convert to eazg confirm;
+  window.CreatorI18n.eazc_convert_to_eazg_preview = Eazc convert to eazg preview;
+  window.CreatorI18n.eazc_convert_min_tpl = Eazc convert min tpl;
+</script>
+
+          </div>
+        </section>
+
+        <!-- Payout Panel -->
+        <section class="csm-panel" data-csm-panel="payout">
+          
+
+<script>
+  window.__EAZ_CONTINENT_LABELS = Object.assign({}, window.__EAZ_CONTINENT_LABELS || {}, {
+    AF: Continent af,
+    AS: Continent as,
+    EU: Continent eu,
+    NA: Continent na,
+    SA: Continent sa,
+    OC: Continent oc,
+    AN: Continent an,
+    OTHER: Continent other
+  });
+</script>
+
+
+<div class="csm-payout-panel" id="csmPayoutPanel" data-no-translate="true">
+  <div class="csm-panel-header">
+    <h4 class="csm-panel-title">Payout title</h4>
+    <p class="csm-panel-subtitle">Payout subtitle</p>
+  </div>
+
+  
+  <div id="csmPayoutAutoOptions">
+  <div class="csm-payout-type-grid" id="csmPayoutTypeGrid">
+    <button type="button" class="csm-payout-type-card is-selected" data-value="shop_credit" id="csmPayoutTypeShop">
+      <span class="csm-payout-type-card__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      </span>
+      <span class="csm-payout-type-card__label">Payout auto method shop</span>
+    </button>
+    <button type="button" class="csm-payout-type-card" data-value="wise" id="csmPayoutTypeWise">
+      <span class="csm-payout-type-card__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v6M12 14v6M16 14v6"/></svg>
+      </span>
+      <span class="csm-payout-type-card__label">Payout auto method wise</span>
+    </button>
+  </div>
+  <input type="hidden" id="csmPayoutTypeValue" value="shop_credit">
+
+  <div class="csm-payout-panel__sections">
+    
+    <section class="csm-payout-section" id="csmPayoutAccountSection">
+      <h5 class="csm-payout-section__title">Payout account title</h5>
+      <p class="csm-payout-section__subtitle">Payout account subtitle</p>
+      <div class="csm-payout-account-type-grid" id="csmPayoutAccountTypeGrid" role="group" aria-label="Payout account method select">
+        <button type="button" class="csm-payout-type-card is-selected" data-account-type="wise" id="csmPayoutAccountTypeWise">
+          <span class="csm-payout-type-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v6M12 14v6M16 14v6"/></svg>
+          </span>
+          <span class="csm-payout-type-card__label">Payout account type wise</span>
+        </button>
+        <button type="button" class="csm-payout-type-card" data-account-type="paypal" id="csmPayoutAccountTypePayPal">
+          <span class="csm-payout-type-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 20h3.5a4 4 0 003.95-3.35l.25-1.65h2.1a3 3 0 002.97-2.56l.78-5A2.5 2.5 0 0019.08 4H10.2a2.5 2.5 0 00-2.47 2.1L6.3 15.5A2.5 2.5 0 008.77 18H11"/></svg>
+          </span>
+          <span class="csm-payout-type-card__label">Payout account type paypal</span>
+        </button>
+      </div>
+      <input type="hidden" id="csmPayoutAccountTypeValue" value="wise">
+      <div class="csm-payout-methods-list" id="csmPayoutMethodsList"></div>
+      <div class="csm-payout-form" id="csmPayoutAccountForm">
+        <input type="hidden" id="csmPayoutEditId" value="">
+        <label class="csm-payout-field">
+          <span class="csm-payout-field__label">Payout method label</span>
+          <input type="text" id="csmPayoutLabel" class="csm-payout-field__input" placeholder="Payout method label placeholder" maxlength="80">
+        </label>
+        <label class="csm-payout-field">
+          <span class="csm-payout-field__label">Payout country label</span>
+          <button type="button" class="csm-payout-country-trigger" id="csmPayoutCountryTrigger" aria-haspopup="dialog">
+            <span class="csm-payout-country-trigger__value" id="csmPayoutCountryDisplay">Germany</span>
+            <svg class="csm-payout-country-trigger__chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </label>
+        <label class="csm-payout-field csm-payout-field--paypal" id="csmPayoutPayPalEmailField" style="display:none">
+          <span class="csm-payout-field__label">Payout paypal email label</span>
+          <input type="email" id="csmPayoutPayPalEmail" class="csm-payout-field__input" placeholder="Payout paypal email placeholder" autocomplete="email">
+        </label>
+        <select id="csmPayoutCountry" class="csm-payout-field__hidden-select" aria-hidden="true">
+            
+            <option value="DE" data-currency="EUR">Germany</option>
+            <option value="AT" data-currency="EUR">Austria</option>
+            <option value="CH" data-currency="CHF">Switzerland</option>
+            <option value="FR" data-currency="EUR">France</option>
+            <option value="GB" data-currency="GBP">United Kingdom</option>
+            <option value="NL" data-currency="EUR">Netherlands</option>
+            <option value="BE" data-currency="EUR">Belgium</option>
+            <option value="ES" data-currency="EUR">Spain</option>
+            <option value="IT" data-currency="EUR">Italy</option>
+            <option value="PL" data-currency="PLN">Poland</option>
+            <option value="SE" data-currency="SEK">Sweden</option>
+            <option value="NO" data-currency="NOK">Norway</option>
+            <option value="FI" data-currency="EUR">Finland</option>
+            <option value="PT" data-currency="EUR">Portugal</option>
+            <option value="IE" data-currency="EUR">Ireland</option>
+            <option value="GR" data-currency="EUR">Greece</option>
+            <option value="CZ" data-currency="CZK">Czech Republic</option>
+            <option value="RO" data-currency="RON">Romania</option>
+            <option value="HU" data-currency="HUF">Hungary</option>
+            <option value="BG" data-currency="BGN">Bulgaria</option>
+            <option value="HR" data-currency="EUR">Croatia</option>
+            <option value="SK" data-currency="EUR">Slovakia</option>
+            <option value="SI" data-currency="EUR">Slovenia</option>
+            <option value="LT" data-currency="EUR">Lithuania</option>
+            <option value="LV" data-currency="EUR">Latvia</option>
+            <option value="EE" data-currency="EUR">Estonia</option>
+            <option value="LU" data-currency="EUR">Luxembourg</option>
+            <option value="MT" data-currency="EUR">Malta</option>
+            <option value="CY" data-currency="EUR">Cyprus</option>
+            <option value="UA" data-currency="UAH">Ukraine</option>
+            
+            <option value="US" data-currency="USD">United States</option>
+            <option value="CA" data-currency="CAD">Canada</option>
+            <option value="MX" data-currency="MXN">Mexico</option>
+            <option value="BR" data-currency="BRL">Brazil</option>
+            <option value="AR" data-currency="ARS">Argentina</option>
+            <option value="CL" data-currency="CLP">Chile</option>
+            <option value="CO" data-currency="COP">Colombia</option>
+            <option value="PE" data-currency="PEN">Peru</option>
+            <option value="CR" data-currency="CRC">Costa Rica</option>
+            <option value="GT" data-currency="GTQ">Guatemala</option>
+            <option value="EC" data-currency="USD">Ecuador</option>
+            
+            <option value="IN" data-currency="INR">India</option>
+            <option value="CN" data-currency="CNY">China</option>
+            <option value="HK" data-currency="HKD">Hong Kong</option>
+            <option value="JP" data-currency="JPY">Japan</option>
+            <option value="KR" data-currency="KRW">South Korea</option>
+            <option value="SG" data-currency="SGD">Singapore</option>
+            <option value="MY" data-currency="MYR">Malaysia</option>
+            <option value="TH" data-currency="THB">Thailand</option>
+            <option value="ID" data-currency="IDR">Indonesia</option>
+            <option value="PH" data-currency="PHP">Philippines</option>
+            <option value="PK" data-currency="PKR">Pakistan</option>
+            <option value="BD" data-currency="BDT">Bangladesh</option>
+            <option value="NP" data-currency="NPR">Nepal</option>
+            <option value="LK" data-currency="LKR">Sri Lanka</option>
+            
+            <option value="AU" data-currency="AUD">Australia</option>
+            <option value="NZ" data-currency="NZD">New Zealand</option>
+            
+            <option value="AE" data-currency="AED">United Arab Emirates</option>
+            <option value="IL" data-currency="ILS">Israel</option>
+            <option value="TR" data-currency="TRY">Turkey</option>
+            <option value="ZA" data-currency="ZAR">South Africa</option>
+            <option value="EG" data-currency="EGP">Egypt</option>
+            <option value="NG" data-currency="NGN">Nigeria</option>
+            <option value="KE" data-currency="KES">Kenya</option>
+            <option value="GH" data-currency="GHS">Ghana</option>
+            <option value="MA" data-currency="MAD">Morocco</option>
+            <option value="TZ" data-currency="TZS">Tanzania</option>
+            <option value="UG" data-currency="UGX">Uganda</option>
+          </select>
+        <label class="csm-payout-field">
+          <span class="csm-payout-field__label">Payout details account holder</span>
+          <input type="text" id="csmPayoutAccountHolder" class="csm-payout-field__input" placeholder="Max Mustermann" maxlength="140">
+        </label>
+        <div id="csmPayoutIbanSection">
+          <label class="csm-payout-field">
+            <span class="csm-payout-field__label">Payout details iban</span>
+            <input type="text" id="csmPayoutIban" class="csm-payout-field__input" placeholder="DE89 3704 0044 0532 0130 00" maxlength="34">
+          </label>
+        </div>
+        <label class="csm-payout-field">
+          <span class="csm-payout-field__label">Payout details currency</span>
+          <button type="button" class="csm-payout-country-trigger" id="csmPayoutCurrencyTrigger" aria-haspopup="dialog">
+            <span class="csm-payout-country-trigger__value" id="csmPayoutCurrencyDisplay">EUR</span>
+            <svg class="csm-payout-country-trigger__chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <select id="csmPayoutCurrency" class="csm-payout-field__hidden-select" aria-hidden="true">
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+            <option value="GBP">GBP</option>
+            <option value="CHF">CHF</option>
+            <option value="AUD">AUD</option>
+            <option value="CAD">CAD</option>
+            <option value="PLN">PLN</option>
+            <option value="SEK">SEK</option>
+            <option value="NOK">NOK</option>
+            <option value="CZK">CZK</option>
+            <option value="RON">RON</option>
+            <option value="HUF">HUF</option>
+            <option value="BGN">BGN</option>
+            <option value="UAH">UAH</option>
+            <option value="MXN">MXN</option>
+            <option value="BRL">BRL</option>
+            <option value="ARS">ARS</option>
+            <option value="CLP">CLP</option>
+            <option value="COP">COP</option>
+            <option value="PEN">PEN</option>
+            <option value="CRC">CRC</option>
+            <option value="GTQ">GTQ</option>
+            <option value="INR">INR</option>
+            <option value="CNY">CNY</option>
+            <option value="JPY">JPY</option>
+            <option value="KRW">KRW</option>
+            <option value="SGD">SGD</option>
+            <option value="HKD">HKD</option>
+            <option value="MYR">MYR</option>
+            <option value="THB">THB</option>
+            <option value="IDR">IDR</option>
+            <option value="PHP">PHP</option>
+            <option value="PKR">PKR</option>
+            <option value="BDT">BDT</option>
+            <option value="NPR">NPR</option>
+            <option value="LKR">LKR</option>
+            <option value="NZD">NZD</option>
+            <option value="AED">AED</option>
+            <option value="ILS">ILS</option>
+            <option value="TRY">TRY</option>
+            <option value="ZAR">ZAR</option>
+            <option value="EGP">EGP</option>
+            <option value="NGN">NGN</option>
+            <option value="KES">KES</option>
+            <option value="GHS">GHS</option>
+            <option value="MAD">MAD</option>
+            <option value="TZS">TZS</option>
+            <option value="UGX">UGX</option>
+          </select>
+        </label>
+        <div id="csmPayoutDynamicFields" class="csm-payout-dynamic" style="display:none"></div>
+        <p class="csm-payout-status" id="csmPayoutAccountStatus" aria-live="polite"></p>
+      </div>
+    </section>
+
+    
+    <section class="csm-payout-section" id="csmPayoutAutoSection">
+      <h5 class="csm-payout-section__title">Payout auto title</h5>
+      <p class="csm-payout-section__subtitle">Payout auto subtitle</p>
+      <div class="csm-payout-form">
+        <label class="csm-payout-toggle">
+          <input type="checkbox" id="csmPayoutAutoEnable" class="csm-payout-toggle__input">
+          <span class="csm-payout-toggle__label">Payout auto enable</span>
+        </label>
+        <input type="radio" name="csm_auto_method" value="shop_credit" id="csmAutoMethodShop" class="csm-payout-radio__hidden" checked>
+        <input type="radio" name="csm_auto_method" value="wise" id="csmAutoMethodWise" class="csm-payout-radio__hidden">
+        <label class="csm-payout-field" id="csmPayoutAutoMethodSelectWrap" style="display:none">
+          <span class="csm-payout-field__label">Payout auto method select</span>
+          <select id="csmPayoutAutoMethodSelect" class="csm-payout-field__input"></select>
+        </label>
+        <label class="csm-payout-field csm-payout-field--inline">
+          <span class="csm-payout-field__label">Payout auto min label</span>
+          <input type="number" id="csmPayoutMinAmount" class="csm-payout-field__input" min="5" max="500" step="5" value="50">
+          <span class="csm-payout-field__unit">EUR</span>
+        </label>
+        <p class="csm-payout-hint">Payout auto min hint</p>
+        <p class="csm-payout-status" id="csmPayoutAutoStatus" aria-live="polite"></p>
+      </div>
+    </section>
+  </div>
+
+  
+  </div>
+
+  
+  <div class="csm-payout-panel__footer">
+    <p class="csm-payout-status csm-payout-panel__footer-status" id="csmPayoutFooterStatus" aria-live="polite"></p>
+    <div class="csm-payout-panel__footer-actions">
+      <button type="button" class="csm-payout-btn csm-payout-btn--ghost" id="csmPayoutCancelEdit" style="display:none">
+        Cancel
+      </button>
+      <button type="button" class="csm-payout-btn csm-payout-btn--primary" id="csmPayoutSaveAccount">
+        Payout details save
+      </button>
+      <button type="button" class="csm-payout-btn csm-payout-btn--primary" id="csmPayoutSaveAuto">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<div class="csm-country-overlay" id="csmCountryOverlay" aria-hidden="true">
+  <div class="csm-country-modal" role="dialog" aria-modal="true" aria-labelledby="csmCountryModalTitle">
+    <div class="csm-country-modal__header">
+      <h3 id="csmCountryModalTitle">Payout country label</h3>
+      <button type="button" class="csm-country-modal__close" id="csmCountryModalClose" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+    </div>
+    <div class="csm-country-modal__search">
+      <input type="search" id="csmCountrySearch" class="csm-country-modal__search-input" placeholder="Search" aria-label="Search">
+    </div>
+    <div class="csm-country-modal__list" id="csmCountryModalList"></div>
+  </div>
+</div>
+
+
+<div class="csm-country-overlay" id="csmCurrencyOverlay" aria-hidden="true">
+  <div class="csm-country-modal" role="dialog" aria-modal="true" aria-labelledby="csmCurrencyModalTitle">
+    <div class="csm-country-modal__header">
+      <h3 id="csmCurrencyModalTitle">Payout details currency</h3>
+      <button type="button" class="csm-country-modal__close" id="csmCurrencyModalClose" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+    </div>
+    <div class="csm-country-modal__search">
+      <input type="search" id="csmCurrencySearch" class="csm-country-modal__search-input" placeholder="Search" aria-label="Search">
+    </div>
+    <div class="csm-country-modal__list csm-currency-modal__list" id="csmCurrencyModalList"></div>
+  </div>
+</div>
+
+
+<div class="csm-country-overlay csm-payout-edit-overlay" id="csmPayoutEditOverlay" aria-hidden="true">
+  <div class="csm-country-modal csm-payout-edit-modal" role="dialog" aria-modal="true" aria-labelledby="csmPayoutEditTitle">
+    <div class="csm-country-modal__header">
+      <h3 id="csmPayoutEditTitle">Payout edit modal title</h3>
+      <button type="button" class="csm-country-modal__close" id="csmPayoutEditClose" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+    </div>
+    <div class="csm-payout-edit-modal__body">
+      <input type="hidden" id="csmPayoutEditMethodId" value="">
+      <p class="csm-payout-hint">
+        Payout edit masked info label:
+        <strong id="csmPayoutEditMaskedInfo">****</strong>
+      </p>
+      <label class="csm-payout-field">
+        <span class="csm-payout-field__label">Payout method label</span>
+        <input type="text" id="csmPayoutEditLabel" class="csm-payout-field__input" maxlength="80">
+      </label>
+      <label class="csm-payout-field">
+        <span class="csm-payout-field__label">Payout country label</span>
+        <button type="button" class="csm-payout-country-trigger" id="csmPayoutEditCountryTrigger" aria-haspopup="dialog">
+          <span class="csm-payout-country-trigger__value" id="csmPayoutEditCountryDisplay">Germany</span>
+          <svg class="csm-payout-country-trigger__chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <select id="csmPayoutEditCountry" class="csm-payout-field__hidden-select" aria-hidden="true"></select>
+      </label>
+      <label class="csm-payout-field">
+        <span class="csm-payout-field__label">Payout details currency</span>
+        <button type="button" class="csm-payout-country-trigger" id="csmPayoutEditCurrencyTrigger" aria-haspopup="dialog">
+          <span class="csm-payout-country-trigger__value" id="csmPayoutEditCurrencyDisplay">EUR</span>
+          <svg class="csm-payout-country-trigger__chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <select id="csmPayoutEditCurrency" class="csm-payout-field__hidden-select" aria-hidden="true"></select>
+      </label>
+      <label class="csm-payout-field">
+        <span class="csm-payout-field__label">Payout details account holder</span>
+        <input type="text" id="csmPayoutEditAccountHolder" class="csm-payout-field__input" maxlength="140">
+      </label>
+      <label class="csm-payout-field">
+        <span class="csm-payout-field__label">Payout edit account value label</span>
+        <input type="text" id="csmPayoutEditAccountValue" class="csm-payout-field__input" placeholder="Payout details iban" autocomplete="off">
+      </label>
+      <p class="csm-payout-hint">Payout edit reenter account hint</p>
+      <p class="csm-payout-status" id="csmPayoutEditStatus" aria-live="polite"></p>
+    </div>
+    <div class="csm-payout-edit-modal__footer">
+      <button type="button" class="csm-payout-btn csm-payout-btn--ghost" id="csmPayoutEditCancel">Cancel</button>
+      <button type="button" class="csm-payout-btn csm-payout-btn--primary" id="csmPayoutEditSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .csm-payout-panel { display: flex; flex-direction: column; gap: 32px; }
+  .csm-payout-section { padding: 20px 0; border-bottom: 1px solid var(--csm-border); }
+  .csm-payout-section.is-hidden { display: none; }
+  .csm-payout-section:last-of-type { border-bottom: none; }
+  .csm-payout-section__title { margin: 0 0 6px; font-size: 16px; font-weight: 600; color: var(--csm-text); }
+  .csm-payout-section__subtitle { margin: 0 0 16px; font-size: 13px; color: var(--csm-muted); }
+  .csm-payout-form { display: flex; flex-direction: column; gap: 14px; max-width: 380px; }
+  .csm-payout-field { display: flex; flex-direction: column; gap: 6px; }
+  .csm-payout-field__label { font-size: 13px; font-weight: 500; color: #fff; }
+  .csm-payout-field__input { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--csm-border); background: var(--csm-modal-bg-2); color: var(--csm-text); font-size: 14px; }
+  .csm-payout-field__input:focus { outline: none; border-color: var(--csm-accent); }
+  .csm-payout-field--inline { flex-direction: row; align-items: center; gap: 10px; }
+  .csm-payout-field--inline .csm-payout-field__input { width: 80px; }
+  .csm-payout-field__unit { font-size: 14px; color: #fff; }
+  .csm-payout-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .csm-payout-toggle__input { width: 18px; height: 18px; accent-color: var(--csm-accent); }
+  .csm-payout-toggle__label { font-size: 14px; color: var(--csm-text); }
+  .csm-payout-radio { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .csm-payout-radio__input { accent-color: var(--csm-accent); }
+  .csm-payout-radio__label { font-size: 14px; color: var(--csm-text); }
+  .csm-payout-auto-options { display: flex; flex-direction: column; gap: 8px; }
+  .csm-payout-hint { margin: -4px 0 0; font-size: 12px; color: var(--csm-text); }
+  .csm-payout-btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s, background .15s; border: none; align-self: flex-start; }
+  .csm-payout-btn.is-hidden { display: none !important; }
+  .csm-payout-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .csm-payout-btn--primary { background: var(--csm-accent); color: #111827; }
+  .csm-payout-btn--primary:hover:not(:disabled) { background: var(--csm-accent-hover); }
+  .csm-payout-btn--secondary { background: transparent; color: var(--csm-accent); border: 1px solid var(--csm-accent); }
+  .csm-payout-btn--secondary:hover:not(:disabled) { background: var(--csm-accent-soft); }
+  .csm-payout-status { margin: 0; font-size: 13px; color: var(--csm-muted); min-height: 1.2em; }
+  .csm-payout-status--error { color: #ef4444; }
+  .csm-payout-dynamic { display: flex; flex-direction: column; gap: 14px; }
+  .csm-payout-radio-group { display: flex; flex-wrap: wrap; gap: 12px; }
+  .csm-payout-methods-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .csm-payout-method-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--csm-border); background: var(--csm-modal-bg-2); }
+  .csm-payout-method-card__info { display: flex; flex-direction: column; gap: 2px; }
+  .csm-payout-method-card__label { font-weight: 600; color: var(--csm-text); }
+  .csm-payout-method-card__meta { font-size: 12px; color: var(--csm-muted); }
+  .csm-payout-method-card__actions { display: flex; gap: 8px; }
+  .csm-payout-method-card__btn { padding: 6px 12px; font-size: 12px; border-radius: 6px; background: transparent; border: 1px solid var(--csm-border); color: var(--csm-muted); cursor: pointer; }
+  .csm-payout-method-card__btn:hover { color: var(--csm-accent); border-color: var(--csm-accent); }
+  .csm-payout-method-card__btn--delete { border-color: #ef4444; color: #ef4444; }
+  .csm-payout-method-card__btn--delete:hover { background: rgba(239,68,68,0.1); }
+  .csm-payout-btn--ghost { background: transparent; color: var(--csm-muted); border: none; }
+  .csm-payout-btn--ghost:hover { color: var(--csm-text); }
+  .csm-payout-field__hidden-select { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .csm-payout-radio__hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+  /* Type Grid (Shop vs Payout) */
+  .csm-payout-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .csm-payout-type-card {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 16px 12px; border-radius: 12px; border: 2px solid var(--csm-border);
+    background: var(--csm-modal-bg-2); color: var(--csm-text); cursor: pointer;
+    transition: border-color .2s, background .2s; font-size: 14px; font-weight: 500; text-align: center;
+  }
+  .csm-payout-type-card:hover { border-color: var(--csm-accent); background: var(--csm-accent-soft); }
+  .csm-payout-type-card.is-selected { border-color: var(--csm-accent); background: var(--csm-accent-soft); color: var(--csm-accent); }
+  .csm-payout-type-card__icon { width: 32px; height: 32px; }
+  .csm-payout-type-card__icon svg { width: 100%; height: 100%; }
+  .csm-payout-account-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 4px 0 16px; max-width: 380px; }
+  .csm-payout-field.is-hidden { display: none !important; }
+
+  /* Country Trigger */
+  .csm-payout-country-trigger {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--csm-border);
+    background: var(--csm-modal-bg-2); color: var(--csm-text); font-size: 14px;
+    cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .csm-payout-country-trigger:hover { border-color: var(--csm-accent); }
+  .csm-payout-country-trigger__chevron { width: 18px; height: 18px; opacity: 0.6; }
+  .csm-country-flag,
+  .csm-country-modal__flag { display: inline-flex; width: 1.2em; justify-content: center; }
+  .csm-country-modal__item { display: flex; align-items: center; gap: 8px; }
+  .csm-country-modal__name { min-width: 0; }
+
+  /* Footer */
+  .csm-payout-panel__footer {
+    margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--csm-border);
+    display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap;
+  }
+  .csm-payout-panel__footer-status { flex: 1; margin: 0; }
+  .csm-payout-panel__footer-actions { display: flex; gap: 10px; }
+
+  /* Country Modal */
+  .csm-country-overlay {
+    position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .csm-country-overlay.is-over-edit {
+    z-index: 10030 !important;
+  }
+  .csm-country-overlay.is-open { display: flex; }
+  .csm-country-modal {
+    width: 100%; max-width: 360px; max-height: 80vh;
+    background: var(--csm-modal-bg-2, #0f172a); border-radius: 12px;
+    border: 1px solid var(--csm-border); overflow: hidden; display: flex; flex-direction: column;
+  }
+  .csm-country-modal__header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid var(--csm-border);
+  }
+  .csm-country-modal__header h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--csm-text); }
+  .csm-country-modal__close {
+    padding: 6px; background: none; border: none; color: var(--csm-muted); cursor: pointer; border-radius: 6px;
+  }
+  .csm-country-modal__close:hover { color: var(--csm-text); background: var(--csm-accent-soft); }
+  .csm-country-modal__search { padding: 12px; border-bottom: 1px solid var(--csm-border); }
+  .csm-country-modal__search-input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--csm-border);
+    background: var(--csm-modal-bg-2); color: var(--csm-text); font-size: 14px;
+  }
+  .csm-country-modal__search-input:focus { outline: none; border-color: var(--csm-accent); }
+  .csm-country-modal__list {
+    flex: 1; overflow-y: auto; max-height: 320px; padding: 8px;
+  }
+  .csm-country-modal__continent { margin-bottom: 6px; border-radius: 8px; border: 1px solid var(--csm-border); overflow: hidden; background: rgba(255,255,255,0.02); }
+  .csm-country-modal__continent-header {
+    display: flex; align-items: center; gap: 6px; width: 100%; padding: 10px 12px;
+    border: none; background: transparent; color: var(--csm-text); font-size: 13px; font-weight: 600;
+    cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .csm-country-modal__continent-header::before {
+    content: '›';
+    font-size: 1rem;
+    font-weight: 700;
+    opacity: 0.5;
+    width: 1em;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+  .csm-country-modal__continent-header[aria-expanded="true"]::before { transform: rotate(90deg); }
+  .csm-country-modal__continent-label { flex: 1; min-width: 0; }
+  .csm-country-modal__continent-body { padding: 0 6px 6px; }
+  .csm-country-modal__continent-body[hidden] { display: none !important; }
+  .csm-country-modal__continent--search .csm-country-modal__continent-header { pointer-events: none; opacity: 0.85; }
+  .csm-country-modal__item {
+    width: 100%; padding: 10px 14px; border: none; border-radius: 8px;
+    background: transparent; color: var(--csm-text); font-size: 14px; text-align: left;
+    cursor: pointer; font-family: inherit; margin-bottom: 2px;
+  }
+  .csm-country-modal__item:hover { background: var(--csm-accent-soft); }
+  .csm-country-modal__item.is-selected { background: var(--csm-accent-soft); color: var(--csm-accent); font-weight: 600; }
+  .csm-currency-modal__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .csm-currency-modal__left {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .csm-currency-modal__icon {
+    width: 1.6em;
+    display: inline-flex;
+    justify-content: center;
+    opacity: 0.95;
+  }
+  .csm-currency-modal__name {
+    color: var(--csm-text);
+    opacity: 0.9;
+    font-size: 12px;
+  }
+  .csm-currency-modal__suggested {
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+  .csm-country-modal__item.is-suggested {
+    border: 1px solid rgba(245, 158, 11, 0.4);
+  }
+  .csm-payout-edit-overlay { z-index: 10010; }
+  .csm-payout-edit-modal { max-width: 420px; }
+  .csm-payout-edit-modal__body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .csm-payout-edit-modal__footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--csm-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: rgba(10, 16, 30, 0.92);
+  }
+  .csm-payout-edit-modal__footer .csm-payout-btn--ghost {
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .csm-payout-edit-modal__footer .csm-payout-btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+  }
+  .csm-payout-edit-modal__footer .csm-payout-btn--primary {
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.32) inset;
+  }
+  .csm-payout-edit-modal__body .csm-payout-hint {
+    margin: 0;
+    font-size: 12px;
+  }
+
+  @media (max-width: 749px) {
+    .csm-payout-edit-overlay {
+      padding: 12px;
+      align-items: flex-end;
+    }
+    .csm-payout-edit-modal {
+      width: 100%;
+      max-width: 100%;
+      max-height: 82vh;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .csm-payout-edit-modal .csm-country-modal__header {
+      padding: 12px 14px;
+    }
+    .csm-payout-edit-modal .csm-country-modal__header h3 {
+      font-size: 15px;
+    }
+    .csm-payout-edit-modal__body {
+      padding: 10px 12px;
+      gap: 8px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .csm-payout-edit-modal__body .csm-payout-field {
+      gap: 4px;
+    }
+    .csm-payout-edit-modal__body .csm-payout-field__label {
+      font-size: 12px;
+    }
+    .csm-payout-edit-modal__body .csm-payout-field__input {
+      padding: 9px 10px;
+      min-height: 38px;
+      font-size: 13px;
+    }
+    .csm-payout-edit-modal__footer {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+      background: rgba(10, 16, 30, 0.96);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--csm-border);
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .csm-payout-edit-modal__footer .csm-payout-btn {
+      flex: 1;
+      min-height: 40px;
+      padding: 9px 12px;
+      text-align: center;
+    }
+  }
+
+  /* Payout panel color override: pure white text/icons, muted hints only */
+  #csmPayoutPanel,
+  #csmPayoutPanel .csm-panel-title,
+  #csmPayoutPanel .csm-panel-subtitle,
+  #csmPayoutPanel .csm-payout-section__title,
+  #csmPayoutPanel .csm-payout-section__subtitle,
+  #csmPayoutPanel .csm-payout-field__label,
+  #csmPayoutPanel .csm-payout-field__unit,
+  #csmPayoutPanel .csm-payout-toggle__label,
+  #csmPayoutPanel .csm-payout-radio__label,
+  #csmPayoutPanel .csm-payout-status,
+  #csmPayoutPanel .csm-payout-method-card__label,
+  #csmPayoutPanel .csm-payout-method-card__meta,
+  #csmPayoutPanel .csm-payout-method-card__btn,
+  #csmPayoutPanel .csm-payout-country-trigger,
+  #csmPayoutPanel .csm-payout-type-card,
+  #csmPayoutPanel .csm-payout-type-card__icon,
+  #csmPayoutPanel .csm-payout-country-trigger__chevron,
+  #csmPayoutPanel svg {
+    color: #fff !important;
+  }
+  #csmPayoutPanel .csm-payout-country-trigger__chevron {
+    opacity: 1 !important;
+  }
+  #csmPayoutPanel .csm-payout-status--error,
+  #csmPayoutPanel .csm-payout-method-card__btn--delete {
+    color: #ef4444 !important;
+  }
+  #csmPayoutPanel .csm-payout-hint,
+  #csmPayoutPanel .csm-payout-field__input::placeholder,
+  #csmPayoutPanel .csm-payout-field__input::-webkit-input-placeholder {
+    color: var(--csm-muted);
+    opacity: 1;
+  }
+</style>
+
+        </section>
+
+        <!-- Interests Panel -->
+        <section class="csm-panel" data-csm-panel="interests">
+          
+<div class="csm-panel-header csm-panel-header--interests-only-title">
+  <h4 class="csm-panel-title">Your Interests</h4>
+</div>
+
+<div class="csm-panel-content" style="min-height:0;">
+  
+
+<div
+  id=""
+  class="ehub "
+  data-ehub-skin=""
+  data-logged-in="truefalse"
+>
+  <div class="ehub__login" id="ehubLoginGate" style="display:none">
+    <p class="ehub__muted">You need to be logged in to manage your interests.</p>
+    <button type="button" class="ehub__save" id="ehubLoginBtn" style="max-width:240px;margin:12px auto 0;display:block;">
+      Log in
+    </button>
+  </div>
+
+  <div id="ehubMain" class="ehub__main" style="display:none">
+    <div class="ehub__main-tabs" role="tablist">
+      <button type="button" class="ehub__main-tab ehub__main-tab--active" data-ehub-main-tab="themes" role="tab" aria-selected="true">
+        Themes
+      </button>
+      <button type="button" class="ehub__main-tab" data-ehub-main-tab="styles" role="tab" aria-selected="false">
+        Styles
+      </button>
+      <button type="button" class="ehub__main-tab" data-ehub-main-tab="images" role="tab" aria-selected="false">
+        Images
+      </button>
+    </div>
+
+    <div class="ehub__pane" data-ehub-main-pane="themes">
+      <div class="ehub__pane-top">
+        <p class="ehub__section-note ehub__pane-intro">Pick interest topics from the catalogue, add your own, or use topics shared by other users.</p>
+        <div class="ehub__search">
+          Search interests...
+          <input type="search" class="ehub__search-input" id="ehubSearchInput" placeholder="" autocomplete="off" />
+          Clear
+          <button type="button" class="ehub__search-clear" id="ehubSearchClear" style="display:none;" aria-label="">×</button>
+        </div>
+        <div class="ehub__muted ehub__count-row">
+          <span id="ehubThemeCount">0</span>
+          <span>selected</span>
+        </div>
+      </div>
+
+      <div class="ehub__scroll ehub__scroll--pane">
+        <p class="ehub__section-title">Catalogue</p>
+        <div id="ehubCatalogue"></div>
+
+        <p class="ehub__section-title" style="margin-top:16px;">Your themes</p>
+        <div id="ehubMineThemes" class="ehub__chip-row" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+
+        <p class="ehub__section-title" style="margin-top:16px;">From other users</p>
+        <div id="ehubOthersThemes" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+
+      <div id="ehubNoResultsThemes" class="ehub__no-results" style="display:none;">
+        <p class="ehub__muted">No interests found</p>
+        <button type="button" class="ehub__add-btn" id="ehubAddThemeBtn" style="display:none;">Add as new interest</button>
+      </div>
+
+      <button type="button" class="ehub__save ehub__save--pane" id="ehubSaveThemes" disabled>Save</button>
+    </div>
+
+    <div class="ehub__pane" data-ehub-main-pane="styles" style="display:none;">
+      <div class="ehub__pane-top">
+        <p class="ehub__section-note ehub__pane-intro">Choose visual styles the same way as themes — catalogue, your own, and styles shared by others.</p>
+        <div class="ehub__search">
+          Search styles...
+          <input type="search" id="ehubStyleSearchInput" placeholder="" autocomplete="off" />
+          <button type="button" class="ehub__search-clear" id="ehubStyleSearchClear" style="display:none;">×</button>
+        </div>
+        <div class="ehub__muted ehub__count-row">
+          <span id="ehubStyleCount">0</span>
+          <span>selected</span>
+        </div>
+      </div>
+      <div class="ehub__scroll ehub__scroll--pane">
+        <p class="ehub__section-title">Style catalogue</p>
+        <div id="ehubStyleCatalogue"></div>
+        <p class="ehub__section-title" style="margin-top:16px;">Your styles</p>
+        <div id="ehubMineStyles" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        <p class="ehub__section-title" style="margin-top:16px;">Styles from other users</p>
+        <div id="ehubOthersStyles" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+      <div id="ehubNoResultsStyles" class="ehub__no-results" style="display:none;">
+        <p class="ehub__muted">No interests found</p>
+        <button type="button" class="ehub__add-btn" id="ehubAddStyleBtn" style="display:none;">Add as new style</button>
+      </div>
+      <button type="button" class="ehub__save ehub__save--pane" id="ehubSaveStyles" disabled>Save</button>
+    </div>
+
+    <div class="ehub__pane" data-ehub-main-pane="images" style="display:none;">
+      <div class="ehub__pane-top">
+        <p class="ehub__section-note ehub__pane-intro">Choose from the catalogue, your own designs, or discover designs from other users.</p>
+        <p class="ehub__section-note ehub__upload-hint">By uploading, you agree that this image may be shown to other users as inspiration. Please do not upload private or sensitive content.</p>
+      </div>
+
+      <div class="ehub__images-toolbar">
+        Search all sections — designs, your uploads, others’ images…
+        Upload image
+        Upload from phone (QR code)
+        <input type="search" class="ehub__images-search-input" id="ehubImagesSearchInput" placeholder="" autocomplete="off" />
+        <button type="button" class="ehub__upload-icon-btn" id="ehubImagesUploadBtn" aria-label="">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </button>
+        <button type="button" class="ehub__upload-icon-btn ehub__upload-icon-btn--phone" id="ehubImagesPhoneUploadBtn" aria-label="">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </button>
+        <input type="file" id="ehubRefFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;" tabindex="-1" />
+      </div>
+
+      <div class="ehub__scroll ehub__scroll--pane ehub__scroll--images-sections">
+        <details class="ehub-img-sec" id="ehubSecMyUploads" open>
+          <summary class="ehub-img-sec__summary">Your uploads</summary>
+          <div class="ehub-img-sec__body">
+            <div id="ehubMyUploadGrid" class="ehub-own-grid"></div>
+          </div>
+        </details>
+        <details class="ehub-img-sec" id="ehubSecDesigns" open>
+          <summary class="ehub-img-sec__summary">Designs</summary>
+          <div class="ehub-img-sec__body">
+            <div id="ehubDesignGrid" class="ehub__tiles ehub__tiles--contain"></div>
+          </div>
+        </details>
+        <details class="ehub-img-sec" id="ehubSecOthers" open>
+          <summary class="ehub-img-sec__summary">Images from other users</summary>
+          <div class="ehub-img-sec__body">
+            <div id="ehubOthersUploadGrid" class="ehub__tiles ehub__tiles--contain"></div>
+          </div>
+        </details>
+      </div>
+
+      <button type="button" class="ehub__save ehub__save--pane" id="ehubSaveRefs" disabled>Save</button>
+    </div>
+  </div>
+</div>
+
+Profession
+Hobby
+Sport
+Music
+Art
+Food & Drink
+Travel
+Animals
+Technology
+Lifestyle
+Nature
+Gaming
+Fashion
+Science
+Family
+Other
+<script type="application/json" id="ehubCategoryTranslations">
+{
+  "profession": ,
+  "hobby": ,
+  "sport": ,
+  "music": ,
+  "art": ,
+  "food": ,
+  "travel": ,
+  "animals": ,
+  "technology": ,
+  "lifestyle": ,
+  "nature": ,
+  "gaming": ,
+  "fashion": ,
+  "science": ,
+  "family": ,
+  "other": 
+}
+</script>
+Typography styles
+Illustration styles
+Character & figure styles
+Retro & vintage
+Modern & trend styles
+Layout & composition
+Texture & surface
+Color styles
+Effects
+Artistic directions
+Streetwear & fashion
+Pattern styles
+Other
+<script type="application/json" id="ehubStyleCategoryTranslations">
+{
+  "typography_styles": ,
+  "illustration_styles": ,
+  "character_styles": ,
+  "retro_vintage": ,
+  "modern_trend": ,
+  "layout_composition": ,
+  "texture_surface": ,
+  "color_styles": ,
+  "effects_styles": ,
+  "artistic_direction": ,
+  "streetwear_fashion": ,
+  "pattern_styles": ,
+  "other": 
+}
+</script>
+
+</div>
+
+<style>
+  [data-csm-panel="interests"].csm-panel {
+    overflow: hidden !important;
+  }
+  [data-csm-panel="interests"] .csm-panel-header--interests-only-title {
+    padding-bottom: 4px;
+    margin-bottom: 0;
+  }
+  [data-csm-panel="interests"] .csm-panel-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-top: 4px;
+  }
+  [data-csm-panel="interests"] .ehub {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+</style>
+
+        </section>
+
+
+        
+<section class="csm-panel" data-csm-panel="creator-wear">
+  <div class="csm-panel-header">
+    <h4 class="csm-panel-title">Creator Wear</h4>
+    <p class="csm-panel-subtitle">Connect your Wear OS watch to your creator account</p>
+  </div>
+  <div class="csm-panel-content" id="csmWearPanelRoot">
+    <p class="csm-wear-intro">Install Eazpire Creator on your Wear OS watch. After the logo, scan the QR on the watch with Connect below (or use the Eazpire Android app).</p>
+    <a
+      class="csm-btn csm-btn--secondary"
+      href="https://play.google.com/store/apps/details?id=com.eazpire.creator.wear"
+      target="_blank"
+      rel="noopener noreferrer"
+    >Get app on Google Play</a>
+    <div class="csm-wear-prereq" id="csmWearPrereqBlock" hidden></div>
+    <div class="csm-wear-status-block" id="csmWearStatusBlock" aria-live="polite"></div>
+    <div class="csm-wear-status" id="csmWearStatus" aria-live="polite"></div>
+    <button type="button" class="csm-btn csm-btn--primary" id="csmWearConnectBtn" hidden>
+      Connect
+    </button>
+    <button type="button" class="csm-btn csm-btn--secondary" id="csmWearDisconnectBtn" hidden>
+      Disconnect watch
+    </button>
+    <div class="csm-wear-scanner" id="csmWearScanner" hidden>
+      <video id="csmWearScannerVideo" playsinline muted></video>
+      <button type="button" class="csm-btn csm-btn--ghost" id="csmWearScannerClose">Cancel</button>
+    </div>
+  </div>
+</section>
+
+This device: logged in
+This device: not logged in
+Log in on this device first.
+Watch connected. Open the Wear app on your watch.
+Scan the QR code on your watch
+Get app on Google Play
+Connected watch: 
+Connected: 
+No watch connected to your account.
+Disconnect watch
+Watch disconnected.
+Before you can connect
+Complete these steps in Creator Settings:
+Redeem a Creator Code
+Open Creator Settings → Creator Codes and enter your code.
+Add at least one Creator Name
+Open Creator Settings → Creator Names and add your public display name.
+Go to Creator Codes
+Go to Creator Names
+<script>
+  window.CreatorI18n = window.CreatorI18n || {};
+  Object.assign(window.CreatorI18n, {
+    wear_phone_logged_in: ,
+    wear_phone_logged_out: ,
+    wear_login_required: ,
+    wear_connected_ok: ,
+    wear_scan_hint: ,
+    wear_play_store: ,
+    wear_connected_watch: ,
+    wear_connected_at: ,
+    wear_not_connected: ,
+    wear_disconnect: ,
+    wear_disconnected: ,
+    wear_prereq_title: ,
+    wear_prereq_intro: ,
+    wear_prereq_creator_code: ,
+    wear_prereq_creator_code_how: ,
+    wear_prereq_creator_name: ,
+    wear_prereq_creator_name_how: ,
+    wear_prereq_go_creator_code: ,
+    wear_prereq_go_creator_names: 
+  });
+</script>
+
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<dialog class="cps-unsaved-dialog" data-cps-unsaved-dialog>
+  <div class="cps-unsaved-dialog__inner">
+    <h4 class="cps-unsaved-dialog__title" data-t="creator.settings.profile_unsaved_title">Unsaved changes</h4>
+    <p class="cps-unsaved-dialog__intro" data-t="creator.settings.profile_unsaved_intro">You have unsaved profile changes:</p>
+    <ul class="cps-unsaved-dialog__list" data-cps-unsaved-list></ul>
+    <div class="cps-unsaved-dialog__actions">
+      <button type="button" class="cps-save-btn" data-cps-unsaved-save>
+        Save changes
+      </button>
+      <button type="button" class="cps-btn-discard" data-cps-unsaved-discard>
+        Discard
+      </button>
+      <button type="button" class="cps-btn-discard" data-cps-unsaved-cancel>
+        Cancel
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="cps-confirm-save-dialog" data-cps-confirm-save-dialog>
+  <div class="cps-unsaved-dialog__inner">
+    <h4 class="cps-unsaved-dialog__title" data-t="creator.settings.profile_confirm_save_title">Save profile changes?</h4>
+    <p class="cps-unsaved-dialog__intro" data-t="creator.settings.profile_confirm_save_intro">The following changes will be applied:</p>
+    <ul class="cps-unsaved-dialog__list" data-cps-confirm-save-list></ul>
+    <div class="cps-unsaved-dialog__actions">
+      <button type="button" class="cps-save-btn" data-cps-confirm-save-apply>
+        Apply changes
+      </button>
+      <button type="button" class="cps-btn-discard" data-cps-confirm-save-cancel>
+        Cancel
+      </button>
+    </div>
+  </div>
+</dialog>
+
+
+<div
+  id="ccRedeemCelebration"
+  class="cc-redeem-celebration"
+  data-cc-redeem-celebration
+  hidden
+  aria-hidden="true"
+>
+  <div class="cc-redeem-celebration__backdrop"></div>
+  <div class="cc-redeem-celebration__particles" data-cc-redeem-particles aria-hidden="true"></div>
+
+  <div class="cc-redeem-celebration__step cc-redeem-celebration__step--features" data-cc-redeem-step="features">
+    <div class="cc-redeem-celebration__card">
+      <div class="cc-redeem-celebration__badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.8 5.7 21l2.3-7-6-4.6h7.6z"/></svg>
+      </div>
+      <h2 class="cc-redeem-celebration__title" data-t="creator.settings.creator_codes_redeem_celebration_title">
+        Welcome, Creator!
+      </h2>
+      <p class="cc-redeem-celebration__subtitle" data-t="creator.settings.creator_codes_redeem_celebration_subtitle">
+        You unlocked full Creator access:
+      </p>
+      <ul class="cc-redeem-celebration__features" data-cc-redeem-features></ul>
+      <button type="button" class="cc-btn cc-btn--primary cc-redeem-celebration__continue" data-cc-redeem-features-continue>
+        <span data-t="creator.settings.creator_codes_redeem_celebration_continue">
+          Continue
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div class="cc-redeem-celebration__step cc-redeem-celebration__step--level" data-cc-redeem-step="level" hidden>
+    <div class="cc-redeem-celebration__level-wrap">
+      <p class="cc-redeem-celebration__level-kicker" data-t="creator.settings.creator_codes_redeem_level_up_kicker">
+        LEVEL UP
+      </p>
+      <div class="cc-redeem-celebration__level-row">
+        <span class="cc-redeem-celebration__level-old" data-cc-redeem-level-old>1</span>
+        <span class="cc-redeem-celebration__level-arrow" aria-hidden="true">→</span>
+        <span class="cc-redeem-celebration__level-new" data-cc-redeem-level-new>2</span>
+      </div>
+      <p class="cc-redeem-celebration__level-name" data-cc-redeem-level-name></p>
+      <p class="cc-redeem-celebration__level-sub" data-t="creator.settings.creator_codes_redeem_level_up_subtitle">
+        Your Creator tier is now active.
+      </p>
+      <button type="button" class="cc-btn cc-btn--primary cc-redeem-celebration__continue" data-cc-redeem-level-continue>
+        <span data-t="creator.settings.creator_codes_redeem_level_up_btn">
+          
+
+
+
+
+  
+
+  
+  
+  
+    
+  
+    
+  
+
+
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<style>
+  :root{
+    --csm-modal-bg-1:#0b1220;
+    --csm-modal-bg-2:#070b14;
+    --csm-border:rgba(255,255,255,.10);
+    --csm-border-2:rgba(255,255,255,.14);
+    --csm-text:#e5e7eb;
+    --csm-muted:rgba(229,231,235,.70);
+    --csm-accent:#f59e0b;
+    --csm-accent-hover:#fbbf24;
+    --csm-accent-soft:rgba(245,158,11,.18);
+    --csm-shadow:0 28px 90px rgba(0,0,0,.70);
+    --csm-sidebar-width:280px;
+    --csm-mobile-breakpoint:768px;
+  }
+
+  .csm-overlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:flex-end;
+    justify-content:stretch;
+    padding:0;
+    background:rgba(0,0,0,.42);
+    z-index:9999;
+  }
+  .csm-overlay.is-open{display:flex;}
+
+  .csm-modal{
+    width:100vw;
+    max-width:none;
+    height:100dvh;
+    max-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border-radius:0;
+    border:none;
+    box-shadow:var(--csm-shadow);
+    background:linear-gradient(135deg, var(--csm-modal-bg-1) 0%, var(--csm-modal-bg-2) 100%);
+    color:var(--csm-text);
+    transform:translateY(102%);
+    transition:transform .28s cubic-bezier(.22,.61,.36,1);
+    will-change:transform;
+  }
+
+  .csm-overlay.is-open .csm-modal{
+    transform:translateY(0);
+  }
+
+  .csm-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 20px;
+    border-bottom:1px solid var(--csm-border);
+    background:linear-gradient(135deg, var(--csm-modal-bg-1) 0%, var(--csm-modal-bg-2) 100%);
+  }
+
+  .csm-header__left{
+    display:flex;
+    align-items:center;
+    gap:16px;
+  }
+
+  .csm-header__text{
+    display:flex;
+    flex-direction:row;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:6px 12px;
+    min-width:0;
+  }
+
+  .csm-title{
+    margin:0;
+    font-size:18px;
+    font-weight:600;
+    color:var(--csm-text);
+    white-space:nowrap;
+  }
+
+  .csm-subtitle{
+    margin:0;
+    font-size:13px;
+    color:var(--csm-muted);
+    line-height:1.35;
+  }
+
+  .csm-close{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:40px;
+    height:40px;
+    border:none;
+    border-radius:8px;
+    background:transparent;
+    color:var(--csm-text);
+    cursor:pointer;
+    transition:background-color .15s ease, color .15s ease;
+  }
+
+  .csm-close:hover{
+    background-color:var(--csm-accent-soft);
+    color:var(--csm-accent);
+  }
+
+  .csm-close svg{
+    width:20px;
+    height:20px;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .csm-mobile-menu-btn{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    width:40px;
+    height:40px;
+    border:none;
+    border-radius:8px;
+    background:transparent;
+    color:var(--csm-text);
+    cursor:pointer;
+    transition:background-color .15s ease, color .15s ease;
+  }
+
+  .csm-mobile-menu-btn:hover{
+    background-color:var(--csm-accent-soft);
+    color:var(--csm-accent);
+  }
+
+  .csm-mobile-menu-btn svg{
+    width:20px;
+    height:20px;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  .csm-main{
+    display:flex;
+    flex:1;
+    overflow:hidden;
+    min-height:500px;
+  }
+
+  .csm-sidebar{
+    width:var(--csm-sidebar-width);
+    border-right:1px solid var(--csm-border);
+    background:linear-gradient(180deg, var(--csm-modal-bg-1) 0%, var(--csm-modal-bg-2) 100%);
+    overflow-y:auto;
+    /* Scrollbar Styling - wie im Inspirationen-Modal */
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #111827;
+  }
+
+  .csm-sidebar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .csm-sidebar::-webkit-scrollbar-track {
+    background: #111827;
+  }
+
+  .csm-sidebar::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 4px;
+  }
+
+  .csm-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  .csm-sidebar__inner{
+    padding:24px 0;
+  }
+
+  .csm-nav-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    padding:16px 32px;
+    border:none;
+    background:transparent;
+    color:var(--csm-muted);
+    text-align:left;
+    cursor:pointer;
+    transition:background-color .15s ease, color .15s ease, border-left-color .15s ease;
+    border-left:3px solid transparent;
+    font-size:14px;
+    font-weight:500;
+  }
+
+  .csm-nav-item:hover{
+    background-color:var(--csm-accent-soft);
+    color:var(--csm-accent);
+  }
+
+  .csm-nav-item.is-active{
+    background-color:var(--csm-accent-soft);
+    color:var(--csm-accent);
+    border-left-color:var(--csm-accent);
+  }
+
+  .csm-nav-icon{
+    width:20px;
+    height:20px;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    flex-shrink:0;
+  }
+
+  .csm-nav-item.is-active .csm-nav-icon{
+    fill:currentColor;
+  }
+
+  .csm-nav-item.is-disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+    pointer-events:none;
+  }
+
+  .csm-content{
+    flex:1;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .csm-panel{
+    display:none;
+    flex:1;
+    overflow-y:auto;
+    padding:32px;
+    /* Scrollbar Styling - wie im Inspirationen-Modal */
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #111827;
+  }
+
+  .csm-panel::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .csm-panel::-webkit-scrollbar-track {
+    background: #111827;
+  }
+
+  .csm-panel::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 4px;
+  }
+
+  .csm-panel::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  .csm-panel.is-active{
+    display:flex;
+    flex-direction:column;
+  }
+
+  .csm-panel-header{
+    margin-bottom:32px;
+  }
+
+  .csm-panel-title{
+    margin:0 0 8px;
+    font-size:20px;
+    font-weight:600;
+    color:var(--csm-text);
+  }
+
+  .csm-panel-subtitle{
+    margin:0;
+    font-size:14px;
+    color:var(--csm-muted);
+  }
+
+  .csm-panel-content{
+    flex:1;
+  }
+
+  .csm-panel-body--profile{
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    min-height:0;
+  }
+  .csm-panel-content--profile{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    padding-right:4px;
+  }
+  .csm-profile-footer{
+    flex-shrink:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding:12px 0 0;
+    margin-top:12px;
+    border-top:1px solid var(--csm-border);
+  }
+  .csm-profile-footer .cps-save-btn--footer{
+    width:100%;
+    justify-content:center;
+    text-align:center;
+  }
+  .csm-profile-footer .cps-save-btn--footer:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+  .cps-status--footer{ margin:0; min-height:18px; }
+
+  .cps-avatar-field{ display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:8px; }
+  .cps-avatar-btn{
+    position:relative;
+    width:96px;
+    height:96px;
+    padding:0;
+    border:2px dashed var(--csm-border-2);
+    border-radius:16px;
+    background:var(--csm-modal-bg-2);
+    cursor:pointer;
+    overflow:hidden;
+  }
+  .cps-avatar-btn:hover{ border-color:var(--csm-accent); }
+  .cps-avatar-img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .cps-avatar-placeholder{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:100%;
+    color:var(--csm-muted);
+  }
+  .cps-avatar-placeholder svg{ width:32px; height:32px; fill:currentColor; opacity:.7; }
+  .cps-actions--hidden{ display:none !important; }
+
+  .cps-unsaved-dialog,.cps-confirm-save-dialog{
+    border:none;
+    padding:0;
+    background:transparent;
+    max-width:420px;
+    width:calc(100% - 32px);
+  }
+  .cps-unsaved-dialog::backdrop,.cps-confirm-save-dialog::backdrop{ background:rgba(0,0,0,.72); }
+  .cps-unsaved-dialog__inner{
+    padding:22px;
+    border-radius:14px;
+    background:var(--csm-modal-bg-1,#111827);
+    border:1px solid var(--csm-border);
+    color:var(--csm-text);
+  }
+  .cps-unsaved-dialog__title{ margin:0 0 8px; font-size:18px; font-weight:700; }
+  .cps-unsaved-dialog__intro{ margin:0 0 10px; font-size:14px; color:var(--csm-muted); }
+  .cps-unsaved-dialog__list{ margin:0 0 16px; padding-left:18px; font-size:14px; color:var(--csm-text); }
+  .cps-unsaved-dialog__actions{ display:flex; flex-direction:column; gap:8px; }
+  .cps-btn-discard{
+    border-radius:8px;
+    padding:11px 16px;
+    font-size:14px;
+    font-weight:600;
+    background:transparent;
+    color:var(--csm-muted);
+    border:1px solid var(--csm-border);
+    cursor:pointer;
+  }
+
+  .csm-coming-soon{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:48px 0;
+    color:var(--csm-muted);
+  }
+
+  .csm-coming-soon-icon{
+    width:48px;
+    height:48px;
+    margin-bottom:16px;
+    opacity:.6;
+  }
+
+  .csm-coming-soon-title{
+    margin:0 0 8px;
+    font-size:18px;
+    font-weight:600;
+    color:var(--csm-text);
+  }
+
+  .csm-coming-soon-text{
+    margin:0;
+    font-size:14px;
+    max-width:300px;
+  }
+
+  /* Mobile Sidebar Drawer Overlay */
+  .csm-mobile-drawer-overlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    background:rgba(0,0,0,.5);
+    z-index:10000;
+    transition:opacity .3s ease, visibility .3s ease;
+  }
+
+  .csm-mobile-drawer-overlay.is-open{
+    display:block;
+    opacity:1;
+    visibility:visible;
+  }
+
+  /* Login Required State */
+  .csm-login-required{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:48px 0;
+    color:var(--csm-muted);
+  }
+
+  .csm-login-required-content{
+    max-width:400px;
+  }
+
+  .csm-login-required-icon{
+    width:64px;
+    height:64px;
+    margin-bottom:24px;
+    opacity:.6;
+    stroke:currentColor;
+    stroke-width:1.5;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    fill:none;
+  }
+
+  .csm-login-required-title{
+    margin:0 0 12px;
+    font-size:24px;
+    font-weight:600;
+    color:var(--csm-text);
+  }
+
+  .csm-login-required-text{
+    margin:0 0 24px;
+    font-size:14px;
+    line-height:1.5;
+  }
+
+  .csm-login-required-btn{
+    border-radius:8px;
+    padding:12px 24px;
+    font-size:14px;
+    font-weight:600;
+    background:var(--csm-accent);
+    color:#111827;
+    border:1px solid var(--csm-accent);
+    cursor:pointer;
+    transition:background-color .15s ease, border-color .15s ease, transform .1s ease;
+  }
+
+  .csm-login-required-btn:hover{
+    background:var(--csm-accent-hover);
+    border-color:var(--csm-accent-hover);
+    transform:translateY(-1px);
+  }
+
+  .csm-login-required-btn:active{
+    transform:translateY(0);
+  }
+
+  /* Shared Profile Settings Form (Creator Theme) */
+  .cps-root--creator .cps-form{ display:flex; flex-direction:column; gap:16px; max-width:640px; }
+  .cps-root--creator .cps-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .cps-root--creator .cps-field{ display:flex; flex-direction:column; gap:6px; }
+  .cps-root--creator .cps-label{ font-size:13px; font-weight:500; color:var(--csm-muted); }
+  .cps-root--creator .cps-input{ padding:10px 12px; border-radius:8px; border:1px solid var(--csm-border); background:var(--csm-modal-bg-2); color:var(--csm-text); font-size:14px; }
+  .cps-root--creator .cps-input--email-inline{ width:auto; flex:1; min-width:0; }
+  .cps-root--creator .cps-email-row{ display:flex; flex-direction:row; align-items:stretch; gap:10px; flex-wrap:wrap; }
+  .cps-root--creator .cps-logout-btn{
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 14px;
+    font-size:14px;
+    font-weight:600;
+    text-decoration:none;
+    border-radius:8px;
+    border:1px solid var(--csm-border);
+    background:var(--csm-modal-bg-2);
+    color:var(--csm-text);
+    white-space:nowrap;
+    box-sizing:border-box;
+  }
+  .cps-root--creator .cps-logout-btn:hover{ background:var(--csm-accent-soft); border-color:var(--csm-accent); color:var(--csm-accent); }
+  @media (max-width:420px){
+    .cps-root--creator .cps-email-row{ flex-direction:column; align-items:stretch; }
+    .cps-root--creator .cps-logout-btn{ justify-content:center; }
+  }
+  .cps-root--creator .cps-input[readonly]{ opacity:.8; cursor:default; }
+  .cps-root--creator .cps-hint{ margin:0; font-size:12px; color:var(--csm-muted); }
+  .cps-root--creator .cps-username-status{ margin:0; font-size:12px; min-height:16px; }
+  .cps-root--creator .cps-username-status.is-available{ color:#34d399; }
+  .cps-root--creator .cps-username-status.is-error{ color:#f87171; }
+  .cps-root--creator .cps-username-status.is-checking{ color:var(--csm-muted); }
+  .cps-root--creator .cps-gender-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .cps-root--creator .cps-gender-option{ display:flex; align-items:center; gap:8px; border:1px solid var(--csm-border); border-radius:10px; background:var(--csm-modal-bg-2); color:var(--csm-text); padding:10px 12px; cursor:pointer; }
+  .cps-root--creator .cps-gender-option svg{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.8; }
+  .cps-root--creator .cps-gender-option svg circle{ fill:none; }
+  .cps-root--creator .cps-gender-option.is-active{ border-color:var(--csm-accent); color:var(--csm-accent); background:var(--csm-accent-soft); }
+  .cps-root--creator .cps-actions{ display:flex; justify-content:flex-start; }
+  .cps-root--creator .cps-save-btn{ border-radius:8px; padding:11px 22px; font-size:14px; font-weight:600; background:var(--csm-accent); color:#111827; border:1px solid var(--csm-accent); cursor:pointer; }
+  .cps-root--creator .cps-save-btn:hover{ background:var(--csm-accent-hover); border-color:var(--csm-accent-hover); }
+  .cps-root--creator .cps-save-btn:disabled{ opacity:.7; cursor:not-allowed; }
+  .cps-root--creator .cps-status{ margin:0; font-size:13px; color:var(--csm-muted); min-height:18px; }
+  .cps-root--creator .cps-status.is-success{ color:#34d399; }
+  .cps-root--creator .cps-status.is-error{ color:#fca5a5; }
+  .cps-root--creator .cps-login-required{ display:flex; justify-content:center; padding:48px 0; text-align:center; color:var(--csm-muted); }
+  .cps-root--creator .cps-login-required-title{ margin:0 0 12px; font-size:24px; color:var(--csm-text); }
+  .cps-root--creator .cps-login-required-text{ margin:0 0 22px; font-size:14px; }
+  .cps-root--creator .cps-login-required-btn{ border-radius:8px; padding:12px 24px; font-size:14px; font-weight:600; background:var(--csm-accent); color:#111827; border:1px solid var(--csm-accent); cursor:pointer; }
+
+  /* Desktop: fullscreen horizontal, slide up from bottom */
+  @media (min-width: 768px){
+    .csm-overlay{
+      align-items:flex-end;
+      justify-content:stretch;
+      padding:0;
+      background:rgba(0,0,0,.42);
+    }
+
+    .csm-modal{
+      width:100vw;
+      max-width:none;
+      height:100dvh;
+      max-height:100dvh;
+      border-radius:0;
+      border:none;
+      transform:translateY(102%);
+      opacity:1;
+      transition:transform .28s cubic-bezier(.22,.61,.36,1);
+    }
+
+    .csm-overlay.is-open .csm-modal{
+      transform:translateY(0);
+    }
+  }
+
+  /* Mobile Styles - Vollbild wie Profil-Modal im Shop */
+  @media (max-width: 767px){
+    .csm-overlay{
+      padding:0;
+    }
+
+    .csm-modal{
+      width:100vw;
+      max-width:100vw;
+      height:100dvh;
+      max-height:100dvh;
+      border-radius:0;
+      padding:0;
+    }
+
+    .csm-header{
+      padding:16px 20px;
+    }
+
+    .csm-mobile-menu-btn{
+      display:flex;
+    }
+
+    .csm-title{
+      font-size:20px;
+    }
+
+    .csm-subtitle{
+      font-size:12px;
+    }
+
+    .csm-main{
+      flex-direction:column;
+      min-height:0;
+    }
+
+    .csm-sidebar{
+      position:fixed;
+      top:0;
+      left:0;
+      width:var(--csm-sidebar-width);
+      height:100vh;
+      border-right:1px solid var(--csm-border);
+      background:linear-gradient(180deg, var(--csm-modal-bg-1) 0%, var(--csm-modal-bg-2) 100%);
+      transform:translateX(-100%);
+      transition:transform .3s ease;
+      z-index:10001;
+      overflow-y:auto;
+      /* Scrollbar Styling - wie im Inspirationen-Modal */
+      scrollbar-width: thin;
+      scrollbar-color: #4b5563 #111827;
+    }
+
+    .csm-sidebar::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .csm-sidebar::-webkit-scrollbar-track {
+      background: #111827;
+    }
+
+    .csm-sidebar::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 4px;
+    }
+
+    .csm-sidebar::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+
+    .csm-sidebar.is-open{
+      transform:translateX(0);
+    }
+
+    .csm-sidebar__inner{
+      padding:80px 0 24px 0;
+    }
+
+    .csm-nav-item{
+      padding:16px 32px;
+      border-left:3px solid transparent;
+      border-bottom:none;
+    }
+
+    .csm-nav-item.is-active{
+      border-left-color:var(--csm-accent);
+      border-bottom:none;
+    }
+
+    .csm-nav-item.is-disabled{
+      opacity:0.4;
+      cursor:not-allowed;
+      pointer-events:none;
+    }
+
+    .csm-nav-text{
+      display:block;
+    }
+
+    .csm-nav-icon{
+      width:20px;
+      height:20px;
+    }
+
+    .csm-content{
+      flex:1;
+    }
+
+    .csm-panel{
+      padding:20px 16px;
+    }
+
+    .cps-root--creator .cps-grid{
+      grid-template-columns:1fr;
+    }
+
+    .csm-panel-header{
+      margin-bottom:24px;
+    }
+
+    .csm-panel-title{
+      font-size:18px;
+    }
+
+    /* Creator Wear tab: web mobile only (native Android app has its own settings) */
+    .csm-nav-item--wear{
+      display:flex;
+    }
+    @media (min-width:768px){
+      .csm-nav-item--wear{
+        display:none !important;
+      }
+    }
+
+    .csm-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+      margin-top:12px;
+      padding:14px 20px;
+      border-radius:10px;
+      border:none;
+      font-size:15px;
+      font-weight:600;
+      cursor:pointer;
+      text-decoration:none;
+      transition:background .15s ease, transform .15s ease;
+    }
+    .csm-btn--primary{
+      background:var(--csm-accent);
+      color:#111827;
+    }
+    .csm-btn--primary:hover{
+      background:var(--csm-accent-hover);
+    }
+    .csm-btn--secondary{
+      background:rgba(255,255,255,.08);
+      color:var(--csm-text);
+      border:1px solid var(--csm-border-2);
+    }
+    .csm-btn--secondary:hover{
+      background:rgba(255,255,255,.14);
+    }
+    .csm-btn--ghost{
+      background:transparent;
+      color:var(--csm-muted);
+      margin-top:8px;
+    }
+
+    .csm-wear-intro{
+      color:var(--csm-muted);
+      margin:0 0 16px;
+      line-height:1.5;
+    }
+    .csm-wear-prereq{
+      margin:0 0 16px;
+      padding:14px 16px;
+      border-radius:12px;
+      background:rgba(249,115,22,.08);
+      border:1px solid rgba(249,115,22,.35);
+    }
+    .csm-wear-prereq__title{
+      margin:0 0 6px;
+      font-size:15px;
+      font-weight:700;
+      color:var(--csm-text);
+    }
+    .csm-wear-prereq__intro{
+      margin:0 0 12px;
+      font-size:13px;
+      line-height:1.45;
+      color:var(--csm-muted);
+    }
+    .csm-wear-prereq__item{
+      margin:0 0 12px;
+      padding:10px 12px;
+      border-radius:10px;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .csm-wear-prereq__item:last-child{
+      margin-bottom:0;
+    }
+    .csm-wear-prereq__item-title{
+      margin:0 0 4px;
+      font-size:14px;
+      font-weight:600;
+      color:var(--csm-text);
+    }
+    .csm-wear-prereq__item-how{
+      margin:0 0 8px;
+      font-size:12px;
+      line-height:1.4;
+      color:var(--csm-muted);
+    }
+    .csm-wear-prereq__item-cta{
+      display:inline-flex;
+      align-items:center;
+      min-height:32px;
+      padding:0 12px;
+      border-radius:8px;
+      font-size:12px;
+      font-weight:600;
+      color:#fff;
+      background:var(--csm-accent,#f97316);
+      text-decoration:none;
+      border:none;
+      cursor:pointer;
+    }
+    .csm-wear-status{
+      margin:16px 0;
+      font-size:14px;
+      color:var(--csm-text);
+    }
+    .csm-wear-status--error{
+      color:#fca5a5;
+    }
+    .csm-wear-scanner{
+      margin-top:16px;
+      border-radius:12px;
+      overflow:hidden;
+      background:#000;
+    }
+    .csm-wear-scanner video{
+      width:100%;
+      max-height:280px;
+      display:block;
+      object-fit:cover;
+    }
+    .csm-coming-soon{
+      padding:32px 0;
+    }
+  }
+</style>

@@ -1,0 +1,201 @@
+/* Share + Copy Buttons Row */
+.share-copy-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.share-copy-buttons--compact .copy-link-button__label,
+.share-copy-buttons--compact .share-button__icon + span {
+  display: none;
+}
+.copy-link-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+.copy-link-button:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.copy-link-button--compact {
+  padding: 8px;
+}
+.copy-link-button__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.copy-link-button__feedback {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: #fff;
+  background: #059669;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
+}
+.copy-link-button--copied .copy-link-button__feedback {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.copy-link-button__feedback::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-top-color: #059669;
+}
+
+/* Share Button */
+.share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+.share-button:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.share-button--card {
+  position: absolute;
+  right: 40px;
+  top: 8px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.creator-item:hover .share-button--card,
+.creator-item__media:hover .share-button--card {
+  opacity: 1;
+}
+@media (max-width: 749px) {
+  .share-button--card {
+    opacity: 1;
+  }
+}
+.share-button__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Share Modal */
+.share-modal {
+  position: fixed;
+  inset: 0;
+  /* Above gift-card / product variant modal (z-index 10000) */
+  z-index: 10050;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.share-modal--open {
+  display: flex;
+}
+.share-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+.share-modal__content {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+.share-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.share-modal__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.share-modal__close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0 4px;
+}
+.share-modal__close:hover {
+  color: #111;
+}
+.share-modal__body {
+  padding: 20px;
+}
+.share-modal__copy-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.share-modal__input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+.share-modal__copy-btn {
+  flex-shrink: 0;
+}
+.share-modal__social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.share-modal__social-link {
+  display: inline-block;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  color: #374151;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.share-modal__social-link:hover {
+  background: #e5e7eb;
+}
