@@ -4,6 +4,10 @@
   --portal-boot-muted: #9aa8c7;
 }
 
+.creator-boot[hidden] {
+  display: none !important;
+}
+
 body.is-boot-loading #creatorPortalApp {
   visibility: hidden;
 }
