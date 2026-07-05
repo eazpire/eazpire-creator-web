@@ -38,14 +38,13 @@
       var params = new URLSearchParams(global.location.search);
       if (params.get("auth") === "ok") {
         params.delete("auth");
-        var next = global.location.pathname + (params.toString() ? "?" + params.toString() : "") + global.location.hash;
+        var next = global.location.pathname + (params.toString() ? "?" + params.toString() : "");
         global.history.replaceState({}, "", next);
         showToast("Signed in", "Welcome to Eazpire Creator.");
       } else if (params.get("auth_error")) {
         var err = params.get("auth_error");
         params.delete("auth_error");
-        var nextErr =
-          global.location.pathname + (params.toString() ? "?" + params.toString() : "") + global.location.hash;
+        var nextErr = global.location.pathname + (params.toString() ? "?" + params.toString() : "");
         global.history.replaceState({}, "", nextErr);
         showToast("Sign-in failed", err.replace(/_/g, " "));
       }

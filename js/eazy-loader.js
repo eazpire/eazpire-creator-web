@@ -69,6 +69,7 @@
     html = html
       .replace(/^https?:\/\/www\.eazpire\.com\/cdn\/shop[^\n]*\n/gm, "")
       .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>\s*/gi, "")
+      .replace(/<script(?![^>]*\ssrc=)[^>]*>[\s\S]*?<\/script>\s*/gi, "")
       .replace(/<script[^>]*src=[^>]*>\s*<\/script>\s*/gi, "");
     var wrap = document.createElement("div");
     wrap.setAttribute("data-partial", name);
@@ -160,13 +161,16 @@
       } catch (e) {}
     })();
 
-    try {
-      await state;
-    } catch (e) {
-      state = null;
-      console.warn("[CreatorPortalEazy] load failed", e);
-    }
-    return state;
+      try {
+        await state;
+      } catch (e) {
+        state = null;
+        console.warn("[CreatorPortalEazy] load failed", e);
+      }
+      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.applyOwnerFromAuth === "function") {
+        global.CreatorPortalThemeBridge.applyOwnerFromAuth();
+      }
+      return state;
   }
 
   global.CreatorPortalEazy = {

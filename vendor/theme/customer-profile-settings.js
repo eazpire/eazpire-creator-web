@@ -4,7 +4,15 @@
   if (window.__customerProfileSettingsLoaded) return;
   window.__customerProfileSettingsLoaded = true;
 
-  var API_BASE = "https://creator-engine.eazpire.workers.dev/apps/creator-dispatch";
+  var API_BASE = (function () {
+    if (window.__CREATOR_PORTAL_HOST__) {
+      return (window.location.origin || "").replace(/\/$/, "") + "/api/dispatch";
+    }
+    if (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) {
+      return window.CREATOR_API_CONFIG.BASE_URL + "/apps/creator-dispatch";
+    }
+    return "https://creator-engine.eazpire.workers.dev/apps/creator-dispatch";
+  })();
 
   function getOwnerId() {
     return String(
@@ -809,12 +817,24 @@
     if (!isLoggedIn()) return Promise.resolve();
     setLoading(root, true);
     setStatus(root, "");
-    return Promise.all([apiGet("get-customer-account-profile"), apiGet("get-account-username")])
+    return Promise.all([
+      apiGet("get-customer-account-profile"),
+      apiGet("get-account-username"),
+      apiGet("get-customer-email"),
+    ])
       .then(function (results) {
         var profileData = results[0];
         var usernameData = results[1];
+        var emailData = results[2];
         if (!profileData || profileData.ok !== true) throw new Error("profile_load_failed");
+        var email =
+          emailData && emailData.ok === true && emailData.email
+            ? String(emailData.email).trim()
+            : (profileData.profile && profileData.profile.email) || "";
+        if (email) root.setAttribute("data-customer-email", email);
         fillForm(root, profileData.profile || null);
+        var emailEl = root.querySelector("[data-cps-email]");
+        if (emailEl) emailEl.value = email || root.getAttribute("data-customer-email") || "";
         var username = usernameData && usernameData.ok === true ? usernameData.username : "";
         if (typeof root.__cpsSetSavedUsername === "function") {
           root.__cpsSetSavedUsername(username || "");

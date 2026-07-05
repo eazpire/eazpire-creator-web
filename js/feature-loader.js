@@ -86,6 +86,7 @@
 
   function sharedCss() {
     [
+      "/vendor/theme/sales-modal.css",
       "/vendor/theme/creator-mobile.css",
       "/vendor/theme/creator-mobile-screens.css",
       "/vendor/theme/creator-my-creations.css",
@@ -199,6 +200,7 @@
     state.generator = (async function () {
       if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
       sharedCss();
+      loadCss("/vendor/theme/sales-modal.css");
 
       await injectPartial("creator-mobile-generator-modals.html");
       await injectPartial("reference-influence-modal.html");

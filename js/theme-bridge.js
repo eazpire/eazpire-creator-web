@@ -16,6 +16,7 @@
   };
 
   global.__CREATOR_PORTAL_HOST__ = true;
+  global.__CREATOR_DASHBOARD_EMBED_PAGE = true;
   global.__EAZ_SKIP_SHOP_LIST_JOBS__ = true;
   global.__EAZ_DEFER_CREATOR_DESIGN_MODAL__ = true;
 
@@ -30,19 +31,71 @@
     return null;
   }
 
+  function syncChatAuthUi() {
+    var loggedIn = !!resolveOwnerId();
+    var gate = document.getElementById("creator-chat-login-gate");
+    if (gate) gate.hidden = loggedIn;
+    var input = document.getElementById("creator-chat-input");
+    if (input) {
+      input.disabled = !loggedIn;
+      if (loggedIn && input.getAttribute("data-portal-placeholder")) {
+        input.placeholder = input.getAttribute("data-portal-placeholder");
+      }
+    }
+    var uploadBtn = document.getElementById("creator-chat-upload-btn");
+    if (uploadBtn) {
+      uploadBtn.disabled = !loggedIn;
+      uploadBtn.style.opacity = loggedIn ? "" : "0.3";
+      uploadBtn.style.pointerEvents = loggedIn ? "" : "none";
+    }
+    var loginBtn = gate && gate.querySelector(".creator-chat__login-gate-btn");
+    if (loginBtn && loggedIn === false) {
+      loginBtn.setAttribute("href", "/auth/login");
+    }
+  }
+
+  function bindChatCloseDelegation() {
+    if (global.__creatorPortalChatCloseBound) return;
+    global.__creatorPortalChatCloseBound = true;
+    document.addEventListener(
+      "click",
+      function (e) {
+        var btn = e.target.closest("#creator-chat-close, .creator-chat__panel-close");
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (global.CreatorChat && typeof global.CreatorChat.close === "function") {
+          global.CreatorChat.close();
+        }
+      },
+      true
+    );
+  }
+
   function applyOwnerFromAuth() {
     var oid = resolveOwnerId();
     if (oid) {
       global.__EAZ_OWNER_ID = oid;
       global.__CREATOR_IS_LOGGED_IN = true;
+      global.__creatorSettingsUserLoggedIn = true;
+      try {
+        delete global.__EAZY_GUEST;
+      } catch (e) {
+        global.__EAZY_GUEST = false;
+      }
     } else {
       global.__CREATOR_IS_LOGGED_IN = false;
+      global.__creatorSettingsUserLoggedIn = false;
+      global.__EAZY_GUEST = true;
     }
+    syncChatAuthUi();
+    bindChatCloseDelegation();
     return oid;
   }
 
   global.creatorApiFetch = async function (operation, params, options) {
-    var url = new URL(origin + "/apps/creator-dispatch");
+    var dispatchPath = "/api/dispatch";
+    var url = new URL(origin + dispatchPath);
     url.searchParams.set("op", operation);
     if (!options || !options.method || options.method === "GET") url.searchParams.set("_t", String(Date.now()));
     Object.keys(params || {}).forEach(function (key) {
@@ -70,7 +123,10 @@
 
   global.CreatorWidget = global.CreatorWidget || {};
   if (!global.CreatorWidget.apiBaseUrl) {
-    global.CreatorWidget.apiBaseUrl = origin + "/apps/creator-dispatch";
+    global.CreatorWidget.apiBaseUrl = origin + "/api/dispatch";
+  }
+  if (!global.CreatorWidget.ownerId && resolveOwnerId()) {
+    global.CreatorWidget.ownerId = resolveOwnerId();
   }
 
   global.EazAnim = global.EazAnim || {
@@ -116,6 +172,25 @@
     applyPortalI18n: applyPortalI18n,
     notifyContextReady: function () {
       applyOwnerFromAuth();
+      if (global.CreatorWidget) global.CreatorWidget.ownerId = resolveOwnerId();
+      if (
+        global.CreatorDashboardData &&
+        typeof global.CreatorDashboardData.refreshDashboardShellData === "function"
+      ) {
+        try {
+          global.CreatorDashboardData.refreshDashboardShellData();
+        } catch (e) {}
+      }
+      if (typeof global.loadCreatorBalance === "function") {
+        try {
+          global.loadCreatorBalance(0);
+        } catch (e) {}
+      }
+      if (typeof global.loadCreatorSalesBalance === "function") {
+        try {
+          global.loadCreatorSalesBalance(0);
+        } catch (e) {}
+      }
       global.dispatchEvent(new CustomEvent("eazCreatorContextReady"));
     },
     assetUrl: function (file) {

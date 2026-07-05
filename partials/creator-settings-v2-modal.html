@@ -73,13 +73,6 @@
             <span class="csm-nav-text">Creator Names</span>
           </button>
 
-          <button type="button" class="csm-nav-item creator-journey-trigger" data-cj-open="level" title="Level">
-            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            <span class="csm-nav-text">Creator Journey</span>
-          </button>
-
           <!-- EAZ Tab -->
           <button type="button" class="csm-nav-item" data-csm-nav="eaz">
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -146,37 +139,37 @@
   
 
 
-Profile settings saved.
-Profile settings could not be saved.
-Profile settings could not be loaded.
-You need to be logged in to manage your profile settings.
-Login required
-Log in now
-Email
-Log out
-Your account email (from Shopify)
-Username
-English handle, unique across Eazpire
-Checking availability…
-Available
-Already taken
-3–20 characters: letters, numbers, underscore only
-Could not save username.
-Profile picture (1:1, JPG/PNG/WebP)
-Upload profile picture
-Could not upload profile picture.
-First name
-Last name
-Address
-City
-Country
-Select country
-Birth date
-Share your birth date to unlock a birthday surprise.
-Gender
-Female
-Male
-Save profile settings
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -186,24 +179,24 @@ Save profile settings
   data-customer-profile-settings-root
   data-context=""
   data-customer-email=""
-  data-msg-saved=""
-  data-msg-save-failed=""
-  data-msg-load-failed=""
-  data-msg-login-required=""
-  data-msg-username-checking=""
-  data-msg-username-available=""
-  data-msg-username-taken=""
-  data-msg-username-invalid=""
-  data-msg-username-save-failed=""
-  data-msg-avatar-failed=""
-  data-label-first-name=""
-  data-label-last-name=""
-  data-label-address=""
-  data-label-city=""
-  data-label-country=""
-  data-label-birth-date=""
-  data-label-gender=""
-  data-label-username=""
+  data-msg-saved="Profile settings saved."
+  data-msg-save-failed="Profile settings could not be saved."
+  data-msg-load-failed="Profile settings could not be loaded."
+  data-msg-login-required="You need to be logged in to manage your profile settings."
+  data-msg-username-checking="Checking availability…"
+  data-msg-username-available="Available"
+  data-msg-username-taken="Already taken"
+  data-msg-username-invalid="3–20 characters: letters, numbers, underscore only"
+  data-msg-username-save-failed="Could not save username."
+  data-msg-avatar-failed="Could not upload profile picture."
+  data-label-first-name="First name"
+  data-label-last-name="Last name"
+  data-label-address="Address"
+  data-label-city="City"
+  data-label-country="Country"
+  data-label-birth-date="Birth date"
+  data-label-gender="Gender"
+  data-label-username="Username"
   
 >
   <div
@@ -213,10 +206,10 @@ Save profile settings
     data-cps-login-required
   >
     <div class="cps-login-required-content">
-      <h3 class="cps-login-required-title"></h3>
-      <p class="cps-login-required-text"></p>
+      <h3 class="cps-login-required-title">Login required</h3>
+      <p class="cps-login-required-text">You need to be logged in to manage your profile settings.</p>
       <button type="button" class="cps-login-required-btn" id="csmProfileLoginBtn" data-cps-login-btn>
-        
+        Log in now
       </button>
     </div>
   </div>
@@ -224,13 +217,13 @@ Save profile settings
   <div
     class="cps-form-wrap"
     id="csmProfileForm"
-    style="display:none"
+    style=""
     data-cps-form-wrap
   >
     <form class="cps-form" data-cps-form>
       
       <div class="cps-avatar-field" data-cps-avatar-field>
-        <button type="button" class="cps-avatar-btn" data-cps-avatar-btn aria-label="">
+        <button type="button" class="cps-avatar-btn" data-cps-avatar-btn aria-label="Upload profile picture">
           <img class="cps-avatar-img" data-cps-avatar-img alt="" width="96" height="96" hidden>
           <span class="cps-avatar-placeholder" data-cps-avatar-placeholder aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
@@ -241,12 +234,12 @@ Save profile settings
       </div>
       
       <div class="cps-field cps-field--email">
-        <label class="cps-label" for=""></label>
+        <label class="cps-label" for="">Email</label>
         <div class="cps-email-row">
           <input id="" type="text" class="cps-input cps-input--email-inline" data-cps-email readonly aria-readonly="true">
-          <a href="" class="cps-logout-btn"></a>
+          <a href="" class="cps-logout-btn">Log out</a>
         </div>
-        <p class="cps-hint"></p>
+        <p class="cps-hint">Your account email (from Shopify)</p>
       </div>
 
       <div class="cps-field">
@@ -258,29 +251,29 @@ Save profile settings
 
       <div class="cps-grid">
         <div class="cps-field">
-          <label class="cps-label" for="cpsFirstName-"></label>
+          <label class="cps-label" for="cpsFirstName-">First name</label>
           <input id="cpsFirstName-" type="text" class="cps-input" name="first_name" maxlength="100" data-cps-input="first_name">
         </div>
         <div class="cps-field">
-          <label class="cps-label" for="cpsLastName-"></label>
+          <label class="cps-label" for="cpsLastName-">Last name</label>
           <input id="cpsLastName-" type="text" class="cps-input" name="last_name" maxlength="100" data-cps-input="last_name">
         </div>
       </div>
 
       <div class="cps-field">
-        <label class="cps-label" for="cpsAddress-"></label>
+        <label class="cps-label" for="cpsAddress-">Address</label>
         <input id="cpsAddress-" type="text" class="cps-input" name="address_line" maxlength="255" data-cps-input="address_line">
       </div>
 
       <div class="cps-grid">
         <div class="cps-field">
-          <label class="cps-label" for="cpsCity-"></label>
+          <label class="cps-label" for="cpsCity-">City</label>
           <input id="cpsCity-" type="text" class="cps-input" name="city" maxlength="120" data-cps-input="city">
         </div>
         <div class="cps-field">
-          <label class="cps-label" for="cpsCountry-"></label>
+          <label class="cps-label" for="cpsCountry-">Country</label>
           <select id="cpsCountry-" class="cps-input" name="country" data-cps-input="country">
-            <option value=""></option>
+            <option value="">Select country</option>
             
           </select>
         </div>
@@ -288,21 +281,21 @@ Save profile settings
 
       <div class="cps-grid">
         <div class="cps-field">
-          <label class="cps-label" for="cpsBirthDate-"></label>
+          <label class="cps-label" for="cpsBirthDate-">Birth date</label>
           <input id="cpsBirthDate-" type="date" class="cps-input" name="birth_date" data-cps-input="birth_date" max="">
-          <p class="cps-hint"></p>
+          <p class="cps-hint">Share your birth date to unlock a birthday surprise.</p>
         </div>
 
         <div class="cps-field">
-          <span class="cps-label"></span>
-          <div class="cps-gender-grid" role="group" aria-label="">
+          <span class="cps-label">Gender</span>
+          <div class="cps-gender-grid" role="group" aria-label="Gender">
             <button type="button" class="cps-gender-option" data-cps-gender-btn="female" aria-pressed="false">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M12 12v8M9 16h6M9.5 20h5"></path></svg>
-              <span></span>
+              <span>Female</span>
             </button>
             <button type="button" class="cps-gender-option" data-cps-gender-btn="male" aria-pressed="false">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="15" r="4"></circle><path d="M13 11l6-6M15 5h4v4"></path></svg>
-              <span></span>
+              <span>Male</span>
             </button>
           </div>
           <input type="hidden" name="gender" value="" data-cps-input="gender">
@@ -310,7 +303,7 @@ Save profile settings
       </div>
 
       <div class="cps-actions cps-actions--hidden">
-        <button type="submit" class="cps-save-btn" data-cps-save-btn></button>
+        <button type="submit" class="cps-save-btn" data-cps-save-btn>Save profile settings</button>
       </div>
       <p class="cps-status" data-cps-status></p>
     </form>
@@ -413,18 +406,7 @@ Save profile settings
               Full details & steps
             </a>
             
-              Account and data deletion request
               
-
-
-Please delete my customer account and associated personal data for this shop.
-
-Account email: 
-
-Thank you.
-
-
-
               
               <a
                 class="cps-delete-account__btn"
@@ -630,11 +612,11 @@ Thank you.
   </div>
 
   <!-- User Picker Modal -->
-  Search by username
+  
   <dialog class="cc-picker-modal" data-cc-picker-modal>
     <div class="cc-picker-modal__inner">
       <h4 class="cc-picker-modal__title" data-t="creator.settings.creator_codes_picker_title">Send Creator Code</h4>
-      <input type="search" class="cc-picker-modal__search" data-cc-picker-search autocomplete="off" placeholder="" />
+      <input type="search" class="cc-picker-modal__search" data-cc-picker-search autocomplete="off" placeholder="Search by username" />
       <p class="cc-picker-modal__hint" data-t="creator.settings.creator_codes_picker_search_hint">Type at least 2 characters to search</p>
       <div class="cc-picker-modal__loading" data-cc-picker-loading style="display:none" data-t="creator.common.loading">Loading...</div>
       <div class="cc-picker-modal__list" data-cc-picker-list></div>
@@ -1116,26 +1098,7 @@ Thank you.
 
   <div style="display:none;" data-creator-names-storage></div>
 
-  <script type="application/json" data-creator-names-data style="display:none;">
-    {}
-  </script>
-
-  <script>
-    window.CreatorI18n = window.CreatorI18n || {};
-    window.CreatorI18n.settings_names_usage = {current} / {max} used;
-    window.CreatorI18n.settings_names_empty = No creator names yet.;
-    window.CreatorI18n.settings_names_loading = Loading your Creator names...;
-    window.CreatorI18n.settings_names_added_ok = Creator name added.;
-    window.CreatorI18n.settings_names_add_error = Could not add name.;
-    window.CreatorI18n.settings_names_invalid_chars = Only letters, numbers, spaces, and hyphens (-) are allowed.;
-    window.CreatorI18n.settings_names_name_taken = This name is already taken. Try another one!;
-    window.CreatorI18n.settings_names_too_short = Name must be at least 3 characters.;
-    window.CreatorI18n.settings_names_limit_reached = You can register up to 5 creator names.;
-    window.CreatorI18n.settings_names_already_added = You already added this name.;
-    window.CreatorI18n.editCreatorProfile = Edit creator profile;
-  </script>
-
-</div>
+  </div>
 
 <style>
   .creator-names-panel--compact{
@@ -1536,92 +1499,12 @@ Thank you.
   </div>
 </div>
 
-<script type="application/json" id="creator-eaz-packages-json">
-[
-  {"eaz":150,"priceUSD":19.99,"recommended":false,"label":"150 EAZG"},
-  {"eaz":410,"priceUSD":44.99,"recommended":false,"label":"410 EAZG"},
-  {"eaz":1050,"priceUSD":99.99,"recommended":true,"label":"1050 EAZG"}
-]
-</script>
-
-<script>
-  window.CreatorI18n = window.CreatorI18n || {};
-  window.CreatorI18n.eazRefillPrefix = At the next daily reset, up to %N free EAZG can be added (until your free pool reaches the cap).;
-  window.CreatorI18n.eazUntilReset = Time until daily reset: ;
-  window.CreatorI18n.eaz_wallet_locked_hint = Redeem a Creator Code to unlock EAZ, daily free credits, and purchases.;
-  window.CreatorI18n.eaz_enter_creator_code_cta = Enter Creator Code;
-  window.CreatorI18n.eazShopCta = Buy Now;
-  window.CreatorI18n.eazPkgGensTpl = Up to  design generations ( EAZ each)
-Up to  uploads ( EAZ each)
-Free pool: up to  uploads ( EAZ cap);
-  window.CreatorI18n.eazPkgDiscount = % better value per EAZG vs smallest pack;
-  window.CreatorI18n.eazPkgPriceUsd = ;
-  window.CreatorI18n.eazPkgRecommended = Recommended;
-  window.CreatorI18n.eazPkgPer10Tpl =  per 10 EAZG;
-  window.CreatorI18n.eazPkgBaseline = Compared to starter pack (reference tier);
-  window.CreatorI18n.eazStripeFailed = Checkout could not start. Please try again in a moment.;
-  window.CreatorI18n.eazCheckoutNeedAccount = Sign in to continue to checkout.;
-  window.CreatorI18n.eazLogsEmptyFiltered = No entries in this category.;
-  window.CreatorI18n.eazLogsEmptyDefault = No transactions yet.;
-  window.CreatorI18n.eazLogDebitSplitTpl = Free  / Purchased ;
-  window.CreatorI18n.eazLedgerReasonEazPackDryRun = EAZ pack test (no payment — Stripe dry run);
-  window.CreatorI18n.eazAdminTestBuy = Test (dry run);
-  window.CreatorI18n.eazAdminTestBuyConfirm = Simulate this pack on your account? No Stripe charge — EAZ will be credited as a test purchase.;
-  window.CreatorI18n.eazAdminTestBuyFail = Dry run failed. Try again or check admin configuration.;
-  window.CreatorI18n.eazAdminTestBuyForbidden = Only designated admin accounts can run test purchases.;
-  window.CreatorI18n.eaz_tab_starter = Starter Pack;
-  window.CreatorI18n.eaz_starter_summary_tpl =  used ·  left (max );
-  window.CreatorI18n.eaz_starter_loading = Loading Starter Pack…;
-  window.CreatorI18n.eaz_starter_not_applicable = —;
-  window.CreatorI18n.eaz_tab_costs = EAZ Costs;
-  window.CreatorI18n.eaz_costs_intro = Your effective EAZ price per feature (includes mascot discounts when active).;
-  window.CreatorI18n.eaz_costs_loading = Loading prices…;
-  window.CreatorI18n.eaz_cost_free = Free;
-  window.CreatorI18n.eazCostDesignGenerate = Generate design;
-  window.CreatorI18n.eazCostDesignUpload = Upload design;
-  window.CreatorI18n.eazCostBgRemove = Remove background;
-  window.CreatorI18n.eazCostDesignEdit = Edit design;
-  window.CreatorI18n.eazCostDesignVariation = Design variation;
-  window.CreatorI18n.eazCostMockupGenerate = Generate mockup;
-  window.CreatorI18n.eazCostMockupSave = Save mockup;
-  window.CreatorI18n.eazCostHeroGenerate = Hero image generation;
-  window.CreatorI18n.eazCostHeroImpression = Hero impression;
-  window.CreatorI18n.eazCostVideoGenerate = Video generation;
-  window.CreatorI18n.eazCostWardrobeGenerate = Wardrobe generation;
-  window.CreatorI18n.eazCostCreatorImage = Creator image;
-  window.CreatorI18n.eazCostExportHighRes = High-res export;
-  window.CreatorI18n.eazCostExportPrint = Print export;
-  window.CreatorI18n.eaz_convert_hint = Convert available EAZC to fiat balance or a shop gift card.;
-  window.CreatorI18n.eaz_convert_available_label = Available;
-  window.CreatorI18n.eaz_convert_min_tpl = Minimum  EAZ required.;
-  window.CreatorI18n.eaz_convert_success = Conversion complete.;
-  window.CreatorI18n.eaz_convert_fail = Conversion failed.;
-  window.CreatorI18n.eaz_convert_preview = ≈ ;
-  window.CreatorI18n.eazc_convert_to_eazg_confirm = Convert  EAZC to  EAZG? This reduces your cash-out balance.;
-  window.CreatorI18n.eazc_convert_to_eazg_preview = You receive  EAZG (1:1);
-  window.CreatorI18n.eazc_convert_min_tpl = Minimum  EAZC required.;
-</script>
-
-          </div>
+</div>
         </section>
 
         <!-- Payout Panel -->
         <section class="csm-panel" data-csm-panel="payout">
           
-
-<script>
-  window.__EAZ_CONTINENT_LABELS = Object.assign({}, window.__EAZ_CONTINENT_LABELS || {}, {
-    AF: Africa,
-    AS: Asia,
-    EU: Europe,
-    NA: North America,
-    SA: South America,
-    OC: Oceania,
-    AN: Antarctica,
-    OTHER: Other regions
-  });
-</script>
-
 
 <div class="csm-payout-panel" id="csmPayoutPanel" data-no-translate="true">
   <div class="csm-panel-header">
@@ -2289,7 +2172,7 @@ Free pool: up to  uploads ( EAZ cap);
     </button>
   </div>
 
-  <div id="ehubMain" class="ehub__main" style="display:none">
+  <div id="ehubMain" class="ehub__main" style="">
     <div class="ehub__main-tabs" role="tablist">
       <button type="button" class="ehub__main-tab ehub__main-tab--active" data-ehub-main-tab="themes" role="tab" aria-selected="true">
         Themes
@@ -2306,10 +2189,10 @@ Free pool: up to  uploads ( EAZ cap);
       <div class="ehub__pane-top">
         <p class="ehub__section-note ehub__pane-intro">Pick interest topics from the catalogue, add your own, or use topics shared by other users.</p>
         <div class="ehub__search">
-          Search interests...
-          <input type="search" class="ehub__search-input" id="ehubSearchInput" placeholder="" autocomplete="off" />
-          Clear
-          <button type="button" class="ehub__search-clear" id="ehubSearchClear" style="display:none;" aria-label="">×</button>
+          
+          <input type="search" class="ehub__search-input" id="ehubSearchInput" placeholder="Search interests..." autocomplete="off" />
+          
+          <button type="button" class="ehub__search-clear" id="ehubSearchClear" style="display:none;" aria-label="Clear">×</button>
         </div>
         <div class="ehub__muted ehub__count-row">
           <span id="ehubThemeCount">0</span>
@@ -2340,8 +2223,8 @@ Free pool: up to  uploads ( EAZ cap);
       <div class="ehub__pane-top">
         <p class="ehub__section-note ehub__pane-intro">Choose visual styles the same way as themes — catalogue, your own, and styles shared by others.</p>
         <div class="ehub__search">
-          Search styles...
-          <input type="search" id="ehubStyleSearchInput" placeholder="" autocomplete="off" />
+          
+          <input type="search" id="ehubStyleSearchInput" placeholder="Search styles..." autocomplete="off" />
           <button type="button" class="ehub__search-clear" id="ehubStyleSearchClear" style="display:none;">×</button>
         </div>
         <div class="ehub__muted ehub__count-row">
@@ -2371,14 +2254,14 @@ Free pool: up to  uploads ( EAZ cap);
       </div>
 
       <div class="ehub__images-toolbar">
-        Search all sections — designs, your uploads, others’ images…
-        Upload image
-        Upload from phone (QR code)
-        <input type="search" class="ehub__images-search-input" id="ehubImagesSearchInput" placeholder="" autocomplete="off" />
-        <button type="button" class="ehub__upload-icon-btn" id="ehubImagesUploadBtn" aria-label="">
+        
+        
+        
+        <input type="search" class="ehub__images-search-input" id="ehubImagesSearchInput" placeholder="Search all sections — designs, your uploads, others’ images…" autocomplete="off" />
+        <button type="button" class="ehub__upload-icon-btn" id="ehubImagesUploadBtn" aria-label="Upload image">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </button>
-        <button type="button" class="ehub__upload-icon-btn ehub__upload-icon-btn--phone" id="ehubImagesPhoneUploadBtn" aria-label="">
+        <button type="button" class="ehub__upload-icon-btn ehub__upload-icon-btn--phone" id="ehubImagesPhoneUploadBtn" aria-label="Upload from phone (QR code)">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
         </button>
         <input type="file" id="ehubRefFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;" tabindex="-1" />
@@ -2410,72 +2293,21 @@ Free pool: up to  uploads ( EAZ cap);
   </div>
 </div>
 
-Profession
-Hobby
-Sport
-Music
-Art
-Food & Drink
-Travel
-Animals
-Technology
-Lifestyle
-Nature
-Gaming
-Fashion
-Science
-Family
-Other
-<script type="application/json" id="ehubCategoryTranslations">
-{
-  "profession": ,
-  "hobby": ,
-  "sport": ,
-  "music": ,
-  "art": ,
-  "food": ,
-  "travel": ,
-  "animals": ,
-  "technology": ,
-  "lifestyle": ,
-  "nature": ,
-  "gaming": ,
-  "fashion": ,
-  "science": ,
-  "family": ,
-  "other": 
-}
-</script>
-Typography styles
-Illustration styles
-Character & figure styles
-Retro & vintage
-Modern & trend styles
-Layout & composition
-Texture & surface
-Color styles
-Effects
-Artistic directions
-Streetwear & fashion
-Pattern styles
-Other
-<script type="application/json" id="ehubStyleCategoryTranslations">
-{
-  "typography_styles": ,
-  "illustration_styles": ,
-  "character_styles": ,
-  "retro_vintage": ,
-  "modern_trend": ,
-  "layout_composition": ,
-  "texture_surface": ,
-  "color_styles": ,
-  "effects_styles": ,
-  "artistic_direction": ,
-  "streetwear_fashion": ,
-  "pattern_styles": ,
-  "other": 
-}
-</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 </div>
 
@@ -2537,52 +2369,26 @@ Other
   </div>
 </section>
 
-This device: logged in
-This device: not logged in
-Log in on this device first.
-Watch connected. Open the Wear app on your watch.
-Scan the QR code on your watch
-Get app on Google Play
-Connected watch: 
-Connected: 
-No watch connected to your account.
-Disconnect watch
-Watch disconnected.
-Before you can connect
-Complete these steps in Creator Settings:
-Redeem a Creator Code
-Open Creator Settings → Creator Codes and enter your code.
-Add at least one Creator Name
-Open Creator Settings → Creator Names and add your public display name.
-Go to Creator Codes
-Go to Creator Names
-<script>
-  window.CreatorI18n = window.CreatorI18n || {};
-  Object.assign(window.CreatorI18n, {
-    wear_phone_logged_in: ,
-    wear_phone_logged_out: ,
-    wear_login_required: ,
-    wear_connected_ok: ,
-    wear_scan_hint: ,
-    wear_play_store: ,
-    wear_connected_watch: ,
-    wear_connected_at: ,
-    wear_not_connected: ,
-    wear_disconnect: ,
-    wear_disconnected: ,
-    wear_prereq_title: ,
-    wear_prereq_intro: ,
-    wear_prereq_creator_code: ,
-    wear_prereq_creator_code_how: ,
-    wear_prereq_creator_name: ,
-    wear_prereq_creator_name_how: ,
-    wear_prereq_go_creator_code: ,
-    wear_prereq_go_creator_names: 
-  });
-</script>
 
 
-      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
 
     </div>
 

@@ -286,8 +286,21 @@
         var pathDash = window.location.pathname || '';
         var onDash =
           pathDash.indexOf('/') !== -1 ||
-          pathDash.indexOf('/pages/creator-overview') !== -1;
+          pathDash.indexOf('/pages/creator-overview') !== -1 ||
+          window.__CREATOR_PORTAL_HOST__ === true;
         if (onDash) {
+          if (window.__CREATOR_PORTAL_HOST__) {
+            var portalPath = pathDash.replace(/\/$/, '') || '/';
+            var portalMap = {
+              '/': 'dashboard',
+              '/dashboard': 'dashboard',
+              '/generator': 'generator',
+              '/creations': 'creations',
+              '/marketing': 'marketing',
+              '/automations': 'automations'
+            };
+            if (portalMap[portalPath]) activeScreen = portalMap[portalPath];
+          }
           var dh = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();
           if (dh === 'promotions') activeScreen = 'marketing';
           else if (allowed[dh]) activeScreen = dh;
@@ -301,8 +314,19 @@
         var pathDash = window.location.pathname || '';
         if (
           pathDash.indexOf('/') === -1 &&
-          pathDash.indexOf('/pages/creator-overview') === -1
+          pathDash.indexOf('/pages/creator-overview') === -1 &&
+          window.__CREATOR_PORTAL_HOST__ !== true
         ) {
+          return;
+        }
+        if (window.__CREATOR_PORTAL_HOST__) {
+          var nextPath = screen === 'dashboard' ? '/dashboard' : '/' + screen;
+          var currentPath = pathDash.replace(/\/$/, '') || '/';
+          if (currentPath === nextPath) return;
+          var portalUrl = new URL(window.location.href);
+          portalUrl.pathname = nextPath;
+          portalUrl.hash = '';
+          window.history.replaceState(window.history.state, '', portalUrl.pathname + portalUrl.search);
           return;
         }
         var cur = (window.location.hash || '').replace(/^#/, '').toLowerCase();
@@ -460,7 +484,7 @@
     switchScreen(activeScreen);
 
     window.addEventListener('hashchange', function () {
-      if (embedDashboard) return;
+      if (embedDashboard || window.__CREATOR_PORTAL_HOST__) return;
       try {
         var pathDash = window.location.pathname || '';
         if (
@@ -476,6 +500,22 @@
         }
         if (allowed[h]) switchScreen(h);
       } catch (eHc) {}
+    });
+
+    window.addEventListener('popstate', function () {
+      if (embedDashboard || !window.__CREATOR_PORTAL_HOST__) return;
+      try {
+        var pathDash = (window.location.pathname || '').replace(/\/$/, '') || '/';
+        var portalMap = {
+          '/': 'dashboard',
+          '/dashboard': 'dashboard',
+          '/generator': 'generator',
+          '/creations': 'creations',
+          '/marketing': 'marketing',
+          '/automations': 'automations'
+        };
+        if (portalMap[pathDash]) switchScreen(portalMap[pathDash]);
+      } catch (ePs) {}
     });
 
     window.CreatorDesktopShell = {

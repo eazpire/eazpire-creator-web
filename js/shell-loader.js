@@ -78,7 +78,7 @@
       img.src = CREATOR_LOGO;
     });
     host.querySelectorAll(".creator-desktop-header__brand").forEach(function (a) {
-      a.setAttribute("href", "/#dashboard");
+      a.setAttribute("href", "/dashboard");
     });
 
     if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
@@ -127,6 +127,8 @@
   }
 
   async function loadThemeRuntime() {
+    await loadScript("/js/portal-balances.js");
+    await loadScript("/vendor/theme/creator-creator-area-api.js");
     await loadScript("/vendor/theme/creator-dashboard-data.js");
     await loadScript("/vendor/theme/particle-reveal.js");
     await loadScript("/vendor/theme/design-particle-reveal.js");
@@ -135,6 +137,9 @@
     await loadScript("/vendor/theme/creator-mobile.js");
     await loadScript("/vendor/theme/creator-desktop.js");
     await loadScript("/vendor/theme/creator-theme-background.js");
+    await loadScript("/vendor/theme/creator-shop-portal-handoff.js");
+    await loadScript("/vendor/theme/creator-switch-page-transition.js");
+    await loadScript("/js/creator-portal-switch.js");
     await loadAudioModal();
     if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
       try {

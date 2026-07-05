@@ -9,9 +9,12 @@
     ? window.CREATOR_API_CONFIG.BASE_URL
     : 'https://creator-engine.eazpire.workers.dev';
   var DISPATCH_URL = API_BASE + '/apps/creator-dispatch';
-  var GENERATOR_URL = (typeof window.location !== 'undefined' ? window.location.origin : '') + '/#generator';
+  var GENERATOR_URL = (typeof window.location !== 'undefined' ? window.location.origin : '') + '/generator';
 
   function refreshCreatorGenEazyUi() {
+    if (typeof window.syncCreatorHeaderEazySpeech === 'function') {
+      window.syncCreatorHeaderEazySpeech();
+    }
     if (typeof window.syncCreatorMobileEazyLookLeft === 'function') {
       window.syncCreatorMobileEazyLookLeft();
     }

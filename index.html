@@ -11,12 +11,14 @@
   <link rel="stylesheet" href="/vendor/theme/creator-seamless-bg.css?v=6">
   <link rel="stylesheet" href="/vendor/theme/creator-theme-background.css?v=6">
   <link rel="stylesheet" href="/vendor/theme/creator-mobile-screens.css?v=6">
+  <link rel="stylesheet" href="/vendor/theme/sales-modal.css?v=6">
   <link rel="stylesheet" href="/vendor/theme/creator-automations.css?v=6">
   <link rel="stylesheet" href="/vendor/theme/creator-audio-modal.css?v=6">
   <link rel="stylesheet" media="(min-width: 992px)" href="/vendor/theme/creator-desktop.css?v=6">
-  <link rel="stylesheet" href="/css/creator-portal.css?v=7">
+  <link rel="stylesheet" href="/css/creator-portal.css?v=9">
   <script>
     window.__CREATOR_PORTAL_HOST__ = true;
+    window.__CREATOR_DASHBOARD_EMBED_PAGE = true;
     window.__EAZ_SKIP_SHOP_LIST_JOBS__ = true;
     window.__EAZ_DEFER_CREATOR_DESIGN_MODAL__ = true;
     window.__CREATOR_THEME_DEFAULTS__ = {
@@ -29,9 +31,11 @@
 
 <div class="creator-boot" id="creatorBoot" role="status" aria-live="polite" aria-label="Loading Eazpire Creator">
   <div class="creator-boot__card">
-    <img class="creator-boot__logo" src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950" alt="" width="320" height="112" decoding="async">
-    <div class="creator-boot__bar-wrap">
-      <div class="creator-boot__bar" id="creatorBootBar" aria-hidden="true"></div>
+    <div class="creator-boot__visual" aria-hidden="true">
+      <div class="creator-boot__orbit"></div>
+      <div class="creator-boot__orbit creator-boot__orbit--delay"></div>
+      <div class="creator-boot__pulse"></div>
+      <img class="creator-boot__logo" src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950" alt="" width="320" height="112" decoding="async">
     </div>
     <p class="creator-boot__status" id="creatorBootStatus">Loading Creator Hub</p>
   </div>

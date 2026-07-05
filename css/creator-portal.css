@@ -107,31 +107,72 @@ body.is-boot-loading #creatorPortalApp {
 }
 
 .creator-boot__logo {
-  max-width: 220px;
+  position: relative;
+  z-index: 2;
+  max-width: 200px;
   height: auto;
-  margin: 0 auto 20px;
+  margin: 0 auto;
   display: block;
+  animation: creatorBootLogoBreathe 2.4s ease-in-out infinite;
 }
 
-.creator-boot__bar-wrap {
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  margin-bottom: 12px;
+.creator-boot__visual {
+  position: relative;
+  width: 220px;
+  height: 140px;
+  margin: 0 auto 16px;
 }
 
+.creator-boot__orbit,
+.creator-boot__orbit--delay {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  box-shadow: 0 0 24px rgba(124, 92, 255, 0.15);
+  animation: creatorBootOrbitSpin 3.2s linear infinite;
+}
+
+.creator-boot__orbit--delay {
+  width: 150px;
+  height: 150px;
+  border-color: rgba(45, 212, 191, 0.28);
+  animation-duration: 4.6s;
+  animation-direction: reverse;
+}
+
+.creator-boot__pulse {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 92, 255, 0.35) 0%, transparent 70%);
+  animation: creatorBootPulse 2s ease-in-out infinite;
+}
+
+@keyframes creatorBootLogoBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.92; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes creatorBootOrbitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes creatorBootPulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.45; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+.creator-boot__bar-wrap,
 .creator-boot__bar {
-  height: 100%;
-  width: 0;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #7c5cff, #2dd4bf);
-  animation: creatorBootBar 1.2s ease-in-out infinite alternate;
-}
-
-@keyframes creatorBootBar {
-  from { width: 18%; }
-  to { width: 88%; }
+  display: none;
 }
 
 .creator-boot__status {
@@ -229,4 +270,207 @@ body.is-boot-loading #creatorPortalApp {
 .btn.ghost {
   background: transparent;
   color: inherit;
+}
+
+/* Portal: Shop/Creator toggle — match theme switch (no doubled labels) */
+body.creator-mobile-page .creator-toggle {
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+}
+
+body.creator-mobile-page .creator-toggle__track {
+  position: relative;
+  width: 150px;
+  min-height: 38px;
+  height: 50px;
+  border-radius: 999px;
+  padding: 2px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+body.creator-mobile-page .creator-toggle__label {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  text-align: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+body.creator-mobile-page .creator-toggle:not(.creator-toggle--creator) .creator-toggle__label--left,
+body.creator-mobile-page .creator-toggle.creator-toggle--creator .creator-toggle__label--right {
+  visibility: hidden;
+}
+
+body.creator-mobile-page .creator-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(50% - 3px);
+  height: calc(100% - 4px);
+  z-index: 2;
+  touch-action: none;
+}
+
+body.creator-mobile-page .creator-toggle__thumb-label {
+  display: none;
+  position: relative;
+  z-index: 1;
+}
+
+body.creator-mobile-page .creator-toggle:not(.creator-toggle--creator) .creator-toggle__thumb-label--shop,
+body.creator-mobile-page .creator-toggle.creator-toggle--creator .creator-toggle__thumb-label--creator {
+  display: block;
+}
+
+body.creator-mobile-page .creator-toggle__tutorial-hand {
+  position: absolute;
+  top: 50%;
+  left: 20%;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M9 11V6a1 1 0 0 1 2 0v5h5a1 1 0 0 1 0 2h-6a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
+}
+
+/* Remove header / switch shimmer on portal */
+body.creator-mobile-page .creator-desktop-header::before,
+body.creator-mobile-page .creator-desktop-switch .creator-toggle__thumb::before,
+body.creator-mobile-page .creator-desktop-switch .creator-toggle__track::before {
+  animation: none !important;
+  opacity: 0 !important;
+  content: none !important;
+}
+
+/* Keep Eazy mascot in header snap slot — not over screen title */
+body.creator-mobile-page .creator-desktop-header__center {
+  z-index: 2;
+}
+
+body.creator-mobile-page .creator-desktop-header__snap-anchor {
+  position: relative;
+  z-index: 4;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+body.creator-mobile-page .creator-desktop-header__snap-anchor .creator-eazy-cluster,
+body.creator-mobile-page .creator-desktop-header__snap-anchor .creator-eazy-cluster.creator-eazy-cluster--compose-center,
+body.creator-mobile-page .creator-desktop-header__snap-anchor .creator-eazy-cluster.creator-eazy-cluster--job-overlay {
+  position: absolute !important;
+  left: auto !important;
+  right: 0 !important;
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  max-width: 56px;
+  z-index: 4 !important;
+}
+
+body.creator-mobile-page #eazy-mascot.eazy-mascot--docked {
+  z-index: 5;
+}
+
+body.creator-mobile-page .creator-desktop-header__screen-title {
+  position: relative;
+  z-index: 1;
+}
+
+/* Path-based portal: generator pills + cards share one column width */
+body.creator-mobile-page .creator-generator__pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+body.creator-mobile-page .creator-generator__scroll {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+body.creator-mobile-page .creator-generator__pills .creator-pill,
+body.creator-mobile-page .creator-generator__scroll .creator-gen-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body.creator-mobile-page .creator-gen-footer,
+body.creator-mobile-page .creator-gen-footer--fixed,
+body.creator-mobile-page #genGenerate {
+  display: none !important;
+}
+
+/* Generator / settings modals above shell chrome */
+body.creator-mobile-page .gen-select-overlay,
+body.creator-mobile-page .gen-options-overlay,
+body.creator-mobile-page .creator-inspiration-modal,
+body.creator-mobile-page .creator-mobile-gen-styles-modal,
+body.creator-mobile-page #genRefImageOverlay {
+  z-index: 25000 !important;
+}
+
+body.creator-mobile-page .cj-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 26000 !important;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
+  overflow: auto;
+}
+
+body.creator-mobile-page .cj-overlay.is-open {
+  display: flex !important;
+}
+
+body.creator-mobile-page .cj-overlay .cj-modal {
+  margin: auto;
+  max-height: min(92vh, 920px);
+}
+
+body.creator-mobile-page .creator-desktop-xp-hint-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 26000 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+body.creator-mobile-page .creator-desktop-xp-hint-modal[hidden] {
+  display: none !important;
+}
+
+body.creator-mobile-page .creator-chat__login-gate[hidden] {
+  display: none !important;
+}
+
+body.creator-mobile-page .creator-chat__login-gate[hidden] ~ .creator-chat__input-inner,
+body.creator-mobile-page .creator-chat__login-gate[hidden] ~ .creator-chat__send {
+  display: flex !important;
+}
+
+body.creator-mobile-page .creator-chat__login-gate[hidden] ~ .creator-chat__input-inner {
+  flex: 1;
+}
+
+body.creator-mobile-page #creatorPortalModals,
+body.creator-mobile-page #creatorPortalEazy {
+  position: relative;
+  z-index: 24000;
 }
