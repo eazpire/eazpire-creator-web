@@ -1,0 +1,777 @@
+/**
+ * Creator Chat Icon - Eazy Sleep Design
+ * Design, Animationen, erweiterbar für weitere Funktionen
+ */
+
+/* Toggle mit Custom-Icon: ohne Hintergrund, nur Mascotchen wie Original.
+   Weiter nach links: ca. 1× Mascot-Breite (110px) mehr Abstand zum rechten Rand. */
+.creator-chat__toggle--custom-icon {
+  background: transparent;
+  box-shadow: none;
+  width: 110px;
+  height: 110px;
+  right: var(--eazy-icon-right, calc(24px + 110px));
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (max-width: 749px) {
+  .creator-chat__toggle--custom-icon {
+    right: var(--eazy-icon-right, calc(20px + 110px));
+  }
+}
+
+.creator-chat__toggle--custom-icon:hover {
+  background: transparent;
+  box-shadow: none;
+  transform: scale(1.05);
+}
+
+.creator-chat__toggle .creator-chat-icon {
+  padding: 0;
+}
+
+/* ═══ Base Bubble (shared) ═══ */
+.eazy-thought {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-12px);
+  min-width: 80px;
+  max-width: 160px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+}
+
+.eazy-thought.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+.eazy-thought .eazy-thought-text {
+  display: block;
+}
+
+/* ═══ Speech Tail (awake mode) – triangle pointer ═══ */
+.eazy-thought .eazy-thought-tail {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid #fff;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.06));
+}
+
+/* ═══ Thought dots (hidden in awake mode by default) ═══ */
+.eazy-thought .eazy-thought-dots {
+  position: absolute;
+  left: 50%;
+  bottom: -18px;
+  transform: translateX(-50%);
+  display: none;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+}
+
+.eazy-thought .eazy-thought-dots span {
+  border-radius: 50%;
+  background: rgba(109, 76, 196, 0.5);
+}
+
+.eazy-thought .eazy-thought-dots span:nth-child(1) {
+  width: 10px;
+  height: 10px;
+}
+.eazy-thought .eazy-thought-dots span:nth-child(2) {
+  width: 7px;
+  height: 7px;
+}
+.eazy-thought .eazy-thought-dots span:nth-child(3) {
+  width: 5px;
+  height: 5px;
+}
+
+/* ═══ Dream / Thought Bubble (sleep mode) ═══ */
+.eazy-thought--dream {
+  background: rgba(109, 76, 196, 0.92);
+  color: #f0eaff;
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(109, 76, 196, 0.3), 0 0 0 1px rgba(109, 76, 196, 0.15);
+  animation: eazy-dream-pulse 3s ease-in-out infinite;
+  font-style: italic;
+}
+
+.eazy-thought--dream.show {
+  opacity: 0.92;
+}
+
+/* Dream: hide speech tail, show thought dots */
+.eazy-thought--dream .eazy-thought-tail {
+  display: none;
+}
+
+.eazy-thought--dream .eazy-thought-dots {
+  display: flex;
+  bottom: -22px;
+}
+
+.eazy-thought--dream .eazy-thought-dots span {
+  background: rgba(109, 76, 196, 0.55);
+  animation: eazy-thought-dot-float 2s ease-in-out infinite;
+}
+.eazy-thought--dream .eazy-thought-dots span:nth-child(2) {
+  animation-delay: 0.3s;
+}
+.eazy-thought--dream .eazy-thought-dots span:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes eazy-dream-pulse {
+  0%, 100% { transform: translateX(-50%) translateY(-8px) scale(1); opacity: 0.92; }
+  50% { transform: translateX(-50%) translateY(-12px) scale(1.03); opacity: 0.8; }
+}
+
+@keyframes eazy-thought-dot-float {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50% { transform: translateY(-2px); opacity: 0.85; }
+}
+
+/* When Eazy is docked in header, show bubble below */
+.creator-chat__toggle--docked .eazy-thought {
+  bottom: auto;
+  top: 100%;
+  transform: translateX(-50%) translateY(12px);
+  margin-bottom: 0;
+  margin-top: 8px;
+}
+.creator-chat__toggle--docked .eazy-thought.show {
+  transform: translateX(-50%) translateY(8px);
+}
+.creator-chat__toggle--docked .eazy-thought .eazy-thought-tail {
+  bottom: auto;
+  top: -8px;
+  border-top: none;
+  border-bottom: 8px solid #fff;
+}
+.creator-chat__toggle--docked .eazy-thought .eazy-thought-dots {
+  bottom: auto;
+  top: -22px;
+  left: 50%;
+}
+.creator-chat__toggle--docked .eazy-thought--dream.show {
+  opacity: 0.92;
+}
+
+.creator-chat-icon {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.creator-chat-icon__wrap {
+  position: relative;
+  width: 110px;
+  height: 110px;
+}
+
+.creator-chat-icon__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+  z-index: 2;
+  position: relative;
+}
+
+/* Schlaf-Atmung */
+.creator-chat__toggle.creator-chat-icon--sleeping .creator-chat-icon__svg {
+  animation: creator-chat-icon-breathe 2.6s ease-in-out infinite;
+}
+
+@keyframes creator-chat-icon-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.02); }
+}
+
+/* Aufwach-Pop */
+.creator-chat__toggle.creator-chat-icon--waking .creator-chat-icon__svg {
+  animation: creator-chat-icon-wakePop 0.55s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+@keyframes creator-chat-icon-wakePop {
+  0% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.18) rotate(8deg); }
+  55% { transform: scale(0.96) rotate(-7deg); }
+  80% { transform: scale(1.06) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Brand-Text (optional sichtbar) */
+.creator-chat-icon__brand {
+  margin-top: -2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: #4b4b4b;
+  line-height: 1;
+}
+
+body.creator-mode .creator-chat-icon__brand {
+  color: #9ca3af;
+}
+
+.creator-chat-icon__brand-e {
+  color: var(--chat-accent, #f97316);
+  font-weight: 700;
+}
+
+/* Brand ausblenden in kompakter Schaltfläche (Standard) */
+.creator-chat__toggle .creator-chat-icon__brand {
+  display: none;
+}
+
+/* ZZZ-Blasen */
+.creator-chat-icon__zzz {
+  position: absolute;
+  left: 100%;
+  top: 20%;
+  transform: translate(-20px, -50%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.creator-chat-icon__zzz span {
+  position: absolute;
+  color: #2f7bff;
+  font-weight: 800;
+  opacity: 0;
+  font-size: 8px;
+}
+
+.creator-chat-icon__zzz span:nth-child(1) { font-size: 18px; }
+.creator-chat-icon__zzz span:nth-child(2) { font-size: 24px; }
+.creator-chat-icon__zzz span:nth-child(3) { font-size: 30px; }
+
+.creator-chat__toggle.creator-chat-icon--sleeping .creator-chat-icon__zzz span {
+  animation: creator-chat-icon-zMove 3s linear infinite;
+}
+
+.creator-chat-icon__zzz span:nth-child(1) { animation-delay: 0s; }
+.creator-chat-icon__zzz span:nth-child(2) { animation-delay: 0.8s; }
+.creator-chat-icon__zzz span:nth-child(3) { animation-delay: 1.6s; }
+
+@keyframes creator-chat-icon-zMove {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.9); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(28px, -60px) scale(1.1); }
+}
+
+/* Augen: offen/geschlossen */
+.creator-chat-icon__eyes--closed {
+  display: none;
+}
+
+.creator-chat__toggle.creator-chat-icon--sleeping .creator-chat-icon__eyes--open {
+  display: none;
+}
+
+.creator-chat__toggle.creator-chat-icon--sleeping .creator-chat-icon__eyes--closed {
+  display: block;
+}
+
+.creator-chat__toggle.creator-chat-icon--waking .creator-chat-icon__eyes--open {
+  display: block;
+}
+
+.creator-chat__toggle.creator-chat-icon--waking .creator-chat-icon__eyes--closed {
+  display: none;
+}
+
+/* Disable sleep animations when docked or in snap mode */
+.creator-chat__toggle--docked .creator-chat-icon__zzz,
+.creator-chat__toggle--snap-mode .creator-chat-icon__zzz {
+  display: none !important;
+}
+.creator-chat__toggle--docked .creator-chat-icon__eyes--closed,
+.creator-chat__toggle--snap-mode .creator-chat-icon__eyes--closed {
+  display: none !important;
+}
+.creator-chat__toggle--docked .creator-chat-icon__eyes--open,
+.creator-chat__toggle--snap-mode .creator-chat-icon__eyes--open {
+  display: block !important;
+}
+.creator-chat__toggle--docked .creator-chat-icon__svg,
+.creator-chat__toggle--snap-mode .creator-chat-icon__svg {
+  animation: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Activity Animations – shared helpers
+═══════════════════════════════════════════════════════ */
+.eazy-activity { overflow: visible; }
+
+/* Steam (kaffee, kochen, tee) */
+.eazy-steam { opacity: 0; }
+.eazy-act-kaffee .eazy-steam,
+.eazy-act-kochen .eazy-steam,
+.eazy-act-tee .eazy-steam { animation: eazy-steam-rise 2s ease-out infinite; }
+.eazy-steam--2 { animation-delay: .5s !important; }
+.eazy-steam--3 { animation-delay: 1s !important; }
+@keyframes eazy-steam-rise {
+  0%   { opacity: 0; transform: translateY(0) scaleX(1); }
+  30%  { opacity: .7; }
+  100% { opacity: 0; transform: translateY(-18px) scaleX(1.3); }
+}
+
+/* Notes (musik, gitarre) */
+.eazy-note { opacity: 0; }
+.eazy-act-musik .eazy-note,
+.eazy-act-gitarre .eazy-note { animation: eazy-note-float 2.5s ease-out infinite; }
+.eazy-note--2 { animation-delay: .7s !important; }
+.eazy-note--3 { animation-delay: 1.4s !important; }
+@keyframes eazy-note-float {
+  0%   { opacity: 0; transform: translate(0,0) rotate(0deg); }
+  20%  { opacity: .9; }
+  100% { opacity: 0; transform: translate(12px,-22px) rotate(20deg); }
+}
+
+/* Snowflakes (schneemann) */
+.eazy-flake { opacity: 0; }
+.eazy-act-schneemann .eazy-flake { animation: eazy-snow-fall 3s linear infinite; }
+.eazy-flake--2 { animation-delay: .6s !important; }
+.eazy-flake--3 { animation-delay: 1.2s !important; }
+.eazy-flake--4 { animation-delay: 1.8s !important; }
+.eazy-flake--5 { animation-delay: 2.4s !important; }
+@keyframes eazy-snow-fall {
+  0%   { opacity: 0; transform: translate(0,0); }
+  15%  { opacity: .8; }
+  100% { opacity: 0; transform: translate(4px,40px); }
+}
+
+/* Leaves (herbst) */
+.eazy-leaf { opacity: 0; }
+.eazy-act-herbst .eazy-leaf { animation: eazy-leaf-fall 3.5s ease-in-out infinite; }
+.eazy-leaf--2 { animation-delay: .8s !important; }
+.eazy-leaf--3 { animation-delay: 1.6s !important; }
+.eazy-leaf--4 { animation-delay: 2.4s !important; }
+@keyframes eazy-leaf-fall {
+  0%   { opacity: 0; transform: translate(0,0) rotate(0deg); }
+  15%  { opacity: .85; }
+  100% { opacity: 0; transform: translate(-10px,35px) rotate(60deg); }
+}
+
+/* Stars (weihnachten) */
+.eazy-star { opacity: 0; }
+.eazy-act-weihnachten .eazy-star { animation: eazy-star-twinkle 1.8s ease-in-out infinite; }
+.eazy-star--2 { animation-delay: .4s !important; }
+.eazy-star--3 { animation-delay: .8s !important; }
+.eazy-star--4 { animation-delay: 1.2s !important; }
+@keyframes eazy-star-twinkle {
+  0%, 100% { opacity: 0; transform: scale(.5); }
+  50%      { opacity: 1; transform: scale(1); }
+}
+
+/* Sweat (joggen) */
+.eazy-sweat { opacity: 0; }
+.eazy-act-joggen .eazy-sweat { animation: eazy-sweat-drop 1.2s ease-in infinite; }
+.eazy-sweat--2 { animation-delay: .5s !important; }
+@keyframes eazy-sweat-drop {
+  0%   { opacity: 0; transform: translate(0,0); }
+  30%  { opacity: .7; }
+  100% { opacity: 0; transform: translate(2px,12px); }
+}
+
+/* Splats (malen) */
+.eazy-splat { opacity: 0; }
+.eazy-act-malen .eazy-splat { animation: eazy-splat-pop 2.5s ease-out infinite; }
+.eazy-splat--2 { animation-delay: .8s !important; }
+.eazy-splat--3 { animation-delay: 1.6s !important; }
+@keyframes eazy-splat-pop {
+  0%   { opacity: 0; transform: scale(0); }
+  20%  { opacity: 1; transform: scale(1.2); }
+  40%  { transform: scale(1); }
+  100% { opacity: 0; transform: scale(.8); }
+}
+
+/* Flowers (blumen) */
+.eazy-flower { transform-origin: bottom center; }
+.eazy-act-blumen .eazy-flower { animation: eazy-flower-grow 3s ease-out infinite; }
+.eazy-flower--2 { animation-delay: .6s !important; }
+.eazy-flower--3 { animation-delay: 1.2s !important; }
+@keyframes eazy-flower-grow {
+  0%   { transform: scaleY(0); opacity: 0; }
+  30%  { transform: scaleY(1); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Water drop (blumen) */
+.eazy-waterdrop { opacity: 0; }
+.eazy-act-blumen .eazy-waterdrop { animation: eazy-water-drip 1.5s ease-in infinite; }
+@keyframes eazy-water-drip {
+  0%   { opacity: 0; transform: translateY(0); }
+  30%  { opacity: .7; }
+  100% { opacity: 0; transform: translateY(14px); }
+}
+
+/* Wave (strand) */
+.eazy-wave { opacity: 0; }
+.eazy-act-strand .eazy-wave { animation: eazy-wave-move 2s ease-in-out infinite; }
+@keyframes eazy-wave-move {
+  0%, 100% { opacity: .5; transform: translateX(-3px); }
+  50%      { opacity: .8; transform: translateX(3px); }
+}
+
+/* Popcorn (film) */
+.eazy-popcorn { opacity: 0; }
+.eazy-act-film .eazy-popcorn { animation: eazy-popcorn-pop 2s ease-out infinite; }
+@keyframes eazy-popcorn-pop {
+  0%   { opacity: 0; transform: translateY(0); }
+  20%  { opacity: 1; transform: translateY(-8px); }
+  100% { opacity: 0; transform: translateY(2px); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Activity Animations – per-activity body movement
+═══════════════════════════════════════════════════════ */
+
+/* Kaffee: gentle bob */
+.eazy-act-kaffee .creator-chat-icon__svg {
+  animation: eazy-act-bob 1.5s ease-in-out infinite alternate;
+}
+@keyframes eazy-act-bob {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-3px); }
+}
+
+/* Yoga: arms stretch */
+.eazy-yoga-arm { opacity: 0; }
+.eazy-act-yoga .eazy-yoga-arm { opacity: 1; }
+.eazy-act-yoga .eazy-yoga-arm--l { animation: eazy-yoga-arm-l 3s ease-in-out infinite; transform-origin: 32px 62px; }
+.eazy-act-yoga .eazy-yoga-arm--r { animation: eazy-yoga-arm-r 3s ease-in-out infinite; transform-origin: 100px 55px; }
+.eazy-act-yoga .creator-chat-icon__svg {
+  animation: eazy-act-yoga-stretch 3s ease-in-out infinite;
+}
+@keyframes eazy-yoga-arm-l { 0%,100% { transform: rotate(0); } 50% { transform: rotate(-25deg); } }
+@keyframes eazy-yoga-arm-r { 0%,100% { transform: rotate(0); } 50% { transform: rotate(25deg); } }
+@keyframes eazy-act-yoga-stretch { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.04) translateY(-2px); } }
+
+/* Zeitung: eyes scan */
+.eazy-act-zeitung .creator-chat-icon__eyes--open {
+  animation: eazy-act-read 2.5s ease-in-out infinite;
+}
+@keyframes eazy-act-read { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+
+/* Joggen: bounce */
+.eazy-act-joggen .creator-chat-icon__svg {
+  animation: eazy-act-jog .4s ease-in-out infinite alternate;
+}
+@keyframes eazy-act-jog { 0% { transform: translateY(0); } 100% { transform: translateY(-6px); } }
+
+/* Pancakes: happy rock */
+.eazy-act-pancakes .creator-chat-icon__svg {
+  animation: eazy-act-happy 1s ease-in-out infinite alternate;
+}
+@keyframes eazy-act-happy { 0% { transform: rotate(-2deg); } 100% { transform: rotate(2deg); } }
+
+/* Malen: brush stroke */
+.eazy-brush { transform-origin: 105px 75px; }
+.eazy-act-malen .eazy-brush { animation: eazy-act-brush 1.8s ease-in-out infinite; }
+@keyframes eazy-act-brush { 0%,100% { transform: rotate(-10deg) translateX(0); } 50% { transform: rotate(10deg) translateX(4px); } }
+
+/* Skateboard: roll + lean */
+.eazy-act-skateboard .creator-chat-icon__svg {
+  animation: eazy-act-skate-lean 1.2s ease-in-out infinite alternate;
+}
+@keyframes eazy-act-skate-lean { 0% { transform: translateX(-3px) rotate(-2deg); } 100% { transform: translateX(3px) rotate(2deg); } }
+
+/* Kochen: spoon stir */
+.eazy-spoon { transform-origin: 70px 95px; }
+.eazy-act-kochen .eazy-spoon { animation: eazy-act-stir 1.5s ease-in-out infinite; }
+@keyframes eazy-act-stir { 0%,100% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } }
+
+/* Musik: body bop */
+.eazy-act-musik .creator-chat-icon__svg {
+  animation: eazy-act-bop .6s ease-in-out infinite alternate;
+}
+@keyframes eazy-act-bop { 0% { transform: rotate(-3deg); } 100% { transform: rotate(3deg); } }
+
+/* Programmieren: cursor blink */
+.eazy-cursor { opacity: 0; }
+.eazy-act-programmieren .eazy-cursor { animation: eazy-act-blink .8s step-end infinite; }
+@keyframes eazy-act-blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+
+/* Lesen: page flip */
+.eazy-page { transform-origin: 58px 90px; }
+.eazy-act-lesen .eazy-page { animation: eazy-act-page 3s ease-in-out infinite; }
+@keyframes eazy-act-page { 0%,40%,100% { transform: rotateY(0); } 50% { transform: rotateY(-40deg); } }
+
+/* Gaming: shake + focus */
+.eazy-act-gaming .creator-chat-icon__svg {
+  animation: eazy-act-shake .15s ease-in-out infinite alternate;
+}
+@keyframes eazy-act-shake { 0% { transform: translateX(-1px); } 100% { transform: translateX(1px); } }
+
+/* Film: gentle sway */
+.eazy-act-film .creator-chat-icon__svg {
+  animation: eazy-act-bob 4s ease-in-out infinite;
+}
+
+/* Gitarre: rock */
+.eazy-act-gitarre .creator-chat-icon__svg {
+  animation: eazy-act-happy .8s ease-in-out infinite alternate;
+}
+
+/* Tee: relax */
+.eazy-act-tee .creator-chat-icon__svg {
+  animation: eazy-act-bob 3s ease-in-out infinite alternate;
+}
+
+/* Schneemann: build */
+.eazy-act-schneemann .creator-chat-icon__svg {
+  animation: eazy-act-build 2s ease-in-out infinite;
+}
+@keyframes eazy-act-build { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px) rotate(3deg); } }
+
+/* Strand: chill */
+.eazy-act-strand .creator-chat-icon__svg {
+  animation: eazy-act-happy 2.5s ease-in-out infinite alternate;
+}
+
+/* Herbst: sway */
+.eazy-act-herbst .creator-chat-icon__svg {
+  animation: eazy-act-happy 2s ease-in-out infinite alternate;
+}
+
+/* Blumen: idle */
+.eazy-act-blumen .creator-chat-icon__svg {
+  animation: eazy-act-bob 2s ease-in-out infinite alternate;
+}
+
+/* Weihnachten: joy */
+.eazy-act-weihnachten .creator-chat-icon__svg {
+  animation: eazy-act-xmas 1s ease-in-out infinite alternate;
+}
+@keyframes eazy-act-xmas { 0% { transform: rotate(-2deg) translateY(0); } 100% { transform: rotate(2deg) translateY(-2px); } }
+
+/* Hide activity when docked or sleeping */
+.creator-chat__toggle--docked .eazy-activity,
+.creator-chat__toggle--snap-mode .eazy-activity,
+.creator-chat__toggle.creator-chat-icon--sleeping .eazy-activity {
+  display: none !important;
+}
+
+/* ═══ Speaking animation on page icon ═══ */
+.creator-chat__toggle.eazy-speaking .creator-chat-icon__svg {
+  animation: eazy-icon-speak-glow 0.6s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.55));
+}
+
+@keyframes eazy-icon-speak-glow {
+  0%   { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.05) translateY(-2px); }
+}
+
+/* ═══ Sound Effect Animations ═══ */
+
+/* Wide eyes (shown during shock) */
+.creator-chat-icon__eyes--wide { display: none; }
+
+/* Mouth (shown during SFX speaking) */
+.creator-chat-icon__mouth { display: none; }
+.eazy-sfx-speaking .creator-chat-icon__mouth { display: block; }
+.eazy-sfx-speaking .creator-chat-icon__mouth ellipse {
+  transform-origin: 80px 76px;
+  animation: eazy-sfx-mouth 0.28s ease-in-out infinite;
+}
+@keyframes eazy-sfx-mouth {
+  0%, 100% { transform: scaleY(0.3); }
+  50%      { transform: scaleY(1); }
+}
+.eazy-sfx-speaking .creator-chat-icon__svg {
+  animation: eazy-sfx-speak-bounce 0.5s ease-in-out infinite alternate,
+             eazy-sfx-speak-glow 0.5s ease-in-out infinite alternate !important;
+}
+@keyframes eazy-sfx-speak-bounce {
+  0%   { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.06) translateY(-2px); }
+}
+@keyframes eazy-sfx-speak-glow {
+  0%   { filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.2)); }
+  100% { filter: drop-shadow(0 0 14px rgba(249, 115, 22, 0.6)); }
+}
+
+/* SFX body animations */
+.eazy-sfx-shock .creator-chat-icon__svg {
+  animation: eazy-sfx-shock 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+@keyframes eazy-sfx-shock {
+  0%   { transform: scale(1) rotate(0deg); }
+  15%  { transform: scale(1.25) rotate(-8deg); }
+  30%  { transform: scale(0.9) rotate(6deg); }
+  45%  { transform: scale(1.12) rotate(-4deg); }
+  60%  { transform: scale(0.97) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.eazy-sfx-embarrassed .creator-chat-icon__svg {
+  animation: eazy-sfx-embarrassed 0.8s ease-out !important;
+}
+@keyframes eazy-sfx-embarrassed {
+  0%   { transform: translateX(0) scale(1); }
+  10%  { transform: translateX(-4px) scale(0.96); }
+  20%  { transform: translateX(4px) scale(0.96); }
+  30%  { transform: translateX(-3px) scale(0.97); }
+  40%  { transform: translateX(3px) scale(0.97); }
+  50%  { transform: translateX(-1px) scale(1); }
+  60%  { transform: translateX(0) scale(1); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+.eazy-sfx-proud .creator-chat-icon__svg {
+  animation: eazy-sfx-proud 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+}
+@keyframes eazy-sfx-proud {
+  0%   { transform: scale(1) translateY(0); }
+  20%  { transform: scale(1.15) translateY(-6px); }
+  40%  { transform: scale(1.1) translateY(-4px); }
+  60%  { transform: scale(1.05) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+.eazy-sfx-giggle .creator-chat-icon__svg {
+  animation: eazy-sfx-giggle 0.9s ease-in-out !important;
+}
+@keyframes eazy-sfx-giggle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  10%  { transform: rotate(-5deg) scale(1.05); }
+  20%  { transform: rotate(5deg) scale(1.05); }
+  30%  { transform: rotate(-4deg) scale(1.03); }
+  40%  { transform: rotate(4deg) scale(1.03); }
+  50%  { transform: rotate(-2deg) scale(1.01); }
+  60%  { transform: rotate(2deg) scale(1.01); }
+  70%  { transform: rotate(0deg) scale(1); }
+}
+
+/* Wide eyes for shock */
+.eazy-sfx-shock .creator-chat-icon__eyes--open,
+.eazy-sfx-shock .creator-chat-icon__eyes--closed { display: none !important; }
+.eazy-sfx-shock .creator-chat-icon__eyes--wide { display: block !important; }
+
+/* Closed eyes for embarrassed */
+.eazy-sfx-embarrassed .creator-chat-icon__eyes--open { display: none !important; }
+.eazy-sfx-embarrassed .creator-chat-icon__eyes--closed { display: block !important; }
+.eazy-sfx-embarrassed .creator-chat-icon__eyes--wide { display: none !important; }
+
+/* Blush */
+.eazy-sfx-blush {
+  position: absolute;
+  width: 16%;
+  height: 8%;
+  border-radius: 50%;
+  background: rgba(255, 100, 100, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.eazy-sfx-blush--l { top: 52%; left: 30%; }
+.eazy-sfx-blush--r { top: 47%; left: 58%; }
+.eazy-sfx-shock .eazy-sfx-blush,
+.eazy-sfx-embarrassed .eazy-sfx-blush {
+  animation: eazy-sfx-blush 2s ease-in-out;
+}
+@keyframes eazy-sfx-blush {
+  0%, 100% { opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+}
+
+/* Fart stink clouds – behind Eazy's tail (bottom-left) */
+.eazy-sfx-stink {
+  position: absolute;
+  bottom: 18%;
+  left: -2%;
+  pointer-events: none;
+  z-index: 1;
+}
+.eazy-sfx-stink span {
+  position: absolute;
+  font-size: 16px;
+  opacity: 0;
+}
+.eazy-sfx-stink span:nth-child(1) { --sdx: -22px; --sdy: -30px; --srot: -15deg; }
+.eazy-sfx-stink span:nth-child(2) { --sdx: -30px; --sdy: -45px; --srot: -25deg; left: 8px; bottom: -4px; }
+.eazy-sfx-stink span:nth-child(3) { --sdx: -12px; --sdy: -55px; --srot: -10deg; left: -6px; bottom: 8px; }
+.eazy-sfx-stink-active .eazy-sfx-stink span {
+  animation: eazy-sfx-stink-float 2s ease-out forwards;
+}
+.eazy-sfx-stink-active .eazy-sfx-stink span:nth-child(2) { animation-delay: 0.25s; }
+.eazy-sfx-stink-active .eazy-sfx-stink span:nth-child(3) { animation-delay: 0.5s; }
+@keyframes eazy-sfx-stink-float {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.5) rotate(0deg); }
+  25%  { opacity: 0.65; }
+  100% { opacity: 0; transform: translate(var(--sdx, -20px), var(--sdy, -40px)) scale(1.3) rotate(var(--srot, -15deg)); }
+}
+
+/* Burp gas clouds – green, right side near mouth */
+.eazy-sfx-burp {
+  position: absolute;
+  top: 36%;
+  right: -4%;
+  pointer-events: none;
+  z-index: 3;
+}
+.eazy-sfx-burp span {
+  position: absolute;
+  width: 14px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(74, 222, 128, 0.45);
+  opacity: 0;
+  box-shadow: -4px -2px 0 rgba(74, 222, 128, 0.3), 4px -3px 0 rgba(74, 222, 128, 0.25);
+}
+.eazy-sfx-burp span:nth-child(1) { --bdx: 24px; --bdy: -16px; --brot: 12deg; }
+.eazy-sfx-burp span:nth-child(2) { --bdx: 30px; --bdy: -28px; --brot: -10deg; right: -4px; top: -6px; }
+.eazy-sfx-burp span:nth-child(3) { --bdx: 18px; --bdy: -8px; --brot: 18deg; top: 8px; }
+.eazy-sfx-burp-active .eazy-sfx-burp span {
+  animation: eazy-sfx-burp-float 1.8s ease-out forwards;
+}
+.eazy-sfx-burp-active .eazy-sfx-burp span:nth-child(2) { animation-delay: 0.2s; }
+.eazy-sfx-burp-active .eazy-sfx-burp span:nth-child(3) { animation-delay: 0.45s; }
+@keyframes eazy-sfx-burp-float {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  20%  { opacity: 0.7; }
+  100% { opacity: 0; transform: translate(var(--bdx, 25px), var(--bdy, -20px)) scale(1.4) rotate(var(--brot, 15deg)); }
+}
+
+/* Hide SFX elements when docked or sleeping */
+.creator-chat__toggle--docked .eazy-sfx-stink,
+.creator-chat__toggle--docked .eazy-sfx-burp,
+.creator-chat__toggle--docked .eazy-sfx-blush,
+.creator-chat__toggle--snap-mode .eazy-sfx-stink,
+.creator-chat__toggle--snap-mode .eazy-sfx-burp,
+.creator-chat__toggle--snap-mode .eazy-sfx-blush {
+  display: none !important;
+}

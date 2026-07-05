@@ -1,0 +1,688 @@
+/**
+ * Eazy Prize Cards — 1:1 full-bleed artwork, rarity tint + frame, overlay UI.
+ * Class = icon badge only · Legendary shimmer sweep.
+ */
+
+@keyframes eazy-prize-card-shimmer {
+  0% {
+    transform: translateX(-140%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(340%) skewX(-20deg);
+  }
+}
+
+.eazy-prize-card {
+  --eazy-rarity: #3b82f6;
+  --eazy-tint-top: 18%;
+  --eazy-tint-mid: 12%;
+  --eazy-tint-bottom: 42%;
+  --eazy-corner-cut: 10px;
+  --eazy-clip-chamfer: polygon(
+    var(--eazy-corner-cut) 0,
+    calc(100% - var(--eazy-corner-cut)) 0,
+    100% var(--eazy-corner-cut),
+    100% calc(100% - var(--eazy-corner-cut)),
+    calc(100% - var(--eazy-corner-cut)) 100%,
+    var(--eazy-corner-cut) 100%,
+    0 calc(100% - var(--eazy-corner-cut)),
+    0 var(--eazy-corner-cut)
+  );
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  overflow: hidden;
+  padding: 0;
+  clip-path: var(--eazy-clip-chamfer);
+  background: #0a0f18;
+  filter: drop-shadow(0 8px 20px rgb(0 0 0 / 0.55));
+}
+
+.eazy-prize-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  clip-path: var(--eazy-clip-chamfer);
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--eazy-rarity) 88%, #ffffff),
+    inset 0 0 0 3px color-mix(in srgb, var(--eazy-rarity) 52%, #000000);
+}
+
+.eazy-prize-card[data-rarity="common"] {
+  --eazy-rarity: #3b82f6;
+  --eazy-tint-top: 14%;
+  --eazy-tint-mid: 10%;
+  --eazy-tint-bottom: 38%;
+}
+
+.eazy-prize-card[data-rarity="uncommon"] {
+  --eazy-rarity: #22c55e;
+  --eazy-tint-top: 16%;
+  --eazy-tint-mid: 11%;
+  --eazy-tint-bottom: 40%;
+}
+
+.eazy-prize-card[data-rarity="rare"] {
+  --eazy-rarity: #7c3aed;
+  --eazy-tint-top: 20%;
+  --eazy-tint-mid: 14%;
+  --eazy-tint-bottom: 44%;
+}
+
+.eazy-prize-card[data-rarity="epic"] {
+  --eazy-rarity: #d946ef;
+  --eazy-tint-top: 24%;
+  --eazy-tint-mid: 16%;
+  --eazy-tint-bottom: 48%;
+}
+
+.eazy-prize-card[data-rarity="legendary"] {
+  --eazy-rarity: #ffd700;
+  --eazy-tint-top: 28%;
+  --eazy-tint-mid: 18%;
+  --eazy-tint-bottom: 52%;
+}
+
+.eazy-prize-card[data-rarity="legendary"]::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: 0;
+  z-index: 3;
+  width: 42%;
+  height: 180%;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 18%,
+    rgba(255, 215, 0, 0.12) 38%,
+    rgba(255, 248, 200, 0.42) 50%,
+    rgba(255, 215, 0, 0.12) 62%,
+    rgba(255, 255, 255, 0.02) 82%,
+    transparent 100%
+  );
+  transform: translateX(-140%) skewX(-20deg);
+  animation: eazy-prize-card-shimmer 3.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eazy-prize-card[data-rarity="legendary"]::after {
+    animation: none;
+    opacity: 0.35;
+  }
+}
+
+.eazy-prize-card__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.eazy-prize-card__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #0a0f18;
+}
+
+.eazy-prize-card__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.eazy-prize-card__bg--empty {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--eazy-rarity) 32%, #121a2e) 0%,
+    color-mix(in srgb, var(--eazy-rarity) 24%, #0a0f18) 52%,
+    color-mix(in srgb, var(--eazy-rarity) 18%, #060a12) 100%
+  );
+}
+
+.eazy-prize-card__bg--placeholder {
+  background:
+    linear-gradient(135deg, #0f172a 0%, #0a0f18 100%),
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--eazy-rarity) 8%, #1e293b) 0,
+      color-mix(in srgb, var(--eazy-rarity) 8%, #1e293b) 2px,
+      transparent 2px,
+      transparent 10px
+    );
+}
+
+.eazy-prize-card__placeholder-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: center;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.eazy-prize-card__rarity-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--eazy-rarity) var(--eazy-tint-top), transparent) 0%,
+    color-mix(in srgb, var(--eazy-rarity) var(--eazy-tint-mid), transparent) 38%,
+    color-mix(in srgb, var(--eazy-rarity) var(--eazy-tint-bottom), #000000) 100%
+  );
+}
+
+.eazy-prize-card[data-art-mode="none"] .eazy-prize-card__rarity-tint,
+.eazy-prize-card[data-art-mode="placeholder"] .eazy-prize-card__rarity-tint {
+  --eazy-tint-top: 26%;
+  --eazy-tint-mid: 20%;
+  --eazy-tint-bottom: 58%;
+  opacity: 0.92;
+}
+
+/* Uploaded artwork: keep rarity frame, minimal bottom shading so art stays visible */
+.eazy-prize-card[data-art-mode="upload"] .eazy-prize-card__rarity-tint {
+  --eazy-tint-top: 10%;
+  --eazy-tint-mid: 6%;
+  --eazy-tint-bottom: 16%;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--eazy-rarity) var(--eazy-tint-top), transparent) 0%,
+    transparent 58%,
+    color-mix(in srgb, var(--eazy-rarity) var(--eazy-tint-bottom), transparent) 100%
+  );
+  opacity: 0.72;
+}
+
+.eazy-prize-card__center-value {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 20%;
+  font-weight: 800;
+  font-size: clamp(0.75rem, 4.5vw, 1rem);
+  line-height: 1.2;
+  text-align: center;
+  color: #ffffff;
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--eazy-rarity) 70%, #000000),
+    0 2px 8px rgb(0 0 0 / 0.85);
+  pointer-events: none;
+}
+
+.eazy-prize-card__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+  pointer-events: none;
+}
+
+.eazy-prize-card__overlay-bottom {
+  position: relative;
+  padding: 8px 6px 4px;
+  margin: 0 -2px -2px;
+}
+
+.eazy-prize-card__overlay-bottom::before {
+  content: "";
+  position: absolute;
+  inset: -16px -4px -4px;
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.58) 0%,
+    rgb(0 0 0 / 0.32) 42%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+.eazy-prize-card[data-art-mode="upload"] .eazy-prize-card__overlay-bottom::before {
+  inset: -10px -4px -4px;
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.42) 0%,
+    rgb(0 0 0 / 0.16) 55%,
+    transparent 100%
+  );
+}
+
+.eazy-prize-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.eazy-prize-card__class-icon {
+  width: 28px;
+  height: 28px;
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  color: #f8fafc;
+  background: rgb(10 15 24 / 0.88);
+  border: 1px solid rgb(203 213 225 / 0.35);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
+
+.eazy-prize-card__rarity-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+  color: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--eazy-rarity) 72%, #ffffff);
+  background: color-mix(in srgb, var(--eazy-rarity) 38%, #0a0f18);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+  white-space: nowrap;
+}
+
+.eazy-prize-card[data-rarity="legendary"] .eazy-prize-card__rarity-badge {
+  color: #fff9db;
+  border-color: #e6c200;
+  background: rgb(74 58 12 / 0.92);
+}
+
+.eazy-prize-card__stats {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.eazy-prize-card__stat {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 6px;
+  clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
+  color: #e2e8f0;
+  background: rgb(10 15 24 / 0.82);
+  border: 1px solid rgb(30 41 59 / 0.9);
+}
+
+.eazy-prize-card__stat--utility { border-color: rgb(59 130 246 / 0.55); color: #93c5fd; }
+.eazy-prize-card__stat--luck { border-color: rgb(34 197 94 / 0.55); color: #86efac; }
+.eazy-prize-card__stat--craft { border-color: rgb(245 158 11 / 0.55); color: #fcd34d; }
+.eazy-prize-card__stat--charm { border-color: rgb(168 85 247 / 0.55); color: #d8b4fe; }
+.eazy-prize-card__stat--power { border-color: rgb(236 72 153 / 0.55); color: #f9a8d4; }
+
+.eazy-prize-card__title {
+  position: relative;
+  margin: 0 0 2px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #f8fafc;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.85);
+}
+
+.eazy-prize-card__sub {
+  position: relative;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #cbd5e1;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.85);
+}
+
+.eazy-prize-card__foot {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.eazy-prize-card__tag {
+  font-size: 9px;
+  padding: 3px 7px;
+  clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
+  background: rgb(10 15 24 / 0.82);
+  border: 1px solid rgb(51 65 85 / 0.9);
+  color: #cbd5e1;
+}
+
+.eazy-prize-card__actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  pointer-events: auto;
+}
+
+.eazy-games-collection__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px;
+}
+
+.eazy-games-collection__card.eazy-prize-card {
+  margin: 0;
+}
+
+/* Admin: upload + active toggle */
+.eazy-prize-card--admin .eazy-prize-card__admin {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.eazy-prize-card__upload-btn {
+  pointer-events: auto;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: #f8fafc;
+  background: rgb(10 15 24 / 0.82);
+  border: 1px solid rgb(203 213 225 / 0.45);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.55);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.eazy-prize-card__upload-btn:hover {
+  background: rgb(30 41 59 / 0.92);
+  transform: scale(1.05);
+}
+
+.eazy-prize-card__upload-btn.is-uploading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.eazy-prize-card__active-toggle {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #e2e8f0;
+  background: rgb(10 15 24 / 0.88);
+  border: 1px solid rgb(51 65 85 / 0.9);
+  padding: 4px 8px;
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+}
+
+.eazy-prize-card__active-toggle input {
+  accent-color: var(--eazy-rarity, #3b82f6);
+}
+
+.admin-prizes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  max-width: 1200px;
+}
+
+.admin-prizes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.admin-prizes-toolbar .eazy-games-chip {
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgb(51 65 85 / 0.8);
+  background: rgb(15 23 42 / 0.6);
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.admin-prizes-toolbar .eazy-games-chip.is-active {
+  border-color: #3b82f6;
+  color: #93c5fd;
+  background: rgb(30 58 138 / 0.35);
+}
+
+.admin-prizes-status {
+  font-size: 0.8rem;
+  color: var(--admin-text-muted, #94a3b8);
+  margin-bottom: 12px;
+}
+
+.admin-prizes-grid .eazy-prize-card {
+  max-width: 220px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.eazy-games-chip__icon {
+  margin-right: 4px;
+}
+
+.eazy-prize-card--fusion-ready {
+  animation: eazy-prize-card-fusion-pulse 1.6s ease-in-out infinite;
+  cursor: pointer;
+}
+
+@keyframes eazy-prize-card-fusion-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 8px 20px rgb(0 0 0 / 0.55));
+  }
+  50% {
+    filter: drop-shadow(0 8px 28px color-mix(in srgb, var(--eazy-rarity) 65%, transparent));
+  }
+}
+
+.eazy-fusion-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: rgb(0 0 0 / 0.55);
+}
+
+.eazy-fusion-overlay.is-active {
+  opacity: 1;
+}
+
+.eazy-fusion-overlay__burst {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--eazy-rarity, #3b82f6);
+  transform: scale(0.2);
+  animation: eazy-fusion-burst 1.2s ease-out forwards;
+}
+
+.eazy-fusion-overlay__label {
+  position: absolute;
+  bottom: 18%;
+  color: #f8fafc;
+  font-size: 1.1rem;
+  font-weight: 600;
+  opacity: 0;
+  animation: eazy-fusion-label 0.6s ease 0.8s forwards;
+}
+
+@keyframes eazy-fusion-burst {
+  0% {
+    transform: scale(0.2);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(2.8);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes eazy-fusion-label {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.eazy-fusion-overlay--common { --eazy-rarity: #3b82f6; }
+.eazy-fusion-overlay--uncommon { --eazy-rarity: #22c55e; }
+.eazy-fusion-overlay--rare { --eazy-rarity: #7c3aed; }
+.eazy-fusion-overlay--epic { --eazy-rarity: #d946ef; }
+.eazy-fusion-overlay--legendary { --eazy-rarity: #eab308; }
+
+.eazy-card-token-footer {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgb(51 65 85 / 0.8);
+  border-radius: 12px;
+  background: rgb(15 23 42 / 0.55);
+}
+
+.eazy-card-token-footer__label {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #93c5fd;
+}
+
+.eazy-card-token-footer__value {
+  margin: 4px 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.eazy-card-token-footer__sub {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+}
+
+.eazy-card-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+}
+
+.eazy-card-modal[hidden] {
+  display: none !important;
+}
+
+.eazy-card-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.65);
+}
+
+.eazy-card-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, calc(100vw - 28px));
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgb(51 65 85 / 0.85);
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 12px;
+}
+
+.eazy-card-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.eazy-card-modal__head h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.eazy-card-modal__close {
+  border: 0;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.eazy-card-modal__body {
+  margin-top: 10px;
+}
+
+.eazy-card-viewer__card {
+  max-width: 260px;
+}
+
+.eazy-card-viewer__meta,
+.eazy-card-market__status,
+.eazy-card-trade-review__status {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin: 0 0 10px;
+}
+
+.eazy-card-market__list,
+.eazy-card-trade-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.eazy-card-send-friend__input {
+  width: 100%;
+  margin: 8px 0 10px;
+  border: 1px solid rgb(51 65 85 / 0.85);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #0b1220;
+  color: #e2e8f0;
+}
+

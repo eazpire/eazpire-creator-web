@@ -2,6 +2,76 @@
   --portal-boot-panel: rgba(14, 20, 34, 0.92);
   --portal-boot-border: rgba(255, 255, 255, 0.08);
   --portal-boot-muted: #9aa8c7;
+  --portal-shell-bg: #070b14;
+}
+
+/* Full-bleed shell: portal has no Shopify theme base.css (margin reset, flex column body). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body.creator-mobile-page {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--portal-shell-bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+body.creator-mobile-page {
+  display: flex;
+  flex-direction: column;
+  color: #f5f3ff;
+}
+
+#creatorPortalApp,
+#creatorPortalShell {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+body.creator-mobile-page #creatorPortalShell > .creator-desktop-app,
+body.creator-mobile-page #creatorPortalShell > .creator-mobile-app {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  min-height: 100svh;
+  margin: 0;
+}
+
+body.creator-mobile-page,
+body.creator-mobile-page .creator-desktop-app,
+body.creator-mobile-page .creator-mobile-app {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body.creator-mobile-page .creator-desktop-sidebar__item .creator-nav-menu-icon-wrap svg + svg {
+  display: none;
+}
+
+body.creator-mobile-page .creator-desktop-switch.creator-toggle {
+  flex-shrink: 0;
+}
+
+body.creator-mobile-page .creator-desktop-footer__copyright {
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .creator-boot[hidden] {
@@ -13,14 +83,17 @@ body.is-boot-loading #creatorPortalApp {
 }
 
 .creator-boot {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
   display: grid;
   place-items: center;
   padding: 24px;
+  margin: 0;
   background:
     radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124, 92, 255, 0.22), transparent),
     radial-gradient(ellipse 60% 40% at 100% 0%, rgba(45, 212, 191, 0.12), transparent),
-    #070b14;
+    var(--portal-shell-bg);
 }
 
 .creator-boot__card {

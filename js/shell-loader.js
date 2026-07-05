@@ -81,7 +81,29 @@
       a.setAttribute("href", "/#dashboard");
     });
 
+    if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
+      global.CreatorPortalI18n.applyDataT(host);
+    }
+
     host.dataset.loaded = "1";
+  }
+
+  async function loadAudioModal() {
+    var host = document.getElementById("creatorPortalModals");
+    if (!host || host.querySelector('[data-partial="creator-audio-modal.html"]')) return;
+    try {
+      var html = await fetchPartial("creator-audio-modal.html");
+      var wrap = document.createElement("div");
+      wrap.setAttribute("data-partial", "creator-audio-modal.html");
+      wrap.innerHTML = html;
+      host.appendChild(wrap);
+      if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
+        global.CreatorPortalI18n.applyDataT(wrap);
+      }
+      await loadScript("/vendor/theme/creator-audio-modal.js");
+    } catch (e) {
+      console.warn("[CreatorPortal] audio modal load failed", e);
+    }
   }
 
   function loadScript(src) {
@@ -90,7 +112,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=5";
+      s.src = src + "?v=6";
       s.defer = true;
       s.setAttribute("data-portal-runtime", src);
       s.onload = function () {
@@ -105,12 +127,33 @@
 
   async function loadThemeRuntime() {
     await loadScript("/vendor/theme/creator-dashboard-data.js");
+    await loadScript("/vendor/theme/particle-reveal.js");
+    await loadScript("/vendor/theme/design-particle-reveal.js");
+    await loadScript("/vendor/theme/drawer-aquarium.js");
+    await loadScript("/vendor/theme/creator-footer-eaz-ui.js");
     await loadScript("/vendor/theme/creator-mobile.js");
     await loadScript("/vendor/theme/creator-desktop.js");
+    await loadScript("/vendor/theme/creator-theme-background.js");
+    await loadAudioModal();
+    if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
+      try {
+        await global.CreatorPortalEazy.ensure();
+      } catch (e) {
+        console.warn("[CreatorPortal] Eazy load failed", e);
+      }
+    }
+    if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.ensureDashboard === "function") {
+      try {
+        await global.CreatorPortalFeatures.ensureDashboard();
+      } catch (e) {
+        console.warn("[CreatorPortal] dashboard modals load failed", e);
+      }
+    }
   }
 
   global.CreatorPortalShell = {
     loadShell: loadShell,
     loadThemeRuntime: loadThemeRuntime,
+    loadAudioModal: loadAudioModal,
   };
 })(typeof window !== "undefined" ? window : globalThis);

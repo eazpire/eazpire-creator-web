@@ -1,0 +1,675 @@
+/* ============================================
+   Eazy Mascot – Animation only (kein Chat)
+   Integration in Creator Area Mobile
+   ============================================ */
+
+/* Standalone snap targets when creator-mobile-overview (header slots) is not on the page */
+.creator-eazy-snap-fallback {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  z-index: 150;
+  pointer-events: none;
+  width: 36px;
+  height: 36px;
+}
+.creator-eazy-snap-fallback .eazy-snap-slot {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+}
+@media (min-width: 992px) {
+  .creator-eazy-snap-fallback {
+    top: max(16px, env(safe-area-inset-top, 0px));
+    right: max(20px, env(safe-area-inset-right, 0px));
+  }
+}
+
+.eazy-mascot {
+  position: fixed;
+  bottom: calc(var(--creator-global-footer-height, 52px) + 16px);
+  right: 20px;
+  z-index: 150;
+  width: 56px;
+  height: 56px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  filter: drop-shadow(0 4px 12px rgba(249, 115, 22, 0.35));
+  animation: eazy-mascot-float 4s ease-in-out infinite;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Wenn Position gespeichert: left/top statt bottom/right */
+.eazy-mascot--positioned {
+  bottom: auto;
+  right: auto;
+}
+
+/* —— Floating cluster: speech + undocked mascot; default = same corner as solo .eazy-mascot —— */
+.creator-eazy-cluster {
+  position: fixed;
+  left: auto;
+  right: 20px;
+  top: auto;
+  bottom: calc(var(--creator-global-footer-height, 52px) + 16px);
+  transform: none;
+  z-index: 160;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  pointer-events: none;
+  max-width: min(calc(100vw - 24px), 420px);
+  touch-action: none;
+}
+
+.creator-eazy-compose-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Compose / job active: bottom-right of viewport (same band as solo .eazy-mascot) */
+.creator-eazy-cluster--compose-center {
+  left: auto !important;
+  top: auto !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--creator-global-footer-height, 52px) + 16px) !important;
+  right: 20px !important;
+  transform: none !important;
+  justify-content: flex-end !important;
+  z-index: 170;
+}
+
+.creator-eazy-cluster--compose-center.creator-eazy-cluster--positioned {
+  transform: none !important;
+}
+
+/* Generation polling while docked: leave scroll anchor so cluster stays in visible band */
+.creator-eazy-cluster--job-overlay {
+  position: fixed !important;
+  left: auto !important;
+  top: auto !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--creator-global-footer-height, 52px) + 16px) !important;
+  right: 20px !important;
+  transform: none !important;
+  width: auto;
+  max-width: min(calc(100vw - 24px), 420px);
+  justify-content: flex-end !important;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.creator-eazy-cluster--job-overlay .creator-eazy-compose-row {
+  pointer-events: auto;
+}
+
+/* #eazy-mascot is a sibling of .creator-eazy-compose-row, not inside the row — must receive drag/tap */
+#creatorEazyCluster.creator-eazy-cluster--job-overlay > #eazy-mascot {
+  pointer-events: auto !important;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+  z-index: 2;
+  cursor: grab;
+}
+
+#creatorEazyCluster.creator-eazy-cluster--docked-speech-below > #eazy-mascot {
+  pointer-events: auto !important;
+  touch-action: none;
+  z-index: 2;
+  cursor: grab;
+}
+
+/* Mascot on left, speech on right (mascot faces right toward bubble) */
+.creator-eazy-cluster--speech-after {
+  flex-direction: row-reverse;
+}
+
+.creator-eazy-cluster-default-host {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0;
+  z-index: 0;
+}
+
+/* Docked header Eazy: speech row lives in screen anchor (scrolls); decorative Eazy left, bubble right, tail toward Eazy */
+.creator-eazy-cluster--docked-speech-below {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  /* fit-content: full-width cluster made drag clamp use ~viewport width (only vertical movement) */
+  width: fit-content;
+  max-width: min(calc(100vw - 24px), 420px);
+  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 0;
+  z-index: 50;
+  pointer-events: none;
+  animation: none;
+}
+.creator-eazy-cluster--docked-speech-below .creator-eazy-compose-row {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  cursor: grab;
+  touch-action: none;
+}
+/* Legacy: decorative SVG removed from Liquid; keep rule harmless if old HTML cached */
+.creator-eazy-cluster .creator-eazy-compose-mascot {
+  display: none !important;
+}
+
+.creator-eazy-cluster > * {
+  pointer-events: auto;
+}
+
+.creator-eazy-cluster--positioned:not(.creator-eazy-cluster--compose-center) {
+  transform: none;
+}
+
+/* User-set left/top: intrinsic width so flex row doesn’t stretch to full viewport */
+#creatorEazyCluster.creator-eazy-cluster--positioned {
+  width: max-content;
+  max-width: min(calc(100vw - 16px), 100vw - 16px);
+  right: auto !important;
+  bottom: auto !important;
+  box-sizing: border-box;
+}
+
+/* User-dragged cluster during compose/job: keep above content without compose-center class */
+.creator-eazy-cluster.creator-eazy-cluster--positioned {
+  z-index: 170;
+}
+
+.creator-eazy-cluster--dragging {
+  cursor: grabbing;
+}
+
+#creatorEazyCluster > .eazy-mascot:not(.eazy-mascot--docked) {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+.eazy-mascot--dragging {
+  cursor: grabbing;
+  animation: none;
+}
+
+.eazy-mascot--dragging .eazy-mascot__inner {
+  animation: none;
+}
+
+.eazy-mascot__inner {
+  width: 100%;
+  height: 100%;
+  animation: eazy-mascot-idle 3s ease-in-out infinite;
+}
+
+/* Creator Generator (Screen 2): nach links schauen zur Sprechblase – JS setzt Klasse */
+.eazy-mascot__inner.eazy-mascot__inner--look-left {
+  animation: none;
+  transform: scaleX(-1);
+  transition: transform 0.35s ease;
+}
+
+/* Upload activity state: Eazy "holds" upload arrow + subtle movement */
+.eazy-mascot--uploading {
+  animation: eazy-mascot-upload-sway 1.1s ease-in-out infinite;
+}
+
+.eazy-mascot--uploading::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #22c55e, #86efac);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 16.6A4.6 4.6 0 0 0 18 8a6 6 0 0 0-11.5 2A4.3 4.3 0 0 0 7 18h13a3.4 3.4 0 0 0 0-6.8Z'/%3E%3Cpath d='M12 15V9'/%3E%3Cpath d='m9.5 11.5 2.5-2.5 2.5 2.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.45);
+  animation: eazy-mascot-upload-badge 0.9s ease-in-out infinite;
+}
+
+@keyframes eazy-mascot-upload-sway {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-1px) rotate(-3deg); }
+  50% { transform: translateY(-2px) rotate(0deg); }
+  75% { transform: translateY(-1px) rotate(3deg); }
+}
+
+@keyframes eazy-mascot-upload-badge {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+.eazy-mascot svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Sanftes Mund-Atmen */
+.eazy-mascot__mouth {
+  transform-origin: center;
+  animation: eazy-mascot-breathe 2.5s ease-in-out infinite;
+}
+
+@keyframes eazy-mascot-breathe {
+  0%, 100% { opacity: 0.85; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* Sanftes Schweben */
+@keyframes eazy-mascot-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.02); }
+}
+
+/* Subtiler Glow-Rhythmus */
+@keyframes eazy-mascot-idle {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.2)); }
+  50% { filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.4)); }
+}
+
+/* ============================================
+   Long-Press Snap – Overlay, keine Layout-Änderung
+   Slot erscheint absolut positioniert im unteren Header rechts
+   (creator-header ist position:fixed = Bezug für absolute Kinder)
+   ============================================ */
+
+.eazy-snap-slot {
+  display: none;
+  position: relative;
+  right: auto;
+  bottom: auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.eazy-snap-slot.is-active,
+.eazy-snap-slot.is-docked {
+  display: flex;
+}
+
+/* Aussparung: Vertiefung im Header in Form von Eazy */
+.eazy-snap-slot__indent {
+  width: 36px;
+  height: 36px;
+  overflow: visible;
+  transition: filter 0.2s ease;
+  filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.15));
+  animation: eazy-slot-shimmer 2.5s ease-in-out infinite;
+}
+
+@keyframes eazy-slot-shimmer {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.12))
+            drop-shadow(0 0 8px rgba(249, 115, 22, 0.08));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.22))
+            drop-shadow(0 0 12px rgba(249, 115, 22, 0.12));
+  }
+}
+
+/* Äußerer Rand: 3D-Loch – Lippe fängt Licht (heller Rand) */
+.eazy-snap-slot__recess {
+  fill: var(--eazy-snap-grad-outer, url(#eazy-hole-grad-mobile));
+  stroke: rgba(255, 255, 255, calc(0.18 + 0.05 * var(--snap-glow, 0)));
+  stroke-width: 1.2;
+}
+
+/* Innere Fläche – etwas tiefer, 3D-Gradient */
+.eazy-snap-slot__recess-inner {
+  fill: var(--eazy-snap-grad-inner, url(#eazy-hole-inner-mobile));
+  stroke: none;
+}
+
+/* Augen und Knopf – kleine Vertiefungen im Loch */
+.eazy-snap-slot__recess-eye {
+  fill: rgba(8, 5, 18, 0.85);
+  stroke: rgba(255, 255, 255, 0.04);
+  stroke-width: 0.5;
+}
+
+/* Bei Nähe: stärkerer, schnellerer Schimmer */
+.eazy-snap-slot.is-near .eazy-snap-slot__indent {
+  animation: eazy-slot-shimmer-strong 1.2s ease-in-out infinite;
+}
+
+@keyframes eazy-slot-shimmer-strong {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.25))
+            drop-shadow(0 0 10px rgba(249, 115, 22, 0.12));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.4))
+            drop-shadow(0 0 16px rgba(249, 115, 22, 0.2));
+  }
+}
+
+.eazy-snap-slot.is-near .eazy-snap-slot__recess {
+  stroke: rgba(249, 115, 22, 0.35);
+}
+
+.eazy-snap-slot.is-near .eazy-snap-slot__recess-eye {
+  fill: rgba(30, 18, 45, 0.9);
+  stroke: rgba(249, 115, 22, 0.2);
+}
+
+.eazy-snap-slot.is-docked {
+  display: flex;
+  pointer-events: auto;
+}
+
+.eazy-snap-slot.is-docked .eazy-snap-slot__indent {
+  display: none;
+}
+
+/* Snap-Mode: Mascot schrumpft beim Long-Press */
+.eazy-mascot--snap-mode {
+  width: 38px;
+  height: 38px;
+  filter: drop-shadow(0 0 12px rgba(255, 154, 42, 0.5));
+  z-index: 10001;
+}
+
+/* Docked: Mascot im Header-Slot */
+.eazy-mascot--docked {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  animation: eazy-docked-shimmer 3s ease-in-out infinite;
+  cursor: grab;
+}
+
+.eazy-mascot--docked .eazy-mascot__inner {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes eazy-docked-shimmer {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.2)); }
+  50% { filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.45)); }
+}
+
+@keyframes eazy-dock-flash {
+  0% { filter: brightness(1); }
+  30% { filter: brightness(1.8); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes eazy-header-quake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-2px); }
+  30% { transform: translateX(2px); }
+  45% { transform: translateX(-1px); }
+  60% { transform: translateX(1px); }
+}
+
+/* ============================================
+   Interaktive Long-Hold Animationen
+   ============================================ */
+
+/* Vibration: Top-Bar (Drawer, EAZ, Account) gemeinsam */
+.creator-header--snap-vibrate .creator-header__top {
+  animation: eazy-top-vibrate 0.08s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Intensität 0.06–0.72: unten leicht, nah stärker (max etwas reduziert) */
+@keyframes eazy-top-vibrate {
+  0%, 100% {
+    transform: translate(
+      calc(-3.5px * var(--snap-vibrate, 0.4)),
+      calc(-1.5px * var(--snap-vibrate, 0.4))
+    );
+  }
+  25% {
+    transform: translate(
+      calc(3.5px * var(--snap-vibrate, 0.4)),
+      calc(1.5px * var(--snap-vibrate, 0.4))
+    );
+  }
+  50% {
+    transform: translate(
+      calc(-2.5px * var(--snap-vibrate, 0.4)),
+      calc(2.5px * var(--snap-vibrate, 0.4))
+    );
+  }
+  75% {
+    transform: translate(
+      calc(2.5px * var(--snap-vibrate, 0.4)),
+      calc(-2px * var(--snap-vibrate, 0.4))
+    );
+  }
+}
+
+/* Dots: hoch/runter springen, jede mit eigener Phase (nicht synchron) */
+.creator-header--snap-vibrate .creator-header__dots .creator-dot {
+  animation: eazy-dot-bounce 0.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.creator-header--snap-vibrate .creator-header__dots .creator-dot:nth-child(1) { animation-delay: 0s; }
+.creator-header--snap-vibrate .creator-header__dots .creator-dot:nth-child(2) { animation-delay: 0.12s; }
+.creator-header--snap-vibrate .creator-header__dots .creator-dot:nth-child(3) { animation-delay: 0.28s; }
+.creator-header--snap-vibrate .creator-header__dots .creator-dot:nth-child(4) { animation-delay: 0.18s; }
+
+@keyframes eazy-dot-bounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(calc(-2px * var(--snap-vibrate, 0.4))); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(calc(1.5px * var(--snap-vibrate, 0.4))); }
+}
+
+/* Erdbeben beim Einrasten */
+@keyframes eazy-header-earthquake {
+  0% { transform: translate(0, 0) scale(1); }
+  5% { transform: translate(-4px, -2px) scale(1.01); }
+  10% { transform: translate(4px, 2px) scale(0.99); }
+  15% { transform: translate(-6px, 3px) scale(1.02); }
+  20% { transform: translate(5px, -3px) scale(0.98); }
+  25% { transform: translate(-4px, -4px) scale(1.01); }
+  30% { transform: translate(4px, 4px) scale(0.99); }
+  35% { transform: translate(-3px, 2px) scale(1); }
+  40% { transform: translate(3px, -2px) scale(1); }
+  45% { transform: translate(-2px, -1px) scale(1); }
+  50% { transform: translate(2px, 1px) scale(1); }
+  60%, 100% { transform: translate(0, 0) scale(1); }
+}
+
+/* Knall: kurzer Weiß-Blitz */
+.creator-header--dock-bang {
+  position: relative;
+}
+
+.creator-header--dock-bang::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.4);
+  animation: eazy-dock-bang-flash 0.15s ease-out forwards;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+@keyframes eazy-dock-bang-flash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Header crack SVG: styles in creator-mobile.css (loaded for all creator mobile pages; see comment there). */
+
+/* ============================================
+   Snap Reward Toast – +0.01 EAZ mittig
+   Kreative Animation (Design-Generator-Style)
+   ============================================ */
+
+.eazy-snap-reward-toast {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.eazy-snap-reward-toast--show {
+  animation: eazy-snap-reward-show 2.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.eazy-snap-reward-toast__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 32px;
+  background: linear-gradient(160deg, rgba(8, 5, 18, 0.92) 0%, rgba(30, 20, 40, 0.95) 100%);
+  border-radius: 20px;
+  border: 2px solid rgba(249, 115, 22, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 40px rgba(249, 115, 22, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.eazy-snap-reward-toast__glow {
+  position: absolute;
+  inset: -8px;
+  border-radius: 28px;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(249, 115, 22, 0.4), transparent 70%);
+  animation: eazy-snap-reward-glow 1.5s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.eazy-snap-reward-toast__coin {
+  position: relative;
+  animation: eazy-snap-reward-coin-drop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.eazy-snap-reward-toast__coin img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.6));
+  animation: eazy-snap-reward-coin-spin 1.2s ease-out 0.3s both;
+}
+
+.eazy-snap-reward-toast__value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffb347, #f97316, #ea580c);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.02em;
+  text-shadow: none;
+  animation: eazy-snap-reward-value-in 0.5s ease-out 0.4s both;
+}
+
+.eazy-snap-reward-toast__unit {
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  animation: eazy-snap-reward-value-in 0.5s ease-out 0.5s both;
+}
+
+.eazy-snap-reward-toast__sparkles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.eazy-snap-reward-toast__sparkles span {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 30%, rgba(249, 115, 22, 0.5) 100%);
+  border-radius: 50%;
+  animation: eazy-snap-reward-sparkle 1.5s ease-out 0.3s both;
+}
+
+.eazy-snap-reward-toast__sparkles span:nth-child(1) { left: 10%; top: 20%; animation-delay: 0.2s; }
+.eazy-snap-reward-toast__sparkles span:nth-child(2) { right: 15%; top: 25%; animation-delay: 0.35s; }
+.eazy-snap-reward-toast__sparkles span:nth-child(3) { left: 5%; bottom: 30%; animation-delay: 0.5s; }
+.eazy-snap-reward-toast__sparkles span:nth-child(4) { right: 10%; bottom: 25%; animation-delay: 0.4s; }
+.eazy-snap-reward-toast__sparkles span:nth-child(5) { left: 50%; top: 5%; animation-delay: 0.25s; transform: translateX(-50%); }
+.eazy-snap-reward-toast__sparkles span:nth-child(6) { left: 50%; bottom: 5%; animation-delay: 0.45s; transform: translateX(-50%); }
+
+@keyframes eazy-snap-reward-show {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  75% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05) translateY(-20px); }
+}
+
+@keyframes eazy-snap-reward-glow {
+  from { opacity: 0.5; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.15); }
+}
+
+@keyframes eazy-snap-reward-coin-drop {
+  0% { transform: translateY(-60px) scale(0.3); opacity: 0; }
+  60% { transform: translateY(4px) scale(1.1); opacity: 1; }
+  80% { transform: translateY(-2px) scale(1.05); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes eazy-snap-reward-coin-spin {
+  0% { transform: rotate(-20deg) scale(1); }
+  100% { transform: rotate(0) scale(1); }
+}
+
+@keyframes eazy-snap-reward-value-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes eazy-snap-reward-sparkle {
+  0% { opacity: 0; transform: scale(0); }
+  40% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(1.5); }
+}

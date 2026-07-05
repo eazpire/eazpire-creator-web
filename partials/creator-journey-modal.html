@@ -1,0 +1,252 @@
+<div class="cj-overlay" id="cjOverlay" aria-hidden="true" style="display:none">
+  <div class="cj-modal" role="dialog" aria-modal="true" aria-labelledby="cjTitle">
+    <header class="cj-header">
+      <div class="cj-header__left">
+        <button type="button" class="cj-mobile-menu-btn" id="cjMobileMenuBtn" aria-label="Open menu" title="Open menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"></path></svg>
+        </button>
+        <div class="cj-header__text">
+          <h3 class="cj-title" id="cjTitle" data-t="creator.journey.title">Creator Journey</h3>
+        </div>
+      </div>
+      <button type="button" class="cj-close" id="cjClose" aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </header>
+
+    <div class="cj-mobile-drawer-overlay" id="cjMobileDrawerOverlay" aria-hidden="true"></div>
+
+    <div class="cj-main">
+      <nav class="cj-sidebar" id="cjSidebar" aria-label="Creator Journey navigation">
+        <div class="cj-sidebar__inner">
+          <button type="button" class="cj-nav-item is-active" data-cj-nav="overview">
+            <span class="cj-nav-icon-wrap" aria-hidden="true">
+              <svg class="cj-nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </span>
+            <span class="cj-nav-text">Overview</span>
+          </button>
+          <button type="button" class="cj-nav-item" data-cj-nav="quests">
+            <span class="cj-nav-icon-wrap" aria-hidden="true">
+              <svg class="cj-nav-icon" viewBox="0 0 24 24"><path d="M6 3h12v4l-2 2v12H8V9L6 7V3z"/><path d="M10 9h4v10h-4z"/></svg>
+            </span>
+            <span class="cj-nav-text">Quests</span>
+          </button>
+          <button type="button" class="cj-nav-item" data-cj-nav="unlock-tree">
+            <span class="cj-nav-icon-wrap" aria-hidden="true">
+              <svg class="cj-nav-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </span>
+            <span class="cj-nav-text">Unlock Tree</span>
+          </button>
+          <button type="button" class="cj-nav-item" data-cj-nav="level">
+            <span class="cj-nav-icon-wrap" aria-hidden="true">
+              <svg class="cj-nav-icon" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>
+            </span>
+            <span class="cj-nav-text">Level</span>
+          </button>
+        </div>
+        <div class="cj-sidebar__level" id="cjFloatLevel" hidden aria-live="polite">
+          <div class="cj-float-level__ring" id="cjFloatLevelRing">
+            <svg class="cj-float-level__svg" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="cj-float-level__track" cx="60" cy="60" r="52"></circle>
+              <circle class="cj-float-level__fill" id="cjFloatLevelFill" cx="60" cy="60" r="52"></circle>
+            </svg>
+            <div class="cj-float-level__center">
+              <span class="cj-float-level__kicker" data-t="creator.journey.float_level">Level</span>
+              <span class="cj-float-level__num" id="cjFloatLevelNum">1</span>
+            </div>
+          </div>
+          <p class="cj-float-level__xp" id="cjFloatLevelXp">—</p>
+          <p class="cj-float-level__next" id="cjFloatLevelNext" hidden></p>
+        </div>
+        <div class="cj-sidebar__balance" id="cjSidebarBalance" hidden>
+          <img class="cj-sidebar__balance-coin" src="" alt="" width="40" height="40" loading="lazy">
+          <div class="cj-sidebar__balance-text">
+            <span class="cj-sidebar__balance-label" data-t="creator.journey.balance_your">Your Balance</span>
+            <strong class="cj-sidebar__balance-value" id="cjSidebarBalanceValue">—</strong>
+          </div>
+        </div>
+      </nav>
+
+      <div class="cj-content" id="cjContent">
+        <div class="cj-content-bg" id="cjContentBg" aria-hidden="true"></div>
+
+        <div class="cj-content-scroll">
+          <section class="cj-panel is-active" data-cj-panel="overview" id="cjPanelOverview">
+            <p class="cj-panel-loading" id="cjOverviewLoading" data-t="creator.journey.loading">Loading…</p>
+            <div class="cj-overview-shell" id="cjOverviewShell" hidden>
+              <div class="cj-overview-hidden-bar" id="cjOverviewHiddenBar" hidden>
+                <span class="cj-overview-hidden-bar__label" data-t="creator.journey.overview_hidden_label">Hidden sections:</span>
+                <div class="cj-overview-hidden-bar__actions" id="cjOverviewHiddenActions"></div>
+              </div>
+              <div class="cj-overview-sections" id="cjOverviewSections" aria-live="polite"></div>
+            </div>
+            <div class="cj-code-hint" id="cjCodeHint" hidden>
+              <p>Redeem a Creator Code to unlock EAZ progression and the full tree.</p>
+              <button type="button" class="cj-btn cj-btn--ghost creator-settings-trigger" data-csm-open-tab="creator-codes">Open Creator Codes</button>
+            </div>
+          </section>
+
+          <section class="cj-panel" data-cj-panel="quests" id="cjPanelQuests">
+            <p class="cj-panel-loading" id="cjQuestsLoading" data-t="creator.journey.loading">Loading…</p>
+            <div class="cj-quests-shell" id="cjQuestsShell" hidden>
+              <nav class="cj-quests-type-tabs" id="cjQuestsTypeTabs" aria-label="Quest categories">
+                <button type="button" class="cj-quests-type-tab is-active" data-cj-quest-type="main">
+                  <span class="cj-quests-type-tab__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 2l2.4 4.8L20 8l-4 3.8L17 18l-5-2.8L7 18l1-6.2L4 8l5.6-1.2L12 2z"/></svg>
+                  </span>
+                  <span data-t="creator.journey.quests_main">Main Quests</span>
+                </button>
+                <button type="button" class="cj-quests-type-tab" data-cj-quest-type="daily">
+                  <span class="cj-quests-type-tab__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  </span>
+                  <span data-t="creator.journey.quests_daily">Daily Quests</span>
+                </button>
+              </nav>
+              <div class="cj-quests-filter" id="cjQuestsFilter" role="tablist" aria-label="Quest status filter">
+                <button type="button" class="cj-quests-filter__btn is-active" data-cj-quest-filter="available" data-t="creator.journey.quests_available">Available</button>
+                <button type="button" class="cj-quests-filter__btn" data-cj-quest-filter="completed" data-t="creator.journey.quests_completed">Completed</button>
+              </div>
+              <div class="cj-quests-list" id="cjQuestsList" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <section class="cj-panel" data-cj-panel="unlock-tree" id="cjPanelTree">
+            <p class="cj-panel-loading" id="cjTreeLoading" hidden data-t="creator.journey.loading">Loading…</p>
+            <div class="cj-tree-filters" id="cjTreeFilters" role="tablist" aria-label="Unlock categories"></div>
+            <div class="cj-tree-stage" id="cjTreeStage">
+              <div class="cj-tree-list" id="cjTreeList" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <section class="cj-panel" data-cj-panel="level" id="cjPanelLevel">
+            
+
+<div id="creator-level-panel" data-owner-id="">
+  <!-- Loading/Skeleton State -->
+  <div class="clp-loading" id="clpLoading">
+    <div class="clp-skeleton clp-skeleton-header"></div>
+    <div class="clp-skeleton clp-skeleton-level"></div>
+    <div class="clp-skeleton clp-skeleton-progress"></div>
+    <div class="clp-skeleton clp-skeleton-features"></div>
+    <div class="clp-skeleton clp-skeleton-levels"></div>
+  </div>
+
+  <!-- Error State -->
+  <div class="clp-error" id="clpError" style="display: none;">
+    <div class="clp-error-content">
+      <svg class="clp-error-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+      </svg>
+      <h4 class="clp-error-title">Please log in</h4>
+      <p class="clp-error-text">You need to be logged in to see your Creator level.</p>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="clp-content" id="clpContent" style="display: none;">
+
+    <!-- Header Section -->
+    <div class="clp-header">
+      <h3 class="clp-title">Creator Level</h3>
+      <p class="clp-subtitle">Level up and unlock new features</p>
+    </div>
+
+    <!-- Level Badge -->
+    <div class="clp-level-badge">
+      <div class="clp-level-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      </div>
+      <div class="clp-level-info">
+        <span class="clp-level-label">Level</span>
+        <span class="clp-level-number" id="clpLevelNumber">-</span>
+        <span class="clp-level-display-name" id="clpLevelDisplayName" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <!-- XP Progress -->
+    <div class="clp-xp-section">
+      <div class="clp-xp-header">
+        <span class="clp-xp-label">XP</span>
+        <span class="clp-xp-text" id="clpXpText">0 / 0 XP</span>
+      </div>
+      <div class="clp-progress-container">
+        <div class="clp-progress-bar">
+          <div class="clp-progress-fill" id="clpProgressFill" style="width: 0%;"></div>
+        </div>
+      </div>
+      <div class="clp-xp-remaining" id="clpXpRemaining" data-template=" XP until Level "></div>
+    </div>
+
+    <!-- Current Level Features -->
+    <div class="clp-features-section">
+      <h4 class="clp-section-title">Features for this level</h4>
+      <div class="clp-features-list" id="clpFeaturesList">
+        <!-- Features werden per JS geladen -->
+      </div>
+    </div>
+
+    <!-- Upcoming Levels -->
+    <div class="clp-levels-section">
+      <h4 class="clp-section-title">Upcoming Levels</h4>
+      <div class="clp-levels-grid" id="clpLevelsGrid">
+        <!-- Level-Liste wird per JS geladen -->
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  window.CreatorI18n = window.CreatorI18n || {};
+  window.CreatorI18n.levelFeatureDailyTpl =  EAZ daily (free pool);
+  window.CreatorI18n.levelFeatureMaxTpl =  EAZ max free pool;
+  window.CreatorI18n.levelFeatureStarterGenTpl = Up to  Starter Pack generations;
+  window.CreatorI18n.levelFeatureStarterUploadTpl = Up to  Starter Pack uploads;
+  window.CreatorI18n.levelGridStarterTpl =  generations ·  uploads · Starter Pack;
+  window.CreatorI18n.levelGridDailyMaxTpl = Daily  · Max ;
+  window.CreatorI18n.levelBadgeCurrent = Current;
+  window.CreatorI18n.levelXpMaxTitle = Max level reached;
+  window.CreatorI18n.levelXpRemainingTpl =  XP until Level ;
+  window.CreatorI18n.levelXpAtSegmentTpl =  /  XP;
+  window.CreatorI18n.levelLockedLabelTpl = Level ;
+  window.CreatorI18n.levelTierNames = window.CreatorI18n.levelTierNames || {
+    1: Beginner,
+    2: Starter,
+    3: Apprentice,
+    4: Journeyman,
+    5: Artist,
+    6: Master,
+    7: Expert,
+    8: Virtuoso,
+    9: Legend,
+    10: Creator
+  };
+</script>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cj-commit-overlay" id="cjCommitOverlay" aria-hidden="true" hidden>
+    <div class="cj-commit-dialog" role="dialog" aria-modal="true" aria-labelledby="cjCommitTitle">
+      <h4 class="cj-commit-dialog__title" id="cjCommitTitle">Commit EAZ</h4>
+      <p class="cj-commit-dialog__hint">How much EAZ do you want to allocate to this unlock? Allocated EAZ cannot be withdrawn.</p>
+      <p class="cj-commit-dialog__node" id="cjCommitNodeLabel" hidden></p>
+      <p class="cj-commit-dialog__avail" id="cjCommitAvail"></p>
+      <label class="cj-label" for="cjCommitAmount">Commit EAZ
+        <input type="number" id="cjCommitAmount" class="cj-input" min="0" step="0.01" inputmode="decimal">
+      </label>
+      <div class="cj-commit-dialog__actions">
+        <button type="button" class="cj-btn" id="cjCommitCancel">Cancel</button>
+        <button type="button" class="cj-btn cj-btn--primary" id="cjCommitConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-journey-modal.css?v=">
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-journey-modal.js?v=" defer></script>

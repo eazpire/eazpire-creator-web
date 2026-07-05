@@ -3,16 +3,16 @@
   
   <div class="creator-level-row">
     <div class="creator-level-badge" id="creator-mobile-level-root">
-      <button type="button" class="creator-level-badge__icon creator-journey-trigger" aria-label="Open aria">
+      <button type="button" class="creator-level-badge__icon creator-journey-trigger" aria-label="Open Creator Journey">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
         </svg>
       </button>
       <div class="creator-level-badge__info">
-        <span class="creator-level-badge__label" data-t="creator.overview.level_label">Level label</span>
+        <span class="creator-level-badge__label" data-t="creator.overview.level_label">Creator Level</span>
         <div class="creator-level-badge__value">
           <span class="creator-level-badge__number" id="creator-mobile-level-num">–</span>
-          <span class="creator-level-badge__name" id="creator-mobile-level-name" data-t="creator.overview.loading">Loading</span>
+          <span class="creator-level-badge__name" id="creator-mobile-level-name" data-t="creator.overview.loading">Loading...</span>
         </div>
       </div>
       <div class="creator-level-badge__xp">
@@ -22,7 +22,7 @@
         <div class="creator-level-badge__xp-info">
           <span class="creator-level-badge__xp-label">XP</span>
           <span class="creator-level-badge__xp-value" id="creator-mobile-xp-value">0 / 50</span>
-          <span class="creator-level-badge__xp-hint" id="creator-mobile-xp-hint" data-t="creator.mobile.xp_until_next">Xp until next</span>
+          <span class="creator-level-badge__xp-hint" id="creator-mobile-xp-hint" data-t="creator.mobile.xp_until_next">Still XP until next level</span>
         </div>
       </div>
     </div>
@@ -48,8 +48,8 @@
   
   <article class="creator-container" data-collapsible data-section-id="journey">
     <button type="button" class="creator-container__header" aria-expanded="true" aria-controls="creator-mobile-journey-body" id="creator-mobile-journey-toggle">
-      <span class="creator-container__drag" aria-label="Reorder">⋮⋮</span>
-      <span class="creator-container__title" data-t="creator.overview.onboarding_title">Onboarding title</span>
+      <span class="creator-container__drag" aria-label="Change order">⋮⋮</span>
+      <span class="creator-container__title" data-t="creator.overview.onboarding_title">Your Creator Journey</span>
       <span class="creator-container__count" id="creator-mobile-journey-progress">0/10</span>
       <svg class="creator-container__chevron" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="currentColor"/>
@@ -60,40 +60,14 @@
         <div class="creator-journey-bar__fill" id="creator-mobile-journey-bar-fill" style="width: 0%"></div>
       </div>
       <div class="creator-journey-tabs">
-        <button type="button" class="creator-journey-tab creator-journey-tab--active" data-tab="open"><span data-t="creator.overview.tab_open">Tab open</span> <span id="creator-mobile-journey-open-count">0</span></button>
-        <button type="button" class="creator-journey-tab" data-tab="completed"><span data-t="creator.overview.tab_completed">Tab completed</span> <span id="creator-mobile-journey-completed-count">0</span></button>
+        <button type="button" class="creator-journey-tab creator-journey-tab--active" data-tab="open"><span data-t="creator.overview.tab_open">Open</span> <span id="creator-mobile-journey-open-count">0</span></button>
+        <button type="button" class="creator-journey-tab" data-tab="completed"><span data-t="creator.overview.tab_completed">Completed</span> <span id="creator-mobile-journey-completed-count">0</span></button>
       </div>
       <div class="creator-journey-list creator-journey-list--open" id="creator-mobile-journey-open">
-        <p class="creator-journey-loading" data-t="creator.overview.loading_todos">Loading todos</p>
+        <p class="creator-journey-loading" data-t="creator.overview.loading_todos">Loading your journey...</p>
       </div>
       <div class="creator-journey-list creator-journey-list--hidden" id="creator-mobile-journey-completed">
-        <p class="creator-journey-empty" data-t="creator.overview.no_completed_todos">No completed todos</p>
-      </div>
-    </div>
-  </article>
-  
-  
-  <article class="creator-container" data-collapsible data-section-id="journey">
-    <button type="button" class="creator-container__header" aria-expanded="true" aria-controls="creator-mobile-guest-journey-body" id="creator-mobile-guest-journey-toggle">
-      <span class="creator-container__drag" aria-label="Reorder">⋮⋮</span>
-      <span class="creator-container__title" data-t="creator.overview.guest_journey_title">Guest journey title</span>
-      <span class="creator-container__count">0/1</span>
-      <svg class="creator-container__chevron" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="currentColor"/>
-      </svg>
-    </button>
-    <div class="creator-container__body" id="creator-mobile-guest-journey-body">
-      <a href="?redirect=" class="creator-todo-item creator-todo-item--login">
-        <div class="creator-todo-item__icon">🚀</div>
-        <div class="creator-todo-item__content">
-          <p class="creator-todo-item__title" data-t="creator.overview.todo_login">Todo login</p>
-          <span class="creator-todo-item__xp">Todo login reward</span>
-        </div>
-        <span class="creator-todo-item__arrow">→</span>
-      </a>
-      <div class="creator-journey-cta">
-        <p>Guest cta text</p>
-        <a href="">Guest cta register</a>
+        <p class="creator-journey-empty" data-t="creator.overview.no_completed_todos">No completed tasks yet</p>
       </div>
     </div>
   </article>
@@ -102,7 +76,7 @@
   
   <article class="creator-container" data-collapsible data-section-id="stats">
     <button type="button" class="creator-container__header" aria-expanded="true" aria-controls="creator-mobile-stats-body" id="creator-mobile-stats-toggle">
-      <span class="creator-container__drag" aria-label="Reorder">⋮⋮</span>
+      <span class="creator-container__drag" aria-label="Change order">⋮⋮</span>
       <span class="creator-container__title" data-t="creator.mobile.overview">Overview</span>
       <span class="creator-container__count">4</span>
       <svg class="creator-container__chevron" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -114,72 +88,43 @@
         
         <article class="creator-stat-card creator-stat-card--sales creator-stat-card--clickable" data-open-sales-modal role="button" tabindex="0">
           <div class="creator-stat-card__icon creator-stat-card__icon--sales">💰</div>
-          <span class="creator-stat-card__label" data-t="creator.overview.sales_label">Sales label</span>
+          <span class="creator-stat-card__label" data-t="creator.overview.sales_label">Sales</span>
           <div class="creator-stat-card__dual">
-            <span class="creator-stat-card__dual-label" data-t="creator.overview.sales_eazpire">Sales eazpire</span>
+            <span class="creator-stat-card__dual-label" data-t="creator.overview.sales_eazpire">eazpire</span>
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-sales-eazpire">–</span>
-            <span class="creator-stat-card__dual-label" data-t="creator.overview.sales_amazon">Sales amazon</span>
+            <span class="creator-stat-card__dual-label" data-t="creator.overview.sales_amazon">Amazon</span>
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-sales-amazon">–</span>
           </div>
         </article>
         <article class="creator-stat-card creator-stat-card--designs creator-stat-card--clickable" role="button" tabindex="0" data-goto="2" data-creations-tab="designs">
           <div class="creator-stat-card__icon creator-stat-card__icon--designs">🎨</div>
-          <span class="creator-stat-card__label" data-t="creator.overview.designs_label">Designs label</span>
+          <span class="creator-stat-card__label" data-t="creator.overview.designs_label">Designs</span>
           <div class="creator-stat-card__dual">
-            <span class="creator-stat-card__dual-label" data-t="creator.overview.designs_generated">Designs generated</span>
+            <span class="creator-stat-card__dual-label" data-t="creator.overview.designs_generated">Generated</span>
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-designs-generated">–</span>
-            <span class="creator-stat-card__dual-label" data-t="creator.overview.designs_uploaded">Designs uploaded</span>
+            <span class="creator-stat-card__dual-label" data-t="creator.overview.designs_uploaded">Uploaded</span>
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-designs-uploaded">–</span>
           </div>
         </article>
         <article class="creator-stat-card creator-stat-card--products creator-stat-card--clickable" role="button" tabindex="0" data-goto="2" data-creations-tab="products">
           <div class="creator-stat-card__icon creator-stat-card__icon--products">📦</div>
-          <span class="creator-stat-card__label" data-t="creator.overview.products_label">Products label</span>
+          <span class="creator-stat-card__label" data-t="creator.overview.products_label">Products</span>
           <div class="creator-stat-card__dual">
-            <span class="creator-stat-card__dual-label" data-t="creator.overview.products_online">Products online</span>
+            <span class="creator-stat-card__dual-label" data-t="creator.overview.products_online">Online</span>
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-products-online">–</span>
-            <span class="creator-stat-card__dual-label" data-t="creator.overview.products_offline">Products offline</span>
+            <span class="creator-stat-card__dual-label" data-t="creator.overview.products_offline">Offline</span>
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-products-offline">–</span>
           </div>
         </article>
         <article class="creator-stat-card creator-stat-card--heroes creator-stat-card--clickable" role="button" tabindex="0" data-goto="3" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
           <div class="creator-stat-card__icon creator-stat-card__icon--heroes">🖼️</div>
-          <span class="creator-stat-card__label" data-t="creator.overview.hero_images_label">Hero images label</span>
+          <span class="creator-stat-card__label" data-t="creator.overview.hero_images_label">Hero Images</span>
           <div class="creator-stat-card__dual">
-            <span class="creator-stat-card__dual-label">Designs generated</span>
+            <span class="creator-stat-card__dual-label">Generated</span>
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-heroes-generated">–</span>
-            <span class="creator-stat-card__dual-label">Products online</span>
+            <span class="creator-stat-card__dual-label">Online</span>
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-heroes-online">–</span>
           </div>
-        </article>
-        
-        <article class="creator-stat-card creator-stat-card--locked">
-          <div class="creator-stat-card__icon creator-stat-card__icon--designs">🎨</div>
-          <span class="creator-stat-card__label">Designs label</span>
-          <span class="creator-stat-card__meta">Total</span>
-          <span class="creator-stat-card__value">–</span>
-        </article>
-        <article class="creator-stat-card creator-stat-card--locked">
-          <div class="creator-stat-card__icon creator-stat-card__icon--products">📦</div>
-          <span class="creator-stat-card__label">Products label</span>
-          <span class="creator-stat-card__meta">Online</span>
-          <span class="creator-stat-card__value">–</span>
-        </article>
-        <article class="creator-stat-card creator-stat-card--locked">
-          <div class="creator-stat-card__icon creator-stat-card__icon--level">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
-            </svg>
-            <span class="creator-stat-card__level-badge">0</span>
-          </div>
-          <span class="creator-stat-card__label">Level label</span>
-          <span class="creator-stat-card__label-meta">0</span>
-        </article>
-        <article class="creator-stat-card creator-stat-card--locked">
-          <div class="creator-stat-card__icon creator-stat-card__icon--heroes">🖼️</div>
-          <span class="creator-stat-card__label">Hero images label</span>
-          <span class="creator-stat-card__meta">Generated</span>
-          <span class="creator-stat-card__value">–</span>
         </article>
         
       </div>
@@ -189,8 +134,8 @@
   
   <article class="creator-container" data-collapsible data-section-id="actions">
     <button type="button" class="creator-container__header" aria-expanded="true" aria-controls="creator-mobile-actions-body" id="creator-mobile-actions-toggle">
-      <span class="creator-container__drag" aria-label="Reorder">⋮⋮</span>
-      <span class="creator-container__title" data-t="creator.overview.quick_actions">Quick actions</span>
+      <span class="creator-container__drag" aria-label="Change order">⋮⋮</span>
+      <span class="creator-container__title" data-t="creator.overview.quick_actions">Quick Actions</span>
       <svg class="creator-container__chevron" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="currentColor"/>
       </svg>
@@ -200,40 +145,40 @@
         <a href="/?eaz_open_shop_create=1" class="creator-quick-action" data-goto="1">
           <div class="creator-quick-action__icon">🎨</div>
           <div class="creator-quick-action__text">
-            <p class="creator-quick-action__title" data-t="creator.overview.action_generator_title">Action generator title</p>
-            <p class="creator-quick-action__desc">Action generator desc</p>
+            <p class="creator-quick-action__title" data-t="creator.overview.action_generator_title">Design Generator</p>
+            <p class="creator-quick-action__desc">Create new design</p>
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
         <a href="/pages/creator-dashboard#creations" class="creator-quick-action" data-goto="2" data-creations-tab="designs">
           <div class="creator-quick-action__icon">📤</div>
           <div class="creator-quick-action__text">
-            <p class="creator-quick-action__title" data-t="creator.overview.action_designs_title">Action designs title</p>
-            <p class="creator-quick-action__desc">Action designs desc</p>
+            <p class="creator-quick-action__title" data-t="creator.overview.action_designs_title">My Designs</p>
+            <p class="creator-quick-action__desc">Manage designs</p>
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
         <a href="/pages/creator-dashboard?eaz_marketing_subtab=content-creation&amp;eaz_marketing_content=hero-images#marketing" class="creator-quick-action" data-goto="3" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
           <div class="creator-quick-action__icon">🖼️</div>
           <div class="creator-quick-action__text">
-            <p class="creator-quick-action__title" data-t="creator.overview.action_content_title">Action content title</p>
-            <p class="creator-quick-action__desc">Action content desc</p>
+            <p class="creator-quick-action__title" data-t="creator.overview.action_content_title">Content Creation</p>
+            <p class="creator-quick-action__desc">Create Hero Images</p>
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
         <a href="/pages/creator-dashboard?eaz_creations_tab=products#creations" class="creator-quick-action" data-goto="2" data-creations-tab="products">
           <div class="creator-quick-action__icon">📊</div>
           <div class="creator-quick-action__text">
-            <p class="creator-quick-action__title" data-t="creator.overview.action_products_title">Action products title</p>
-            <p class="creator-quick-action__desc">Action products desc</p>
+            <p class="creator-quick-action__title" data-t="creator.overview.action_products_title">My Products</p>
+            <p class="creator-quick-action__desc">Manage products</p>
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
         <a href="/pages/creator-dashboard#automations" class="creator-quick-action" data-goto="4" data-automations-maintab="design-generator">
           <div class="creator-quick-action__icon">⚙️</div>
           <div class="creator-quick-action__text">
-            <p class="creator-quick-action__title" data-t="creator.overview.action_automations_title">Action automations title</p>
-            <p class="creator-quick-action__desc">Action automations desc</p>
+            <p class="creator-quick-action__title" data-t="creator.overview.action_automations_title">Automations</p>
+            <p class="creator-quick-action__desc">Schedule design generation</p>
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
@@ -241,16 +186,16 @@
         <a href="?redirect=" class="creator-quick-action creator-quick-action--highlight">
           <div class="creator-quick-action__icon">🔐</div>
           <div class="creator-quick-action__text">
-            <p class="creator-quick-action__title">Action login title</p>
-            <p class="creator-quick-action__desc">Action login desc</p>
+            <p class="creator-quick-action__title">Log In</p>
+            <p class="creator-quick-action__desc">Access your dashboard</p>
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
-        <a href="" class="creator-quick-action creator-quick-action--highlight">
+        <a href="https://www.eazpire.com/account/register" class="creator-quick-action creator-quick-action--highlight">
           <div class="creator-quick-action__icon">🎉</div>
           <div class="creator-quick-action__text">
-            <p class="creator-quick-action__title">Action register title</p>
-            <p class="creator-quick-action__desc">Action register desc</p>
+            <p class="creator-quick-action__title">Sign Up</p>
+            <p class="creator-quick-action__desc">Create free account</p>
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>

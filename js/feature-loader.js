@@ -10,6 +10,8 @@
     marketing: null,
     automations: null,
     settings: null,
+    journey: null,
+    dashboard: null,
   };
   var partialsHostId = "creatorPortalModals";
 
@@ -56,6 +58,17 @@
     }, Promise.resolve());
   }
 
+  function applyPartialI18n(hostEl) {
+    if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
+      global.CreatorPortalI18n.applyDataT(hostEl);
+    } else if (
+      global.CreatorPortalThemeBridge &&
+      typeof global.CreatorPortalThemeBridge.applyPortalI18n === "function"
+    ) {
+      global.CreatorPortalThemeBridge.applyPortalI18n(hostEl);
+    }
+  }
+
   async function injectPartial(name, hostEl) {
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
@@ -68,6 +81,7 @@
     wrap.setAttribute("data-partial", name);
     wrap.innerHTML = html;
     host.appendChild(wrap);
+    applyPartialI18n(wrap);
   }
 
   function sharedCss() {
@@ -284,9 +298,49 @@
     return state.automations;
   }
 
+  async function ensureDashboard() {
+    if (state.dashboard) return state.dashboard;
+
+    state.dashboard = (async function () {
+      loadCss("/vendor/theme/creator-journey-modal.css");
+      loadCss("/vendor/theme/creator-level-celebration.css");
+
+      await Promise.all([
+        injectPartial("creator-journey-modal.html"),
+        injectPartial("creator-level-celebration-overlay.html"),
+      ]);
+
+      await loadScriptsSequential([
+        asset("creator-journey-modal.js"),
+        asset("creator-level-celebration.js"),
+      ]);
+
+      global.CreatorCelebrationI18n = global.CreatorCelebrationI18n || {
+        blocked_title: "Level up blocked",
+        blocked_body: "Complete the required steps to level up.",
+        celebrate_title: "Level up!",
+        celebrate_subtitle: "You reached a new creator level.",
+        cta_creator_codes: "Open Creator Codes",
+        badge_ready_aria: "Level badge ready",
+      };
+
+      if (requireLogin()) {
+        if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
+        await ensureSettings();
+      }
+    })();
+
+    try {
+      await state.dashboard;
+    } catch (e) {
+      state.dashboard = null;
+      console.warn("[CreatorPortalFeatures] dashboard load failed", e);
+    }
+    return state.dashboard;
+  }
+
   async function ensureSettings() {
     if (state.settings) return state.settings;
-    if (!requireLogin()) return null;
 
     state.settings = (async function () {
       if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
@@ -326,6 +380,27 @@
     return state.settings;
   }
 
+  async function ensureJourney() {
+    if (state.journey) return state.journey;
+
+    state.journey = (async function () {
+      loadCss("/vendor/theme/creator-journey-modal.css");
+      loadCss("/vendor/theme/creator-level-panel.css");
+
+      await injectPartial("creator-journey-modal.html");
+
+      await loadScript(asset("creator-journey-modal.js"));
+    })();
+
+    try {
+      await state.journey;
+    } catch (e) {
+      state.journey = null;
+      console.warn("[CreatorPortalFeatures] journey load failed", e);
+    }
+    return state.journey;
+  }
+
   async function openSettings(tab) {
     if (!requireLogin()) {
       if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.login === "function") {
@@ -340,17 +415,25 @@
   }
 
   function bindSettingsTriggers() {
-    document.querySelectorAll("[data-open-settings]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var tab = btn.getAttribute("data-settings-tab") || "";
-        openSettings(tab || undefined);
-      });
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-open-settings]");
+      if (!btn) return;
+      e.preventDefault();
+      var tab = btn.getAttribute("data-settings-tab") || "";
+      openSettings(tab || undefined);
     });
   }
 
   function onRoute(name) {
+    if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
+      global.CreatorPortalEazy.ensure();
+    }
+    if (name === "dashboard") ensureDashboard();
     if (name === "creations") ensureCreations();
-    if (name === "generator") ensureGenerator();
+    if (name === "generator") {
+      ensureGenerator();
+      ensureDashboard();
+    }
     if (name === "marketing") ensureMarketing();
     if (name === "automations") ensureAutomations();
   }
@@ -359,11 +442,13 @@
 
   global.CreatorPortalFeatures = {
     onRoute: onRoute,
+    ensureDashboard: ensureDashboard,
     ensureCreations: ensureCreations,
     ensureGenerator: ensureGenerator,
     ensureMarketing: ensureMarketing,
     ensureAutomations: ensureAutomations,
     ensureSettings: ensureSettings,
+    ensureJourney: ensureJourney,
     openSettings: openSettings,
     applyMarketingDeepLink: applyMarketingDeepLink,
   };

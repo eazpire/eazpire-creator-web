@@ -24,7 +24,7 @@
     </svg>
   </div>
   <div class="creator-header__top">
-    <button type="button" class="creator-header__drawer-btn" id="creatorMobileDrawerBtn" aria-label="Menu open">
+    <button type="button" class="creator-header__drawer-btn" id="creatorMobileDrawerBtn" aria-label="Open menu">
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
         <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="currentColor"/>
       </svg>
@@ -40,12 +40,12 @@
       >
     </div>
     <div class="creator-header__actions">
-      <button type="button" class="creator-header__balance-btn" id="creatorHeaderBalanceBtn" role="button" tabindex="0" aria-label="Available balance">
+      <button type="button" class="creator-header__balance-btn" id="creatorHeaderBalanceBtn" role="button" tabindex="0" aria-label="Available Balance">
         <svg class="creator-header__balance-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/></svg>
-        <span class="creator-header__balance-value" id="global-sales-balance-value" data-sales-balance-value data-debug-owner="null">Loading</span>
+        <span class="creator-header__balance-value" id="global-sales-balance-value" data-sales-balance-value data-debug-owner="">Loading...</span>
         <span class="creator-header__balance-unit" data-sales-balance-unit>€</span>
       </button>
-      <button type="button" class="creator-header__account-btn creator-settings-trigger" id="creatorHeaderAccountBtn" aria-label="Title">
+      <button type="button" class="creator-header__account-btn creator-settings-trigger" id="creatorHeaderAccountBtn" aria-label="Creator Settings">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4 20c0-3.3 2.7-6 6-6h4c3.3 0 6 2.7 6 6"/></svg>
       </button>
     </div>
@@ -70,21 +70,21 @@
 
 <div
   class="eazy-snap-slot"
-  id="eazy-snap-slot--"
+  id="eazy-snap-slot--mobile"
   aria-hidden="true"
-  style="--eazy-snap-grad-outer: url(#eazy-hole-grad-); --eazy-snap-grad-inner: url(#eazy-hole-inner-);"
+  style="--eazy-snap-grad-outer: url(#eazy-hole-grad-mobile); --eazy-snap-grad-inner: url(#eazy-hole-inner-mobile);"
 >
   <svg class="eazy-snap-slot__indent" viewBox="18 16 100 100" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="eazy-hole-grad-" x1="0.3" y1="0.2" x2="0.7" y2="0.9">
+      <linearGradient id="eazy-hole-grad-mobile" x1="0.3" y1="0.2" x2="0.7" y2="0.9">
         <stop offset="0%" stop-color="rgba(25,18,45,0.9)"/>
         <stop offset="100%" stop-color="rgba(12,8,22,0.95)"/>
       </linearGradient>
-      <linearGradient id="eazy-hole-inner-" x1="0.35" y1="0.25" x2="0.65" y2="0.85">
+      <linearGradient id="eazy-hole-inner-mobile" x1="0.35" y1="0.25" x2="0.65" y2="0.85">
         <stop offset="0%" stop-color="rgba(20,14,38,0.95)"/>
         <stop offset="100%" stop-color="rgba(10,6,18,0.98)"/>
       </linearGradient>
-      <filter id="eazy-hole-shadow-" x="-15%" y="-15%" width="130%" height="130%">
+      <filter id="eazy-hole-shadow-mobile" x="-15%" y="-15%" width="130%" height="130%">
         <feOffset in="SourceAlpha" dx="1.5" dy="2"/>
         <feGaussianBlur stdDeviation="1.2" result="blur"/>
         <feFlood flood-color="rgba(0,0,0,0.35)"/>
@@ -92,7 +92,7 @@
         <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
     </defs>
-    <g filter="url(#eazy-hole-shadow-)">
+    <g filter="url(#eazy-hole-shadow-mobile)">
       <path class="eazy-snap-slot__recess" d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z"/>
       <circle class="eazy-snap-slot__recess" cx="50" cy="28" r="7"/>
       <path class="eazy-snap-slot__recess-inner" d="M56 39c-15 6-24 20-24 35 0 19 16 34 36 34 20 0 36-16 36-36 0-21-17-38-38-38-4.3 0-8.4.7-10 .9Z"/>
@@ -104,22 +104,22 @@
 
       </div>
       <div class="creator-header__audio-widget creator-header__audio-widget--mobile" id="creatorMobileAudioArea">
-        <canvas class="creator-header__audio-visualizer creator-header__audio-visualizer--mobile" id="creatorMobileAudioVisualizer" width="72" height="22" aria-label="Open modal" role="button" tabindex="0"></canvas>
+        <canvas class="creator-header__audio-visualizer creator-header__audio-visualizer--mobile" id="creatorMobileAudioVisualizer" width="72" height="22" aria-label="Open audio library" role="button" tabindex="0"></canvas>
         <div class="creator-header__audio-controls creator-header__audio-controls--mobile" id="creatorMobileAudioControls">
-          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__back" id="creatorMobileAudioCtrlBack" aria-label="Back">
+          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__back" id="creatorMobileAudioCtrlBack" aria-label="Back 10s">
             <svg viewBox="0 0 24 24" width="14" height="14"><path d="M11 18V6l-8 6 8 6zm8-6l-8 6V6l8 6z" fill="currentColor"/></svg>
           </button>
           <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__play" id="creatorMobileAudioCtrlPlay" aria-label="Play">
             <svg class="creator-audio-ctrl__play-icon" viewBox="0 0 24 24" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
             <svg class="creator-audio-ctrl__pause-icon" viewBox="0 0 24 24" width="14" height="14"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>
           </button>
-          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__fwd" id="creatorMobileAudioCtrlFwd" aria-label="Next">
+          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__fwd" id="creatorMobileAudioCtrlFwd" aria-label="Next (random)">
             <svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 18l8-6-8-6v12zm9-12v12l8-6-8-6z" fill="currentColor"/></svg>
           </button>
         </div>
       </div>
       <h1 class="creator-header__title">Dashboard</h1>
     </div>
-    <p class="creator-header__swipe-hint">Swipe hint</p>
+    <p class="creator-header__swipe-hint">Swipe left / right</p>
   </div>
 </header>

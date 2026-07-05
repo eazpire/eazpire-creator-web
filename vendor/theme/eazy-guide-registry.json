@@ -1,0 +1,212 @@
+{
+  "interests": {
+    "title": "Interests",
+    "summary": "Choose interests that match you to get better product and design suggestions across the shop and creator tools.",
+    "tips": [
+      "Choose interests that match you to get better suggestions.",
+      "You can select up to 10 interests.",
+      "New interest? Type it and I will suggest matching terms."
+    ]
+  },
+  "community": {
+    "title": "Community",
+    "summary": "Grow your network with referral links and earn commission across up to 10 levels.",
+    "tips": [
+      "Share your referral link to grow your network.",
+      "Your network has 10 levels and each level earns commission.",
+      "Use promo codes to win new partners."
+    ]
+  },
+  "generate-design": {
+    "title": "Design Generator",
+    "summary": "Create AI designs from a text prompt or reference image, then save and publish them.",
+    "tips": [
+      "The more detailed your prompt, the better the result.",
+      "You can upload your own image as a reference.",
+      "Try different styles for unique designs.",
+      "After generation, you can publish the design directly."
+    ]
+  },
+  "my-creations": {
+    "title": "My Creations",
+    "summary": "Browse, filter, and manage all designs you have generated or uploaded.",
+    "tips": [
+      "Click a design to see more options.",
+      "You can filter designs by date or type.",
+      "Unsaved designs are deleted after 30 days."
+    ]
+  },
+  "publish": {
+    "title": "Publish Products",
+    "summary": "Place your design on print-on-demand products and publish them to the shop.",
+    "tips": [
+      "Select a design first, then choose products.",
+      "You can publish to multiple products at once.",
+      "After publishing, you can find the product in the shop."
+    ]
+  },
+  "my-products": {
+    "title": "My Products",
+    "summary": "View products you have published and manage their visibility in the shop.",
+    "tips": [
+      "Published products appear in your creator storefront.",
+      "You can update mockups and metadata from here."
+    ]
+  },
+  "active-jobs": {
+    "title": "Active Jobs",
+    "summary": "Track in-progress generation and publishing jobs.",
+    "tips": [
+      "Jobs run in the background while you browse.",
+      "You will get a notification when a job completes."
+    ]
+  },
+  "favorites": {
+    "title": "Favorites",
+    "summary": "Save products you like and find them again quickly.",
+    "tips": [
+      "Tap the heart icon on a product to favorite it.",
+      "Favorites sync when you are logged in."
+    ]
+  },
+  "gift-cards": {
+    "title": "Gift Cards",
+    "summary": "Purchase or redeem Eazpire gift cards.",
+    "tips": [
+      "Gift cards can be shared with friends and family.",
+      "Redeem a code at checkout."
+    ]
+  },
+  "promo-codes": {
+    "title": "Promo Codes",
+    "summary": "Create and share promo codes for your community.",
+    "tips": [
+      "Promo codes can offer discounts or track referrals.",
+      "Share codes from your community dashboard."
+    ]
+  },
+  "size-ai": {
+    "title": "Size AI",
+    "summary": "Get size recommendations based on your measurements.",
+    "tips": [
+      "Enter your measurements and I will suggest the best size.",
+      "Reference sizes help for more accurate recommendations.",
+      "The recommendation applies to all product types."
+    ]
+  },
+  "my-orders": {
+    "title": "My Orders",
+    "summary": "View order history, details, and tracking information.",
+    "tips": [
+      "Click an order for details and tracking.",
+      "If there is an issue with an order, report it.",
+      "You can see your last 10 orders here."
+    ]
+  },
+  "product-search": {
+    "title": "Product Search",
+    "summary": "Search the shop by keyword or browse categories.",
+    "tips": [
+      "Enter a search term or choose a category.",
+      "You can add products directly to your cart.",
+      "Mark favorites with the heart icon for later."
+    ]
+  },
+  "browse-shop": {
+    "title": "Browse Shop",
+    "summary": "Discover products, trends, and personalized recommendations.",
+    "tips": [
+      "Discover new products and trends.",
+      "Recommendations are based on your interests.",
+      "You can search for something specific anytime."
+    ]
+  },
+  "wardrobe": {
+    "title": "Wardrobe",
+    "summary": "Combine up to 9 items into outfits and generate AI outfit previews.",
+    "tips": [
+      "Combine up to 9 items per outfit.",
+      "Generate an AI image of your outfit.",
+      "You can save up to 20 outfits."
+    ]
+  },
+  "my-mockups": {
+    "title": "My Mockups",
+    "summary": "Upload photos and generate product mockups.",
+    "tips": [
+      "Upload a photo and I will generate mockups for different products.",
+      "Choose the right person type for more realistic results.",
+      "Mockups work great as product previews."
+    ]
+  },
+  "hero-images": {
+    "title": "Hero Images",
+    "summary": "Create rotating hero banners for your shop storefront (costs EAZ).",
+    "tips": [
+      "Hero Images cost 0.5 EAZ and appear as shop title images.",
+      "Choose up to 5 products for one hero image.",
+      "Published hero images rotate randomly on your shop page."
+    ]
+  },
+  "creator-image": {
+    "title": "Creator Image",
+    "summary": "Set your avatar and cover image shown on your creator profile.",
+    "tips": [
+      "Your avatar is optimized to 512x512 and your cover to 800x300.",
+      "You can upload images or generate them with AI.",
+      "Your creator image appears on your profile and products."
+    ]
+  },
+  "creator-settings": {
+    "title": "Creator Settings",
+    "summary": "Manage creator names, filters, and publishing defaults.",
+    "tips": [
+      "You can create up to 5 creator names.",
+      "The active creator defines the name you publish under.",
+      "Filter settings decide which products you see."
+    ]
+  },
+  "balance": {
+    "title": "EAZ Balance",
+    "summary": "EAZ is your in-app currency for premium features like hero images.",
+    "tips": [
+      "EAZ is your currency for premium features like hero images.",
+      "You earn EAZ by creating designs, sales, and daily login.",
+      "Your max balance increases with your level."
+    ]
+  },
+  "level": {
+    "title": "Creator Level",
+    "summary": "Your level unlocks benefits and raises your maximum EAZ balance.",
+    "tips": [
+      "Your level determines your maximum EAZ balance.",
+      "You gain XP through activities like creating designs and publishing products.",
+      "There are 10 levels and each unlocks new benefits."
+    ]
+  },
+  "mentor-support": {
+    "title": "Support a Creator",
+    "summary": "Tip or support other creators in the community.",
+    "tips": [
+      "Support creators you follow or collaborate with.",
+      "Tips may use EAZ or shop checkout depending on the flow."
+    ]
+  },
+  "chat-input": {
+    "title": "Chat Input",
+    "summary": "Type a message or use functions from the carousel above the input.",
+    "tips": [
+      "Ask anything about the shop or creator tools.",
+      "Use the + button for a new conversation.",
+      "Type Support to reach a human."
+    ]
+  },
+  "chat-functions": {
+    "title": "Function Carousel",
+    "summary": "Quick access to Eazy functions like design generation, orders, and settings.",
+    "tips": [
+      "Tap a function icon to start a guided flow.",
+      "Customize visible functions in the Eazy tab with the eye icon."
+    ]
+  }
+}

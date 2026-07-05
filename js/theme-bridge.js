@@ -68,8 +68,14 @@
     return data;
   };
 
+  global.CreatorWidget = global.CreatorWidget || {};
+  if (!global.CreatorWidget.apiBaseUrl) {
+    global.CreatorWidget.apiBaseUrl = origin + "/apps/creator-dispatch";
+  }
+
   global.EazAnim = global.EazAnim || {
-    isEnabled: function () {
+    isEnabled: function (scope, key) {
+      if (scope === "creator" && key === "theme_bg_video") return true;
       return false;
     },
     whenReady: function () {
@@ -77,9 +83,37 @@
     },
   };
 
+  function applyPortalI18n(root) {
+    var scope = root || document;
+    var map = global.CreatorI18n || {};
+    scope.querySelectorAll("[data-t]").forEach(function (el) {
+      var key = el.getAttribute("data-t");
+      if (!key || map[key] == null) return;
+      if (el.children.length) return;
+      el.textContent = map[key];
+      el.setAttribute("data-t-applied", "1");
+    });
+    scope.querySelectorAll("[data-t-aria-label]").forEach(function (el) {
+      var key = el.getAttribute("data-t-aria-label");
+      if (key && map[key] != null) {
+        el.setAttribute("aria-label", map[key]);
+        el.setAttribute("data-t-applied", "1");
+      }
+    });
+    scope.querySelectorAll("[aria-label][data-t]").forEach(function (el) {
+      var key = el.getAttribute("data-t");
+      if (key && map[key] != null) el.setAttribute("aria-label", map[key]);
+    });
+  }
+
+  global.CreatorPortalI18n = {
+    applyDataT: applyPortalI18n,
+  };
+
   global.CreatorPortalThemeBridge = {
     applyOwnerFromAuth: applyOwnerFromAuth,
     resolveOwnerId: resolveOwnerId,
+    applyPortalI18n: applyPortalI18n,
     notifyContextReady: function () {
       applyOwnerFromAuth();
       global.dispatchEvent(new CustomEvent("eazCreatorContextReady"));

@@ -4,14 +4,14 @@
     <!-- Header -->
     <header class="csm-header">
       <div class="csm-header__left">
-        <button type="button" class="csm-mobile-menu-btn" id="csmMobileMenuBtn" aria-label="Menu open" title="Menu open">
+        <button type="button" class="csm-mobile-menu-btn" id="csmMobileMenuBtn" aria-label="Open menu" title="Open menu">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 12h18M3 6h18M3 18h18"></path>
           </svg>
         </button>
         <div class="csm-header__text">
-          <h3 class="csm-title" id="csmTitle">Title</h3>
-          <p class="csm-subtitle">Subtitle</p>
+          <h3 class="csm-title" id="csmTitle">Creator Settings</h3>
+          <p class="csm-subtitle">Manage your Creator profiles and settings</p>
         </div>
       </div>
 
@@ -29,7 +29,7 @@
     <div class="csm-main">
 
       <!-- Sidebar Navigation (Desktop) / Drawer (Mobile) -->
-      <nav class="csm-sidebar" id="csmSidebar" aria-label="Nav aria">
+      <nav class="csm-sidebar" id="csmSidebar" aria-label="Settings Navigation">
         <div class="csm-sidebar__inner">
 
           <!-- Profile Tab -->
@@ -37,7 +37,7 @@
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
             </svg>
-            <span class="csm-nav-text">Nav profile</span>
+            <span class="csm-nav-text">Profile</span>
           </button>
 
           <!-- Notifications Tab -->
@@ -53,7 +53,7 @@
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z"/>
             </svg>
-            <span class="csm-nav-text">Nav creator codes</span>
+            <span class="csm-nav-text">Creator Codes</span>
             <span class="cc-available-dot" data-cc-dot style="display:none"></span>
           </button>
 
@@ -62,7 +62,7 @@
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
             </svg>
-            <span class="csm-nav-text">Nav community</span>
+            <span class="csm-nav-text">Community</span>
           </button>
 
           <!-- Creator Names Tab -->
@@ -70,14 +70,14 @@
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
-            <span class="csm-nav-text">Nav creator names</span>
+            <span class="csm-nav-text">Creator Names</span>
           </button>
 
-          <button type="button" class="csm-nav-item creator-journey-trigger" data-cj-open="level" title="Nav level">
+          <button type="button" class="csm-nav-item creator-journey-trigger" data-cj-open="level" title="Level">
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
-            <span class="csm-nav-text">Title</span>
+            <span class="csm-nav-text">Creator Journey</span>
           </button>
 
           <!-- EAZ Tab -->
@@ -85,7 +85,7 @@
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
-            <span class="csm-nav-text">Nav eaz</span>
+            <span class="csm-nav-text">EAZ</span>
           </button>
 
           <!-- Payout Tab -->
@@ -93,7 +93,7 @@
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
             </svg>
-            <span class="csm-nav-text">Nav payout</span>
+            <span class="csm-nav-text">Payout</span>
           </button>
 
           <!-- Interests Tab -->
@@ -101,7 +101,7 @@
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            <span class="csm-nav-text">Nav interests</span>
+            <span class="csm-nav-text">Interests</span>
           </button>
 
 
@@ -133,8 +133,8 @@
         <!-- Profile Panel -->
         <section class="csm-panel" data-csm-panel="profile">
           <div class="csm-panel-header">
-            <h4 class="csm-panel-title">Profile title</h4>
-            <p class="csm-panel-subtitle">Profile subtitle</p>
+            <h4 class="csm-panel-title">Profile Settings</h4>
+            <p class="csm-panel-subtitle">Manage your personal Creator settings</p>
           </div>
           <div class="csm-panel-body csm-panel-body--profile">
             <div class="csm-panel-content csm-panel-content--profile">
@@ -196,7 +196,7 @@ Save profile settings
 
 
 <div
-  class="cps-root cps-root--creator cps-root--account"
+  class="cps-root cps-root--creator"
   data-customer-profile-settings-root
   data-context=""
   data-customer-email=""
@@ -263,7 +263,7 @@ Save profile settings
           </span>
         </button>
         <input type="file" data-cps-avatar-input accept="image/jpeg,image/png,image/webp" hidden>
-        <p class="cps-hint" data-t="creator.settings.profile_picture_hint"></p>
+        <p class="cps-hint" data-t="creator.settings.profile_picture_hint">Profile picture (1:1, JPG/PNG/WebP)</p>
       </div>
       
       <div class="cps-field cps-field--email">
@@ -276,9 +276,9 @@ Save profile settings
       </div>
 
       <div class="cps-field">
-        <label class="cps-label" for="cpsUsername-" data-t="creator.settings.profile_username_label"></label>
+        <label class="cps-label" for="cpsUsername-" data-t="creator.settings.profile_username_label">Username</label>
         <input id="cpsUsername-" type="text" class="cps-input" name="username" maxlength="20" autocomplete="username" spellcheck="false" data-cps-input="username" data-cps-username-input>
-        <p class="cps-hint" data-t="creator.settings.profile_username_hint"></p>
+        <p class="cps-hint" data-t="creator.settings.profile_username_hint">English handle, unique across Eazpire</p>
         <p class="cps-username-status" data-cps-username-status aria-live="polite"></p>
       </div>
 
@@ -435,7 +435,7 @@ Save profile settings
             </div>
           
           <div class="cps-delete-account__actions">
-            <a class="cps-delete-account__link" href="pages/account-data-deletion">
+            <a class="cps-delete-account__link" href="https://www.eazpire.com/pages/account-data-deletion">
               Full details & steps
             </a>
             
@@ -459,7 +459,7 @@ Thank you.
                 Request deletion by email
               </a>
             
-              <a class="cps-delete-account__btn" href="pages/account-data-deletion">
+              <a class="cps-delete-account__btn" href="https://www.eazpire.com/pages/account-data-deletion">
                 How to request deletion
               </a>
             
@@ -651,9 +651,7 @@ Thank you.
     <div class="cc-history" data-cc-history style="display:none">
       <h5 class="cc-history-title" data-t="creator.settings.creator_codes_redeemed_title">Redeemed Codes</h5>
       <div class="cc-history-list" data-cc-history-list></div>
-      <div class="cc-history-empty" data-cc-history-empty style="display:none" data-t="creator.settings.creator_codes_redeemed_empty">
-        No codes have been redeemed yet.
-      </div>
+      <div class="cc-history-empty" data-cc-history-empty style="display:none" data-t="creator.settings.creator_codes_redeemed_empty">No codes have been redeemed yet.</div>
     </div>
   </div>
 
@@ -664,7 +662,7 @@ Thank you.
       <h4 class="cc-picker-modal__title" data-t="creator.settings.creator_codes_picker_title">Send Creator Code</h4>
       <input type="search" class="cc-picker-modal__search" data-cc-picker-search autocomplete="off" placeholder="" />
       <p class="cc-picker-modal__hint" data-t="creator.settings.creator_codes_picker_search_hint">Type at least 2 characters to search</p>
-      <div class="cc-picker-modal__loading" data-cc-picker-loading style="display:none" data-t="creator.common.loading">Loading…</div>
+      <div class="cc-picker-modal__loading" data-cc-picker-loading style="display:none" data-t="creator.common.loading">Loading...</div>
       <div class="cc-picker-modal__list" data-cc-picker-list></div>
       <p class="cc-picker-modal__empty" data-cc-picker-empty style="display:none" data-t="creator.settings.creator_codes_picker_empty">No eligible users found</p>
       <div class="cc-picker-modal__confirm" data-cc-picker-confirm style="display:none">
@@ -746,17 +744,17 @@ Thank you.
   <div class="cp-wrap">
     <header class="cp-header">
       <div class="cp-title">
-        <h1 class="cp-title__h1">Title</h1>
-        <p class="cp-title__sub">Subtitle</p>
+        <h1 class="cp-title__h1">Network</h1>
+        <p class="cp-title__sub">Overview of your network – compact and pressure-free.</p>
       </div>
     </header>
 
-    <div class="cp-subtabs" role="tablist" aria-label="Analytics tabs aria">
+    <div class="cp-subtabs" role="tablist" aria-label="Network tabs">
       <button type="button" class="cp-subtab cp-subtab--active" data-cp-subtab="overview" role="tab" aria-selected="true">
-        Overview tab
+        Overview
       </button>
       <button type="button" class="cp-subtab" data-cp-subtab="analytics" role="tab" aria-selected="false">
-        Analytics tab
+        Analytics
       </button>
     </div>
 
@@ -764,11 +762,11 @@ Thank you.
 
     <div class="cp-referral cp-referral-section" data-cp-referral-section style="display:none;">
       <div class="cp-referral-header">
-        <h2 class="cp-referral-title">Referral link title</h2>
-        <p class="cp-referral-hint">Referral link hint</p>
+        <h2 class="cp-referral-title">Your Referral Link</h2>
+        <p class="cp-referral-hint">Share this link – when others register and buy, you earn.</p>
       </div>
       <div class="cp-referral-row">
-        <input type="text" class="cp-referral-input" data-cp-referral-input readonly aria-label="Referral link title">
+        <input type="text" class="cp-referral-input" data-cp-referral-input readonly aria-label="Your Referral Link">
         <button type="button" class="cp-referral-copy button button--secondary" data-cp-referral-copy aria-label="Copy link">
           Copy link
         </button>
@@ -796,8 +794,8 @@ Thank you.
       <div class="cp-ref-links-modal__content">
         <div class="cp-ref-links-modal__header">
           <div>
-            <h3 class="cp-ref-links-modal__title">Ref links manage title</h3>
-            <p class="cp-ref-links-modal__subtitle">Ref links manage subtitle</p>
+            <h3 class="cp-ref-links-modal__title">Manage referral links</h3>
+            <p class="cp-ref-links-modal__subtitle">Create up to 5 named links.</p>
           </div>
           <button type="button" class="cp-ref-links-modal__close" data-cp-ref-links-close aria-label="Close">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -809,41 +807,41 @@ Thank you.
         <div class="cp-ref-links-modal__list" data-cp-ref-links-list></div>
 
         <div class="cp-ref-links-modal__add">
-          <label class="cp-ref-links-modal__label" for="cpRefLinkSlugInput">Ref links slug label</label>
+          <label class="cp-ref-links-modal__label" for="cpRefLinkSlugInput">Ref link</label>
           <input
             id="cpRefLinkSlugInput"
             type="text"
             class="cp-ref-links-modal__input cp-ref-links-modal__input--slug"
             data-cp-ref-links-slug
             maxlength="24"
-            placeholder="Ref links slug placeholder"
+            placeholder="e.g. instagram-campaign"
             autocomplete="off"
           >
           <p class="cp-ref-links-modal__preview" data-cp-ref-links-preview></p>
-          <p class="cp-ref-links-modal__hint">Ref links slug hint</p>
+          <p class="cp-ref-links-modal__hint">Allowed: a-z, 0-9, -, length 4-24.</p>
 
-          <label class="cp-ref-links-modal__label" for="cpRefLinkNameInput">Ref links name label</label>
+          <label class="cp-ref-links-modal__label" for="cpRefLinkNameInput">Label</label>
           <input
             id="cpRefLinkNameInput"
             type="text"
             class="cp-ref-links-modal__input"
             data-cp-ref-links-name
             maxlength="80"
-            placeholder="Ref links name placeholder"
+            placeholder="e.g. Instagram Bio"
           >
 
-          <label class="cp-ref-links-modal__label" for="cpRefLinkDescInput">Ref links description label</label>
+          <label class="cp-ref-links-modal__label" for="cpRefLinkDescInput">Description</label>
           <textarea
             id="cpRefLinkDescInput"
             class="cp-ref-links-modal__textarea"
             data-cp-ref-links-description
             rows="3"
             maxlength="200"
-            placeholder="Ref links description placeholder"
+            placeholder="Optional info for this link"
           ></textarea>
 
           <button type="button" class="cp-ref-links-modal__add-btn" data-cp-ref-links-add>
-            Ref links add button
+            Add link
           </button>
           <p class="cp-ref-links-modal__error" data-cp-ref-links-error hidden></p>
         </div>
@@ -855,8 +853,8 @@ Thank you.
         <div class="cp-ni-left">
           <div class="cp-ni-badge">i</div>
           <div class="cp-ni-meta">
-            <div class="cp-ni-title">Network info</div>
-            <div class="cp-ni-sub">Network info sub</div>
+            <div class="cp-ni-title">Network Info</div>
+            <div class="cp-ni-sub">Users · Designs · Products · Sales · Profit</div>
           </div>
         </div>
         <div class="cp-ni-chev" aria-hidden="true">
@@ -869,7 +867,7 @@ Thank you.
         <div class="cp-ni-kv cp-net-kv">
           <div class="cp-kvc cp-kvc--partners">
             <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a4.2 4.2 0 1 0-4.2-4.2A4.2 4.2 0 0 0 12 12Z"/><path d="M4.5 20.2c1.8-4.1 5.2-6.2 7.5-6.2s5.7 2.1 7.5 6.2" stroke-linecap="round"/></svg></span>
-            <div class="cp-kvc-inner"><span class="cp-k">Partners 1 10</span><span class="cp-v" data-cp-stat="partners">0</span></div>
+            <div class="cp-kvc-inner"><span class="cp-k">Users</span><span class="cp-v" data-cp-stat="partners">0</span></div>
           </div>
           <div class="cp-kvc cp-kvc--designs">
             <span class="cp-kvc-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
@@ -888,7 +886,7 @@ Thank you.
             <div class="cp-kvc-inner"><span class="cp-k">Profit</span><span class="cp-v" data-cp-stat="profit">–</span></div>
           </div>
         </div>
-        <div class="cp-footnote">Stats hint</div>
+        <div class="cp-footnote">Tip: These values can later be calculated automatically from your real data.</div>
       </div>
     </details>
 
@@ -898,7 +896,7 @@ Thank you.
           <div class="cp-ni-badge">👤</div>
           <div class="cp-ni-meta">
             <div class="cp-ni-title cp-du-title">You</div>
-            <div class="cp-ni-sub cp-du-sub">You stats hint</div>
+            <div class="cp-ni-sub cp-du-sub">Your own stats · Designs · Products · Sales · Profit</div>
           </div>
         </div>
         <div class="cp-ni-chev" aria-hidden="true">
@@ -929,112 +927,112 @@ Thank you.
       </div>
     </details>
 
-    <div class="cp-loading cp-loading-el">Loading</div>
-    <div class="cp-empty cp-empty-el" style="display:none;">Empty</div>
+    <div class="cp-loading cp-loading-el">Loading...</div>
+    <div class="cp-empty cp-empty-el" style="display:none;">No community data yet.</div>
     <div class="cp-card cp-levels-el" style="display:none;"></div>
 
-    <p class="cp-footnote cp-footnote--bottom">Level hint</p>
+    <p class="cp-footnote cp-footnote--bottom">From level 2 onwards, no users are displayed. In level 1 you can filter by country to see direct users per country.</p>
     </section>
 
     <section class="cp-subpanel cp-subpanel--analytics" data-cp-subpanel="analytics" hidden>
       <div class="cp-analytics" data-cp-analytics-root>
         <div class="cp-analytics__header">
-          <h2 class="cp-analytics__title">Analytics title</h2>
-          <p class="cp-analytics__subtitle">Analytics subtitle</p>
+          <h2 class="cp-analytics__title">Network Analytics</h2>
+          <p class="cp-analytics__subtitle">Detailed performance of referral traffic, conversions and generated value.</p>
         </div>
 
         <div class="cp-analytics-filters" data-cp-analytics-filters>
           <div class="cp-af-row">
             <label class="cp-af-field">
-              <span class="cp-af-label">Analytics period</span>
+              <span class="cp-af-label">Period</span>
               <select class="cp-af-select" data-cp-af-period>
-                <option value="7">Analytics last 7 days</option>
-                <option value="30" selected>Analytics last 30 days</option>
-                <option value="90">Analytics last 90 days</option>
-                <option value="365">Analytics last year</option>
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365">Last year</option>
               </select>
             </label>
             <label class="cp-af-field">
-              <span class="cp-af-label">Analytics compare</span>
+              <span class="cp-af-label">Compare</span>
               <select class="cp-af-select" data-cp-af-compare>
-                <option value="0">Analytics compare off</option>
-                <option value="1" selected>Analytics compare previous</option>
+                <option value="0">Off</option>
+                <option value="1" selected>Previous period</option>
               </select>
             </label>
           </div>
           <div class="cp-af-row">
             <label class="cp-af-field">
-              <span class="cp-af-label">Analytics link</span>
+              <span class="cp-af-label">Link</span>
               <select class="cp-af-select" data-cp-af-link>
-                <option value="">Analytics all links</option>
+                <option value="">All links</option>
               </select>
             </label>
             <label class="cp-af-field">
-              <span class="cp-af-label">Analytics source</span>
+              <span class="cp-af-label">Source</span>
               <select class="cp-af-select" data-cp-af-source>
-                <option value="">Analytics all sources</option>
+                <option value="">All sources</option>
               </select>
             </label>
           </div>
         </div>
 
         <div class="cp-analytics-kpis" data-cp-analytics-kpis>
-          <div class="cp-analytics-kpi" data-kpi="clicks"><span class="cp-ak-label">Analytics clicks</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
-          <div class="cp-analytics-kpi" data-kpi="unique_clicks"><span class="cp-ak-label">Analytics unique clicks</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
-          <div class="cp-analytics-kpi" data-kpi="new_users"><span class="cp-ak-label">Analytics new users</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
-          <div class="cp-analytics-kpi" data-kpi="sales"><span class="cp-ak-label">Analytics sales</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
-          <div class="cp-analytics-kpi" data-kpi="revenue"><span class="cp-ak-label">Analytics revenue</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
-          <div class="cp-analytics-kpi" data-kpi="new_creators"><span class="cp-ak-label">Analytics new creators</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="clicks"><span class="cp-ak-label">Total clicks</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="unique_clicks"><span class="cp-ak-label">Unique clicks</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="new_users"><span class="cp-ak-label">New users</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="sales"><span class="cp-ak-label">Sales generated</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="revenue"><span class="cp-ak-label">Revenue generated</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
+          <div class="cp-analytics-kpi" data-kpi="new_creators"><span class="cp-ak-label">New creators</span><span class="cp-ak-value">–</span><span class="cp-ak-delta">–</span></div>
         </div>
 
         <div class="cp-analytics-card">
-          <div class="cp-analytics-card__title">Analytics funnel</div>
+          <div class="cp-analytics-card__title">Conversion funnel</div>
           <div class="cp-funnel-list" data-cp-funnel-list></div>
         </div>
 
         <div class="cp-analytics-grid2">
           <div class="cp-analytics-card">
-            <div class="cp-analytics-card__title">Analytics top links</div>
+            <div class="cp-analytics-card__title">Top links</div>
             <div class="cp-bar-list" data-cp-top-links-bars></div>
           </div>
           <div class="cp-analytics-card">
-            <div class="cp-analytics-card__title">Analytics top sources</div>
+            <div class="cp-analytics-card__title">Top sources</div>
             <div class="cp-bar-list" data-cp-top-sources-bars></div>
           </div>
         </div>
 
         <div class="cp-analytics-card">
-          <div class="cp-analytics-card__title">Analytics event feed</div>
+          <div class="cp-analytics-card__title">Event feed</div>
           <div class="cp-analytics-table-wrap">
             <table class="cp-analytics-table">
               <thead>
                 <tr>
-                  <th>Analytics col time</th>
-                  <th>Analytics col link</th>
-                  <th>Analytics col source</th>
-                  <th>Analytics col outcome</th>
-                  <th>Analytics col value</th>
+                  <th>Time</th>
+                  <th>Link</th>
+                  <th>Source</th>
+                  <th>Outcome</th>
+                  <th>Value</th>
                 </tr>
               </thead>
               <tbody data-cp-analytics-events-body></tbody>
             </table>
           </div>
           <button type="button" class="cp-analytics-load-more" data-cp-analytics-load-more hidden>
-            Analytics load more
+            Load more
           </button>
         </div>
 
-        <div class="cp-loading cp-analytics-loading" data-cp-analytics-loading>Loading</div>
-        <div class="cp-empty cp-analytics-empty" data-cp-analytics-empty hidden>Analytics empty</div>
+        <div class="cp-loading cp-analytics-loading" data-cp-analytics-loading>Loading...</div>
+        <div class="cp-empty cp-analytics-empty" data-cp-analytics-empty hidden>No analytics data for this period.</div>
       </div>
     </section>
   </div>
 
   <div class="cp-modal-backdrop cp-modal-backdrop-el" aria-hidden="true">
-    <div class="cp-modal" role="dialog" aria-modal="true" aria-label="Partner">
+    <div class="cp-modal" role="dialog" aria-modal="true" aria-label="User">
       <div class="cp-modal-header">
         <div class="cp-modal-title">
-          <h2 class="cp-modal-title-h2">Partner</h2>
+          <h2 class="cp-modal-title-h2">User</h2>
           <div class="cp-modal-subtitle cp-modal-subtitle-el"></div>
         </div>
         <button class="cp-xbtn cp-close-modal-btn" aria-label="Close">
@@ -1044,8 +1042,8 @@ Thank you.
         </button>
       </div>
 
-      <div class="cp-tabs" role="tablist" aria-label="Partner tabs aria">
-        <button class="cp-tab cp-tab--active" data-cp-tab="info" role="tab" aria-selected="true">Partner info</button>
+      <div class="cp-tabs" role="tablist" aria-label="Partner Tabs">
+        <button class="cp-tab cp-tab--active" data-cp-tab="info" role="tab" aria-selected="true">Partner Information</button>
         <button class="cp-tab" data-cp-tab="designs" role="tab" aria-selected="false">Designs</button>
         <button class="cp-tab" data-cp-tab="products" role="tab" aria-selected="false">Products</button>
       </div>
@@ -1053,13 +1051,13 @@ Thank you.
       <div class="cp-modal-body">
         <div class="cp-panel cp-panel--active" data-cp-panel="info">
           <div class="cp-kv cp-kv-grid"></div>
-          <div class="cp-section-title">Creator names</div>
+          <div class="cp-section-title">Creator Names</div>
           <div class="cp-list cp-creator-list"></div>
           <details class="cp-downline cp-downline-el">
             <summary>
               <div class="cp-dl-left">
                 <div class="cp-dl-title cp-downline-title"></div>
-                <div class="cp-dl-sub">Downline sub</div>
+                <div class="cp-dl-sub">Breakdown by levels (1–10)</div>
               </div>
               <div class="cp-dl-chev" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -1072,14 +1070,14 @@ Thank you.
         </div>
         <div class="cp-panel" data-cp-panel="designs">
           <div class="cp-toolbar">
-            <div class="cp-label">Filter creator</div>
+            <div class="cp-label">Filter: Creator</div>
             <select class="cp-select cp-design-creator-filter"></select>
           </div>
           <div class="cp-grid cp-design-grid"></div>
         </div>
         <div class="cp-panel" data-cp-panel="products">
           <div class="cp-toolbar">
-            <div class="cp-label">Filter creator</div>
+            <div class="cp-label">Filter: Creator</div>
             <select class="cp-select cp-product-creator-filter"></select>
           </div>
           <div class="cp-grid cp-product-grid"></div>
@@ -1107,12 +1105,12 @@ Thank you.
   <div class="creator-names-panel__content">
 
     <label class="creator-names-panel__field">
-      <span>New name</span>
+      <span>New Creator Name</span>
       <input
         type="text"
         id="creator-settings-name"
         class="creator-names-panel__input"
-        placeholder="Placeholder"
+        placeholder="e.g. eazpire"
       >
     </label>
 
@@ -1128,13 +1126,13 @@ Thank you.
 
     <div class="creator-names-panel__available-wrap">
       <p class="creator-names-panel__available-title">
-        Your names short
+        Your names
         <span class="creator-names-panel__available-counter" id="creator-available-count"></span>
       </p>
       <div class="creator-names-panel__available-list" id="creator-available-list" data-no-translate="true">
       </div>
       <div class="creator-names-panel__available-loading" id="creator-available-loading">
-        Loading
+        Loading your Creator names...
       </div>
     </div>
 
@@ -1150,17 +1148,17 @@ Thank you.
 
   <script>
     window.CreatorI18n = window.CreatorI18n || {};
-    window.CreatorI18n.settings_names_usage = Usage label;
-    window.CreatorI18n.settings_names_empty = Empty list;
-    window.CreatorI18n.settings_names_loading = Loading;
-    window.CreatorI18n.settings_names_added_ok = Added ok;
-    window.CreatorI18n.settings_names_add_error = Add error;
-    window.CreatorI18n.settings_names_invalid_chars = Invalid chars;
-    window.CreatorI18n.settings_names_name_taken = Name taken;
-    window.CreatorI18n.settings_names_too_short = Too short;
-    window.CreatorI18n.settings_names_limit_reached = Limit reached;
-    window.CreatorI18n.settings_names_already_added = Already added;
-    window.CreatorI18n.editCreatorProfile = Edit profile;
+    window.CreatorI18n.settings_names_usage = {current} / {max} used;
+    window.CreatorI18n.settings_names_empty = No creator names yet.;
+    window.CreatorI18n.settings_names_loading = Loading your Creator names...;
+    window.CreatorI18n.settings_names_added_ok = Creator name added.;
+    window.CreatorI18n.settings_names_add_error = Could not add name.;
+    window.CreatorI18n.settings_names_invalid_chars = Only letters, numbers, spaces, and hyphens (-) are allowed.;
+    window.CreatorI18n.settings_names_name_taken = This name is already taken. Try another one!;
+    window.CreatorI18n.settings_names_too_short = Name must be at least 3 characters.;
+    window.CreatorI18n.settings_names_limit_reached = You can register up to 5 creator names.;
+    window.CreatorI18n.settings_names_already_added = You already added this name.;
+    window.CreatorI18n.editCreatorProfile = Edit creator profile;
   </script>
 
 </div>
@@ -1365,106 +1363,106 @@ Thank you.
 
 
 <div class="creator-eaz-panel" id="creatorEazPanel" data-free-cap="50" data-cost-design-generate="" data-cost-design-upload="" data-eaz-admin-test="true">
-  <div class="creator-eaz-tabs" role="tablist" aria-label="Eaz tabs aria">
+  <div class="creator-eaz-tabs" role="tablist" aria-label="EAZ sections">
     <button type="button" class="creator-eaz-tab" role="tab" id="eaz-tab-starter" aria-selected="false" aria-controls="eaz-panel-starter" data-eaz-subtab="starter" hidden>
       <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-      <span class="creator-eaz-tab__label">Eaz tab starter</span>
+      <span class="creator-eaz-tab__label">Starter Pack</span>
     </button>
     <button type="button" class="creator-eaz-tab is-active" role="tab" id="eaz-tab-balance" aria-selected="true" aria-controls="eaz-panel-balance" data-eaz-subtab="balance">
       <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-      <span class="creator-eaz-tab__label">Eaz tab balance</span>
+      <span class="creator-eaz-tab__label">Balance</span>
     </button>
     <button type="button" class="creator-eaz-tab" role="tab" id="eaz-tab-logs" aria-selected="false" aria-controls="eaz-panel-logs" data-eaz-subtab="logs">
       <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-      <span class="creator-eaz-tab__label">Eaz tab logs</span>
+      <span class="creator-eaz-tab__label">Logs</span>
     </button>
     <button type="button" class="creator-eaz-tab" role="tab" id="eaz-tab-buy" aria-selected="false" aria-controls="eaz-panel-buy" data-eaz-subtab="buy">
       <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-      <span class="creator-eaz-tab__label">Eaz tab buy</span>
+      <span class="creator-eaz-tab__label">Buy EAZG</span>
     </button>
     <button type="button" class="creator-eaz-tab" role="tab" id="eaz-tab-costs" aria-selected="false" aria-controls="eaz-panel-costs" data-eaz-subtab="costs">
       <svg class="creator-eaz-tab__icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-      <span class="creator-eaz-tab__label">Eaz tab costs</span>
+      <span class="creator-eaz-tab__label">EAZ Costs</span>
     </button>
   </div>
 
   <div class="creator-eaz-panels">
     <div class="creator-eaz-panel-pane" id="eaz-panel-starter" role="tabpanel" aria-labelledby="eaz-tab-starter" data-eaz-pane="starter" hidden>
       <div class="creator-eaz-wallet-lock-banner" role="status" hidden data-eaz-lock-banner>
-        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Eaz wallet locked hint</p>
+        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Redeem a Creator Code to unlock EAZ, daily free credits, and purchases.</p>
       </div>
       <div class="creator-eaz-starter-head">
-        <h3 class="creator-eaz-starter-title">Eaz starter heading</h3>
-        <button type="button" class="creator-eaz-starter-info-btn" id="eazStarterInfoBtn" aria-expanded="false" aria-controls="eazStarterInfoPanel" aria-label="Eaz starter info btn aria">
+        <h3 class="creator-eaz-starter-title">Starter Pack</h3>
+        <button type="button" class="creator-eaz-starter-info-btn" id="eazStarterInfoBtn" aria-expanded="false" aria-controls="eazStarterInfoPanel" aria-label="How to unlock more capacity">
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M12 16v-4M12 8h.01"></path>
           </svg>
         </button>
       </div>
-      <div class="creator-eaz-starter-info-panel" id="eazStarterInfoPanel" hidden role="region" aria-label="Eaz starter info title">
-        <p class="creator-eaz-starter-info-body" data-t="creator.settings.eaz_starter_info_body">Eaz starter info body</p>
+      <div class="creator-eaz-starter-info-panel" id="eazStarterInfoPanel" hidden role="region" aria-label="Unlock more">
+        <p class="creator-eaz-starter-info-body" data-t="creator.settings.eaz_starter_info_body">To generate more designs and uploads beyond this Starter Pack, you need to reach Level 2 and unlock EAZ with a Creator Code. You can get a Creator Code by making a sale in the shop, purchasing one, or receiving one from another creator.</p>
       </div>
       <div class="creator-eaz-starter-summary">
         <div class="creator-eaz-starter-summary-card">
-          <span class="creator-eaz-starter-summary-label">Eaz starter generate label</span>
+          <span class="creator-eaz-starter-summary-label">Design generations</span>
           <span class="creator-eaz-starter-summary-val" id="eazStarterGenLine">—</span>
         </div>
         <div class="creator-eaz-starter-summary-card">
-          <span class="creator-eaz-starter-summary-label">Eaz starter upload label</span>
+          <span class="creator-eaz-starter-summary-label">Uploads</span>
           <span class="creator-eaz-starter-summary-val" id="eazStarterUploadLine">—</span>
         </div>
       </div>
-      <p class="creator-eaz-starter-loading" id="eazStarterLoading" hidden>Eaz starter loading</p>
-      <div class="creator-eaz-starter-kind" role="tablist" aria-label="Eaz starter kind tabs aria">
-        <button type="button" class="creator-eaz-starter-kind-btn is-active" role="tab" id="eazStarterKindGenerated" aria-selected="true" aria-controls="eazStarterGrid" data-starter-kind="generated">Eaz starter kind generated</button>
-        <button type="button" class="creator-eaz-starter-kind-btn" role="tab" id="eazStarterKindUploaded" aria-selected="false" aria-controls="eazStarterGrid" data-starter-kind="uploaded">Eaz starter kind uploaded</button>
+      <p class="creator-eaz-starter-loading" id="eazStarterLoading" hidden>Loading Starter Pack…</p>
+      <div class="creator-eaz-starter-kind" role="tablist" aria-label="Switch between generated and uploaded previews">
+        <button type="button" class="creator-eaz-starter-kind-btn is-active" role="tab" id="eazStarterKindGenerated" aria-selected="true" aria-controls="eazStarterGrid" data-starter-kind="generated">Generated</button>
+        <button type="button" class="creator-eaz-starter-kind-btn" role="tab" id="eazStarterKindUploaded" aria-selected="false" aria-controls="eazStarterGrid" data-starter-kind="uploaded">Uploaded</button>
       </div>
       <div class="creator-eaz-starter-grid-shell">
         <div class="creator-eaz-starter-grid" id="eazStarterGrid" role="list" aria-labelledby="eazStarterKindGenerated"></div>
-        <p class="creator-eaz-starter-empty" id="eazStarterEmpty" hidden>Eaz starter grid empty</p>
+        <p class="creator-eaz-starter-empty" id="eazStarterEmpty" hidden>Nothing here yet.</p>
       </div>
     </div>
 
     <div class="creator-eaz-panel-pane is-active" id="eaz-panel-balance" role="tabpanel" aria-labelledby="eaz-tab-balance" data-eaz-pane="balance">
       <div class="creator-eaz-wallet-lock-banner" role="status" hidden data-eaz-lock-banner>
-        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Eaz wallet locked hint</p>
+        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Redeem a Creator Code to unlock EAZ, daily free credits, and purchases.</p>
       </div>
       <div class="creator-eaz-balance-starter-view" id="eazBalanceStarterView" hidden>
-        <h3 class="creator-eaz-starter-title">Eaz starter heading</h3>
+        <h3 class="creator-eaz-starter-title">Starter Pack</h3>
         <div class="creator-eaz-starter-summary">
           <div class="creator-eaz-starter-summary-card">
-            <span class="creator-eaz-starter-summary-label">Eaz starter generate label</span>
+            <span class="creator-eaz-starter-summary-label">Design generations</span>
             <span class="creator-eaz-starter-summary-val" id="eazBalanceGenLine">—</span>
           </div>
           <div class="creator-eaz-starter-summary-card">
-            <span class="creator-eaz-starter-summary-label">Eaz starter upload label</span>
+            <span class="creator-eaz-starter-summary-label">Uploads</span>
             <span class="creator-eaz-starter-summary-val" id="eazBalanceUploadLine">—</span>
           </div>
         </div>
-        <p class="creator-eaz-starter-info-body creator-eaz-balance-starter-info" data-t="creator.settings.eaz_starter_info_body">Eaz starter info body</p>
+        <p class="creator-eaz-starter-info-body creator-eaz-balance-starter-info" data-t="creator.settings.eaz_starter_info_body">To generate more designs and uploads beyond this Starter Pack, you need to reach Level 2 and unlock EAZ with a Creator Code. You can get a Creator Code by making a sale in the shop, purchasing one, or receiving one from another creator.</p>
       </div>
       <div class="creator-eaz-balance-wallet-view" id="eazBalanceWalletView">
       <div class="creator-eaz-wallet-cards">
         <article class="creator-eaz-wallet-card creator-eaz-wallet-card--eazg">
           <header class="creator-eaz-wallet-card__head">
-            <span class="creator-eaz-wallet-card__title">Eazg title</span>
-            <span class="creator-eaz-wallet-card__hint">Eazg subtitle</span>
+            <span class="creator-eaz-wallet-card__title">EAZG — Game balance</span>
+            <span class="creator-eaz-wallet-card__hint">Free daily credits and purchased packs. Not cash-out.</span>
           </header>
           <p class="creator-eaz-wallet-card__amount"><span id="creatorEazEazgTotal">—</span> <span class="creator-eaz-wallet-card__unit">EAZG</span></p>
           <div class="creator-eaz-wallet-card__rows">
             <div class="creator-eaz-wallet-card__row">
-              <span class="creator-eaz-wallet-card__row-label">Eazg free label</span>
+              <span class="creator-eaz-wallet-card__row-label">Free daily</span>
               <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazFree">—</span> / <span class="creator-eaz-free-cap">50</span></span>
             </div>
             <div class="creator-eaz-wallet-card__row">
-              <span class="creator-eaz-wallet-card__row-label">Eazg purchased label</span>
+              <span class="creator-eaz-wallet-card__row-label">Purchased</span>
               <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazPurchased">—</span> EAZG</span>
             </div>
           </div>
-          <p class="creator-eaz-refill" id="creatorEazRefill">Eaz refill loading</p>
+          <p class="creator-eaz-refill" id="creatorEazRefill">Loading refill details…</p>
           <div class="creator-eaz-reset-countdown-wrap">
-            <div class="creator-eaz-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="" id="creatorEazProgressBar" aria-label="Eaz progress aria">
+            <div class="creator-eaz-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="" id="creatorEazProgressBar" aria-label="Time until daily free refill">
               <div class="creator-eaz-progress-fill" id="creatorEazProgressFill"></div>
             </div>
             <p class="creator-eaz-countdown-label" id="creatorEazCountdown" aria-live="polite"></p>
@@ -1473,59 +1471,59 @@ Thank you.
 
         <article class="creator-eaz-wallet-card creator-eaz-wallet-card--eazc" id="creatorEazEazcCard">
           <header class="creator-eaz-wallet-card__head">
-            <span class="creator-eaz-wallet-card__title">Eazc title</span>
-            <span class="creator-eaz-wallet-card__hint">Eazc subtitle</span>
+            <span class="creator-eaz-wallet-card__title">EAZC — Earnings</span>
+            <span class="creator-eaz-wallet-card__hint">From sales and Move to Earn. Cash out or convert to EAZG.</span>
           </header>
           <div class="creator-eaz-wallet-card__rows">
             <div class="creator-eaz-wallet-card__row">
-              <span class="creator-eaz-wallet-card__row-label">Eazc total label</span>
+              <span class="creator-eaz-wallet-card__row-label">Total</span>
               <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazEarnedTotal">—</span> EAZC</span>
             </div>
             <div class="creator-eaz-wallet-card__row">
-              <span class="creator-eaz-wallet-card__row-label">Eazc available label</span>
+              <span class="creator-eaz-wallet-card__row-label">Available</span>
               <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazEarnedAvailable">—</span> EAZC</span>
             </div>
             <div class="creator-eaz-wallet-card__row">
-              <span class="creator-eaz-wallet-card__row-label">Eazc locked label</span>
+              <span class="creator-eaz-wallet-card__row-label">Pending</span>
               <span class="creator-eaz-wallet-card__row-value"><span id="creatorEazEarnedLocked">—</span> EAZC</span>
             </div>
           </div>
 
           <div class="creator-eaz-earned-convert creator-eaz-earned-convert--to-eazg" id="creatorEazcToEazgConvert" hidden>
-            <h4 class="creator-eaz-earned-convert__section-title">Eazc convert to eazg title</h4>
-            <p class="creator-eaz-earned-convert__hint">Eazc convert to eazg hint</p>
+            <h4 class="creator-eaz-earned-convert__section-title">Use for features</h4>
+            <p class="creator-eaz-earned-convert__hint">Convert available EAZC to EAZG at 1:1 to spend inside the platform.</p>
             <div class="creator-eaz-earned-convert__amount-row">
               <div class="creator-eaz-earned-convert__field">
-                <label class="creator-eaz-earned-convert__label" for="creatorEazcToEazgAmount">Eazc convert amount label</label>
+                <label class="creator-eaz-earned-convert__label" for="creatorEazcToEazgAmount">Amount (EAZC)</label>
                 <input type="number" class="creator-eaz-earned-convert__input" id="creatorEazcToEazgAmount" min="1" step="0.01" inputmode="decimal">
               </div>
               <div class="creator-eaz-earned-convert__avail" aria-live="polite">
-                <span class="creator-eaz-earned-convert__avail-label">Eazc convert available label</span>
+                <span class="creator-eaz-earned-convert__avail-label">Available</span>
                 <span class="creator-eaz-earned-convert__avail-value" id="creatorEazcConvertAvail">— EAZC</span>
               </div>
             </div>
             <p class="creator-eaz-earned-convert__preview" id="creatorEazcToEazgPreview" aria-live="polite"></p>
             <div class="creator-eaz-earned-convert__actions">
-              <button type="button" class="creator-eaz-earned-convert__btn" id="creatorEazcToEazgBtn">Eazc convert to eazg btn</button>
+              <button type="button" class="creator-eaz-earned-convert__btn" id="creatorEazcToEazgBtn">Convert to EAZG</button>
             </div>
           </div>
 
           <div class="creator-eaz-earned-convert creator-eaz-earned-convert--cashout" id="creatorEazEarnedConvert" hidden>
-            <h4 class="creator-eaz-earned-convert__section-title">Eazc cashout title</h4>
-            <p class="creator-eaz-earned-convert__hint" data-t="creator.settings.eaz_convert_hint">Eaz convert hint</p>
+            <h4 class="creator-eaz-earned-convert__section-title">Cash out</h4>
+            <p class="creator-eaz-earned-convert__hint" data-t="creator.settings.eaz_convert_hint">Convert available EAZC to fiat balance or a shop gift card.</p>
             <div class="creator-eaz-earned-convert__amount-row">
               <div class="creator-eaz-earned-convert__field">
-                <label class="creator-eaz-earned-convert__label" for="creatorEazConvertAmount">Eaz convert amount label</label>
+                <label class="creator-eaz-earned-convert__label" for="creatorEazConvertAmount">Amount (EAZC)</label>
                 <input type="number" class="creator-eaz-earned-convert__input" id="creatorEazConvertAmount" min="100" step="1" inputmode="numeric">
               </div>
               <div class="creator-eaz-earned-convert__avail" aria-live="polite">
-                <span class="creator-eaz-earned-convert__avail-label" data-t="creator.settings.eaz_convert_available_label">Eaz convert available label</span>
+                <span class="creator-eaz-earned-convert__avail-label" data-t="creator.settings.eaz_convert_available_label">Available</span>
                 <span class="creator-eaz-earned-convert__avail-value" id="creatorEazConvertAvail">— EAZC</span>
               </div>
             </div>
             <div class="creator-eaz-earned-convert__actions">
-              <button type="button" class="creator-eaz-earned-convert__btn" id="creatorEazConvertFiatBtn" data-t="creator.settings.eaz_convert_fiat">Eaz convert fiat</button>
-              <button type="button" class="creator-eaz-earned-convert__btn creator-eaz-earned-convert__btn--secondary" id="creatorEazConvertGcBtn" data-t="creator.settings.eaz_convert_gift_card">Eaz convert gift card</button>
+              <button type="button" class="creator-eaz-earned-convert__btn" id="creatorEazConvertFiatBtn" data-t="creator.settings.eaz_convert_fiat">Convert to fiat</button>
+              <button type="button" class="creator-eaz-earned-convert__btn creator-eaz-earned-convert__btn--secondary" id="creatorEazConvertGcBtn" data-t="creator.settings.eaz_convert_gift_card">Convert to gift card</button>
             </div>
             <p class="creator-eaz-earned-convert__preview" id="creatorEazConvertPreview" aria-live="polite"></p>
           </div>
@@ -1536,30 +1534,30 @@ Thank you.
 
     <div class="creator-eaz-panel-pane" id="eaz-panel-logs" role="tabpanel" aria-labelledby="eaz-tab-logs" data-eaz-pane="logs" hidden>
       <div class="creator-eaz-wallet-lock-banner" role="status" hidden data-eaz-lock-banner>
-        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Eaz wallet locked hint</p>
+        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Redeem a Creator Code to unlock EAZ, daily free credits, and purchases.</p>
       </div>
-      <div class="creator-eaz-log-subtabs" role="tablist" aria-label="Eaz logs sub aria">
-        <button type="button" class="creator-eaz-log-subtab is-active" role="tab" aria-selected="true" data-eaz-log-filter="all">Eaz logs sub all</button>
-        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="purchased">Eaz logs sub purchased</button>
-        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="free">Eaz logs sub free</button>
-        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="usage">Eaz logs sub usage</button>
+      <div class="creator-eaz-log-subtabs" role="tablist" aria-label="Filter transactions">
+        <button type="button" class="creator-eaz-log-subtab is-active" role="tab" aria-selected="true" data-eaz-log-filter="all">All</button>
+        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="purchased">Purchased</button>
+        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="free">Free</button>
+        <button type="button" class="creator-eaz-log-subtab" role="tab" aria-selected="false" data-eaz-log-filter="usage">Usage</button>
       </div>
       <ul class="creator-eaz-logs" id="creatorEazLogsList"></ul>
-      <p class="creator-eaz-logs-empty" id="creatorEazLogsEmpty" hidden>Eaz logs empty</p>
+      <p class="creator-eaz-logs-empty" id="creatorEazLogsEmpty" hidden>No transactions yet.</p>
     </div>
 
     <div class="creator-eaz-panel-pane" id="eaz-panel-buy" role="tabpanel" aria-labelledby="eaz-tab-buy" data-eaz-pane="buy" hidden>
       <div class="creator-eaz-wallet-lock-banner" role="status" hidden data-eaz-lock-banner>
-        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Eaz wallet locked hint</p>
+        <p class="creator-eaz-wallet-lock-banner__text" data-t="creator.settings.eaz_wallet_locked_hint">Redeem a Creator Code to unlock EAZ, daily free credits, and purchases.</p>
       </div>
-      <p class="creator-eaz-buy-intro">Eaz buy intro</p>
+      <p class="creator-eaz-buy-intro">Choose a pack. Checkout is in USD through Stripe only.</p>
       <div class="creator-eaz-grid" id="creatorEazGrid" role="list"></div>
     </div>
 
     <div class="creator-eaz-panel-pane" id="eaz-panel-costs" role="tabpanel" aria-labelledby="eaz-tab-costs" data-eaz-pane="costs" hidden>
-      <p class="creator-eaz-costs-intro">Eaz costs intro</p>
+      <p class="creator-eaz-costs-intro">Your effective EAZ price per feature (includes mascot discounts when active).</p>
       <ul class="creator-eaz-costs-list" id="creatorEazCostsList" role="list"></ul>
-      <p class="creator-eaz-costs-loading" id="creatorEazCostsLoading" hidden>Eaz costs loading</p>
+      <p class="creator-eaz-costs-loading" id="creatorEazCostsLoading" hidden>Loading prices…</p>
     </div>
   </div>
 </div>
@@ -1574,58 +1572,60 @@ Thank you.
 
 <script>
   window.CreatorI18n = window.CreatorI18n || {};
-  window.CreatorI18n.eazRefillPrefix = Eaz refill prefix;
-  window.CreatorI18n.eazUntilReset = Eaz until reset;
-  window.CreatorI18n.eaz_wallet_locked_hint = Eaz wallet locked hint;
-  window.CreatorI18n.eaz_enter_creator_code_cta = Eaz enter creator code cta;
-  window.CreatorI18n.eazShopCta = Eaz shop cta;
-  window.CreatorI18n.eazPkgGensTpl = Eaz pkg gens tpl;
-  window.CreatorI18n.eazPkgDiscount = Eaz pkg discount;
-  window.CreatorI18n.eazPkgPriceUsd = Eaz pkg price usd;
-  window.CreatorI18n.eazPkgRecommended = Eaz pkg recommended badge;
-  window.CreatorI18n.eazPkgPer10Tpl = Eaz pkg per 10 tpl;
-  window.CreatorI18n.eazPkgBaseline = Eaz pkg baseline comparison;
-  window.CreatorI18n.eazStripeFailed = Eaz stripe failed;
-  window.CreatorI18n.eazCheckoutNeedAccount = Eaz checkout need account;
-  window.CreatorI18n.eazLogsEmptyFiltered = Eaz logs empty filtered;
-  window.CreatorI18n.eazLogsEmptyDefault = Eaz logs empty;
-  window.CreatorI18n.eazLogDebitSplitTpl = Eaz log debit split;
-  window.CreatorI18n.eazLedgerReasonEazPackDryRun = Eaz ledger reason eaz pack dry run;
-  window.CreatorI18n.eazAdminTestBuy = Eaz admin test buy;
-  window.CreatorI18n.eazAdminTestBuyConfirm = Eaz admin test buy confirm;
-  window.CreatorI18n.eazAdminTestBuyFail = Eaz admin test buy fail;
-  window.CreatorI18n.eazAdminTestBuyForbidden = Eaz admin test buy forbidden;
-  window.CreatorI18n.eaz_tab_starter = Eaz tab starter;
-  window.CreatorI18n.eaz_starter_summary_tpl = Eaz starter summary tpl;
-  window.CreatorI18n.eaz_starter_loading = Eaz starter loading;
-  window.CreatorI18n.eaz_starter_not_applicable = Eaz starter not applicable;
-  window.CreatorI18n.eaz_tab_costs = Eaz tab costs;
-  window.CreatorI18n.eaz_costs_intro = Eaz costs intro;
-  window.CreatorI18n.eaz_costs_loading = Eaz costs loading;
-  window.CreatorI18n.eaz_cost_free = Eaz cost free;
-  window.CreatorI18n.eazCostDesignGenerate = Eaz cost design generate;
-  window.CreatorI18n.eazCostDesignUpload = Eaz cost design upload;
-  window.CreatorI18n.eazCostBgRemove = Eaz cost bg remove;
-  window.CreatorI18n.eazCostDesignEdit = Eaz cost design edit;
-  window.CreatorI18n.eazCostDesignVariation = Eaz cost design variation;
-  window.CreatorI18n.eazCostMockupGenerate = Eaz cost mockup generate;
-  window.CreatorI18n.eazCostMockupSave = Eaz cost mockup save;
-  window.CreatorI18n.eazCostHeroGenerate = Eaz cost hero generate;
-  window.CreatorI18n.eazCostHeroImpression = Eaz cost hero impression;
-  window.CreatorI18n.eazCostVideoGenerate = Eaz cost video generate;
-  window.CreatorI18n.eazCostWardrobeGenerate = Eaz cost wardrobe generate;
-  window.CreatorI18n.eazCostCreatorImage = Eaz cost creator image;
-  window.CreatorI18n.eazCostExportHighRes = Eaz cost export high res;
-  window.CreatorI18n.eazCostExportPrint = Eaz cost export print;
-  window.CreatorI18n.eaz_convert_hint = Eaz convert hint;
-  window.CreatorI18n.eaz_convert_available_label = Eaz convert available label;
-  window.CreatorI18n.eaz_convert_min_tpl = Eaz convert min tpl;
-  window.CreatorI18n.eaz_convert_success = Eaz convert success;
-  window.CreatorI18n.eaz_convert_fail = Eaz convert fail;
-  window.CreatorI18n.eaz_convert_preview = Eaz convert preview;
-  window.CreatorI18n.eazc_convert_to_eazg_confirm = Eazc convert to eazg confirm;
-  window.CreatorI18n.eazc_convert_to_eazg_preview = Eazc convert to eazg preview;
-  window.CreatorI18n.eazc_convert_min_tpl = Eazc convert min tpl;
+  window.CreatorI18n.eazRefillPrefix = At the next daily reset, up to %N free EAZG can be added (until your free pool reaches the cap).;
+  window.CreatorI18n.eazUntilReset = Time until daily reset: ;
+  window.CreatorI18n.eaz_wallet_locked_hint = Redeem a Creator Code to unlock EAZ, daily free credits, and purchases.;
+  window.CreatorI18n.eaz_enter_creator_code_cta = Enter Creator Code;
+  window.CreatorI18n.eazShopCta = Buy Now;
+  window.CreatorI18n.eazPkgGensTpl = Up to  design generations ( EAZ each)
+Up to  uploads ( EAZ each)
+Free pool: up to  uploads ( EAZ cap);
+  window.CreatorI18n.eazPkgDiscount = % better value per EAZG vs smallest pack;
+  window.CreatorI18n.eazPkgPriceUsd = ;
+  window.CreatorI18n.eazPkgRecommended = Recommended;
+  window.CreatorI18n.eazPkgPer10Tpl =  per 10 EAZG;
+  window.CreatorI18n.eazPkgBaseline = Compared to starter pack (reference tier);
+  window.CreatorI18n.eazStripeFailed = Checkout could not start. Please try again in a moment.;
+  window.CreatorI18n.eazCheckoutNeedAccount = Sign in to continue to checkout.;
+  window.CreatorI18n.eazLogsEmptyFiltered = No entries in this category.;
+  window.CreatorI18n.eazLogsEmptyDefault = No transactions yet.;
+  window.CreatorI18n.eazLogDebitSplitTpl = Free  / Purchased ;
+  window.CreatorI18n.eazLedgerReasonEazPackDryRun = EAZ pack test (no payment — Stripe dry run);
+  window.CreatorI18n.eazAdminTestBuy = Test (dry run);
+  window.CreatorI18n.eazAdminTestBuyConfirm = Simulate this pack on your account? No Stripe charge — EAZ will be credited as a test purchase.;
+  window.CreatorI18n.eazAdminTestBuyFail = Dry run failed. Try again or check admin configuration.;
+  window.CreatorI18n.eazAdminTestBuyForbidden = Only designated admin accounts can run test purchases.;
+  window.CreatorI18n.eaz_tab_starter = Starter Pack;
+  window.CreatorI18n.eaz_starter_summary_tpl =  used ·  left (max );
+  window.CreatorI18n.eaz_starter_loading = Loading Starter Pack…;
+  window.CreatorI18n.eaz_starter_not_applicable = —;
+  window.CreatorI18n.eaz_tab_costs = EAZ Costs;
+  window.CreatorI18n.eaz_costs_intro = Your effective EAZ price per feature (includes mascot discounts when active).;
+  window.CreatorI18n.eaz_costs_loading = Loading prices…;
+  window.CreatorI18n.eaz_cost_free = Free;
+  window.CreatorI18n.eazCostDesignGenerate = Generate design;
+  window.CreatorI18n.eazCostDesignUpload = Upload design;
+  window.CreatorI18n.eazCostBgRemove = Remove background;
+  window.CreatorI18n.eazCostDesignEdit = Edit design;
+  window.CreatorI18n.eazCostDesignVariation = Design variation;
+  window.CreatorI18n.eazCostMockupGenerate = Generate mockup;
+  window.CreatorI18n.eazCostMockupSave = Save mockup;
+  window.CreatorI18n.eazCostHeroGenerate = Hero image generation;
+  window.CreatorI18n.eazCostHeroImpression = Hero impression;
+  window.CreatorI18n.eazCostVideoGenerate = Video generation;
+  window.CreatorI18n.eazCostWardrobeGenerate = Wardrobe generation;
+  window.CreatorI18n.eazCostCreatorImage = Creator image;
+  window.CreatorI18n.eazCostExportHighRes = High-res export;
+  window.CreatorI18n.eazCostExportPrint = Print export;
+  window.CreatorI18n.eaz_convert_hint = Convert available EAZC to fiat balance or a shop gift card.;
+  window.CreatorI18n.eaz_convert_available_label = Available;
+  window.CreatorI18n.eaz_convert_min_tpl = Minimum  EAZ required.;
+  window.CreatorI18n.eaz_convert_success = Conversion complete.;
+  window.CreatorI18n.eaz_convert_fail = Conversion failed.;
+  window.CreatorI18n.eaz_convert_preview = ≈ ;
+  window.CreatorI18n.eazc_convert_to_eazg_confirm = Convert  EAZC to  EAZG? This reduces your cash-out balance.;
+  window.CreatorI18n.eazc_convert_to_eazg_preview = You receive  EAZG (1:1);
+  window.CreatorI18n.eazc_convert_min_tpl = Minimum  EAZC required.;
 </script>
 
           </div>
@@ -1637,22 +1637,22 @@ Thank you.
 
 <script>
   window.__EAZ_CONTINENT_LABELS = Object.assign({}, window.__EAZ_CONTINENT_LABELS || {}, {
-    AF: Continent af,
-    AS: Continent as,
-    EU: Continent eu,
-    NA: Continent na,
-    SA: Continent sa,
-    OC: Continent oc,
-    AN: Continent an,
-    OTHER: Continent other
+    AF: Africa,
+    AS: Asia,
+    EU: Europe,
+    NA: North America,
+    SA: South America,
+    OC: Oceania,
+    AN: Antarctica,
+    OTHER: Other regions
   });
 </script>
 
 
 <div class="csm-payout-panel" id="csmPayoutPanel" data-no-translate="true">
   <div class="csm-panel-header">
-    <h4 class="csm-panel-title">Payout title</h4>
-    <p class="csm-panel-subtitle">Payout subtitle</p>
+    <h4 class="csm-panel-title">Payout Settings</h4>
+    <p class="csm-panel-subtitle">Set your payout account and automatic payout preferences.</p>
   </div>
 
   
@@ -1662,13 +1662,13 @@ Thank you.
       <span class="csm-payout-type-card__icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
       </span>
-      <span class="csm-payout-type-card__label">Payout auto method shop</span>
+      <span class="csm-payout-type-card__label">Shop credit (+10% bonus)</span>
     </button>
     <button type="button" class="csm-payout-type-card" data-value="wise" id="csmPayoutTypeWise">
       <span class="csm-payout-type-card__icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v6M12 14v6M16 14v6"/></svg>
       </span>
-      <span class="csm-payout-type-card__label">Payout auto method wise</span>
+      <span class="csm-payout-type-card__label">Wise (bank transfer)</span>
     </button>
   </div>
   <input type="hidden" id="csmPayoutTypeValue" value="shop_credit">
@@ -1676,20 +1676,20 @@ Thank you.
   <div class="csm-payout-panel__sections">
     
     <section class="csm-payout-section" id="csmPayoutAccountSection">
-      <h5 class="csm-payout-section__title">Payout account title</h5>
-      <p class="csm-payout-section__subtitle">Payout account subtitle</p>
-      <div class="csm-payout-account-type-grid" id="csmPayoutAccountTypeGrid" role="group" aria-label="Payout account method select">
+      <h5 class="csm-payout-section__title">Payout account</h5>
+      <p class="csm-payout-section__subtitle">For Wise payouts, add your bank details. Available worldwide. Shop credit does not require an account.</p>
+      <div class="csm-payout-account-type-grid" id="csmPayoutAccountTypeGrid" role="group" aria-label="Payout account type">
         <button type="button" class="csm-payout-type-card is-selected" data-account-type="wise" id="csmPayoutAccountTypeWise">
           <span class="csm-payout-type-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v6M12 14v6M16 14v6"/></svg>
           </span>
-          <span class="csm-payout-type-card__label">Payout account type wise</span>
+          <span class="csm-payout-type-card__label">Wise (bank transfer)</span>
         </button>
         <button type="button" class="csm-payout-type-card" data-account-type="paypal" id="csmPayoutAccountTypePayPal">
           <span class="csm-payout-type-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 20h3.5a4 4 0 003.95-3.35l.25-1.65h2.1a3 3 0 002.97-2.56l.78-5A2.5 2.5 0 0019.08 4H10.2a2.5 2.5 0 00-2.47 2.1L6.3 15.5A2.5 2.5 0 008.77 18H11"/></svg>
           </span>
-          <span class="csm-payout-type-card__label">Payout account type paypal</span>
+          <span class="csm-payout-type-card__label">PayPal</span>
         </button>
       </div>
       <input type="hidden" id="csmPayoutAccountTypeValue" value="wise">
@@ -1697,19 +1697,19 @@ Thank you.
       <div class="csm-payout-form" id="csmPayoutAccountForm">
         <input type="hidden" id="csmPayoutEditId" value="">
         <label class="csm-payout-field">
-          <span class="csm-payout-field__label">Payout method label</span>
-          <input type="text" id="csmPayoutLabel" class="csm-payout-field__input" placeholder="Payout method label placeholder" maxlength="80">
+          <span class="csm-payout-field__label">Label for this payout method</span>
+          <input type="text" id="csmPayoutLabel" class="csm-payout-field__input" placeholder="e.g. Private Bank, Business USD" maxlength="80">
         </label>
         <label class="csm-payout-field">
-          <span class="csm-payout-field__label">Payout country label</span>
+          <span class="csm-payout-field__label">Country</span>
           <button type="button" class="csm-payout-country-trigger" id="csmPayoutCountryTrigger" aria-haspopup="dialog">
             <span class="csm-payout-country-trigger__value" id="csmPayoutCountryDisplay">Germany</span>
             <svg class="csm-payout-country-trigger__chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
           </button>
         </label>
         <label class="csm-payout-field csm-payout-field--paypal" id="csmPayoutPayPalEmailField" style="display:none">
-          <span class="csm-payout-field__label">Payout paypal email label</span>
-          <input type="email" id="csmPayoutPayPalEmail" class="csm-payout-field__input" placeholder="Payout paypal email placeholder" autocomplete="email">
+          <span class="csm-payout-field__label">PayPal email</span>
+          <input type="email" id="csmPayoutPayPalEmail" class="csm-payout-field__input" placeholder="name@example.com" autocomplete="email">
         </label>
         <select id="csmPayoutCountry" class="csm-payout-field__hidden-select" aria-hidden="true">
             
@@ -1787,17 +1787,17 @@ Thank you.
             <option value="UG" data-currency="UGX">Uganda</option>
           </select>
         <label class="csm-payout-field">
-          <span class="csm-payout-field__label">Payout details account holder</span>
+          <span class="csm-payout-field__label">Account holder</span>
           <input type="text" id="csmPayoutAccountHolder" class="csm-payout-field__input" placeholder="Max Mustermann" maxlength="140">
         </label>
         <div id="csmPayoutIbanSection">
           <label class="csm-payout-field">
-            <span class="csm-payout-field__label">Payout details iban</span>
+            <span class="csm-payout-field__label">IBAN</span>
             <input type="text" id="csmPayoutIban" class="csm-payout-field__input" placeholder="DE89 3704 0044 0532 0130 00" maxlength="34">
           </label>
         </div>
         <label class="csm-payout-field">
-          <span class="csm-payout-field__label">Payout details currency</span>
+          <span class="csm-payout-field__label">Currency</span>
           <button type="button" class="csm-payout-country-trigger" id="csmPayoutCurrencyTrigger" aria-haspopup="dialog">
             <span class="csm-payout-country-trigger__value" id="csmPayoutCurrencyDisplay">EUR</span>
             <svg class="csm-payout-country-trigger__chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
@@ -1860,25 +1860,25 @@ Thank you.
 
     
     <section class="csm-payout-section" id="csmPayoutAutoSection">
-      <h5 class="csm-payout-section__title">Payout auto title</h5>
-      <p class="csm-payout-section__subtitle">Payout auto subtitle</p>
+      <h5 class="csm-payout-section__title">Automatic payout</h5>
+      <p class="csm-payout-section__subtitle">Automatically convert earnings when the minimum amount is reached.</p>
       <div class="csm-payout-form">
         <label class="csm-payout-toggle">
           <input type="checkbox" id="csmPayoutAutoEnable" class="csm-payout-toggle__input">
-          <span class="csm-payout-toggle__label">Payout auto enable</span>
+          <span class="csm-payout-toggle__label">Enable automatic payout</span>
         </label>
         <input type="radio" name="csm_auto_method" value="shop_credit" id="csmAutoMethodShop" class="csm-payout-radio__hidden" checked>
         <input type="radio" name="csm_auto_method" value="wise" id="csmAutoMethodWise" class="csm-payout-radio__hidden">
         <label class="csm-payout-field" id="csmPayoutAutoMethodSelectWrap" style="display:none">
-          <span class="csm-payout-field__label">Payout auto method select</span>
+          <span class="csm-payout-field__label">Select payout method</span>
           <select id="csmPayoutAutoMethodSelect" class="csm-payout-field__input"></select>
         </label>
         <label class="csm-payout-field csm-payout-field--inline">
-          <span class="csm-payout-field__label">Payout auto min label</span>
+          <span class="csm-payout-field__label">Minimum amount</span>
           <input type="number" id="csmPayoutMinAmount" class="csm-payout-field__input" min="5" max="500" step="5" value="50">
           <span class="csm-payout-field__unit">EUR</span>
         </label>
-        <p class="csm-payout-hint">Payout auto min hint</p>
+        <p class="csm-payout-hint">Payout triggers when balance reaches this amount.</p>
         <p class="csm-payout-status" id="csmPayoutAutoStatus" aria-live="polite"></p>
       </div>
     </section>
@@ -1895,7 +1895,7 @@ Thank you.
         Cancel
       </button>
       <button type="button" class="csm-payout-btn csm-payout-btn--primary" id="csmPayoutSaveAccount">
-        Payout details save
+        Save bank details
       </button>
       <button type="button" class="csm-payout-btn csm-payout-btn--primary" id="csmPayoutSaveAuto">
         Save
@@ -1908,7 +1908,7 @@ Thank you.
 <div class="csm-country-overlay" id="csmCountryOverlay" aria-hidden="true">
   <div class="csm-country-modal" role="dialog" aria-modal="true" aria-labelledby="csmCountryModalTitle">
     <div class="csm-country-modal__header">
-      <h3 id="csmCountryModalTitle">Payout country label</h3>
+      <h3 id="csmCountryModalTitle">Country</h3>
       <button type="button" class="csm-country-modal__close" id="csmCountryModalClose" aria-label="Close">
         <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg>
       </button>
@@ -1924,7 +1924,7 @@ Thank you.
 <div class="csm-country-overlay" id="csmCurrencyOverlay" aria-hidden="true">
   <div class="csm-country-modal" role="dialog" aria-modal="true" aria-labelledby="csmCurrencyModalTitle">
     <div class="csm-country-modal__header">
-      <h3 id="csmCurrencyModalTitle">Payout details currency</h3>
+      <h3 id="csmCurrencyModalTitle">Currency</h3>
       <button type="button" class="csm-country-modal__close" id="csmCurrencyModalClose" aria-label="Close">
         <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg>
       </button>
@@ -1940,7 +1940,7 @@ Thank you.
 <div class="csm-country-overlay csm-payout-edit-overlay" id="csmPayoutEditOverlay" aria-hidden="true">
   <div class="csm-country-modal csm-payout-edit-modal" role="dialog" aria-modal="true" aria-labelledby="csmPayoutEditTitle">
     <div class="csm-country-modal__header">
-      <h3 id="csmPayoutEditTitle">Payout edit modal title</h3>
+      <h3 id="csmPayoutEditTitle">Edit payout method</h3>
       <button type="button" class="csm-country-modal__close" id="csmPayoutEditClose" aria-label="Close">
         <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg>
       </button>
@@ -1948,15 +1948,15 @@ Thank you.
     <div class="csm-payout-edit-modal__body">
       <input type="hidden" id="csmPayoutEditMethodId" value="">
       <p class="csm-payout-hint">
-        Payout edit masked info label:
+        Current account ending:
         <strong id="csmPayoutEditMaskedInfo">****</strong>
       </p>
       <label class="csm-payout-field">
-        <span class="csm-payout-field__label">Payout method label</span>
+        <span class="csm-payout-field__label">Label for this payout method</span>
         <input type="text" id="csmPayoutEditLabel" class="csm-payout-field__input" maxlength="80">
       </label>
       <label class="csm-payout-field">
-        <span class="csm-payout-field__label">Payout country label</span>
+        <span class="csm-payout-field__label">Country</span>
         <button type="button" class="csm-payout-country-trigger" id="csmPayoutEditCountryTrigger" aria-haspopup="dialog">
           <span class="csm-payout-country-trigger__value" id="csmPayoutEditCountryDisplay">Germany</span>
           <svg class="csm-payout-country-trigger__chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
@@ -1964,7 +1964,7 @@ Thank you.
         <select id="csmPayoutEditCountry" class="csm-payout-field__hidden-select" aria-hidden="true"></select>
       </label>
       <label class="csm-payout-field">
-        <span class="csm-payout-field__label">Payout details currency</span>
+        <span class="csm-payout-field__label">Currency</span>
         <button type="button" class="csm-payout-country-trigger" id="csmPayoutEditCurrencyTrigger" aria-haspopup="dialog">
           <span class="csm-payout-country-trigger__value" id="csmPayoutEditCurrencyDisplay">EUR</span>
           <svg class="csm-payout-country-trigger__chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
@@ -1972,14 +1972,14 @@ Thank you.
         <select id="csmPayoutEditCurrency" class="csm-payout-field__hidden-select" aria-hidden="true"></select>
       </label>
       <label class="csm-payout-field">
-        <span class="csm-payout-field__label">Payout details account holder</span>
+        <span class="csm-payout-field__label">Account holder</span>
         <input type="text" id="csmPayoutEditAccountHolder" class="csm-payout-field__input" maxlength="140">
       </label>
       <label class="csm-payout-field">
-        <span class="csm-payout-field__label">Payout edit account value label</span>
-        <input type="text" id="csmPayoutEditAccountValue" class="csm-payout-field__input" placeholder="Payout details iban" autocomplete="off">
+        <span class="csm-payout-field__label">IBAN or account number</span>
+        <input type="text" id="csmPayoutEditAccountValue" class="csm-payout-field__input" placeholder="IBAN" autocomplete="off">
       </label>
-      <p class="csm-payout-hint">Payout edit reenter account hint</p>
+      <p class="csm-payout-hint">For security, re-enter your full IBAN/account number to save changes.</p>
       <p class="csm-payout-status" id="csmPayoutEditStatus" aria-live="polite"></p>
     </div>
     <div class="csm-payout-edit-modal__footer">
@@ -2306,7 +2306,7 @@ Thank you.
   id=""
   class="ehub "
   data-ehub-skin=""
-  data-logged-in="truefalse"
+  data-logged-in="true"
 >
   <div class="ehub__login" id="ehubLoginGate" style="display:none">
     <p class="ehub__muted">You need to be logged in to manage your interests.</p>
@@ -2666,54 +2666,27 @@ Go to Creator Names
       <div class="cc-redeem-celebration__badge" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.8 5.7 21l2.3-7-6-4.6h7.6z"/></svg>
       </div>
-      <h2 class="cc-redeem-celebration__title" data-t="creator.settings.creator_codes_redeem_celebration_title">
-        Welcome, Creator!
-      </h2>
-      <p class="cc-redeem-celebration__subtitle" data-t="creator.settings.creator_codes_redeem_celebration_subtitle">
-        You unlocked full Creator access:
-      </p>
+      <h2 class="cc-redeem-celebration__title" data-t="creator.settings.creator_codes_redeem_celebration_title">Welcome, Creator!</h2>
+      <p class="cc-redeem-celebration__subtitle" data-t="creator.settings.creator_codes_redeem_celebration_subtitle">You unlocked full Creator access:</p>
       <ul class="cc-redeem-celebration__features" data-cc-redeem-features></ul>
       <button type="button" class="cc-btn cc-btn--primary cc-redeem-celebration__continue" data-cc-redeem-features-continue>
-        <span data-t="creator.settings.creator_codes_redeem_celebration_continue">
-          Continue
-        </span>
+        <span data-t="creator.settings.creator_codes_redeem_celebration_continue">Continue</span>
       </button>
     </div>
   </div>
 
   <div class="cc-redeem-celebration__step cc-redeem-celebration__step--level" data-cc-redeem-step="level" hidden>
     <div class="cc-redeem-celebration__level-wrap">
-      <p class="cc-redeem-celebration__level-kicker" data-t="creator.settings.creator_codes_redeem_level_up_kicker">
-        LEVEL UP
-      </p>
+      <p class="cc-redeem-celebration__level-kicker" data-t="creator.settings.creator_codes_redeem_level_up_kicker">LEVEL UP</p>
       <div class="cc-redeem-celebration__level-row">
         <span class="cc-redeem-celebration__level-old" data-cc-redeem-level-old>1</span>
         <span class="cc-redeem-celebration__level-arrow" aria-hidden="true">→</span>
         <span class="cc-redeem-celebration__level-new" data-cc-redeem-level-new>2</span>
       </div>
       <p class="cc-redeem-celebration__level-name" data-cc-redeem-level-name></p>
-      <p class="cc-redeem-celebration__level-sub" data-t="creator.settings.creator_codes_redeem_level_up_subtitle">
-        Your Creator tier is now active.
-      </p>
+      <p class="cc-redeem-celebration__level-sub" data-t="creator.settings.creator_codes_redeem_level_up_subtitle">Your Creator tier is now active.</p>
       <button type="button" class="cc-btn cc-btn--primary cc-redeem-celebration__continue" data-cc-redeem-level-continue>
-        <span data-t="creator.settings.creator_codes_redeem_level_up_btn">
-          
-
-
-
-
-  
-
-  
-  
-  
-    
-  
-    
-  
-
-
-        </span>
+        <span data-t="creator.settings.creator_codes_redeem_level_up_btn">Let's go!</span>
       </button>
     </div>
   </div>

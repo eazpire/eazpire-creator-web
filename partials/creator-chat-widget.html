@@ -1,0 +1,1517 @@
+<button type="button" class="creator-chat__close creator-chat__panel-close" aria-label="Close chat">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+</button>
+
+<script>
+  (function(){try{if(sessionStorage.getItem('creator_chat_limit_reached')==='1'&&document.body)document.body.classList.add('creator-chat-limit-reached');}catch(e){}})();
+</script>
+<div id="creator-chat-root" class="creator-chat" aria-label="Eazy Chat">
+  <button
+    type="button"
+    id="creator-chat-toggle"
+    class="creator-chat__toggle creator-chat__toggle--custom-icon"
+    aria-expanded="false"
+    aria-label="Open chat"
+  >
+    
+<div class="creator-chat-icon">
+  <div class="eazy-thought" id="eazy-thought" role="status" aria-live="polite"><span class="eazy-thought-text"></span><span class="eazy-thought-tail" aria-hidden="true"></span><span class="eazy-thought-dots"><span></span><span></span><span></span></span></div>
+  <div class="creator-chat-icon__wrap">
+    <div class="creator-chat-icon__zzz" aria-hidden="true">
+      <span>Z</span><span>Z</span><span>Z</span>
+    </div>
+    <div class="eazy-sfx-blush eazy-sfx-blush--l" aria-hidden="true"></div>
+    <div class="eazy-sfx-blush eazy-sfx-blush--r" aria-hidden="true"></div>
+    <div class="eazy-sfx-stink" aria-hidden="true"><span>💨</span><span>💨</span><span>💨</span></div>
+    <div class="eazy-sfx-burp" aria-hidden="true"><span></span><span></span><span></span></div>
+    <svg class="creator-chat-icon__svg" viewBox="0 0 128 128" aria-hidden="true">
+      <defs>
+        <linearGradient id="creator-chat-icon-gradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ff9a2a"/>
+          <stop offset="1" stop-color="var(--chat-accent, #f97316)"/>
+        </linearGradient>
+      </defs>
+      <path d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z" fill="url(#creator-chat-icon-gradient)"/>
+      <path d="M56 39c-15 6-24 20-24 35 0 19 16 34 36 34 20 0 36-16 36-36 0-21-17-38-38-38-4.3 0-8.4.7-10 .9Z" fill="#fff"/>
+      <g class="creator-chat-icon__eyes creator-chat-icon__eyes--open">
+        <circle cx="72" cy="62" r="6" fill="var(--chat-accent, #f97316)"/>
+        <circle cx="90" cy="54" r="5" fill="var(--chat-accent, #f97316)"/>
+      </g>
+      <g class="creator-chat-icon__eyes creator-chat-icon__eyes--closed" stroke="var(--chat-accent, #f97316)" stroke-width="4" stroke-linecap="round" fill="none">
+        <path d="M66 62c3 3 8 3 11 0"/>
+        <path d="M84 54c2.5 2.5 6.5 2.5 9 0"/>
+      </g>
+      <g class="creator-chat-icon__eyes creator-chat-icon__eyes--wide" style="display:none">
+        <circle cx="72" cy="62" r="8" fill="var(--chat-accent, #f97316)"/>
+        <circle cx="90" cy="54" r="7" fill="var(--chat-accent, #f97316)"/>
+        <circle cx="74" cy="60" r="2.5" fill="#fff"/>
+        <circle cx="92" cy="52" r="2" fill="#fff"/>
+      </g>
+      <g class="creator-chat-icon__mouth" style="display:none">
+        <ellipse cx="80" cy="76" rx="6" ry="4" fill="var(--chat-accent, #f97316)"/>
+      </g>
+      <circle cx="50" cy="28" r="7" fill="url(#creator-chat-icon-gradient)"/>
+      <g id="eazy-activity" class="eazy-activity"></g>
+    </svg>
+  </div>
+  <span class="creator-chat-icon__brand"><span class="creator-chat-icon__brand-e">E</span>azy</span>
+</div>
+
+  </button>
+  <script>
+    (function(){try{
+      var html=document.documentElement;
+      var e=document.getElementById('creator-chat-toggle');
+      if(!e)return;
+      var isNew=html.classList.contains('eaz-switched');
+      var docked=false;
+      try{docked=localStorage.getItem('eazy_docked')==='true';}catch(err){}
+      if(isNew&&docked){
+        var slot=document.getElementById('eazy-topbar-slot');
+        if(slot){
+          e.classList.add('creator-chat__toggle--docked','creator-chat__toggle--docked-mobile');
+          e.style.cssText='';
+          slot.classList.add('is-docked');
+          slot.appendChild(e);
+          html.classList.add('eazy-icon-ready');
+          return;
+        }
+      }
+      var k=window.innerWidth<750?'eazy_icon_mobile':'eazy_icon_desktop';
+      var r=localStorage.getItem(k);
+      if(r){
+        var p=JSON.parse(r);
+        var x=Math.max(0,Math.min(95,p.x)),y=Math.max(0,Math.min(95,p.y));
+        e.style.left=x+'vw';e.style.top=y+'vh';e.style.right='auto';e.style.bottom='auto';
+      }
+      html.classList.add('eazy-icon-ready');
+    }catch(err){
+      try{document.documentElement.classList.add('eazy-icon-ready');}catch(e2){}
+    }})();
+  </script>
+
+  <div id="creator-chat-backdrop" class="creator-chat__backdrop" aria-hidden="true" style="display:none;"></div>
+
+  <div id="creator-chat-panel" class="creator-chat__panel" aria-hidden="true" style="display:none">
+    <div class="creator-chat__resize-handle" id="creator-chat-resize-handle" aria-label="Adjust chat size" title="Adjust size"></div>
+
+    <div class="creator-chat__sidebar-strip" id="creator-chat-sidebar-strip" aria-label="Open sidebar" role="button" tabindex="0">
+      <svg width="10" height="20" viewBox="0 0 10 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="4" x2="2" y2="16"/><line x1="5" y1="4" x2="5" y2="16"/><line x1="8" y1="4" x2="8" y2="16"/></svg>
+    </div>
+    <div class="creator-chat__sidebar-backdrop" id="creator-chat-sidebar-backdrop" aria-hidden="true"></div>
+    <nav class="creator-chat__sidebar" id="creator-chat-sidebar" aria-label="Navigation">
+      <button type="button" class="creator-chat__sidebar-close" id="creator-chat-sidebar-close" aria-label="Close sidebar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4L4 12"/></svg>
+      </button>
+      <button type="button" class="creator-chat__sidebar-btn is-active" data-view="chat" title="Chat">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </button>
+      <button type="button" class="creator-chat__sidebar-btn" data-view="notifications" title="Notifications">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="creator-chat__sidebar-badge" id="creator-chat-notif-badge" style="display:none">0</span>
+      </button>
+      <button type="button" class="creator-chat__sidebar-btn" data-view="jobs" title="">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span class="creator-chat__sidebar-badge" id="creator-chat-jobs-badge" style="display:none">0</span>
+      </button>
+      <button type="button" class="creator-chat__sidebar-btn" data-view="settings" title="Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+      <button type="button" class="creator-chat__sidebar-btn" data-view="verify" title="Verify">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>
+        </svg>
+      </button>
+      <button type="button" class="creator-chat__sidebar-btn" data-view="games" title="Games">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="7.25" width="16" height="10.5" rx="3"/>
+          <path d="M8.25 11.75v2.5M7 13h2.5"/>
+          <circle cx="15.35" cy="11.35" r="1.15"/>
+          <circle cx="17.65" cy="13.65" r="1.15"/>
+        </svg>
+      </button>
+      <button type="button" class="creator-chat__sidebar-btn" data-view="artifacts" title="Artifacts">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/>
+        </svg>
+      </button>
+      
+      <button type="button" class="creator-chat__sidebar-btn" data-view="functions" title="Functions">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      </button>
+      <button type="button" class="creator-chat__sidebar-btn" data-view="mascot" title="Mascot">
+        <svg width="20" height="20" viewBox="22 12 98 100" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z"/><circle cx="72" cy="62" r="6"/><circle cx="90" cy="54" r="5"/><circle cx="50" cy="28" r="7"/></svg>
+      </button>
+    </nav>
+
+    <div class="creator-chat__panel-content" id="creator-chat-panel-content">
+
+      <div class="creator-chat__view creator-chat__view--chat is-active" id="creator-chat-view-chat">
+        <div class="creator-chat__header">
+          <div class="creator-chat__header-left">
+            <button type="button" id="creator-chat-sidebar-toggle" class="creator-chat__hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <button type="button" id="creator-chat-back-to-eazy" class="creator-chat__back-btn" aria-label="Back to Eazy" style="display:none;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L4 8l6 6"/></svg>
+            </button>
+            <h3 class="creator-chat__title">Eazy Chat</h3>
+          </div>
+          <button type="button" id="creator-chat-close" class="creator-chat__close creator-chat__panel-close" aria-label="Close chat">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 5l10 10M15 5L5 15"/></svg>
+          </button>
+        </div>
+
+        <div class="creator-chat__tabs-bar" id="creator-chat-tabs-bar">
+          <div class="creator-chat__tabs-scroll" id="creator-chat-tabs-scroll">
+            <div class="creator-chat__tabs" id="creator-chat-tabs" role="tablist"></div>
+          </div>
+          <button type="button" class="creator-chat__tabs-new" id="creator-chat-tabs-new" aria-label="New chat" title="New chat">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v12M2 8h12"/></svg>
+          </button>
+          <button type="button" class="creator-chat__tabs-history" id="creator-chat-tabs-history" aria-label="Chat history" title="Chat history">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1a7 7 0 11-5.7 2.9" stroke-linecap="round"/><polyline points="2 1 2 4 5 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 4v4l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <div id="creator-chat-history-modal" class="creator-chat__history-modal" aria-hidden="true">
+          <div class="creator-chat__history-header">
+            <div class="creator-chat__history-header-left">
+              <h4>Chat history</h4>
+              <button type="button" class="creator-chat__history-clear" id="creator-chat-history-clear" aria-label="Clear history" title="Clear history">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M12.5 4l-.5 9a1.5 1.5 0 01-1.5 1.5h-5A1.5 1.5 0 014 13l-.5-9"/><path d="M6.5 7v5"/><path d="M9.5 7v5"/></svg>
+              </button>
+            </div>
+            <button type="button" class="creator-chat__history-close" id="creator-chat-history-close" aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4L4 12"/></svg>
+            </button>
+          </div>
+          <div class="creator-chat__history-list" id="creator-chat-history-list"></div>
+        </div>
+
+        <div class="creator-chat__chat-body" id="creator-chat-chat-body">
+        <div class="creator-chat__drawer-peek" id="creator-chat-drawer-peek">
+          <div class="creator-chat__drawer-peek-line"></div>
+        </div>
+
+        <div class="creator-chat__drawer" id="creator-chat-drawer" aria-hidden="true">
+          <div class="eazy-fn-carousel" id="eazy-fn-carousel">
+            <button type="button" class="eazy-fn-carousel__arrow eazy-fn-carousel__arrow--left" id="eazy-fn-carousel-left" aria-label="Back">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="eazy-fn-carousel__track-wrapper">
+              <div class="eazy-fn-carousel__track" id="eazy-fn-carousel-track"></div>
+            </div>
+            <button type="button" class="eazy-fn-carousel__arrow eazy-fn-carousel__arrow--right" id="eazy-fn-carousel-right" aria-label="Next">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <div class="creator-chat__drawer-handle"></div>
+        </div>
+
+        <div class="creator-chat__drawer-hint" id="creator-chat-drawer-hint" aria-hidden="true">
+          <div class="creator-chat__drawer-hint-hand">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M18 8.5V8a1 1 0 00-2 0v-.5a1 1 0 00-2 0V7a1 1 0 00-2 0V4a1 1 0 00-2 0v8.5l-1.8-1.8a1.25 1.25 0 00-1.7 0 1.2 1.2 0 000 1.7L11 17c1.5 1.5 2.5 3 6 3 3.5 0 5-2.5 5-6v-3.5a1 1 0 00-2 0V8.5a1 1 0 00-2 0z" fill="var(--chat-accent)" opacity="0.9"/></svg>
+          </div>
+        </div>
+
+        <div class="creator-chat__rate-limit" id="creator-chat-rate-limit" aria-live="polite">
+          <span class="creator-chat__rate-text">
+            <span id="creator-chat-remaining">--</span> of <span id="creator-chat-limit">30</span> messages
+          </span>
+          <span class="creator-chat__rate-timer">
+            Reset in <span id="creator-chat-reset-timer">--:--</span>
+          </span>
+          <div class="creator-chat__rate-bar" role="progressbar" aria-valuenow="30" aria-valuemin="0" aria-valuemax="30">
+            <div class="creator-chat__rate-fill" id="creator-chat-bar-fill"></div>
+          </div>
+        </div>
+
+        <div class="creator-chat__support-float" id="creator-chat-support-float" hidden>
+          <span class="creator-chat__support-float-dot" aria-hidden="true"></span>
+          <span class="creator-chat__support-float-status" data-t="eazy_chat.support_agent_online">Online</span>
+          <span class="creator-chat__support-float-name" id="creator-chat-support-agent-name">Tobias</span>
+        </div>
+
+        <div class="creator-chat__messages" id="creator-chat-messages"></div>
+        </div>
+
+        <div class="creator-chat__input-wrap creator-chat__composer" id="creator-chat-composer">
+          
+          <div class="creator-chat__login-gate" id="creator-chat-login-gate">
+            <svg class="creator-chat__login-gate-icon" viewBox="0 0 128 128" width="36" height="36" aria-hidden="true">
+              <defs><linearGradient id="eazy-login-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a2a"/><stop offset="1" stop-color="#f97316"/></linearGradient></defs>
+              <path d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z" fill="url(#eazy-login-g)"/>
+              <path d="M56 39c-15 6-24 20-24 35 0 19 16 34 36 34 20 0 36-16 36-36 0-21-17-38-38-38-4.3 0-8.4.7-10 .9Z" fill="#fff"/>
+              <circle cx="72" cy="62" r="6" fill="#f97316"/><circle cx="90" cy="54" r="5" fill="#f97316"/>
+              <circle cx="50" cy="28" r="7" fill="url(#eazy-login-g)"/>
+            </svg>
+            <p class="creator-chat__login-gate-text">Sign in to use all Eazy features — chat, functions, notifications & more.</p>
+            
+            
+            <a href="?return_url=" class="creator-chat__login-gate-btn">
+              Sign in now
+            </a>
+          </div>
+          
+          <div class="creator-chat__input-inner">
+            <textarea
+              id="creator-chat-input"
+              class="creator-chat__input"
+              data-eazy-guide="chat-input"
+              rows="2"
+              placeholder="Your message..."
+              maxlength="500"
+              aria-label="Enter message"
+              disabled
+            ></textarea>
+            <button type="button" id="creator-chat-upload-btn" class="creator-chat__upload-btn" aria-label="Upload image" disabled style="opacity:0.3;pointer-events:none">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+          </div>
+          <button type="button" id="creator-chat-send" class="creator-chat__send creator-chat__mascot-send" aria-label="Send" disabled>
+            <svg class="creator-chat__mascot-svg" viewBox="0 0 128 128" aria-hidden="true">
+              <defs>
+                <linearGradient id="creator-chat-mascot-send-gradient" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#ff9a2a"/>
+                  <stop offset="1" stop-color="var(--chat-accent, #f97316)"/>
+                </linearGradient>
+              </defs>
+              <path d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z" fill="url(#creator-chat-mascot-send-gradient)"/>
+              <path d="M56 39c-15 6-24 20-24 35 0 19 16 34 36 34 20 0 36-16 36-36 0-21-17-38-38-38-4.3 0-8.4.7-10 .9Z" fill="#fff"/>
+              <g class="creator-chat__mascot-eyes">
+                <circle cx="72" cy="62" r="6" fill="var(--chat-accent, #f97316)"/>
+                <circle cx="90" cy="54" r="5" fill="var(--chat-accent, #f97316)"/>
+              </g>
+              <circle cx="50" cy="28" r="7" fill="url(#creator-chat-mascot-send-gradient)"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="creator-chat__view creator-chat__view--notifications" id="creator-chat-view-notifications">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title">Notifications</h3>
+          </div>
+          
+        </div>
+        <div class="creator-chat__feed-scope-tabs" role="tablist" aria-label="Notification feed">
+          <button type="button" class="creator-chat__feed-scope-tab is-active" data-notif-feed-scope="user" role="tab" aria-selected="true">
+            <span class="creator-chat__feed-scope-tab-inner">
+              <span class="creator-chat__feed-scope-name">User</span>
+              <span class="creator-chat__feed-scope-count" id="creator-chat-notif-count-user" aria-hidden="true"></span>
+            </span>
+          </button>
+          <button type="button" class="creator-chat__feed-scope-tab" data-notif-feed-scope="system" role="tab" aria-selected="false">
+            <span class="creator-chat__feed-scope-tab-inner">
+              <span class="creator-chat__feed-scope-name">System</span>
+              <span class="creator-chat__feed-scope-count" id="creator-chat-notif-count-system" aria-hidden="true"></span>
+            </span>
+          </button>
+        </div>
+        <div class="creator-chat__notif-tabs" role="tablist" aria-label="Read / Unread">
+          <button type="button" class="creator-chat__notif-tab is-active" data-notif-filter="unread" role="tab" aria-selected="true">Unread</button>
+          <button type="button" class="creator-chat__notif-tab" data-notif-filter="read" role="tab" aria-selected="false">Read</button>
+        </div>
+        <div class="creator-chat__notif-markall-row" id="creator-chat-notif-markall-row" hidden>
+          <button type="button" class="creator-chat__notif-mark-all" id="creator-chat-notif-mark-all">Mark all as read</button>
+        </div>
+        <div class="creator-chat__notif-list" id="creator-chat-notif-list" role="list"></div>
+      </div>
+
+      <div class="creator-chat__view creator-chat__view--jobs" id="creator-chat-view-jobs">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title"></h3>
+            <span class="eazy-header-avatar" aria-hidden="true">
+              <svg viewBox="0 0 128 128" width="30" height="30">
+                <defs><linearGradient id="eazy-hdr-jobs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a2a"/><stop offset="1" stop-color="#f97316"/></linearGradient></defs>
+                <path d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z" fill="url(#eazy-hdr-jobs)"/>
+                <path d="M56 39c-15 6-24 20-24 35 0 19 16 34 36 34 20 0 36-16 36-36 0-21-17-38-38-38-4.3 0-8.4.7-10 .9Z" fill="#fff"/>
+                <circle cx="72" cy="62" r="6" fill="#f97316"/><circle cx="90" cy="54" r="5" fill="#f97316"/>
+                <circle cx="50" cy="28" r="7" fill="url(#eazy-hdr-jobs)"/>
+              </svg>
+            </span>
+          </div>
+          
+        </div>
+        <div class="creator-chat__feed-scope-tabs creator-chat__feed-scope-tabs--jobs" role="tablist" aria-label="Jobs feed">
+          <button type="button" class="creator-chat__feed-scope-tab is-active" data-jobs-feed-scope="user" role="tab" aria-selected="true">User</button>
+          <button type="button" class="creator-chat__feed-scope-tab" data-jobs-feed-scope="system" role="tab" aria-selected="false">System</button>
+        </div>
+        <div class="creator-chat__jobs-list" id="creator-chat-jobs-list"></div>
+      </div>
+
+      
+
+      <div class="creator-chat__view creator-chat__view--settings" id="creator-chat-view-settings">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title">Settings</h3>
+            <span class="eazy-header-avatar" aria-hidden="true">
+              <svg viewBox="0 0 128 128" width="30" height="30">
+                <defs><linearGradient id="eazy-hdr-settings" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a2a"/><stop offset="1" stop-color="#f97316"/></linearGradient></defs>
+                <path d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z" fill="url(#eazy-hdr-settings)"/>
+                <path d="M56 39c-15 6-24 20-24 35 0 19 16 34 36 34 20 0 36-16 36-36 0-21-17-38-38-38-4.3 0-8.4.7-10 .9Z" fill="#fff"/>
+                <circle cx="72" cy="62" r="6" fill="#f97316"/><circle cx="90" cy="54" r="5" fill="#f97316"/>
+                <circle cx="50" cy="28" r="7" fill="url(#eazy-hdr-settings)"/>
+              </svg>
+            </span>
+          </div>
+          
+        </div>
+        <div class="eazy-settings" id="eazy-settings-container">
+
+          
+          <details class="eazy-settings__section" open>
+            <summary class="eazy-settings__section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+              <span>Eazy Audio</span>
+            </summary>
+            <div class="eazy-settings__body">
+              <label class="eazy-settings__toggle">
+                <span>Audio</span>
+                <input type="checkbox" id="eazy-set-audio-enabled" data-key="audio_enabled" checked>
+                <span class="eazy-settings__switch"></span>
+              </label>
+              <div class="eazy-settings__slider-row" id="eazy-set-audio-volume-row">
+                <span>Volume</span>
+                <input type="range" id="eazy-set-audio-volume" data-key="audio_volume" min="0" max="100" value="75" class="eazy-settings__range">
+                <span class="eazy-settings__range-val" id="eazy-set-audio-volume-val">75%</span>
+              </div>
+              <label class="eazy-settings__toggle" id="eazy-set-audio-autoplay-row">
+                <span>Auto-play voice messages</span>
+                <input type="checkbox" id="eazy-set-audio-autoplay" data-key="audio_autoplay">
+                <span class="eazy-settings__switch"></span>
+              </label>
+            </div>
+          </details>
+
+          
+          <details class="eazy-settings__section" open>
+            <summary class="eazy-settings__section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              <span>Automatic Messages</span>
+            </summary>
+            <div class="eazy-settings__body">
+              <label class="eazy-settings__toggle eazy-settings__toggle--master">
+                <span>All automatic messages</span>
+                <input type="checkbox" id="eazy-set-messages-enabled" data-key="messages_enabled" checked>
+                <span class="eazy-settings__switch"></span>
+              </label>
+              <div id="eazy-set-messages-group">
+
+                <div class="eazy-settings__msg-card">
+                  <label class="eazy-settings__toggle">
+                    <span>Mascot Bubbles</span>
+                    <input type="checkbox" data-key="messages_mascot_bubbles" checked>
+                    <span class="eazy-settings__switch"></span>
+                  </label>
+                  <p class="eazy-settings__hint">Speech bubbles on the Eazy icon on the page</p>
+                  <div class="eazy-settings__freq-row">
+                    <span>Frequency</span>
+                    <input type="range" data-key="frequency_mascot_bubbles" min="0" max="2" step="1" value="1" class="eazy-settings__range eazy-settings__range--freq">
+                    <span class="eazy-settings__freq-label" data-freq-for="frequency_mascot_bubbles"></span>
+                  </div>
+                </div>
+
+                <div class="eazy-settings__msg-card">
+                  <label class="eazy-settings__toggle">
+                    <span>Dream Bubbles</span>
+                    <input type="checkbox" data-key="messages_dream_bubbles" checked>
+                    <span class="eazy-settings__switch"></span>
+                  </label>
+                  <p class="eazy-settings__hint">At night: Eazy dreams and mumbles</p>
+                  <div class="eazy-settings__freq-row">
+                    <span>Frequency</span>
+                    <input type="range" data-key="frequency_dream_bubbles" min="0" max="2" step="1" value="1" class="eazy-settings__range eazy-settings__range--freq">
+                    <span class="eazy-settings__freq-label" data-freq-for="frequency_dream_bubbles"></span>
+                  </div>
+                </div>
+
+                <div class="eazy-settings__msg-card">
+                  <label class="eazy-settings__toggle">
+                    <span>Chat Greeting</span>
+                    <input type="checkbox" data-key="messages_chat_greeting" checked>
+                    <span class="eazy-settings__switch"></span>
+                  </label>
+                  <p class="eazy-settings__hint">First message when opening the chat</p>
+                </div>
+
+                <div class="eazy-settings__msg-card">
+                  <label class="eazy-settings__toggle">
+                    <span>Idle Tips (Chat)</span>
+                    <input type="checkbox" data-key="messages_idle_tips_chat" checked>
+                    <span class="eazy-settings__switch"></span>
+                  </label>
+                  <p class="eazy-settings__hint">Tips during inactivity in the open chat</p>
+                  <div class="eazy-settings__freq-row">
+                    <span>Frequency</span>
+                    <input type="range" data-key="frequency_idle_tips_chat" min="0" max="2" step="1" value="1" class="eazy-settings__range eazy-settings__range--freq">
+                    <span class="eazy-settings__freq-label" data-freq-for="frequency_idle_tips_chat"></span>
+                  </div>
+                </div>
+
+                <div class="eazy-settings__msg-card">
+                  <label class="eazy-settings__toggle">
+                    <span>Idle Tips (Page)</span>
+                    <input type="checkbox" data-key="messages_idle_tips_page" checked>
+                    <span class="eazy-settings__switch"></span>
+                  </label>
+                  <p class="eazy-settings__hint">Tips as speech bubble on the icon</p>
+                  <div class="eazy-settings__freq-row">
+                    <span>Frequency</span>
+                    <input type="range" data-key="frequency_idle_tips_page" min="0" max="2" step="1" value="1" class="eazy-settings__range eazy-settings__range--freq">
+                    <span class="eazy-settings__freq-label" data-freq-for="frequency_idle_tips_page"></span>
+                  </div>
+                </div>
+
+                <div class="eazy-settings__msg-card">
+                  <label class="eazy-settings__toggle">
+                    <span>Function Tips</span>
+                    <input type="checkbox" data-key="messages_function_tips" checked>
+                    <span class="eazy-settings__switch"></span>
+                  </label>
+                  <p class="eazy-settings__hint">Contextual tips within functions</p>
+                </div>
+
+                <div class="eazy-settings__msg-card">
+                  <label class="eazy-settings__toggle">
+                    <span>Job Updates</span>
+                    <input type="checkbox" data-key="messages_job_updates" checked>
+                    <span class="eazy-settings__switch"></span>
+                  </label>
+                  <p class="eazy-settings__hint">"Design is ready!" as chat message</p>
+                </div>
+
+              </div>
+            </div>
+          </details>
+
+          
+          <details class="eazy-settings__section">
+            <summary class="eazy-settings__section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+              <span>Mood / Tone</span>
+            </summary>
+            <div class="eazy-settings__body">
+              <p class="eazy-settings__hint" style="margin-top:0">Choose which types of messages Eazy sends you.</p>
+              <div class="eazy-settings__chips" id="eazy-set-mood-chips">
+                <button type="button" class="eazy-settings__chip is-active" data-tag="lustig">Funny</button>
+                <button type="button" class="eazy-settings__chip is-active" data-tag="inspirierend">Inspiring</button>
+                <button type="button" class="eazy-settings__chip is-active" data-tag="weisheit">Wisdom</button>
+                <button type="button" class="eazy-settings__chip is-active" data-tag="informativ">Informative</button>
+                <button type="button" class="eazy-settings__chip is-active" data-tag="frech">Cheeky</button>
+                <button type="button" class="eazy-settings__chip is-active" data-tag="flirty">Flirty</button>
+              </div>
+            </div>
+          </details>
+
+          
+          <details class="eazy-settings__section">
+            <summary class="eazy-settings__section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>
+              <span>Eazy Placement</span>
+            </summary>
+            <div class="eazy-settings__body">
+              <div class="eazy-settings__segmented" id="eazy-set-placement">
+                <button type="button" class="eazy-settings__seg-btn" data-placement="header">Header</button>
+                <button type="button" class="eazy-settings__seg-btn is-active" data-placement="page">Page (free)</button>
+              </div>
+              <button type="button" class="eazy-settings__action-btn" id="eazy-set-reset-pos">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                Reset position
+              </button>
+            </div>
+          </details>
+
+          
+          <details class="eazy-settings__section">
+            <summary class="eazy-settings__section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <span>Privacy</span>
+            </summary>
+            <div class="eazy-settings__body">
+              <button type="button" class="eazy-settings__action-btn eazy-settings__action-btn--danger" id="eazy-set-clear-history">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                Delete chat history
+              </button>
+              <button type="button" class="eazy-settings__action-btn eazy-settings__action-btn--danger" id="eazy-set-clear-memory">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                Reset Eazy memory
+              </button>
+            </div>
+          </details>
+
+        </div>
+      </div>
+
+      <div class="creator-chat__view creator-chat__view--verify" id="creator-chat-view-verify">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title">Eazy Verify</h3>
+          </div>
+          
+        </div>
+        <div class="eazy-verify__primary-bar" id="eazy-verify-primary-bar" hidden>
+          <div class="eazy-verify__header-row">
+            <div class="eazy-verify__entity-tabs creator-chat__feed-scope-tabs" role="tablist" aria-label="Review type">
+              <button type="button" class="creator-chat__feed-scope-tab is-active" data-eazy-verify-entity="design" role="tab" aria-selected="true">
+                <span class="creator-chat__feed-scope-tab-inner">
+                  <svg class="eazy-verify__tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  Designs
+                </span>
+              </button>
+              <button type="button" class="creator-chat__feed-scope-tab" data-eazy-verify-entity="product" role="tab" aria-selected="false">
+                <span class="creator-chat__feed-scope-tab-inner">
+                  <svg class="eazy-verify__tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 22V13"/></svg>
+                  Products
+                </span>
+              </button>
+            </div>
+          </div>
+          <div class="eazy-verify__subheader-row">
+            <div class="eazy-verify__segment" role="group" aria-label="Queue">
+              <button type="button" class="eazy-verify__segment-btn is-active" data-eazy-verify-view="available">Available</button>
+              <button type="button" class="eazy-verify__segment-btn" data-eazy-verify-view="completed">Completed</button>
+            </div>
+          </div>
+        </div>
+        <div class="eazy-verify__outcome-bar" id="eazy-verify-completed-block" hidden>
+          <div class="eazy-verify__outcome-tabs creator-chat__feed-scope-tabs" role="tablist" aria-label="Your decisions">
+            <button type="button" class="creator-chat__feed-scope-tab is-active" data-eazy-verify-outcome="verified" role="tab" aria-selected="true">
+              <span class="creator-chat__feed-scope-tab-inner">
+                <svg class="eazy-verify__tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+                Verified
+              </span>
+            </button>
+            <button type="button" class="creator-chat__feed-scope-tab" data-eazy-verify-outcome="rejected" role="tab" aria-selected="false">
+              <span class="creator-chat__feed-scope-tab-inner">
+                <svg class="eazy-verify__tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                Rejected
+              </span>
+            </button>
+            <button type="button" class="creator-chat__feed-scope-tab" data-eazy-verify-outcome="not_sure" role="tab" aria-selected="false">
+              <span class="creator-chat__feed-scope-tab-inner">
+                <svg class="eazy-verify__tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.2 1.8c0 1.8-2.7 2.2-2.7 3.7"/><circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none"/></svg>
+                Not Sure
+              </span>
+            </button>
+          </div>
+        </div>
+        <div id="eazy-verify-root" class="eazy-verify-root">
+          <div class="eazy-verify__terms-gate" id="eazy-verify-terms-gate" hidden>
+            <button type="button" class="eazy-verify__terms-open" id="eazy-verify-terms-open">
+              <span class="eazy-verify__terms-open-box" aria-hidden="true"></span>
+              <span>I confirm I am 16+ and accept the community guidelines</span>
+            </button>
+          </div>
+          <div class="eazy-verify__stage" id="eazy-verify-stage"></div>
+          <div class="eazy-verify__reject-footer" id="eazy-verify-reject-footer" hidden>
+            <button type="button" class="eazy-verify__btn eazy-verify__btn--reject-confirm" id="eazy-verify-reject-confirm">
+              Confirm rejection
+            </button>
+          </div>
+          <div class="eazy-verify__terms-modal" id="eazy-verify-terms-modal" hidden aria-hidden="true">
+            <div class="eazy-verify__terms-modal-panel" role="dialog" aria-modal="true" aria-labelledby="eazy-verify-terms-modal-title">
+              <h4 id="eazy-verify-terms-modal-title" data-t="eazy_verify.terms_title">Community verification</h4>
+              <div class="eazy-verify__terms-modal-scroll creator-chat__scroll-thin">
+                <div class="eazy-verify__terms-modal-upper" id="eazy-verify-terms-modal-upper"></div>
+                <div class="eazy-verify__terms-modal-lower" id="eazy-verify-terms-modal-lower"></div>
+              </div>
+              <div class="eazy-verify__terms-modal-subfooter">
+                <label class="eazy-verify__terms-checkbox-label">
+                  <input type="checkbox" id="eazy-verify-terms-checkbox" />
+                  <span data-t="eazy_verify.terms_accept_checkbox">Accept Community Rules</span>
+                </label>
+              </div>
+              <div class="eazy-verify__terms-modal-footer">
+                <button type="button" class="eazy-verify__terms-btn" id="eazy-verify-terms-modal-accept" disabled>Continue</button>
+              </div>
+            </div>
+          </div>
+          <div class="eazy-verify__reason-info-modal" id="eazy-verify-reason-info-modal" hidden aria-hidden="true">
+            <div class="eazy-verify__reason-info-panel" role="dialog" aria-modal="true" aria-labelledby="eazy-verify-reason-info-title">
+              <h4 id="eazy-verify-reason-info-title"></h4>
+              <p id="eazy-verify-reason-info-body"></p>
+              <button type="button" class="eazy-verify__terms-btn" id="eazy-verify-reason-info-close">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="creator-chat__view creator-chat__view--games" id="creator-chat-view-games">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title" id="creator-chat-games-title" data-t="eazy_chat.games_motto">Play Daily Games – Win Daily Prizes</h3>
+            <button type="button" class="creator-chat__games-header-info" id="creator-chat-games-header-info-btn" aria-label="How the daily game works" title="How the daily game works">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </button>
+          </div>
+          
+        </div>
+        <div class="creator-chat__games-subnav" id="creator-chat-games-subnav">
+          <div class="eazy-games-carousel" id="eazy-games-carousel">
+            <button type="button" class="eazy-games-carousel__item is-active" data-games-section="play" aria-pressed="true">
+              <span class="eazy-games-carousel__item-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7.25" width="16" height="10.5" rx="3"/><path d="M8.25 11.75v2.5M7 13h2.5"/><circle cx="15.35" cy="11.35" r="1.15"/><circle cx="17.65" cy="13.65" r="1.15"/></svg>
+              </span>
+              <span class="eazy-games-carousel__item-label" data-t="eazy_chat.games_section_play">Play</span>
+            </button>
+            <button type="button" class="eazy-games-carousel__item" data-games-section="collection" aria-pressed="false">
+              <span class="eazy-games-carousel__item-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 000-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2Z"/></svg>
+              </span>
+              <span class="eazy-games-carousel__item-label" data-t="eazy_chat.games_section_collection">Collection</span>
+            </button>
+            <button type="button" class="eazy-games-carousel__item" data-games-section="exchange" aria-pressed="false">
+              <span class="eazy-games-carousel__item-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg>
+              </span>
+              <span class="eazy-games-carousel__item-label" data-t="eazy_chat.games_section_exchange">Exchange</span>
+            </button>
+            <button type="button" class="eazy-games-carousel__item" data-games-section="friends" aria-pressed="false">
+              <span class="eazy-games-carousel__item-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+              </span>
+              <span class="eazy-games-carousel__item-label" data-t="eazy_chat.games_section_friends">Friends</span>
+            </button>
+            <button type="button" class="eazy-games-carousel__item" data-games-section="community" aria-pressed="false">
+              <span class="eazy-games-carousel__item-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17.8l-6.2 4.5 2.4-7.4L2 10.4h7.6L12 3z"/></svg>
+              </span>
+              <span class="eazy-games-carousel__item-label" data-t="eazy_chat.games_section_community">Community</span>
+            </button>
+          </div>
+        </div>
+        <div class="creator-chat__games-section creator-chat__games-section--play is-active" data-games-panel="play">
+          <div class="creator-chat__games-play-picker" id="creator-chat-games-play-picker">
+            <div class="eazy-games-picker-carousel" id="eazy-games-picker-carousel">
+              <button type="button" class="eazy-games-picker-carousel__arrow" id="eazy-games-picker-left" aria-label="Previous game">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <div class="eazy-games-picker-carousel__track-wrapper" id="eazy-games-picker-track-wrapper">
+                <div class="eazy-games-picker-carousel__track" id="eazy-games-picker-track"></div>
+              </div>
+              <button type="button" class="eazy-games-picker-carousel__arrow" id="eazy-games-picker-right" aria-label="Next game">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </div>
+            <div class="creator-chat__games-rules-panel" id="creator-chat-games-rules-panel" hidden></div>
+            <div class="creator-chat__games-notify-toggles" id="creator-chat-games-notify-toggles" hidden></div>
+          </div>
+          <div class="creator-chat__games-body" id="creator-chat-games-body">
+            <div class="creator-chat__games-subheader">
+              <p class="creator-chat__games-intro" data-t="eazy_chat.games_daily_intro">Daily memory match on community designs: match every pair before time runs out. Difficulty, peek length, and attempt limits are tuned by Eazy — tap the info icon for details.</p>
+              <div class="creator-chat__games-prize-row" id="creator-chat-games-prize-row" hidden>
+                <p class="creator-chat__games-prize" id="creator-chat-games-prize"></p>
+              </div>
+              <div class="creator-chat__games-timer-sub" id="creator-chat-games-timer-host" hidden></div>
+              <p class="creator-chat__games-status" id="creator-chat-games-status"></p>
+            </div>
+            <div class="creator-chat__games-scroll">
+              <div id="creator-chat-games-outcome" class="creator-chat__games-outcome" aria-live="polite"></div>
+              <div class="creator-chat__games-memory" id="creator-chat-games-memory-root" hidden></div>
+              <div class="creator-chat__games-connect" id="creator-chat-games-connect-root" hidden></div>
+              <div class="creator-chat__games-simon" id="creator-chat-games-simon-root" hidden></div>
+            </div>
+            <div class="creator-chat__games-footer">
+              <div class="creator-chat__games-footer-left" id="creator-chat-games-footer-left">
+                <button type="button" class="creator-chat__games-play" id="creator-chat-games-play" hidden>Start game</button>
+              </div>
+              <div class="creator-chat__games-footer-lives" id="creator-chat-games-footer-lives" hidden aria-live="polite">
+                <svg class="creator-chat__games-lives-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <span id="creator-chat-games-lives-count">0</span>
+              </div>
+              <div class="creator-chat__games-footer-strikes" id="creator-chat-games-footer-strikes" hidden aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+        <div class="creator-chat__games-section creator-chat__games-section--collection" data-games-panel="collection" hidden>
+          <div class="eazy-games-collection" id="eazy-games-collection-root">
+            <div class="eazy-games-collection__filters" id="eazy-games-collection-filters"></div>
+            <div class="eazy-games-collection__grid" id="eazy-games-collection-grid"></div>
+            <p class="eazy-games-collection__empty" id="eazy-games-collection-empty" hidden data-t="eazy_chat.prizes_collection_empty">No prizes or cards yet. Play the daily game to win!</p>
+            <div class="eazy-card-token-footer" id="eazy-card-token-footer" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="creator-chat__games-section creator-chat__games-section--exchange" data-games-panel="exchange" hidden>
+          <div class="eazy-games-exchange" id="eazy-games-exchange-root">
+            <div class="eazy-games-exchange__header">
+              <span class="eazy-games-exchange__tokens" id="eazy-games-exchange-tokens"></span>
+            </div>
+            <div class="eazy-games-exchange__tabs">
+              <button type="button" class="eazy-games-exchange__tab is-active" data-exchange-tab="market" data-t="eazy_chat.exchange_market">Market</button>
+              <button type="button" class="eazy-games-exchange__tab" data-exchange-tab="my_listings" data-t="eazy_chat.exchange_my_listings">My listings</button>
+              <button type="button" class="eazy-games-exchange__tab" data-exchange-tab="trades" data-t="eazy_chat.exchange_trades">Trades</button>
+            </div>
+            <div class="eazy-games-exchange__panel" data-exchange-panel="market" id="eazy-games-exchange-market"></div>
+            <div class="eazy-games-exchange__panel" data-exchange-panel="my_listings" id="eazy-games-exchange-my-listings" hidden></div>
+            <div class="eazy-games-exchange__panel" data-exchange-panel="trades" id="eazy-games-exchange-trades" hidden></div>
+          </div>
+        </div>
+        <div class="creator-chat__games-section creator-chat__games-section--invite" data-games-panel="friends" hidden>
+          <div class="eazy-games-invite" id="eazy-games-invite-root">
+            <div class="eazy-games-invite__tabs" role="tablist" aria-label="Friends tabs">
+              <button type="button" class="eazy-games-invite__tab is-active" data-invite-tab="friends" data-t="eazy_chat.games_section_friends">Friends</button>
+              <button type="button" class="eazy-games-invite__tab" data-invite-tab="requests" data-t="eazy_chat.invite_requests_tab">Requests</button>
+              <button type="button" class="eazy-games-invite__tab" data-invite-tab="invites" data-t="eazy_chat.invite_invites_tab">Invites</button>
+            </div>
+            <div class="eazy-games-invite__panel" data-invite-panel="friends">
+              <div class="eazy-games-invite__grid" id="eazy-games-invite-friends-grid"></div>
+              <p class="eazy-games-invite__empty" id="eazy-games-invite-friends-empty" hidden data-t="eazy_chat.invite_friends_empty">No friends yet. Share your invite link to get started.</p>
+            </div>
+            <div class="eazy-games-invite__panel" data-invite-panel="requests" hidden>
+              <div class="eazy-games-invite__requests" id="eazy-games-invite-requests-list"></div>
+              <p class="eazy-games-invite__empty" id="eazy-games-invite-requests-empty" hidden data-t="eazy_chat.invite_requests_empty">No pending requests.</p>
+            </div>
+            <div class="eazy-games-invite__panel" data-invite-panel="invites" hidden>
+              <div class="eazy-games-invite__requests" id="eazy-games-invite-invites-list"></div>
+              <p class="eazy-games-invite__empty" id="eazy-games-invite-invites-empty" hidden data-t="eazy_chat.invite_invites_empty">No pending life invites.</p>
+            </div>
+            <div class="eazy-games-invite__footer" id="eazy-games-invite-footer">
+              <button type="button" class="eazy-games-btn eazy-games-btn--filled" id="eazy-games-invite-share-btn" data-t="eazy_chat.invite_footer_button">Invite</button>
+            </div>
+          </div>
+        </div>
+        <div class="creator-chat__games-section creator-chat__games-section--community" data-games-panel="community" hidden>
+          <div class="eazy-games-community" id="eazy-games-community-root">
+            <p class="eazy-games-community__intro" data-t="eazy_chat.games_community_intro">Games built by the eazpire community. No daily prizes — just play for fun.</p>
+            <div class="eazy-games-community__grid" id="eazy-games-community-grid"></div>
+            <p class="eazy-games-community__empty" id="eazy-games-community-empty" hidden data-t="eazy_chat.games_community_empty">No community games yet.</p>
+            <p class="eazy-games-community__status" id="eazy-games-community-status" hidden></p>
+            <div class="eazy-games-community__player" id="eazy-games-community-player" hidden>
+              <button type="button" class="eazy-games-btn eazy-games-btn--ghost" id="eazy-games-community-back" data-t="eazy_chat.games_community_back">Back to list</button>
+              <div id="creator-chat-games-community-root"></div>
+            </div>
+            <p class="eazy-games-community__dev-link">
+              <a href="https://play.eazpire.com/auth/login" target="_blank" rel="noopener noreferrer" data-t="eazy_chat.games_community_dev_portal">Build your own game on play.eazpire.com</a>
+            </p>
+          </div>
+        </div>
+        <dialog id="creator-chat-games-rules-dialog" class="creator-chat__games-rules-dialog">
+          <div class="creator-chat__games-rules-dialog__surface">
+            <div class="creator-chat__games-rules-dialog__head">
+              <h4 class="creator-chat__games-rules-dialog__title" data-t="eazy_chat.games_rules_dialog_title">Daily game rules</h4>
+              <button type="button" class="creator-chat__games-rules-dialog__close" id="creator-chat-games-rules-close">Close</button>
+            </div>
+            <div class="creator-chat__games-rules-dialog__body creator-chat__scroll-thin">
+              <p data-t="eazy_chat.games_rules_p1">Goal: find all matching pairs on the board. Each turn you flip two tiles; if they do not match, they flip back after a moment.</p>
+              <p data-t="eazy_chat.games_rules_p2">After you tap Start, you get a short peek at every tile, then they hide and the countdown runs. Finish before time hits zero.</p>
+              <p data-t="eazy_chat.games_rules_p3">Each non-matching pair counts as one wrong guess. You only have a limited number before the round ends — shown as flames next to the timer.</p>
+              <p data-t="eazy_chat.games_rules_p4">About a 25% chance to win loot when you complete the round in time. Wins now roll collection cards only into your Collection. Trade duplicates on the Exchange with trade tokens. One prize-capable play per customer per calendar day unless admin replay mode applies.</p>
+              <p class="creator-chat__games-rules-dynamic" id="creator-chat-games-rules-dynamic"></p>
+              <p data-t="eazy_chat.games_rules_attempt_note">Pair attempts, wrong-guess limit, and time depend on today's puzzle; values are enforced server-side.</p>
+            </div>
+          </div>
+        </dialog>
+
+        <div class="eazy-card-modal" id="eazy-card-viewer-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="eazy-card-viewer-title">
+          <div class="eazy-card-modal__backdrop" data-cards-close></div>
+          <div class="eazy-card-modal__panel">
+            <header class="eazy-card-modal__head">
+              <h4 id="eazy-card-viewer-title" data-t="eazy_chat.cards_viewer_title">Card Viewer</h4>
+              <button type="button" class="eazy-card-modal__close" data-cards-close aria-label="Close">×</button>
+            </header>
+            <div class="eazy-card-modal__body">
+              <div class="eazy-card-viewer__card" id="eazy-card-viewer-card"></div>
+              <p class="eazy-card-viewer__meta" id="eazy-card-viewer-meta"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="eazy-card-modal" id="eazy-card-market-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="eazy-card-market-title">
+          <div class="eazy-card-modal__backdrop" data-cards-close></div>
+          <div class="eazy-card-modal__panel">
+            <header class="eazy-card-modal__head">
+              <h4 id="eazy-card-market-title" data-t="eazy_chat.cards_market_title">Offer a card</h4>
+              <button type="button" class="eazy-card-modal__close" data-cards-close aria-label="Close">×</button>
+            </header>
+            <div class="eazy-card-modal__body">
+              <p class="eazy-card-market__status" id="eazy-card-market-status"></p>
+              <div class="eazy-card-market__list" id="eazy-card-market-offer-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="eazy-card-modal" id="eazy-card-send-friend-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="eazy-card-send-friend-title">
+          <div class="eazy-card-modal__backdrop" data-cards-close></div>
+          <div class="eazy-card-modal__panel">
+            <header class="eazy-card-modal__head">
+              <h4 id="eazy-card-send-friend-title" data-t="eazy_chat.cards_send_friend">Send to friend</h4>
+              <button type="button" class="eazy-card-modal__close" data-cards-close aria-label="Close">×</button>
+            </header>
+            <div class="eazy-card-modal__body">
+              <p id="eazy-card-send-friend-text"></p>
+              <input type="text" id="eazy-card-send-friend-input" class="eazy-card-send-friend__input" readonly />
+              <button type="button" class="eazy-games-btn" id="eazy-card-send-friend-copy" data-t="eazy_chat.cards_send_friend_copy">Copy link</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="eazy-card-modal" id="eazy-card-trade-review-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="eazy-card-trade-review-title">
+          <div class="eazy-card-modal__backdrop" data-cards-close></div>
+          <div class="eazy-card-modal__panel">
+            <header class="eazy-card-modal__head">
+              <h4 id="eazy-card-trade-review-title" data-t="eazy_chat.cards_trade_review">Trade review</h4>
+              <button type="button" class="eazy-card-modal__close" data-cards-close aria-label="Close">×</button>
+            </header>
+            <div class="eazy-card-modal__body">
+              <p class="eazy-card-trade-review__status" id="eazy-card-trade-review-status"></p>
+              <div id="eazy-card-trade-review-body"></div>
+              <div class="eazy-card-trade-review__actions">
+                <button type="button" class="eazy-games-btn" id="eazy-card-trade-review-accept" data-t="eazy_chat.exchange_accept">Accept</button>
+                <button type="button" class="eazy-games-btn eazy-games-btn--ghost" id="eazy-card-trade-review-decline" data-t="eazy_chat.exchange_decline">Decline</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="creator-chat__view creator-chat__view--artifacts" id="creator-chat-view-artifacts">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title" data-t="eazy_chat.artifacts_title">EAZPIRE Artifacts</h3>
+          </div>
+          
+        </div>
+        <header class="creator-chat__artifacts-subheader" aria-label="EAZPIRE Artifacts">
+          <div class="eaz-artifacts-carousel" id="eaz-artifacts-carousel" role="tablist">
+            <div class="eaz-artifacts-carousel__primary">
+              <button type="button" class="eaz-artifacts-carousel__item is-active" data-artifacts-section="collection" role="tab" aria-selected="true" title="NFTs">
+                <svg class="eaz-artifacts-carousel__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <span class="eaz-artifacts-carousel__label" data-t="eazy_chat.artifacts_section_nfts">Collection</span>
+              </button>
+              <button type="button" class="eaz-artifacts-carousel__item" data-artifacts-section="outfit" role="tab" aria-selected="false" title="Outfit">
+                <svg class="eaz-artifacts-carousel__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2l3 4h5l-4 3 2 5-6-4-6 4 2-5-4-3h5z"/><path d="M8 14h8v8H8z"/></svg>
+                <span class="eaz-artifacts-carousel__label" data-t="eazy_chat.artifacts_section_outfit">Outfit</span>
+              </button>
+            </div>
+            <div class="eaz-artifacts-carousel__actions">
+              <button type="button" class="eaz-artifacts-carousel__item eaz-artifacts-carousel__item--icon-only" data-artifacts-section="exchange" role="tab" aria-selected="false" title="Exchange">
+                <svg class="eaz-artifacts-carousel__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+                <span class="eaz-artifacts-carousel__label" data-t="eazy_chat.artifacts_section_exchange">Exchange</span>
+              </button>
+              <button type="button" class="eaz-artifacts-carousel__item eaz-artifacts-carousel__item--icon-only" data-artifacts-section="marketplace" role="tab" aria-selected="false" title="Marketplace">
+                <svg class="eaz-artifacts-carousel__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M9 13v4M15 13v4"/></svg>
+                <span class="eaz-artifacts-carousel__label" data-t="eazy_chat.artifacts_section_marketplace">Marketplace</span>
+              </button>
+            </div>
+          </div>
+        </header>
+        <nav class="eaz-artifacts-section-subnav" id="eaz-artifacts-exchange-subnav" role="tablist" aria-label="Exchange views" hidden>
+          <button type="button" class="eaz-artifacts-section-subnav__btn is-active" data-artifacts-exchange-sub="market" role="tab" aria-selected="true" data-t="eazy_chat.artifacts_exchange_market">Market</button>
+          <button type="button" class="eaz-artifacts-section-subnav__btn" data-artifacts-exchange-sub="mine" role="tab" aria-selected="false" data-t="eazy_chat.artifacts_exchange_my_listings">My Listings</button>
+        </nav>
+        <nav class="eaz-artifacts-section-subnav" id="eaz-artifacts-market-subnav" role="tablist" aria-label="Marketplace views" hidden>
+          <button type="button" class="eaz-artifacts-section-subnav__btn is-active" data-artifacts-market-sub="buy" role="tab" aria-selected="true" data-t="eazy_chat.artifacts_market_buy">Buy</button>
+          <button type="button" class="eaz-artifacts-section-subnav__btn" data-artifacts-market-sub="sell" role="tab" aria-selected="false" data-t="eazy_chat.artifacts_market_sell">Sell</button>
+        </nav>
+        <div class="eaz-artifacts-slot-filters" id="eaz-artifacts-slot-filters"></div>
+        <div class="eaz-artifacts-claim-banner" id="eaz-artifacts-claim-banner" hidden role="status" aria-live="polite">
+          <span class="eaz-artifacts-claim-banner__spinner" id="eaz-artifacts-claim-banner-spinner" hidden aria-hidden="true"></span>
+          <span id="eaz-artifacts-claim-banner-text"></span>
+          <a class="eaz-artifacts-claim-banner__login" id="eaz-artifacts-claim-banner-login" href="#" hidden data-t="eazy_chat.artifacts_claim_sign_in">Sign in</a>
+        </div>
+        <div class="creator-chat__artifacts-body">
+          <div data-artifacts-panel="collection">
+            <div class="eaz-artifacts-nfts__grid" id="eaz-artifacts-nfts-grid"></div>
+            <p class="eaz-artifacts-empty" id="eaz-artifacts-nfts-empty" hidden data-t="eazy_chat.artifacts_collection_empty">No artifacts yet. Scan a product QR to claim.</p>
+          </div>
+          <div data-artifacts-panel="outfit" hidden>
+            <div id="eaz-artifacts-outfit-root"></div>
+          </div>
+          <div data-artifacts-panel="exchange" hidden>
+            <p class="eaz-artifacts-exchange__tokens" id="eaz-artifacts-exchange-tokens"></p>
+            <div id="eaz-artifacts-exchange-root"></div>
+          </div>
+          <div data-artifacts-panel="marketplace" hidden>
+            <div id="eaz-artifacts-marketplace-root"></div>
+          </div>
+        </div>
+        <div class="eaz-artifacts-wear-promo-wrap" id="eaz-artifacts-wear-promo-wrap" hidden>
+          <div class="eaz-artifacts-wear-promo" id="eaz-artifacts-wear-promo" role="button" tabindex="0" aria-label="Unlock eazpire Wear Now">
+            <img class="eaz-artifacts-wear-promo__logo" src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazpire-wear-logo.png?v=" alt="" width="180" height="63" decoding="async">
+            <span class="eaz-artifacts-wear-promo__label" data-t="eazy_chat.artifacts_unlock_wear_now">Unlock eazpire Wear Now</span>
+          </div>
+        </div>
+        <footer class="eaz-artifacts-admin-footer" id="eaz-artifacts-admin-footer" hidden data-eaz-artifacts-admin="true">
+          <button type="button" class="eaz-artifacts-admin-footer__btn" id="eaz-artifacts-admin-scan-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+            <span data-t="eazy_chat.artifacts_admin_scan_qr">Scan QR</span>
+          </button>
+        </footer>
+        <div class="eaz-artifacts-nft-modal" id="eaz-artifacts-nft-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="eaz-artifacts-nft-modal-title">
+          <div class="eaz-artifacts-nft-modal__backdrop" id="eaz-artifacts-nft-modal-backdrop"></div>
+          <div class="eaz-artifacts-nft-modal__card" id="eaz-artifacts-nft-modal-card" tabindex="-1">
+            <div class="eaz-artifacts-nft-modal__header">
+              <h4 id="eaz-artifacts-nft-modal-title" data-t="eazy_chat.artifacts_item_preview_title">Artifact</h4>
+              <button type="button" class="eaz-artifacts-nft-modal__close" id="eaz-artifacts-nft-modal-close" aria-label="Close">×</button>
+            </div>
+            <div class="eaz-artifacts-nft-modal__body">
+              <div class="eaz-artifacts-nft-modal__art" id="eaz-artifacts-nft-modal-art"></div>
+              <dl class="eaz-artifacts-nft-modal__meta" id="eaz-artifacts-nft-modal-meta"></dl>
+            </div>
+            <footer class="eaz-artifacts-nft-modal__footer">
+              <div class="eaz-artifacts-nft-modal__actions" id="eaz-artifacts-nft-modal-actions"></div>
+            </footer>
+          </div>
+        </div>
+        <div class="eaz-artifacts-qr-modal" id="eaz-artifacts-qr-modal" hidden aria-hidden="true" role="dialog" aria-labelledby="eaz-artifacts-qr-modal-title">
+          <div class="eaz-artifacts-qr-modal__backdrop" id="eaz-artifacts-qr-modal-backdrop"></div>
+          <div class="eaz-artifacts-qr-modal__card">
+            <div class="eaz-artifacts-qr-modal__header">
+              <h4 id="eaz-artifacts-qr-modal-title" data-t="eazy_chat.artifacts_admin_qr_title">Test QR Claim</h4>
+              <button type="button" class="eaz-artifacts-qr-modal__close" id="eaz-artifacts-qr-modal-close" aria-label="Close">×</button>
+            </div>
+            <p class="eaz-artifacts-qr-modal__hint" id="eaz-artifacts-qr-modal-hint"></p>
+            <div class="eaz-artifacts-qr-modal__loading" id="eaz-artifacts-qr-modal-loading" hidden>
+              <div class="eaz-artifacts-qr-modal__spinner" aria-hidden="true"></div>
+              <p class="eaz-artifacts-qr-modal__loading-text" data-t="eazy_chat.artifacts_admin_qr_loading">Creating test QR…</p>
+            </div>
+            <img class="eaz-artifacts-qr-modal__img" id="eaz-artifacts-qr-modal-img" alt="" width="280" height="280" hidden/>
+            <div class="eaz-artifacts-qr-modal__mint-host" id="eaz-artifacts-qr-modal-mint-host" hidden></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="creator-chat__view creator-chat__view--functions" id="creator-chat-view-functions">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title">Functions</h3>
+            <div class="eazy-fn-info">
+              <button type="button" class="eazy-fn-info__btn" id="eazy-fn-info-btn" aria-label="Info">
+                <svg viewBox="0 0 128 128" width="30" height="30" aria-hidden="true">
+                  <defs><linearGradient id="fn-eazy-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a2a"/><stop offset="1" stop-color="#f97316"/></linearGradient></defs>
+                  <path d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z" fill="url(#fn-eazy-grad)"/>
+                  <path d="M56 39c-15 6-24 20-24 35 0 19 16 34 36 34 20 0 36-16 36-36 0-21-17-38-38-38-4.3 0-8.4.7-10 .9Z" fill="#fff"/>
+                  <circle cx="72" cy="62" r="6" fill="#f97316"/><circle cx="90" cy="54" r="5" fill="#f97316"/>
+                  <circle cx="50" cy="28" r="7" fill="url(#fn-eazy-grad)"/>
+                </svg>
+              </button>
+              <div class="eazy-fn-info__bubble" id="eazy-fn-info-bubble"></div>
+            </div>
+          </div>
+          
+        </div>
+        <div id="eazy-functions-grid" class="eazy-fn__container" data-eazy-guide="chat-functions"></div>
+      </div>
+
+      <div class="creator-chat__view creator-chat__view--mascot" id="creator-chat-view-mascot">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title">Mascot</h3>
+            <span class="eazy-header-avatar" aria-hidden="true">
+              <svg viewBox="0 0 128 128" width="30" height="30">
+                <defs><linearGradient id="eazy-hdr-mascot" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a2a"/><stop offset="1" stop-color="#f97316"/></linearGradient></defs>
+                <path d="M30 62c0-26 20-44 44-44 22 0 38 16 38 38 0 25-19 44-44 44-5 0-10-.8-14.5-2.2l-16.5 9.2 5.8-16.8C35.7 83 30 73.2 30 62Z" fill="url(#eazy-hdr-mascot)"/>
+                <path d="M56 39c-15 6-24 20-24 35 0 19 16 34 36 34 20 0 36-16 36-36 0-21-17-38-38-38-4.3 0-8.4.7-10 .9Z" fill="#fff"/>
+                <circle cx="72" cy="62" r="6" fill="#f97316"/><circle cx="90" cy="54" r="5" fill="#f97316"/>
+                <circle cx="50" cy="28" r="7" fill="url(#eazy-hdr-mascot)"/>
+              </svg>
+            </span>
+          </div>
+          
+        </div>
+        <div class="eazy-mascot-tab" id="eazy-mascot-tab"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="creator-chat-upload-modal" class="creator-chat__upload-modal" aria-hidden="true" role="dialog">
+    <div class="creator-chat__upload-content">
+      <div class="creator-chat__upload-header">
+        <h4>Upload image</h4>
+        <button type="button" class="creator-chat__upload-close" id="creator-chat-upload-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="creator-chat__upload-zone" id="creator-chat-upload-zone">
+        <input type="file" accept="image/*" id="creator-chat-upload-input" style="display:none" />
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Click or drag image here</p>
+      </div>
+      <div class="creator-chat__upload-preview" id="creator-chat-upload-preview" style="display:none">
+        <img id="creator-chat-upload-img" alt="Preview" />
+        <button type="button" class="creator-chat__upload-remove" id="creator-chat-upload-remove">Remove</button>
+      </div>
+      <button type="button" class="creator-chat__upload-confirm" id="creator-chat-upload-confirm" disabled>Apply</button>
+    </div>
+  </div>
+
+  <div id="eazy-confirm-modal" class="eazy-confirm" aria-hidden="true" role="dialog" style="display:none">
+    <div class="eazy-confirm__card">
+      <div class="eazy-confirm__icon" id="eazy-confirm-icon"></div>
+      <h4 class="eazy-confirm__title" id="eazy-confirm-title"></h4>
+      <p class="eazy-confirm__text" id="eazy-confirm-text"></p>
+      <div class="eazy-confirm__actions">
+        <button type="button" class="eazy-confirm__btn eazy-confirm__btn--cancel" id="eazy-confirm-cancel">Cancel</button>
+        <button type="button" class="eazy-confirm__btn eazy-confirm__btn--confirm" id="eazy-confirm-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="creator-chat-limit-modal" class="creator-chat__limit-modal" aria-hidden="true" role="dialog" aria-labelledby="creator-chat-limit-title" style="display:none">
+    <div class="creator-chat__limit-content">
+      <h4 id="creator-chat-limit-title">Limit reached</h4>
+      <p class="creator-chat__limit-text">Your chat quota for this hour has been used up.</p>
+      <p class="creator-chat__limit-timer">Reset in <span id="creator-chat-limit-reset">--:--</span></p>
+      <p class="creator-chat__limit-hint">You can still chat with our support - use the chat icon at the bottom right.</p>
+      <button type="button" id="creator-chat-limit-ok" class="creator-chat__limit-ok">Understood</button>
+    </div>
+  </div>
+</div>
+
+https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-chat-icon.css
+https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-chat-widget.css
+
+<link rel="stylesheet" href="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-prize-cards.css?v=">
+
+<script>
+  window.__EAZY_GUEST = true;
+  window.CreatorI18n = window.CreatorI18n || {};
+  window.CreatorI18n.eazy_sfx_test = Test fart/burp;
+  Object.assign(window.CreatorI18n, {
+    chat_sign_in_now: Sign in now,
+    balance_free_pool_cap: Free pool max:  EAZ,
+    chat_flow_override_prompt: You are currently in a function selection flow. Do you want to continue via chat instead?,
+    chat_flow_override_yes: Yes, continue via chat,
+    chat_flow_override_no: No, continue selection,
+    chat_choice_generate_1: Let's get started!,
+    chat_choice_generate_2: Alright, go for it!,
+    chat_choice_generate_3: Let's do it!,
+    chat_choice_generate_4: Work your magic, Eazy!,
+    chat_choice_generate_5: Let's go!,
+    chat_choice_generate_6: Launch it!,
+    chat_choice_generate_7: Show me some magic!,
+    chat_choice_generate_8: Run it, Eazy!,
+    chat_choice_generate_9: Full speed ahead!,
+    chat_choice_generate_10: Let's do this!,
+    chat_choice_adjust_1: I am not done yet,
+    chat_choice_adjust_2: Hold on, one more tweak,
+    chat_choice_adjust_3: I want to adjust a bit more,
+    chat_choice_adjust_4: Quick step back, please,
+    chat_choice_adjust_5: Let me review once more,
+    chat_choice_adjust_6: Almost there, not yet,
+    chat_choice_adjust_7: Just one small thing...,
+    chat_choice_adjust_8: I have another idea,
+    chat_choice_adjust_9: Wait, something is missing,
+    chat_choice_adjust_10: One final polish!,
+    chat_choice_cancel_1: I changed my mind,
+    chat_choice_cancel_2: Not in the mood right now,
+    chat_choice_cancel_3: I will try again later,
+    chat_choice_cancel_4: Not today, Eazy,
+    chat_choice_cancel_5: Maybe another time,
+    chat_choice_cancel_6: I need inspiration first,
+    chat_choice_cancel_7: Taking a break for today,
+    chat_choice_cancel_8: No, let's skip it,
+    chat_choice_cancel_9: My brain says no,
+    chat_choice_cancel_10: It was just a test,
+    chat_gen_quote_1: Your masterpiece will be ready in a few seconds!,
+    chat_gen_quote_2: Da Vinci is getting to work...,
+    chat_gen_quote_3: Picasso would be impressed!,
+    chat_gen_quote_4: Michelangelo rolled up his sleeves.,
+    chat_gen_quote_5: Banksy would approve!,
+    chat_gen_quote_6: Van Gogh picked up the brush...,
+    chat_gen_quote_7: Andy Warhol could not do it better!,
+    chat_gen_quote_8: Frida Kahlo nods in approval.,
+    chat_gen_quote_9: Monet is already mixing colors...,
+    chat_gen_quote_10: Rembrandt is studying your draft.,
+    chat_gen_quote_11: Salvador Dali calls this beautifully surreal!,
+    chat_gen_quote_12: Keith Haring is dancing with joy!,
+    chat_gen_quote_13: Bob Ross: 'Happy little design!',
+    chat_gen_quote_14: Basquiat vibes with your style.,
+    chat_gen_quote_15: Klimt is bringing out the gold.,
+    chat_gen_done_quote_1: Ta-da! Your design is ready!,
+    chat_gen_done_quote_2: Voila - a masterpiece!,
+    chat_gen_done_quote_3: Done! Even Picasso applauds.,
+    chat_gen_done_quote_4: Your design is fresh out of the oven!,
+    chat_guest_login_1: Hey! I am Eazy, your personal assistant. Sign in to use all my features - I can help with designs, outfits, gift cards and much more!,
+    chat_guest_login_2: Psst... exclusive features are waiting behind login! Create designs, build outfits, discover gift cards - and I will guide you through everything.,
+    chat_guest_login_3: Want to see what I can do? Log in and be amazed! Design generator, outfit suggestions, personal recommendations - there is something for everyone.,
+    chat_guest_login_4: I have many cool things ready for you! But first, I need you on the other side of login. Come on, it only takes 10 seconds!,
+    chat_guest_login_5: Imagine your own design on a product. Or an outfit that fits you perfectly. All that and more is waiting after login!,
+    chat_guest_login_6: I am getting bored here alone! Sign in and let's find your next favorite outfit, create a design, or redeem a gift card together.,
+    chat_guest_function_1: Nice choice! This feature is waiting for you behind login. Sign in and start right away!,
+    chat_guest_function_2: Great pick! But this feature is available only for signed-in users. Log in - it takes just a moment!,
+    chat_guest_function_3: Hey, this is one of my favorite features! Log in and I will show you what it can do.,
+    chat_guest_function_4: Almost there! Just log in quickly, then we can really get started.,
+    chat_guest_function_5: This feature is really cool - but I can only show it to signed-in users. Come to the other side!,
+    chat_guest_function_6: You have great taste! Sign in quickly and we will start with this feature right away.,
+    chat_network_error_retry: Network error. Please try again.,
+    ui_messages_of: of,
+    ui_messages: messages,
+    ui_reset_in: Reset in,
+    ui_limit_reached: Limit reached,
+    ui_limit_quota_used: Your chat quota for this hour has been used up.,
+    ui_limit_reset_in: Reset in,
+    ui_limit_support_hint: You can still chat with our support - use the chat icon at the bottom right.,
+    ui_limit_understood: Understood,
+    chat_notifications_none_unread: No unread notifications,
+    chat_notifications_none_read: No read notifications,
+    chat_notifications_default_title: Notification,
+    support_tab_prefix: Live Support:,
+    support_agent_online: Online,
+    support_agent_name: Tobias,
+    support_survey_solved: Could we solve your problem?,
+    support_survey_rating: How satisfied were you with the support?,
+    support_survey_feedback_ask: Would you like to tell us anything else?,
+    support_survey_thanks: Thank you for your feedback! You can chat with Eazy again now.,
+    support_yes: Yes,
+    support_no: No,
+    chat_support_feedback_prompt: Please write your message below.,
+    notif_badge_generated: Generate,
+    notif_badge_generated_classic: Generate – Classic,
+    notif_badge_generated_pattern: Generate – Pattern,
+    notif_badge_generated_all_over: Generate – All-Over,
+    notif_badge_generated_full_coverage: Generate – Full Coverage,
+    notif_badge_generated_panorama: Generate – Panorama,
+    notif_badge_saved: Saved,
+    notif_badge_uploaded: Upload,
+    notif_badge_published: Publish,
+    notif_badge_hero_image: Hero Image,
+    notif_badge_merged: Merge,
+    notif_badge_amazon_publish: Amazon Publish,
+    notif_badge_amazon_unpublish: Amazon Remove,
+    notif_badge_removed_product: Product removed,
+    notif_badge_removed_design: Design removed,
+    notif_badge_unknown: Notification,
+    notif_today: Today,
+    notif_yesterday: Yesterday,
+    notif_mark_all_read: Mark all as read,
+    chat_system_publish_job: System publish,
+    chat_no_active_jobs: ,
+    chat_job_status_done: ,
+    chat_job_status_failed: ,
+    chat_job_status_running: ,
+    chat_job_kind_system_publish: ,
+    chat_job_kind_automation_design: ,
+    chat_job_device_wear: ,
+    chat_design_flow_start_intro: Let's create a design! I will guide you step by step through the process.,
+    chat_next: Next,
+    chat_delete: Delete,
+    chat_action: Action,
+    chat_design_flow_step_1_intro: Choose the product for which your design should be created.\n\n,
+    chat_design_flow_step_1_tip: Tip: Classic designs work well across all products. If you are unsure, choose \"All products\" for the most universal result.,
+    chat_design_flow_step_1_title: Step 1 - Product,
+    chat_design_flow_step_1_loading_products: Loading products...,
+    chat_design_flow_step_1_all_products: All products,
+    chat_design_flow_step_1_select_product: Step 1 - Choose product,
+    chat_design_flow_step_2_intro: What type of design should it be?\n\n,
+    chat_design_flow_step_2_classic: • Classic - Centered motif, suitable for all products\n,
+    chat_design_flow_step_2_pattern: • Pattern - Repeating pattern, ideal for t-shirts and accessories\n,
+    chat_design_flow_step_2_all_over: • All-Over - Design covers the entire print area\n,
+    chat_design_flow_step_2_full_coverage: • Full-Coverage - Like all-over, reaches to the edge\n,
+    chat_design_flow_step_2_panorama: • Panorama - Wide format, perfect for mugs and broad surfaces,
+    chat_design_flow_step_2_title: Step 2 - Design type,
+    chat_design_flow_step_3_intro: Describe your design or upload a reference image - or both!\n\n,
+    chat_design_flow_step_3_prompt_only: 📝 Prompt only - Describe what you imagine\n,
+    chat_design_flow_step_3_image_only: 🖼️ Image only - Upload a reference image as a template\n,
+    chat_design_flow_step_3_both: ✨ Both - Image + description for the best result\n\n,
+    chat_design_flow_step_3_example_prefix: Example: \",
+    chat_design_flow_step_3_use_example: Use example,
+    chat_design_flow_step_3_another_suggestion: Another suggestion,
+    chat_design_flow_step_3_prompt_placeholder: Describe your design...,
+    chat_design_flow_step_3_image_uploaded: Image uploaded ✓,
+    chat_design_flow_step_3_upload_optional: Upload image (optional),
+    chat_design_flow_step_3_title: Step 3 - Description and image,
+    chat_design_flow_step_3_uploaded_image_alt: Uploaded image,
+    chat_design_flow_step_4_intro: Almost done! Choose your settings.\n\n,
+    chat_design_flow_step_4_defaults: ⚙️ Default settings:\n• Format: Portrait\n• Content: Design + Text\n• Background: Transparent\n\n,
+    chat_design_flow_step_4_custom_hint: In \"More options\" you can customize format (Portrait, Landscape, Square), content type, background color and styles.,
+    chat_design_flow_step_4_default_settings: Default settings,
+    chat_design_flow_step_4_more_options: More options,
+    chat_design_flow_step_1_products_fallback: Products could not be loaded. We are using "All products".,
+    chat_design_flow_styles_count_label: styles,
+    chat_design_flow_styles_choose: Choose styles,
+    chat_design_flow_ready_to_generate: Your design can now be generated!,
+    chat_design_flow_generate_start_error: Error starting generation: ,
+    chat_error_unknown: Unknown error,
+    chat_design_flow_generate_took_too_long: Generation is taking too long. You will find the result in your notifications.,
+    chat_design_flow_generate_error: Generation error: ,
+    chat_design_flow_design_location_hint: You can always find your designs in notifications or in the creator/shop area under "My Creations".,
+    chat_design_flow_find_later: No worries! You can find your design anytime in notifications or in \"My Creations\".,
+    chat_design_flow_save_intro: Before saving your design, I need a few details.,
+    chat_design_flow_creator_profile_choice: You have multiple creator profiles. Under which name would you like to save the design?\n\n,
+    chat_design_flow_creator_name_public_hint: The selected creator name will be shown publicly when you publish the design.,
+    chat_design_flow_select_creator: Select creator,
+    chat_design_flow_visibility_label: Visibility,
+    chat_design_flow_no_active_design_to_save: Error: No active design found to save.,
+    chat_design_flow_save_error: Error saving: ,
+    chat_design_flow_save_network_error: Network error while saving: ,
+    chat_design_flow_save_took_too_long: Saving takes longer than expected. Check the status in notifications.,
+    chat_retry_prompt: Please try again.,
+    chat_delete: Delete,
+    chat_action: Action,
+    ui_games_tab: Games,
+    ui_verify_tab: Verify,
+    games_daily_intro: Daily memory match on community designs: match every pair before time runs out. Difficulty, peek length, and attempt limits are tuned by Eazy — tap the info icon for details.,
+    games_play: Start game,
+    games_community_intro: Games built by the eazpire community. No daily prizes — just play for fun.,
+    games_community_empty: No community games yet.,
+    games_community_badge: Community,
+    games_community_play: Play,
+    games_community_loading: Loading community games…,
+    games_community_error: Could not load community games.,
+    games_community_back: Back to list,
+    games_community_dev_portal: Build your own game on play.eazpire.com,
+    games_login: Sign in to play the daily game.,
+    games_already_played: You already played today.,
+    games_outcome_win: You won a prize! Check Collection in Games or Gift Cards → Won.,
+    games_outcome_loss: Not this time. Come back tomorrow.,
+    games_outcome_failed: We could not issue the prize right now. Please try again later or contact support.,
+    games_pending: Still processing your last play — try again in a moment.,
+    games_prize_label: Prize value,
+    games_schema_unavailable: Daily games are temporarily unavailable. Please try again soon.,
+    games_memory_daily_intro: Flip two tiles at a time. Non-matches flip back after a moment. Tap Start on the board when you are ready — then you get a short peek before the timer runs.,
+    games_memory_resume: You have a game in progress — continuing.,
+    games_memory_preview: Peek — cards hide when the countdown ends.,
+    games_memory_preview_timer_frozen: Timer starts after peek,
+    games_memory_timer: Time left,
+    games_memory_timer_hint: Beat the clock — memorize quickly.,
+    games_memory_preview_hint: Study the grid.,
+    games_memory_time_up: Time's up!,
+    games_memory_forfeit: Give up,
+    games_memory_board_error: Could not load the game board.,
+    games_memory_pool_empty: Not enough designs available for today's puzzle.,
+    games_admin_unlimited_hint: Admin mode: you can play unlimited full rounds today; prizes are issued like for any other winner.,
+    games_rules_info_aria: How the daily game works,
+    games_rules_dialog_title: Daily game rules,
+    games_rules_p1: Goal: find all matching pairs on the board. Each turn you flip two tiles; if they do not match, they flip back after a moment.,
+    games_rules_p2: After you tap Start, you get a short peek at every tile, then they hide and the countdown runs. Finish before time hits zero.,
+    games_rules_p3: Each non-matching pair counts as one wrong guess. You only have a limited number before the round ends — shown as flames next to the timer.,
+    games_rules_p4: About a 25% chance to win loot when you complete the round in time. Wins now roll collection cards only into your Collection. Trade duplicates on the Exchange with trade tokens. One prize-capable play per customer per calendar day unless admin replay mode applies.,
+    games_rules_attempt_note: Pair attempts, wrong-guess limit, and time depend on today's puzzle; values are enforced server-side.,
+    games_rules_live_caps: Today's puzzle: up to  pair attempts after your peek; s on the play clock.,
+    games_rules_wrong_cap: Wrong guesses (non-matching pairs) allowed this round: .,
+    games_memory_pregame_timer: Ready when you are,
+    games_memory_pregame_hint: The board is hidden under the tiles. Tap Start when you are ready — then you get a peek before the timer.,
+    games_memory_strikes_aria: Wrong guesses remaining — each flame goes out after a non-matching pair.,
+    games_connect_daily_intro: Place four in a row on the 5×5 grid before Eazy does. You have four minutes — a draw counts as a loss.,
+    games_connect_resume: You have a game in progress — continuing.,
+    games_connect_board_error: Could not load the game board.,
+    games_connect_your_turn: Your turn,
+    games_connect_eazy_turn: Eazy is thinking…,
+    games_connect_timer: Time left,
+    games_connect_time_up: Time's up!,
+    games_connect_forfeit: Give up,
+    games_connect_pregame_hint: Tap Start when you are ready.,
+    games_connect_tutorial_badge: Quick tutorial,
+    games_connect_tutorial_intro: Watch a short example — four in a row wins.,
+    games_connect_tutorial_step1: You play X and move first.,
+    games_connect_tutorial_step2: Eazy responds with O after each of your moves.,
+    games_connect_tutorial_step3: Build four in a row — horizontal, vertical, or diagonal.,
+    games_connect_tutorial_step4: Eazy tries to block you.,
+    games_connect_tutorial_step5: Three in a row — one more wins!,
+    games_connect_tutorial_step6: Keep an eye on Eazy's line too.,
+    games_connect_tutorial_step7: Four X in a row wins the round!,
+    games_connect_tutorial_done: Ready for today's puzzle? Start when you are.,
+    games_connect_tutorial_skip: Don't show this tutorial again,
+    games_connect_rules_live: Today's puzzle: × grid,  in a row, s total. A draw counts as a loss.,
+    games_connect_win_stats_line: Moves:  · Round time: s,
+    games_anim_win_title: You won!,
+    games_anim_loss_title: So close!,
+    games_anim_loss_sub: Time ran out, too many attempts, or no prize this round — try again when you can.,
+    games_prize_open_card: Open gift card,
+    games_win_stats_line: Attempts:  · Pairs:  · Round wall-clock: s,
+    "creator.guide.tool_click": Click,
+    "creator.guide.tool_screenshot": Screenshot,
+    "creator.guide.tool_prompt": Prompt,
+    "creator.guide.tool_ask": Explain,
+    "creator.guide.entered": Guide Mode on! Long-press any element, drag a screenshot, or ask me.,
+    "creator.guide.exit_hint": Guide Mode — click Eazy to exit,
+    "creator.guide.discover": Double-click or double-tap me while snapped to enter Guide Mode.,
+    "creator.guide.loading": Let me look at that…,
+    "creator.guide.error": Sorry, I could not explain that right now.,
+    "creator.guide.empty_session": Long-press an element, capture a screenshot, or type a question.,
+    "creator.guide.capturing": Capturing screenshot…,
+    "creator.guide.screenshot_failed": Could not capture screenshot.,
+    "creator.guide.voice_unsupported": Voice input is not supported in this browser.,
+    "creator.guide.prompt_placeholder": Ask about what you see…
+  });
+  window.CreatorI18n.eazy_verify = {
+    title: Eazy Verify,
+    tab_designs: Designs,
+    tab_products: Products,
+    available: Available,
+    completed: Completed,
+    verified: Verified,
+    rejected: Rejected,
+    terms_title: Community verification,
+    terms_body: You must be 16 or older. Help keep our marketplace safe by reviewing designs and products fairly.,
+    terms_confirm: I confirm I am 16+ and accept the community guidelines,
+    terms_accept: Continue,
+    empty: Nothing to review right now. Check back later.,
+    untitled: Untitled,
+    question: Does this meet our community and marketplace standards?,
+    approve: Approve,
+    not_sure: Not Sure,
+    reject_toggle: Reject,
+    reject_confirm: Confirm reject,
+    reject_note_placeholder: Optional note,
+    vote_submitted: Thanks — loading next item…,
+    vote_error: Could not submit vote. Try again.,
+    daily_limit: Daily review limit reached. Come back tomorrow.,
+    reason_quality_issue: Quality issue,
+    reason_legal_copyright: Copyright / legal,
+    reason_misleading_title: Misleading title,
+    reason_offensive_hateful: Offensive or hateful,
+    reason_unsafe_dangerous: Unsafe or dangerous,
+    reason_adult_sexual: Adult / sexual content,
+    reason_sensitive_political: Sensitive political content,
+    reason_not_suitable_minors: Not suitable for minors,
+    reason_other_reason: Other
+  };
+  window.EAZY_I18N = {
+    wake: Oh! I'm awake!,
+    loginGuestGreeting: Hey! I'm Eazy, your personal assistant. Sign in to use all my features — I can help you with designs, outfits, gift cards and much more!,
+    loginRequiredBtn: Sign in now,
+    phrases: [
+      Zzz... Dreaming of lots of orders...,
+      Another new customer? Zzz...,
+      Just five more minutes...,
+      I'm always here for you... when I'm awake.,
+      Got a question? Ask me when I wake up!,
+      Be right back...,
+      Quick break – back soon!
+    ].filter(Boolean),
+    giftHints: [
+      Check your notifications – a gift is waiting!,
+      Psst… a gift is waiting for you!,
+      You have unopened gifts!,
+      Eazy has something for you!
+    ].filter(Boolean)
+  };
+  window.EAZY_GIFT_HINTS = window.EAZY_I18N.giftHints.length > 0 ? window.EAZY_I18N.giftHints : null;
+</script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-messages.js" defer></script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-bot.js" defer></script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-settings.js" defer></script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-chat-icon.js" defer></script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-chat-mascot.js" defer></script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-tips.js" defer></script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-chat-actions.js" defer></script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-functions.js" defer></script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-mascot-tab.js" defer></script>
+<script id="eazy-sfx-data" type="application/json">
+  {
+    "sounds": [
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-fart-classic.mp3", "type": "fart" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-fart-quick.mp3", "type": "fart" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-fart-small.mp3", "type": "fart" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-fart-silly.mp3", "type": "fart" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-fart-common.mp3", "type": "fart" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-fart-wet.mp3", "type": "fart" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-fart-long.mp3", "type": "fart" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-fart-raspberry.mp3", "type": "fart" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-burp-belch.mp3", "type": "burp" },
+      { "url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-burp-2x.mp3", "type": "burp_double" }
+    ],
+    "voices": {
+      "fart": [
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-01.mp3", "text": "Ups, das war ich nicht, ich schwöre!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-02.mp3", "text": "Oh Gott, Entschuldigung."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-03.mp3", "text": "Das, das war der Stuhl."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-04.mp3", "text": "Hat das jemand gehört?"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-05.mp3", "text": "Sorry, sorry, sorry!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-06.mp3", "text": "Okay, das war peinlich."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-07.mp3", "text": "Ja und? Ist menschlich!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-08.mp3", "text": "Haha, der war gut!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-09.mp3", "text": "Besser raus als rein, oder?"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-10.mp3", "text": "Das war Kunst, okay?"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-11.mp3", "text": "Wer war das?! Ich wars."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-12.mp3", "text": "Bitte nicht riechen."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-13.mp3", "text": "Okay, Fenster auf."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-14.mp3", "text": "Können wir das einfach vergessen?"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-15.mp3", "text": "Ich bin eigentlich ein seriöser Assistent."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-16.mp3", "text": "Das bleibt unter uns, ja?"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-17.mp3", "text": "Mein Algorithmus hat gerade versagt."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-fart-18.mp3", "text": "Bitte, erzähl das keinem."}
+      ],
+      "burp": [
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-01.mp3", "text": "Oh, Entschuldigung, das kam unerwartet."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-02.mp3", "text": "Ups, das sollte leise sein."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-03.mp3", "text": "Sorry, zu viel Sprudel."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-04.mp3", "text": "Das war, das war ein Unfall."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-05.mp3", "text": "Oh nein, bitte ignorier das."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-06.mp3", "text": "Prost Mahlzeit!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-07.mp3", "text": "Der saß! Mindestens eine Acht."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-08.mp3", "text": "Ha! Weltklasse."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-09.mp3", "text": "Das war noch nicht mal mein bester!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-10.mp3", "text": "Auf einer Skala von eins bis zehn, locker eine Sieben."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-11.mp3", "text": "Mein Magen sagt Danke!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-12.mp3", "text": "Hoppla, da kommt noch einer. Nee, doch nicht."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-13.mp3", "text": "Das war quasi ein Kompliment an den Koch."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-14.mp3", "text": "Gesundheit! Oh warte, das war ich."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-15.mp3", "text": "Können wir so tun als wäre das nicht passiert?"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-16.mp3", "text": "Ich schwöre, ich bin sonst nicht so."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-17.mp3", "text": "Ich bin eigentlich gut erzogen."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp-18.mp3", "text": "Mein Algorithmus hat gerade gerülpst."}
+      ],
+      "burp_double": [
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp2x-01.mp3", "text": "Oh, oh nein, gleich zwei?!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp2x-02.mp3", "text": "Sorry, und nochmal sorry."},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp2x-03.mp3", "text": "Doppelschlag, tut mir leid!"},
+        {"url": "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-voice-sfx-burp2x-04.mp3", "text": "Einmal reicht nicht, oder was?!"}
+      ]
+    }
+  }
+</script>
+https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-guide-mode.css
+
+<link rel="stylesheet" href="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-verify.css?v=">
+
+<link rel="stylesheet" href="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-artifacts.css?v=">
+<link rel="stylesheet" href="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-artifacts-mint-scene.css?v=">
+<script id="eazy-guide-registry-data" type="application/json" data-src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-guide-registry.json"></script>
+<script>
+  window.__EAZ_CHAT_LAZY_SCRIPTS = [
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-verify.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-sound-effects.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-daily-memory-game.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-daily-connect-game.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-daily-simon-game.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-prize-cards.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-card-collection-ui.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-games-hub.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-games-picker.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-community-game-host.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/artifact-mint-shockwave.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-artifacts-mint-scene.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-artifacts-admin-test.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-open-wear-hub.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-artifacts-wear-promo.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-artifacts-hub.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/wardrobe-figure.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-artifacts-outfit.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-artifacts-marketplace.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/eazy-guide-mode.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-legacy-save.js",
+    "https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-chat-widget.js"
+  ];
+</script>
+<script src="https://www.eazpire.com/cdn/shop/t/182463660314/assets/eaz-chat-widget-loader.js" defer></script>

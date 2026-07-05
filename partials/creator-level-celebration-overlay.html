@@ -1,0 +1,33 @@
+<div
+  id="creatorLevelCelebrationOverlay"
+  class="creator-level-celebration"
+  hidden
+  aria-hidden="true"
+>
+  <div class="creator-level-celebration__backdrop" data-close-level-celebration tabindex="-1"></div>
+  <div
+    class="creator-level-celebration__panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="creatorLevelCelebrationTitle"
+  >
+    <button
+      type="button"
+      class="creator-level-celebration__close"
+      data-close-level-celebration
+      aria-label="Close"
+    >
+      ×
+    </button>
+    <div class="creator-level-celebration__burst" aria-hidden="true"></div>
+    <h2 id="creatorLevelCelebrationTitle" class="creator-level-celebration__title" data-celebration-title></h2>
+    <div class="creator-level-celebration__levels" data-celebration-level-row hidden>
+      <span class="creator-level-celebration__old" data-celebration-old-level></span>
+      <span class="creator-level-celebration__arrow" aria-hidden="true">→</span>
+      <span class="creator-level-celebration__new" data-celebration-new-level></span>
+    </div>
+    <p class="creator-level-celebration__name" data-celebration-level-name hidden></p>
+    <p class="creator-level-celebration__body" data-celebration-body></p>
+    <button type="button" class="creator-level-celebration__cta" data-celebration-cta hidden></button>
+  </div>
+</div>

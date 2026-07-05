@@ -936,8 +936,8 @@
 
   <div class="design-upload-modal__dialog">
     <div class="design-upload-modal__header">
-      <h3 class="design-upload-modal__title">Title</h3>
-      <button type="button" class="design-upload-modal__close" aria-label="Close aria">×</button>
+      <h3 class="design-upload-modal__title">Upload Design</h3>
+      <button type="button" class="design-upload-modal__close" aria-label="Close design upload">×</button>
     </div>
 
     <div class="design-upload-modal__body">
@@ -956,8 +956,8 @@
               </svg>
             </div>
             <div class="design-upload-placeholder__text">
-              <p>Dropzone text</p>
-              <small>Dropzone hint</small>
+              <p>Click here to select a design</p>
+              <small>PNG, JPG, SVG up to 30MB</small>
             </div>
           </div>
         </div>
@@ -991,21 +991,21 @@
       <div class="design-upload-options">
         <div class="design-upload-options__row">
           <label for="design-upload-creator-select-" class="design-upload-options__label">Creator</label>
-          <select id="design-upload-creator-select-" class="design-upload-creator-select" aria-label="Select creator">
-            <option value="">Loading creator</option>
+          <select id="design-upload-creator-select-" class="design-upload-creator-select" aria-label="Select Creator">
+            <option value="">Loading Creator...</option>
           </select>
         </div>
         <div class="design-upload-options__row">
           <span class="design-upload-options__label">Visibility</span>
           <div class="design-upload-visibility-row">
             <label class="design-upload-visibility-switch">
-              <span class="design-upload-visibility-text design-upload-visibility-text--left">Visibility private</span>
+              <span class="design-upload-visibility-text design-upload-visibility-text--left">Private</span>
               <input type="checkbox" id="design-upload-visibility-" data-visibility="public" checked aria-label="Visibility">
               <span class="design-upload-visibility-slider"></span>
-              <span class="design-upload-visibility-text design-upload-visibility-text--right">Visibility public</span>
+              <span class="design-upload-visibility-text design-upload-visibility-text--right">Public</span>
             </label>
           </div>
-          <p class="design-upload-visibility-hint">Visibility hint</p>
+          <p class="design-upload-visibility-hint">With Public, your designs can be used as inspiration by other users.</p>
         </div>
       </div>
       
@@ -1015,8 +1015,8 @@
     <div class="design-upload-modal__footer design-upload-modal__footer--shop-eazy">
       <div class="eaz-shop-upload-eazy-row" data-eaz-shop-upload-cta-wrap>
         <div class="eaz-shop-upload-eazy-speech-wrap">
-          <button type="button" class="eaz-shop-upload-eazy-speech__btn" data-eaz-shop-upload-submit aria-label="Upload eazy aria">
-            Upload eazy cta
+          <button type="button" class="eaz-shop-upload-eazy-speech__btn" data-eaz-shop-upload-submit aria-label="Upload design with Eazy">
+            Upload design
           </button>
         </div>
         <span class="eaz-shop-upload-eazy-mascot" aria-hidden="true">
@@ -1039,17 +1039,6 @@
         <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="" width="18" height="18" class="eaz-coin-icon">
         <span class="design-upload-eaz-cost-upload design-upload-eaz-cost-upload--suffix" data-eaz-cost-feature="design_upload">1 EAZ</span>
       </div>
-    </div>
-    
-    <div class="design-upload-modal__footer">
-      <button type="button" class="design-upload-modal__button design-upload-modal__button--secondary">Cancel</button>
-      <button type="button" class="design-upload-modal__button design-upload-modal__button--primary">
-        <span>Upload button</span>
-        <span class="btn-cost-inline">
-          <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="EAZ" class="eaz-coin-icon">
-          <span data-eaz-cost-feature="design_upload">1</span>
-        </span>
-      </button>
     </div>
     
   </div>

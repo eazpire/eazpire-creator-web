@@ -1,9 +1,7 @@
-{%- assign cache_bust = 'now' | date: '%s' -%}
-
-
-
-
-
+https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-modal-base.css
+https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-modal-physics.js
+https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-inspiration-modal.css
+https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-inspiration-filter-modal.js
 
 <div
   id="creator-inspiration-modal"
@@ -15,7 +13,7 @@
 >
   <div class="creator-modal__dialog creator-modal__dialog--large">
     <div class="creator-modal__header">
-      <h3 id="creator-inspiration-modal-title" class="creator-modal__title">Title</h3>
+      <h3 id="creator-inspiration-modal-title" class="creator-modal__title">Inspirations</h3>
       <button
         type="button"
         class="creator-modal__close"
@@ -33,9 +31,9 @@
             type="search"
             id="creator-inspiration-modal-search"
             class="creator-inspiration-modal__search"
-            placeholder="Search placeholder"
+            placeholder="Search designs..."
             autocomplete="off"
-            aria-label="Search aria"
+            aria-label="Search designs"
           >
           <span id="creator-inspiration-modal-count" class="creator-inspiration-modal__count">0 Designs</span>
           <button
@@ -55,10 +53,10 @@
         <!-- Scrollable Grid Container -->
         <div class="creator-inspiration-modal__grid-container" data-allow-scroll="true">
           <div id="creator-inspiration-modal-loading" class="creator-inspiration-modal__loading" style="display: none;">
-            Loading
+            Loading inspirations...
           </div>
           <div id="creator-inspiration-modal-empty" class="creator-inspiration-modal__empty" style="display: none;">
-            Empty
+            No public designs found.
           </div>
           <div id="creator-inspiration-modal-grid" class="creator-inspiration-modal__grid">
             <!-- Designs will be loaded via JavaScript -->
@@ -118,10 +116,10 @@
                 <!-- Remixes will be loaded via JavaScript -->
               </div>
               <div id="creator-inspiration-modal-remixes-loading" class="creator-inspiration-modal__remixes-loading" style="display: none;">
-                Remixes loading
+                Loading remixes...
               </div>
               <div id="creator-inspiration-modal-remixes-empty" class="creator-inspiration-modal__remixes-empty" style="display: none;">
-                Remixes empty
+                No remixes yet.
               </div>
             </div>
           </div>
@@ -179,10 +177,10 @@
                 <!-- Remixes will be loaded via JavaScript -->
               </div>
               <div id="creator-inspiration-modal-remixes-loading-mobile" class="creator-inspiration-modal__remixes-loading" style="display: none;">
-                Remixes loading
+                Loading remixes...
               </div>
               <div id="creator-inspiration-modal-remixes-empty-mobile" class="creator-inspiration-modal__remixes-empty" style="display: none;">
-                Remixes empty
+                No remixes yet.
               </div>
             </div>
           </div>
@@ -191,3 +189,5 @@
     </div>
   </div>
 </div>
+
+https://www.eazpire.com/cdn/shop/t/182463660314/assets/creator-inspiration-modal.js

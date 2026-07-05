@@ -2,37 +2,37 @@
   window.CreatorI18n = window.CreatorI18n || {};
   window.CreatorI18n.promotions = {
     new_promotion: New promotion,
-    placeholder_hint: Placeholder hint,
-    empty: Empty,
-    load_error: Load error,
-    save_error: Save error,
+    placeholder_hint: Create a time-limited discount for your products.,
+    empty: No promotions yet.,
+    load_error: Could not load promotions. Try again later.,
+    save_error: Could not save promotion.,
     delete: Delete,
-    delete_confirm: Delete confirm,
+    delete_confirm: Delete this promotion?,
     name: Name,
     description: Description,
     discount_type: Discount type,
-    discount_percent: Discount percent,
-    discount_fixed_usd: Discount fixed usd,
-    discount_value: Discount value,
-    discount_value_usd_hint: Discount value usd hint,
-    duration_days: Duration days,
-    duration_hint: Duration hint,
-    date_start: Date start,
-    date_end: Date end,
-    date_range_invalid: Date range invalid,
+    discount_percent: Percent off,
+    discount_fixed_usd: Fixed amount (USD),
+    discount_value: Value,
+    discount_value_usd_hint: Enter amount in USD. The storefront shows the equivalent in the customer’s currency.,
+    duration_days: Duration (days),
+    duration_hint: Optional if you set start and end dates below.,
+    date_start: Start,
+    date_end: End,
+    date_range_invalid: End date and time must be after the start.,
     add_products: Add products,
-    products_heading: Products heading,
-    products_empty: Products empty,
-    products_selected: Products selected,
-    modal_title_new: Modal title new,
-    modal_title_edit: Modal title edit,
-    picker_title: Picker title,
-    tab_available: Tab available,
-    tab_picked: Tab picked,
-    category_filter: Category filter,
-    category_all: Category all,
+    products_heading: Products,
+    products_empty: No products selected yet.,
+    products_selected: Selected products,
+    modal_title_new: New promotion,
+    modal_title_edit: Edit promotion,
+    picker_title: Add products,
+    tab_available: Available,
+    tab_picked: Selected,
+    category_filter: Category,
+    category_all: All categories,
     search_products: Search products,
-    select_all_list: Select all list,
+    select_all_list: Select all in list,
     clear_selection: Clear selection,
     add_selected: Add selected,
     remove: Remove,
@@ -40,33 +40,33 @@
     save: Save,
     cancel: Cancel,
     ends: Ends,
-    discount_summary_percent: Discount summary percent,
-    discount_summary_fixed: Discount summary fixed,
-    days_short: Days short,
-    subtabs_aria: Subtabs aria,
-    subtab_active: Subtab active,
-    subtab_upcoming: Subtab upcoming,
-    subtab_ended: Subtab ended,
-    subtab_all: Subtab all,
-    status_active: Status active,
-    status_upcoming: Status upcoming,
-    status_ended: Status ended,
-    status_unknown: Status unknown,
-    period_range: Period range,
-    period_days: Period days,
-    tab_empty_filtered: Tab empty filtered,
-    nav_settings: Nav settings,
-    nav_products: Nav products,
-    sidebar_open: Sidebar open,
-    sidebar_close: Sidebar close,
+    discount_summary_percent: % off,
+    discount_summary_fixed: $ off,
+    days_short: d,
+    subtabs_aria: Filter promotions by status,
+    subtab_active: Active,
+    subtab_upcoming: Upcoming,
+    subtab_ended: Ended,
+    subtab_all: All,
+    status_active: Active,
+    status_upcoming: Upcoming,
+    status_ended: Ended,
+    status_unknown: Unknown dates,
+    period_range:  – ,
+    period_days:  days,
+    tab_empty_filtered: No promotions in this filter.,
+    nav_settings: Settings,
+    nav_products: Products,
+    sidebar_open: Open menu,
+    sidebar_close: Close menu,
     start_promotion: Start promotion,
     end_promotion: End promotion,
     deselect_all: Deselect all,
     remove_selected: Remove selected,
-    products_no_results: Products no results,
-    validation_incomplete: Validation incomplete,
-    end_promotion_confirm: End promotion confirm,
-    filter_badge_aria: Filter badge aria
+    products_no_results: No products match your search or filters.,
+    validation_incomplete: Please fill in all required fields and select at least one product.,
+    end_promotion_confirm: End this promotion now? Customers will see regular prices outside promo windows.,
+    filter_badge_aria: Active filters
   };
 </script>
 
@@ -75,16 +75,16 @@
     class="eaz-creator-promotions__sub-tabs"
     id="eazCreatorPromotionsSubTabs"
     role="tablist"
-    aria-label="Subtabs aria"
+    aria-label="Filter promotions by status"
   >
-    <button type="button" role="tab" class="eaz-creator-promotions__sub-tab is-active" data-promo-tab="active" aria-selected="true" id="eazPromoSubTabActive">Subtab active</button>
-    <button type="button" role="tab" class="eaz-creator-promotions__sub-tab" data-promo-tab="upcoming" aria-selected="false" id="eazPromoSubTabUpcoming">Subtab upcoming</button>
-    <button type="button" role="tab" class="eaz-creator-promotions__sub-tab" data-promo-tab="ended" aria-selected="false" id="eazPromoSubTabEnded">Subtab ended</button>
-    <button type="button" role="tab" class="eaz-creator-promotions__sub-tab" data-promo-tab="all" aria-selected="false" id="eazPromoSubTabAll">Subtab all</button>
+    <button type="button" role="tab" class="eaz-creator-promotions__sub-tab is-active" data-promo-tab="active" aria-selected="true" id="eazPromoSubTabActive">Active</button>
+    <button type="button" role="tab" class="eaz-creator-promotions__sub-tab" data-promo-tab="upcoming" aria-selected="false" id="eazPromoSubTabUpcoming">Upcoming</button>
+    <button type="button" role="tab" class="eaz-creator-promotions__sub-tab" data-promo-tab="ended" aria-selected="false" id="eazPromoSubTabEnded">Ended</button>
+    <button type="button" role="tab" class="eaz-creator-promotions__sub-tab" data-promo-tab="all" aria-selected="false" id="eazPromoSubTabAll">All</button>
   </div>
   <p class="eaz-creator-promotions__tab-empty" id="eazCreatorPromotionsTabEmpty" hidden role="status"></p>
   <div class="eaz-creator-promotions__grid" id="eazCreatorPromotionsGrid" aria-live="polite"></div>
-  <p class="eaz-creator-promotions__hint" id="eazCreatorPromotionsLoading">Loading</p>
-  <p class="eaz-creator-promotions__empty" id="eazCreatorPromotionsEmpty" hidden>Empty</p>
+  <p class="eaz-creator-promotions__hint" id="eazCreatorPromotionsLoading">Loading...</p>
+  <p class="eaz-creator-promotions__empty" id="eazCreatorPromotionsEmpty" hidden>No promotions yet.</p>
   <p class="eaz-creator-promotions__error" id="eazCreatorPromotionsError" hidden role="alert"></p>
 </div>
