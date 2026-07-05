@@ -23,7 +23,8 @@ html, body {
   color: var(--text);
 }
 
-body.is-boot-loading .creator-shell { visibility: hidden; }
+body.is-boot-loading .creator-shell,
+body.is-boot-loading .creator-app { visibility: hidden; }
 
 .creator-boot {
   min-height: 100vh;
@@ -70,10 +71,11 @@ body.is-boot-loading .creator-shell { visibility: hidden; }
   font-size: 14px;
 }
 
-.creator-shell {
+.creator-shell,
+.creator-app {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 20px 20px 48px;
+  padding: 20px 20px calc(88px + env(safe-area-inset-bottom, 0px));
 }
 
 .creator-top {
@@ -273,4 +275,201 @@ body[data-role="owner"] .owner-only { display: revert; }
 
 @media (max-width: 640px) {
   .creator-top { flex-direction: column; align-items: flex-start; }
+}
+
+/* Phase 3 — app shell */
+.creator-screen { display: none; }
+.creator-screen.active { display: block; }
+
+.creator-guest-hero {
+  padding: 28px;
+}
+.creator-guest-hero h1 {
+  margin: 12px 0 10px;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+.creator-guest-hero__lead {
+  margin: 0 0 18px;
+  color: var(--muted);
+  line-height: 1.55;
+  max-width: 52ch;
+}
+
+.creator-dashboard {
+  display: grid;
+  gap: 16px;
+}
+
+.creator-level {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+}
+.creator-level__badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.35), rgba(45, 212, 191, 0.2));
+}
+.creator-level__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.creator-level__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+.creator-level__num {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+.creator-level__name {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.creator-stats {
+  padding: 20px;
+}
+.creator-stats__title,
+.creator-quick__title {
+  margin: 0 0 14px;
+  font-size: 1rem;
+}
+.creator-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.creator-stat {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+.creator-stat__label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.creator-stat__value {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+.creator-stats__hint {
+  margin: 12px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.creator-quick {
+  padding: 20px;
+}
+.creator-quick__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.creator-quick__btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 14px;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.creator-quick__btn:hover {
+  border-color: rgba(124, 92, 255, 0.45);
+}
+.creator-quick__ico {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+.creator-quick__label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.creator-placeholder {
+  padding: 28px;
+  text-align: center;
+}
+.creator-placeholder h2 {
+  margin: 10px 0 8px;
+}
+.creator-placeholder p {
+  margin: 0 0 14px;
+  color: var(--muted);
+}
+
+.creator-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-around;
+  gap: 4px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: rgba(8, 12, 22, 0.94);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  z-index: 40;
+}
+.creator-nav__btn {
+  flex: 1;
+  max-width: 88px;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 12px;
+  padding: 6px 4px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.creator-nav__btn.active,
+.creator-nav__btn.on {
+  color: var(--text);
+  background: rgba(124, 92, 255, 0.14);
+}
+.creator-nav__ico {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+.creator-nav__label {
+  display: block;
+  line-height: 1.2;
+}
+
+@media (min-width: 900px) {
+  .creator-nav {
+    position: static;
+    max-width: 1100px;
+    margin: 0 auto 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+  }
+  .creator-app {
+    padding-bottom: 20px;
+  }
 }

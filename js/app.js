@@ -1,43 +1,58 @@
 /**
- * Creator portal shell bootstrap (Phase 1).
+ * Creator portal app bootstrap (Phase 3a).
  */
 (function (global) {
   "use strict";
 
+  var bootstrap = null;
+
   function finishBoot() {
     var boot = document.getElementById("creatorBoot");
-    var shell = document.getElementById("creatorShell");
+    var app = document.getElementById("creatorPortalApp");
     document.body.classList.remove("is-boot-loading");
     if (boot) boot.hidden = true;
-    if (shell) shell.hidden = false;
+    if (app) app.hidden = false;
   }
 
-  async function runPingTest() {
-    var out = document.getElementById("creatorPingOut");
-    if (!out) return;
-    out.hidden = false;
-    out.textContent = "Pinging portal…";
-    try {
-      var ping = await global.CreatorPortalApi.ping();
-      var me = await global.CreatorPortalApi.me();
-      out.textContent = JSON.stringify({ ping: ping, session: me }, null, 2);
-    } catch (e) {
-      out.textContent = String(e && e.message ? e.message : e);
+  function applyBootstrap(data) {
+    bootstrap = data || null;
+    if (!data || !data.ok) return;
+    document.querySelectorAll("[data-shop-link]").forEach(function (a) {
+      if (data.shop_url) a.href = data.shop_url;
+    });
+  }
+
+  async function afterAuth() {
+    var auth = global.CreatorPortalAuth && global.CreatorPortalAuth.state;
+    if (auth && auth.loggedIn && auth.ownerId && global.CreatorPortalDashboard) {
+      await global.CreatorPortalDashboard.refresh(false);
     }
-  }
-
-  function bindUi() {
-    var pingBtn = document.getElementById("creatorPingBtn");
-    if (pingBtn) pingBtn.addEventListener("click", runPingTest);
   }
 
   async function init() {
-    bindUi();
+    try {
+      var bootData = await global.CreatorPortalApi.bootstrap();
+      applyBootstrap(bootData);
+    } catch (e) {}
+
     if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.refreshSession === "function") {
       await global.CreatorPortalAuth.refreshSession();
     }
+
+    if (global.CreatorPortalRouter && typeof global.CreatorPortalRouter.init === "function") {
+      global.CreatorPortalRouter.init();
+    }
+
+    await afterAuth();
     finishBoot();
   }
+
+  global.CreatorPortalApp = {
+    bootstrap: function () {
+      return bootstrap;
+    },
+    refresh: afterAuth,
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

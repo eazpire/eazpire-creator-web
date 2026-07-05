@@ -7,7 +7,7 @@
   <title>Eazpire Creator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/creator-portal.css?v=1">
+  <link rel="stylesheet" href="/css/creator-portal.css?v=2">
 </head>
 <body class="is-boot-loading" data-role="guest">
 
@@ -21,62 +21,156 @@
   </div>
 </div>
 
-<div class="creator-shell" id="creatorShell" hidden>
+<div class="creator-app" id="creatorPortalApp" hidden>
   <header class="creator-top">
     <div class="creator-top__brand">
       <img class="creator-top__logo" src="/assets/eazpire-creator-logo.png" alt="Eazpire Creator" width="200" height="70" decoding="async">
-      <div class="creator-top__kicker">creator.eazpire.com · Creator Workspace</div>
+      <div class="creator-top__kicker" id="creatorScreenTitle">Dashboard</div>
     </div>
     <div class="creator-top__actions guest-only">
-      <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener">Back to Shop</a>
+      <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener" data-shop-link>Back to Shop</a>
       <button type="button" class="btn primary sm" data-login>Sign in</button>
     </div>
     <div class="creator-top__actions owner-only">
-      <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener">Back to Shop</a>
+      <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener" data-shop-link>Back to Shop</a>
       <span class="creator-top__owner" id="creatorOwnerLabel">Creator</span>
       <button type="button" class="btn ghost sm" data-logout>Logout</button>
     </div>
   </header>
 
-  <main class="creator-main">
-    <section class="creator-hero panel">
-      <span class="pill">Phase 1 · Portal skeleton</span>
-      <h1 id="creatorHeroTitle">Welcome to Eazpire Creator</h1>
-      <p class="creator-hero__lead">
-        Your creator workspace is moving here — separate from the Shopify theme, powered by our own worker.
-        Dashboard, designs, and tools will arrive in the next phases.
-      </p>
-      <div class="creator-hero__actions guest-only">
+  <main class="creator-main" id="creatorMain">
+    <section class="creator-screen active" data-screen="dashboard" id="creatorScreenDashboard">
+      <div class="creator-guest-hero panel guest-only">
+        <span class="pill">Creator Workspace</span>
+        <h1>Welcome to Eazpire Creator</h1>
+        <p class="creator-guest-hero__lead">
+          Sign in with your Eazpire shop account to manage designs, products, and marketing tools.
+        </p>
         <button type="button" class="btn primary" data-login>Sign in with Eazpire account</button>
       </div>
-      <div class="creator-hero__actions owner-only">
-        <p class="creator-hero__signed-in">Signed in as creator <strong id="creatorOwnerId">—</strong></p>
-        <button type="button" class="btn primary" id="creatorPingBtn">Test API connection</button>
-        <pre class="creator-hero__ping" id="creatorPingOut" hidden></pre>
+
+      <div class="creator-dashboard owner-only" id="creatorDashboardRoot">
+        <div class="creator-level panel" id="creatorLevelCard">
+          <div class="creator-level__badge" aria-hidden="true">★</div>
+          <div class="creator-level__info">
+            <span class="creator-level__label">Creator Level</span>
+            <div class="creator-level__value">
+              <span class="creator-level__num" id="creatorLevelNum">–</span>
+              <span class="creator-level__name" id="creatorLevelName">Loading…</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="creator-stats panel">
+          <h2 class="creator-stats__title">Overview</h2>
+          <div class="creator-stats__grid">
+            <article class="creator-stat">
+              <span class="creator-stat__label">Designs · Generated</span>
+              <span class="creator-stat__value" id="cpStatDesignsGenerated">–</span>
+            </article>
+            <article class="creator-stat">
+              <span class="creator-stat__label">Designs · Uploaded</span>
+              <span class="creator-stat__value" id="cpStatDesignsUploaded">–</span>
+            </article>
+            <article class="creator-stat">
+              <span class="creator-stat__label">Products · Online</span>
+              <span class="creator-stat__value" id="cpStatProductsOnline">–</span>
+            </article>
+            <article class="creator-stat">
+              <span class="creator-stat__label">Products · Offline</span>
+              <span class="creator-stat__value" id="cpStatProductsOffline">–</span>
+            </article>
+            <article class="creator-stat">
+              <span class="creator-stat__label">Hero Images · Generated</span>
+              <span class="creator-stat__value" id="cpStatHeroesGenerated">–</span>
+            </article>
+            <article class="creator-stat">
+              <span class="creator-stat__label">Hero Images · Online</span>
+              <span class="creator-stat__value" id="cpStatHeroesOnline">–</span>
+            </article>
+          </div>
+          <p class="creator-stats__hint" id="creatorStatsHint" hidden>Could not load stats. Try again later.</p>
+        </div>
+
+        <div class="creator-quick panel">
+          <h2 class="creator-quick__title">Quick Actions</h2>
+          <div class="creator-quick__grid">
+            <button type="button" class="creator-quick__btn" data-go="generator">
+              <span class="creator-quick__ico" aria-hidden="true">✨</span>
+              <span class="creator-quick__label">Design Generator</span>
+            </button>
+            <button type="button" class="creator-quick__btn" data-go="creations">
+              <span class="creator-quick__ico" aria-hidden="true">🎨</span>
+              <span class="creator-quick__label">My Creations</span>
+            </button>
+            <button type="button" class="creator-quick__btn" data-go="marketing">
+              <span class="creator-quick__ico" aria-hidden="true">📣</span>
+              <span class="creator-quick__label">Marketing</span>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="creator-grid">
-      <article class="panel creator-card">
-        <div class="creator-card__ico" aria-hidden="true">🎨</div>
-        <h2>Designs &amp; Creations</h2>
-        <p>Generate, edit, and publish — coming in Phase 3.</p>
-        <span class="badge">Planned</span>
-      </article>
-      <article class="panel creator-card">
-        <div class="creator-card__ico" aria-hidden="true">📣</div>
+    <section class="creator-screen" data-screen="creations" id="creatorScreenCreations" hidden>
+      <div class="panel creator-placeholder">
+        <span class="pill">Phase 3</span>
+        <h2>My Creations</h2>
+        <p>Designs and products library — migration from the Shopify theme is in progress.</p>
+        <span class="badge">Coming soon</span>
+      </div>
+    </section>
+
+    <section class="creator-screen" data-screen="marketing" id="creatorScreenMarketing" hidden>
+      <div class="panel creator-placeholder">
+        <span class="pill">Phase 3</span>
         <h2>Marketing &amp; Content</h2>
-        <p>Hero images, videos, and social tools — coming in Phase 3.</p>
-        <span class="badge">Planned</span>
-      </article>
-      <article class="panel creator-card">
-        <div class="creator-card__ico" aria-hidden="true">⚙️</div>
-        <h2>Settings &amp; Payouts</h2>
-        <p>Creator profile, payout details, automations — coming in Phase 3.</p>
-        <span class="badge">Planned</span>
-      </article>
+        <p>Hero images, videos, and publish tools will appear here.</p>
+        <span class="badge">Coming soon</span>
+      </div>
+    </section>
+
+    <section class="creator-screen" data-screen="automations" id="creatorScreenAutomations" hidden>
+      <div class="panel creator-placeholder">
+        <span class="pill">Phase 3</span>
+        <h2>Automations</h2>
+        <p>Design generator automations and scheduled publish flows.</p>
+        <span class="badge">Coming soon</span>
+      </div>
+    </section>
+
+    <section class="creator-screen" data-screen="generator" id="creatorScreenGenerator" hidden>
+      <div class="panel creator-placeholder">
+        <span class="pill">Phase 3</span>
+        <h2>Design Generator</h2>
+        <p>The full generator UI will move here from the shop theme.</p>
+        <span class="badge">Coming soon</span>
+      </div>
     </section>
   </main>
+
+  <nav class="creator-nav owner-only" id="creatorNav" aria-label="Creator navigation">
+    <button type="button" class="creator-nav__btn active" data-go="dashboard" aria-current="page">
+      <span class="creator-nav__ico" aria-hidden="true">▣</span>
+      <span class="creator-nav__label">Dashboard</span>
+    </button>
+    <button type="button" class="creator-nav__btn" data-go="creations">
+      <span class="creator-nav__ico" aria-hidden="true">🎨</span>
+      <span class="creator-nav__label">Creations</span>
+    </button>
+    <button type="button" class="creator-nav__btn" data-go="marketing">
+      <span class="creator-nav__ico" aria-hidden="true">📣</span>
+      <span class="creator-nav__label">Marketing</span>
+    </button>
+    <button type="button" class="creator-nav__btn" data-go="automations">
+      <span class="creator-nav__ico" aria-hidden="true">⚙</span>
+      <span class="creator-nav__label">Automations</span>
+    </button>
+    <button type="button" class="creator-nav__btn" data-go="generator">
+      <span class="creator-nav__ico" aria-hidden="true">✨</span>
+      <span class="creator-nav__label">Generator</span>
+    </button>
+  </nav>
 </div>
 
 <div class="creator-login-bg" id="creatorLoginModal" aria-hidden="true">
@@ -85,18 +179,21 @@
       <h2 id="creatorLoginTitle">Sign in to Creator</h2>
       <button type="button" class="creator-login__close" id="creatorLoginClose" aria-label="Close">✕</button>
     </div>
-    <p class="creator-login__sub">Use your Eazpire shop account. You will return here after login at account.eazpire.com.</p>
-    <button type="button" class="btn primary creator-login__btn" data-oauth-start>
-      Continue with Shop account
+    <p class="creator-login__sub">Use your Eazpire shop account. You will return here after login.</p>
+    <a class="btn primary creator-login__btn" href="/auth/login">Continue with Shop account</a>
+    <button type="button" class="btn ghost creator-login__btn" data-oauth-start style="margin-top:8px;width:100%">
+      OAuth (account.eazpire.com)
     </button>
-    <p class="creator-login__foot">Secure login via <strong>account.eazpire.com</strong></p>
+    <p class="creator-login__foot">Secure login via <strong>www.eazpire.com</strong></p>
   </div>
 </div>
 
 <div class="toast" id="toast"><strong id="tTitle">Done</strong><span id="tText">OK</span></div>
 
-<script src="/js/api.js?v=1"></script>
-<script src="/js/auth.js?v=1"></script>
-<script src="/js/app.js?v=1"></script>
+<script src="/js/api.js?v=2"></script>
+<script src="/js/auth.js?v=2"></script>
+<script src="/js/router.js?v=2"></script>
+<script src="/js/dashboard.js?v=2"></script>
+<script src="/js/app.js?v=2"></script>
 </body>
 </html>

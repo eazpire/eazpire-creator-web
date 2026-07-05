@@ -17,9 +17,7 @@
     state.ownerId = ownerId ? String(ownerId) : null;
     document.body.dataset.role = state.loggedIn ? "owner" : "guest";
     var ownerLabel = document.getElementById("creatorOwnerLabel");
-    var ownerIdEl = document.getElementById("creatorOwnerId");
     if (ownerLabel) ownerLabel.textContent = state.loggedIn ? "Creator #" + state.ownerId : "Creator";
-    if (ownerIdEl) ownerIdEl.textContent = state.loggedIn ? state.ownerId : "—";
   }
 
   function showToast(title, text) {

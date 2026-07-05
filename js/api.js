@@ -43,10 +43,23 @@
         return r.json();
       });
     },
+    bootstrap: function () {
+      return fetch("/api/bootstrap", { credentials: "include", cache: "no-store" }).then(function (r) {
+        return r.json();
+      });
+    },
     ping: function () {
       return fetch("/api/ping", { credentials: "include", cache: "no-store" }).then(function (r) {
         return r.json();
       });
+    },
+    getDashboardStats: function (ownerId, force) {
+      const q = { owner_id: ownerId };
+      if (force) q.force = "1";
+      return dispatch("get-dashboard-stats", { query: q });
+    },
+    getBillingLevel: function (ownerId) {
+      return dispatch("get-billing-level", { query: { owner_id: ownerId } });
     },
   };
 })(typeof window !== "undefined" ? window : globalThis);
