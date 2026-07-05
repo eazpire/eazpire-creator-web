@@ -101,6 +101,7 @@
         global.CreatorPortalI18n.applyDataT(wrap);
       }
       await loadScript("/vendor/theme/creator-audio-modal.js");
+      await loadScript("/vendor/theme/creator-audio-party.js");
     } catch (e) {
       console.warn("[CreatorPortal] audio modal load failed", e);
     }

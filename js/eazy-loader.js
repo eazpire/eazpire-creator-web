@@ -66,6 +66,10 @@
     var res = await fetch("/partials/" + name, { cache: "no-store" });
     if (!res.ok) throw new Error("Failed to load partial " + name);
     var html = await res.text();
+    html = html
+      .replace(/^https?:\/\/www\.eazpire\.com\/cdn\/shop[^\n]*\n/gm, "")
+      .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>\s*/gi, "")
+      .replace(/<script[^>]*src=[^>]*>\s*<\/script>\s*/gi, "");
     var wrap = document.createElement("div");
     wrap.setAttribute("data-partial", name);
     wrap.innerHTML = html;
