@@ -1,0 +1,165 @@
+/**
+ * Seamless looping background drift for Creator (CSS-only, tiling-safe animations).
+ * Scope: Creator dashboard shell + Generator widget — not shop legacy layout.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * Desktop overview: tiled star speckles (::before layers are 240 / 300 / 420 px).
+   */
+  body.creator-mobile-page .creator-desktop-app::before {
+    animation: creator-seamless-desktop-stars 88s linear infinite;
+  }
+
+  /*
+   * Mobile dashboard: orthogonal micro-grid shimmer over galaxy (loops on 72 × 56 px).
+   */
+  body.creator-mobile-page .creator-mobile-app::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    mix-blend-mode: screen;
+    background-image:
+      linear-gradient(
+        180deg,
+        transparent 0,
+        transparent 46%,
+        rgba(255, 255, 255, 0.03) 50%,
+        transparent 54%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 47%,
+        rgba(129, 140, 248, 0.049) 50%,
+        transparent 53%,
+        transparent 100%
+      );
+    background-size:
+      100% 56px,
+      72px 100%;
+    background-repeat: repeat;
+    animation: creator-seamless-mobile-mesh 44s linear infinite;
+  }
+
+  /*
+   * Design Generator: decorative glows stay fixed; marching thin lines drift (period 31 px).
+   */
+  body.creator-mode [id^="creator-widget-"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.88;
+    background-image:
+      radial-gradient(ellipse 88% 64% at 15% 8%, rgba(99, 102, 241, 0.12), transparent 58%),
+      radial-gradient(ellipse 72% 58% at 92% 90%, rgba(249, 115, 22, 0.07), transparent 52%),
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 30px,
+        rgba(255, 255, 255, 0.016) 30px,
+        rgba(255, 255, 255, 0.016) 31px
+      );
+    background-size:
+      auto,
+      auto,
+      100% 31px;
+    background-position:
+      center,
+      center,
+      0 0;
+    background-repeat: no-repeat, no-repeat, repeat;
+    animation: creator-seamless-widget-lines 56s linear infinite;
+  }
+
+  body.creator-mode [id^="creator-widget-"] > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /*
+   * Desktop hero panel: same tiling period as mobile overlay for a perfectly seamless loop.
+   */
+  body.creator-mobile-page #creatorDesktopHero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.38;
+    mix-blend-mode: screen;
+    background-image:
+      linear-gradient(
+        180deg,
+        transparent 0,
+        transparent 46%,
+        rgba(255, 255, 255, 0.028) 50%,
+        transparent 54%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 47%,
+        rgba(129, 140, 248, 0.052) 50%,
+        transparent 53%,
+        transparent 100%
+      );
+    background-size:
+      100% 56px,
+      72px 100%;
+    background-repeat: repeat;
+    animation: creator-seamless-mobile-mesh 52s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.creator-mobile-page .creator-desktop-app::before,
+  body.creator-mobile-page .creator-mobile-app::after,
+  body.creator-mode [id^="creator-widget-"]::before,
+  body.creator-mobile-page #creatorDesktopHero::before {
+    animation: none !important;
+  }
+}
+
+@keyframes creator-seamless-desktop-stars {
+  0% {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  100% {
+    background-position:
+      240px 240px,
+      300px 300px,
+      420px 420px;
+  }
+}
+
+@keyframes creator-seamless-mobile-mesh {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 0 56px, 72px 0;
+  }
+}
+
+@keyframes creator-seamless-widget-lines {
+  0% {
+    background-position: center, center, 0 0;
+  }
+  100% {
+    background-position: center, center, 0 31px;
+  }
+}
+
+/* Former canvas layer — harmless to keep IDs; hide paint layer */
+body.creator-mobile-page #creatorDesktopParticleCanvas,
+body.creator-mobile-page #creatorDesktopParticles {
+  display: none !important;
+}

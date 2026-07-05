@@ -1,0 +1,71 @@
+<div class="creator-generator" id="creatorGenerator">
+  <div class="creator-generator__scroll">
+    <div class="creator-generator__pills">
+      <button type="button" class="creator-pill" id="genTargetProduct" aria-haspopup="dialog">
+        <span class="creator-pill__label">Target product</span>
+        <span class="creator-pill__value" id="genTargetProductVal" data-value="all">Anything</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
+      </button>
+      <button type="button" class="creator-pill" id="genDesignType" aria-haspopup="dialog">
+        <span class="creator-pill__label">Design type</span>
+        <span class="creator-pill__value" id="genDesignTypeVal" data-value="classic">Classic</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
+      </button>
+    </div>
+
+    <article class="creator-gen-card creator-gen-card--upload">
+      <span class="creator-gen-upload-optional">Optional</span>
+      <div class="creator-gen-upload-zone" id="genUploadZone" role="button" tabindex="0">
+        <svg class="creator-gen-upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span class="creator-gen-upload-text">Upload</span>
+      </div>
+      <input type="file" id="genImageInput" accept="image/*" multiple class="creator-gen-upload-input" aria-hidden="true" tabindex="-1" />
+    </article>
+
+    <article class="creator-container creator-gen-card creator-gen-card--selected gen-selected-images" id="genSelectedImagesCard" data-collapsible style="display:none">
+      <button type="button" class="creator-container__header gen-selected-images__header" aria-expanded="true" aria-controls="genSelectedImagesBody">
+        <h3 class="gen-selected-images__title">Reference images</h3>
+        <span class="gen-selected-images__right">
+          <span class="creator-container__count" id="genSelectedImagesCount">0</span>
+          <svg class="creator-container__chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="currentColor"/></svg>
+        </span>
+      </button>
+      <div class="creator-container__body gen-selected-images__body" id="genSelectedImagesBody">
+        <div class="gen-selected-images__grid" id="genSelectedImagesGrid"></div>
+      </div>
+    </article>
+
+    <article class="creator-gen-card creator-gen-card--prompt">
+      <div class="creator-gen-card__bar">
+        <h3 class="creator-gen-card__title">Prompt</h3>
+        <div class="creator-gen-card__actions">
+          <button type="button" class="creator-gen-btn creator-gen-btn--suggest" id="genSuggest" aria-label="Suggest">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            Suggest
+          </button>
+          <button type="button" class="creator-gen-btn creator-gen-btn--clear" id="genClear" aria-label="Clear">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+            Clear
+          </button>
+        </div>
+      </div>
+      <textarea id="genPrompt" class="creator-gen-textarea" rows="4" placeholder="Prompt placeholder"></textarea>
+      <div class="creator-gen-prompt-footer">
+        <button type="button" class="creator-gen-link" id="genMoreOptions">More options</button>
+        <div class="creator-eazy-speech-anchor" id="creatorEazySpeechAnchorGen" aria-hidden="true"></div>
+      </div>
+    </article>
+  </div>
+  
+    <footer class="creator-gen-footer creator-gen-footer--fixed">
+      <button type="button" class="creator-gen-submit" id="genGenerate" data-eaz-price="10">
+        <span>Generate btn</span>
+        <span class="creator-gen-submit__badge">10 EAZ</span>
+      </button>
+    </footer>
+  
+</div>

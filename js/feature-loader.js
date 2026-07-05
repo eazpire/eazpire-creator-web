@@ -225,7 +225,8 @@
       marketingCss();
 
       var host = document.getElementById("creatorMarketingHost");
-      if (host && !host.querySelector("#creatorMarketing")) {
+      var existing = document.getElementById("creatorMarketing");
+      if (!existing && host && !host.querySelector("#creatorMarketing")) {
         await injectPartial("creator-mobile-marketing.html", host);
       }
 
@@ -264,7 +265,8 @@
       loadCss("/vendor/theme/creator-automations.css");
 
       var host = document.getElementById("creatorAutomationsHost");
-      if (host && !host.querySelector("#creatorAutomations")) {
+      var existing = document.getElementById("creatorAutomations");
+      if (!existing && host && !host.querySelector("#creatorAutomations")) {
         await injectPartial("creator-mobile-automations.html", host);
       }
 

@@ -15,6 +15,10 @@
     return origin + "/api/dispatch";
   };
 
+  global.__CREATOR_PORTAL_HOST__ = true;
+  global.__EAZ_SKIP_SHOP_LIST_JOBS__ = true;
+  global.__EAZ_DEFER_CREATOR_DESIGN_MODAL__ = true;
+
   global.Shopify = global.Shopify || {};
   if (!global.Shopify.shop) global.Shopify.shop = "allyoucanpink.myshopify.com";
 

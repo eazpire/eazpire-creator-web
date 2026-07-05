@@ -1,0 +1,77 @@
+<div class="creator-creations" id="creatorCreations">
+  <div class="creator-creations-tabs">
+    <div class="creator-creations-tabs-nav">
+      <button type="button" class="creator-creations-tab is-active" data-tab="designs">Designs</button>
+      <button type="button" class="creator-creations-tab" data-tab="products">Products</button>
+    </div>
+    <button type="button" class="creator-creations-view-btn" id="creatorCreationsViewBtn" aria-label="View mode" aria-haspopup="dialog">
+      <span class="creator-creations-view-icon" id="creatorCreationsViewIcon">
+        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16.5" y="9.5" width="5" height="5" rx="1"/></svg>
+      </span>
+    </button>
+  </div>
+
+  <div class="creator-creations-panel" id="creatorCreationsPanelDesigns" data-tab="designs">
+    <div class="creator-creations-toolbar" id="creatorDesignsToolbar">
+      <input type="search" id="creatorDesignsSearch" class="creator-creations-search" placeholder="Search" aria-label="Search">
+      <button type="button" class="creator-creations-filter-btn creator-creations-filter-btn--has-badge" id="creatorDesignsFilter" aria-label="Filter">
+        <span class="creator-creations-filter-btn__rail" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        <span class="creator-creations-filter-btn__label">Filter</span>
+        <span class="creator-creations-filter-badge" id="creatorDesignsFilterBadge" aria-hidden="true"></span>
+      </button>
+      <button type="button" class="creator-creations-upload-btn" id="creatorDesignsUpload" aria-label="Upload">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </button>
+      <div class="creator-creations-toolbar__meta">
+        <div class="creator-creations-activity-switch" id="creatorDesignsActivitySwitch" role="group" aria-label="
+
+
+
+
+  
+
+  
+  
+  
+    
+  
+    
+  
+
+">
+          <button type="button" class="creator-creations-activity-btn is-active" data-designs-activity="active" aria-pressed="true"></button>
+          <button type="button" class="creator-creations-activity-btn" data-designs-activity="inactive" aria-pressed="false"></button>
+        </div>
+        <span class="creator-creations-count" id="creatorDesignsCount">0 Designs</span>
+      </div>
+    </div>
+    <div class="creator-creations-grid-wrap">
+      <div id="creatorDesignsLoading" class="creator-creations-loading" style="display:none">Loading</div>
+      <div id="creatorDesignsEmpty" class="creator-creations-empty" style="display:none">No designs</div>
+      <div id="creatorDesignsGrid" class="creator-creations-grid creator-creations-grid--2"></div>
+      <div id="creatorDesignsList" class="creator-creations-list" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="creator-creations-panel creator-creations-panel--hidden" id="creatorCreationsPanelProducts" data-tab="products">
+    <div class="creator-creations-toolbar creator-creations-toolbar--no-upload" id="creatorProductsToolbar">
+      <input type="search" id="creatorProductsSearch" class="creator-creations-search" placeholder="Search" aria-label="Search">
+      <button type="button" class="creator-creations-filter-btn creator-creations-filter-btn--has-badge" id="creatorProductsFilter" aria-label="Filter">
+        <span class="creator-creations-filter-btn__rail" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        <span class="creator-creations-filter-btn__label">Filter</span>
+        <span class="creator-creations-filter-badge" id="creatorProductsFilterBadge" aria-hidden="true"></span>
+      </button>
+      <div class="creator-creations-toolbar__meta creator-creations-toolbar__meta--count-only">
+        <span class="creator-creations-count" id="creatorProductsCount">0 Products</span>
+      </div>
+    </div>
+    <div class="creator-creations-grid-wrap">
+      <div id="creatorProductsLoading" class="creator-creations-loading" style="display:none">Loading</div>
+      <div id="creatorProductsEmpty" class="creator-creations-empty" style="display:none">No products</div>
+      <div id="creatorProductsGrid" class="creator-creations-grid creator-creations-grid--2"></div>
+      <div id="creatorProductsList" class="creator-creations-list" style="display:none"></div>
+    </div>
+  </div>
+</div>

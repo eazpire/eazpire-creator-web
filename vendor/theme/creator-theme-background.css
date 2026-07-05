@@ -1,0 +1,52 @@
+/**
+ * Creator theme background media layers (configured via Admin → Themes).
+ * Scoped to Creator dashboard shell only.
+ */
+
+.creator-mobile-app,
+#creatorDesktopApp,
+#creatorDesktopHero {
+  position: relative;
+}
+
+.creator-theme-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.creator-theme-bg-layer--image {
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.creator-theme-bg-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: translateZ(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .creator-theme-bg-video {
+    display: none;
+  }
+}
+
+@media (min-width: 992px) {
+  /* Shell-level theme bg: soften default paint so video/image shows through chrome */
+  body.creator-mobile-page #creatorDesktopApp.has-creator-theme-bg {
+    background:
+      radial-gradient(1000px 460px at 28% -4%, rgba(255, 120, 45, 0.1), rgba(255, 120, 45, 0) 54%),
+      radial-gradient(900px 600px at 80% 0%, rgba(93, 72, 198, 0.1), rgba(93, 72, 198, 0) 52%),
+      linear-gradient(160deg, rgba(17, 18, 51, 0.12) 0%, rgba(11, 16, 42, 0.08) 42%, rgba(9, 13, 31, 0.06) 100%);
+  }
+
+  body.creator-mobile-page #creatorDesktopApp.has-creator-theme-bg .creator-desktop-hero {
+    background: linear-gradient(155deg, rgba(23, 22, 67, 0.36), rgba(10, 12, 30, 0.46));
+  }
+}

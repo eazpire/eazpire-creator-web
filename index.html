@@ -3,17 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <link rel="icon" type="image/png" href="/assets/eaz-app-favicon.png">
+  <link rel="icon" type="image/png" href="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950">
   <title>Eazpire Creator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/creator-portal.css?v=2">
+  <link rel="stylesheet" href="/vendor/theme/creator-mobile.css?v=5">
+  <link rel="stylesheet" href="/vendor/theme/creator-seamless-bg.css?v=5">
+  <link rel="stylesheet" href="/vendor/theme/creator-theme-background.css?v=5">
+  <link rel="stylesheet" href="/vendor/theme/creator-mobile-screens.css?v=5">
+  <link rel="stylesheet" href="/vendor/theme/creator-automations.css?v=5">
+  <link rel="stylesheet" media="(min-width: 992px)" href="/vendor/theme/creator-desktop.css?v=5">
+  <link rel="stylesheet" href="/css/creator-portal.css?v=5">
+  <script>
+    window.__CREATOR_PORTAL_HOST__ = true;
+    window.__EAZ_SKIP_SHOP_LIST_JOBS__ = true;
+    window.__EAZ_DEFER_CREATOR_DESIGN_MODAL__ = true;
+    window.__CREATOR_THEME_DEFAULTS__ = {
+      mobile: { media_type: "image", url: "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/galaxy-nebula-bg.png" },
+      desktop: { media_type: "image", url: "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/galaxy-nebula-bg.png" }
+    };
+  </script>
 </head>
-<body class="is-boot-loading" data-role="guest">
+<body class="creator-mobile-page is-boot-loading" data-role="guest">
 
 <div class="creator-boot" id="creatorBoot" role="status" aria-live="polite" aria-label="Loading Eazpire Creator">
   <div class="creator-boot__card">
-    <img class="creator-boot__logo" src="/assets/eazpire-creator-logo.png" alt="" width="320" height="112" decoding="async">
+    <img class="creator-boot__logo" src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950" alt="" width="320" height="112" decoding="async">
     <div class="creator-boot__bar-wrap">
       <div class="creator-boot__bar" id="creatorBootBar" aria-hidden="true"></div>
     </div>
@@ -21,323 +36,48 @@
   </div>
 </div>
 
-<div class="creator-app" id="creatorPortalApp" hidden>
-  <header class="creator-top">
-    <div class="creator-top__brand">
-      <img class="creator-top__logo" src="/assets/eazpire-creator-logo.png" alt="Eazpire Creator" width="200" height="70" decoding="async">
-      <div class="creator-top__kicker" id="creatorScreenTitle">Dashboard</div>
-    </div>
-    <div class="creator-top__actions guest-only">
-      <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener" data-shop-link>Back to Shop</a>
-      <button type="button" class="btn primary sm" data-login>Sign in</button>
-    </div>
-    <div class="creator-top__actions owner-only">
-      <a class="btn ghost sm" href="https://www.eazpire.com" rel="noopener" data-shop-link>Back to Shop</a>
-      <button type="button" class="btn ghost sm" data-open-settings>Settings</button>
-      <span class="creator-top__owner" id="creatorOwnerLabel">Creator</span>
-      <button type="button" class="btn ghost sm" data-logout>Logout</button>
-    </div>
-  </header>
+<div id="creatorPortalApp" hidden>
+  <div id="creatorPortalShell"></div>
 
-  <main class="creator-main" id="creatorMain">
-    <section class="creator-screen active" data-screen="dashboard" id="creatorScreenDashboard">
-      <div class="creator-guest-hero panel guest-only">
-        <span class="pill">Creator Workspace</span>
-        <h1>Welcome to Eazpire Creator</h1>
-        <p class="creator-guest-hero__lead">
-          Sign in with your Eazpire shop account to manage designs, products, and marketing tools.
-        </p>
-        <button type="button" class="btn primary" data-login>Sign in with Eazpire account</button>
+  <div class="creator-login-bg" id="creatorLoginModal" aria-hidden="true">
+    <div class="creator-login panel" role="dialog" aria-modal="true" aria-labelledby="creatorLoginTitle">
+      <div class="creator-login__head">
+        <h2 id="creatorLoginTitle">Sign in to Creator</h2>
+        <button type="button" class="creator-login__close" id="creatorLoginClose" aria-label="Close">✕</button>
       </div>
-
-      <div class="creator-dashboard owner-only" id="creatorDashboardRoot">
-        <div class="creator-level panel" id="creatorLevelCard">
-          <div class="creator-level__badge" aria-hidden="true">★</div>
-          <div class="creator-level__info">
-            <span class="creator-level__label">Creator Level</span>
-            <div class="creator-level__value">
-              <span class="creator-level__num" id="creatorLevelNum">–</span>
-              <span class="creator-level__name" id="creatorLevelName">Loading…</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="creator-stats panel">
-          <h2 class="creator-stats__title">Overview</h2>
-          <div class="creator-stats__grid">
-            <article class="creator-stat">
-              <span class="creator-stat__label">Designs · Generated</span>
-              <span class="creator-stat__value" id="cpStatDesignsGenerated">–</span>
-            </article>
-            <article class="creator-stat">
-              <span class="creator-stat__label">Designs · Uploaded</span>
-              <span class="creator-stat__value" id="cpStatDesignsUploaded">–</span>
-            </article>
-            <article class="creator-stat">
-              <span class="creator-stat__label">Products · Online</span>
-              <span class="creator-stat__value" id="cpStatProductsOnline">–</span>
-            </article>
-            <article class="creator-stat">
-              <span class="creator-stat__label">Products · Offline</span>
-              <span class="creator-stat__value" id="cpStatProductsOffline">–</span>
-            </article>
-            <article class="creator-stat">
-              <span class="creator-stat__label">Hero Images · Generated</span>
-              <span class="creator-stat__value" id="cpStatHeroesGenerated">–</span>
-            </article>
-            <article class="creator-stat">
-              <span class="creator-stat__label">Hero Images · Online</span>
-              <span class="creator-stat__value" id="cpStatHeroesOnline">–</span>
-            </article>
-          </div>
-          <p class="creator-stats__hint" id="creatorStatsHint" hidden>Could not load stats. Try again later.</p>
-        </div>
-
-        <div class="creator-quick panel">
-          <h2 class="creator-quick__title">Quick Actions</h2>
-          <div class="creator-quick__grid">
-            <button type="button" class="creator-quick__btn" data-go="generator">
-              <span class="creator-quick__ico" aria-hidden="true">✨</span>
-              <span class="creator-quick__label">Design Generator</span>
-            </button>
-            <button type="button" class="creator-quick__btn" data-go="creations">
-              <span class="creator-quick__ico" aria-hidden="true">🎨</span>
-              <span class="creator-quick__label">My Creations</span>
-            </button>
-            <button type="button" class="creator-quick__btn" data-go="marketing">
-              <span class="creator-quick__ico" aria-hidden="true">📣</span>
-              <span class="creator-quick__label">Marketing</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="creator-screen" data-screen="creations" id="creatorScreenCreations" hidden>
-      <div class="panel creator-placeholder guest-only">
-        <h2>My Creations</h2>
-        <p>Sign in to browse your designs and products.</p>
-        <button type="button" class="btn primary" data-login>Sign in</button>
-      </div>
-      <div class="creator-screen__body owner-only" data-desktop-screen="creations">
-        <div class="creator-creations" id="creatorCreations">
-          <div class="creator-creations-tabs">
-            <div class="creator-creations-tabs-nav">
-              <button type="button" class="creator-creations-tab is-active" data-tab="designs">Designs</button>
-              <button type="button" class="creator-creations-tab" data-tab="products">Products</button>
-            </div>
-            <button type="button" class="creator-creations-view-btn" id="creatorCreationsViewBtn" aria-label="View mode" aria-haspopup="dialog">
-              <span class="creator-creations-view-icon" id="creatorCreationsViewIcon">
-                <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16.5" y="9.5" width="5" height="5" rx="1"/></svg>
-              </span>
-            </button>
-          </div>
-          <div class="creator-creations-panel" id="creatorCreationsPanelDesigns" data-tab="designs">
-            <div class="creator-creations-toolbar" id="creatorDesignsToolbar">
-              <input type="search" id="creatorDesignsSearch" class="creator-creations-search" placeholder="Search" aria-label="Search">
-              <button type="button" class="creator-creations-filter-btn creator-creations-filter-btn--has-badge" id="creatorDesignsFilter" aria-label="Filter">
-                <span class="creator-creations-filter-btn__rail" aria-hidden="true"></span>
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                <span class="creator-creations-filter-btn__label">Filter</span>
-                <span class="creator-creations-filter-badge" id="creatorDesignsFilterBadge" aria-hidden="true"></span>
-              </button>
-              <button type="button" class="creator-creations-upload-btn" id="creatorDesignsUpload" aria-label="Upload">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              </button>
-              <div class="creator-creations-toolbar__meta">
-                <div class="creator-creations-activity-switch" id="creatorDesignsActivitySwitch" role="group" aria-label="Design activity">
-                  <button type="button" class="creator-creations-activity-btn is-active" data-designs-activity="active" aria-pressed="true">Active</button>
-                  <button type="button" class="creator-creations-activity-btn" data-designs-activity="inactive" aria-pressed="false">Inactive</button>
-                </div>
-                <span class="creator-creations-count" id="creatorDesignsCount">0 Designs</span>
-              </div>
-            </div>
-            <div class="creator-creations-grid-wrap">
-              <div id="creatorDesignsLoading" class="creator-creations-loading" style="display:none">Loading…</div>
-              <div id="creatorDesignsEmpty" class="creator-creations-empty" style="display:none">No designs found.</div>
-              <div id="creatorDesignsGrid" class="creator-creations-grid creator-creations-grid--2"></div>
-              <div id="creatorDesignsList" class="creator-creations-list" style="display:none"></div>
-            </div>
-          </div>
-          <div class="creator-creations-panel creator-creations-panel--hidden" id="creatorCreationsPanelProducts" data-tab="products">
-            <div class="creator-creations-toolbar creator-creations-toolbar--no-upload" id="creatorProductsToolbar">
-              <input type="search" id="creatorProductsSearch" class="creator-creations-search" placeholder="Search" aria-label="Search">
-              <button type="button" class="creator-creations-filter-btn creator-creations-filter-btn--has-badge" id="creatorProductsFilter" aria-label="Filter">
-                <span class="creator-creations-filter-btn__rail" aria-hidden="true"></span>
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                <span class="creator-creations-filter-btn__label">Filter</span>
-                <span class="creator-creations-filter-badge" id="creatorProductsFilterBadge" aria-hidden="true"></span>
-              </button>
-              <div class="creator-creations-toolbar__meta creator-creations-toolbar__meta--count-only">
-                <span class="creator-creations-count" id="creatorProductsCount">0 Products</span>
-              </div>
-            </div>
-            <div class="creator-creations-grid-wrap">
-              <div id="creatorProductsLoading" class="creator-creations-loading" style="display:none">Loading…</div>
-              <div id="creatorProductsEmpty" class="creator-creations-empty" style="display:none">No products found.</div>
-              <div id="creatorProductsGrid" class="creator-creations-grid creator-creations-grid--2"></div>
-              <div id="creatorProductsList" class="creator-creations-list" style="display:none"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="creator-screen" data-screen="marketing" id="creatorScreenMarketing" hidden>
-      <div class="panel creator-placeholder guest-only">
-        <h2>Marketing &amp; Content</h2>
-        <p>Sign in to create hero images, videos, and promotions.</p>
-        <button type="button" class="btn primary" data-login>Sign in</button>
-      </div>
-      <div class="creator-screen__body owner-only" id="creatorMarketingHost"></div>
-    </section>
-
-    <section class="creator-screen" data-screen="automations" id="creatorScreenAutomations" hidden>
-      <div class="panel creator-placeholder guest-only">
-        <h2>Automations</h2>
-        <p>Sign in to manage design automations.</p>
-        <button type="button" class="btn primary" data-login>Sign in</button>
-      </div>
-      <div class="creator-screen__body owner-only" id="creatorAutomationsHost"></div>
-    </section>
-
-    <section class="creator-screen" data-screen="generator" id="creatorScreenGenerator" hidden>
-      <div class="panel creator-placeholder guest-only">
-        <h2>Design Generator</h2>
-        <p>Sign in to generate new designs.</p>
-        <button type="button" class="btn primary" data-login>Sign in</button>
-      </div>
-      <div class="creator-screen__body owner-only">
-        <div class="creator-generator" id="creatorGenerator">
-          <div class="creator-generator__scroll">
-            <div class="creator-generator__pills">
-              <button type="button" class="creator-pill" id="genTargetProduct" aria-haspopup="dialog">
-                <span class="creator-pill__label">Target Product</span>
-                <span class="creator-pill__value" id="genTargetProductVal" data-value="all">Anything</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
-              </button>
-              <button type="button" class="creator-pill" id="genDesignType" aria-haspopup="dialog">
-                <span class="creator-pill__label">Design Type</span>
-                <span class="creator-pill__value" id="genDesignTypeVal" data-value="classic">Classic</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
-              </button>
-            </div>
-            <article class="creator-gen-card creator-gen-card--upload">
-              <span class="creator-gen-upload-optional">Optional</span>
-              <div class="creator-gen-upload-zone" id="genUploadZone" role="button" tabindex="0">
-                <svg class="creator-gen-upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-                <span class="creator-gen-upload-text">Upload</span>
-              </div>
-              <input type="file" id="genImageInput" accept="image/*" multiple class="creator-gen-upload-input" aria-hidden="true" tabindex="-1" />
-            </article>
-            <article class="creator-container creator-gen-card creator-gen-card--selected gen-selected-images" id="genSelectedImagesCard" data-collapsible style="display:none">
-              <button type="button" class="creator-container__header gen-selected-images__header" aria-expanded="true" aria-controls="genSelectedImagesBody">
-                <h3 class="gen-selected-images__title">Reference images</h3>
-                <span class="gen-selected-images__right">
-                  <span class="creator-container__count" id="genSelectedImagesCount">0</span>
-                  <svg class="creator-container__chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="currentColor"/></svg>
-                </span>
-              </button>
-              <div class="creator-container__body gen-selected-images__body" id="genSelectedImagesBody">
-                <div class="gen-selected-images__grid" id="genSelectedImagesGrid"></div>
-              </div>
-            </article>
-            <article class="creator-gen-card creator-gen-card--prompt">
-              <div class="creator-gen-card__bar">
-                <h3 class="creator-gen-card__title">Prompt</h3>
-                <div class="creator-gen-card__actions">
-                  <button type="button" class="creator-gen-btn creator-gen-btn--suggest" id="genSuggest" aria-label="Suggest">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                    Suggest
-                  </button>
-                  <button type="button" class="creator-gen-btn creator-gen-btn--clear" id="genClear" aria-label="Clear">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                    Clear
-                  </button>
-                </div>
-              </div>
-              <textarea id="genPrompt" class="creator-gen-textarea" rows="4" placeholder="Describe your design or upload an image – both optional"></textarea>
-              <div class="creator-gen-prompt-footer">
-                <button type="button" class="creator-gen-link" id="genMoreOptions">More options</button>
-              </div>
-            </article>
-          </div>
-          <footer class="creator-gen-footer creator-gen-footer--portal">
-            <button type="button" class="creator-gen-submit" id="genGenerate" data-eaz-price="10">
-              <span>Generate</span>
-              <span class="creator-gen-submit__badge">10 EAZ</span>
-            </button>
-          </footer>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <nav class="creator-nav owner-only" id="creatorNav" aria-label="Creator navigation">
-    <button type="button" class="creator-nav__btn active" data-go="dashboard" aria-current="page">
-      <span class="creator-nav__ico" aria-hidden="true">▣</span>
-      <span class="creator-nav__label">Dashboard</span>
-    </button>
-    <button type="button" class="creator-nav__btn" data-go="creations">
-      <span class="creator-nav__ico" aria-hidden="true">🎨</span>
-      <span class="creator-nav__label">Creations</span>
-    </button>
-    <button type="button" class="creator-nav__btn" data-go="marketing">
-      <span class="creator-nav__ico" aria-hidden="true">📣</span>
-      <span class="creator-nav__label">Marketing</span>
-    </button>
-    <button type="button" class="creator-nav__btn" data-go="automations">
-      <span class="creator-nav__ico" aria-hidden="true">⚙</span>
-      <span class="creator-nav__label">Automations</span>
-    </button>
-    <button type="button" class="creator-nav__btn" data-go="generator">
-      <span class="creator-nav__ico" aria-hidden="true">✨</span>
-      <span class="creator-nav__label">Generator</span>
-    </button>
-  </nav>
-</div>
-
-<div class="creator-login-bg" id="creatorLoginModal" aria-hidden="true">
-  <div class="creator-login panel" role="dialog" aria-modal="true" aria-labelledby="creatorLoginTitle">
-    <div class="creator-login__head">
-      <h2 id="creatorLoginTitle">Sign in to Creator</h2>
-      <button type="button" class="creator-login__close" id="creatorLoginClose" aria-label="Close">✕</button>
-    </div>
-    <p class="creator-login__sub">Use your Eazpire shop account. You will return here after login.</p>
-    <a class="btn primary creator-login__btn" href="/auth/login">Continue with Shop account</a>
-    <button type="button" class="btn ghost creator-login__btn" data-oauth-start style="margin-top:8px;width:100%">
-      OAuth (account.eazpire.com)
-    </button>
-    <p class="creator-login__foot">Secure login via <strong>www.eazpire.com</strong></p>
-  </div>
-</div>
-
-<div class="toast" id="toast"><strong id="tTitle">Done</strong><span id="tText">OK</span></div>
-
-<div class="creator-view-mode-overlay" id="creatorViewModeOverlay" aria-hidden="true">
-  <div class="creator-view-mode-modal" role="dialog" aria-label="View options">
-    <div class="creator-view-mode-options">
-      <button type="button" class="creator-view-mode-opt" data-view="grid2"><span>2 columns</span></button>
-      <button type="button" class="creator-view-mode-opt" data-view="grid3"><span>3 columns</span></button>
-      <button type="button" class="creator-view-mode-opt" data-view="grid4"><span>4 columns</span></button>
-      <button type="button" class="creator-view-mode-opt" data-view="list"><span>List</span></button>
+      <p class="creator-login__sub">Use your Eazpire shop account. You will return here after login.</p>
+      <a class="btn primary creator-login__btn" href="/auth/login">Continue with Shop account</a>
+      <button type="button" class="btn ghost creator-login__btn" data-oauth-start style="margin-top:8px;width:100%">
+        OAuth (account.eazpire.com)
+      </button>
+      <p class="creator-login__foot">Secure login via <strong>www.eazpire.com</strong></p>
     </div>
   </div>
+
+  <div class="toast" id="toast"><strong id="tTitle">Done</strong><span id="tText">OK</span></div>
+
+  <div class="creator-view-mode-overlay" id="creatorViewModeOverlay" aria-hidden="true">
+    <div class="creator-view-mode-modal" role="dialog" aria-label="View options">
+      <div class="creator-view-mode-options">
+        <button type="button" class="creator-view-mode-opt" data-view="grid2"><span>2 columns</span></button>
+        <button type="button" class="creator-view-mode-opt" data-view="grid3"><span>3 columns</span></button>
+        <button type="button" class="creator-view-mode-opt" data-view="grid4"><span>4 columns</span></button>
+        <button type="button" class="creator-view-mode-opt" data-view="list"><span>List</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="creatorPortalModals"></div>
 </div>
 
-<div id="creatorPortalModals"></div>
-
-<script src="/js/creator-i18n.js?v=4"></script>
-<script src="/js/api.js?v=4"></script>
-<script src="/js/auth.js?v=4"></script>
-<script src="/js/theme-bridge.js?v=4"></script>
-<script src="/js/router.js?v=4"></script>
-<script src="/js/feature-loader.js?v=4"></script>
-<script src="/js/dashboard.js?v=4"></script>
-<script src="/js/app.js?v=4"></script>
+<script src="/js/creator-i18n.js?v=5" defer></script>
+<script src="/js/api.js?v=5" defer></script>
+<script src="/js/theme-bridge.js?v=5" defer></script>
+<script src="/js/auth.js?v=5" defer></script>
+<script src="/js/shell-loader.js?v=5" defer></script>
+<script src="/js/router.js?v=5" defer></script>
+<script src="/js/feature-loader.js?v=5" defer></script>
+<script src="/js/dashboard.js?v=5" defer></script>
+<script src="/js/app.js?v=5" defer></script>
 </body>
 </html>
