@@ -54,6 +54,9 @@
     if (global.CreatorPortalDashboard && typeof global.CreatorPortalDashboard.onRoute === "function") {
       global.CreatorPortalDashboard.onRoute(current);
     }
+    if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.onRoute === "function") {
+      global.CreatorPortalFeatures.onRoute(current);
+    }
   }
 
   function go(name, options) {

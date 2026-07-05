@@ -1,0 +1,640 @@
+/* Creator Inspiration Modal - Erweitert creator-modal-base.css */
+/* Seitengross wie Profil- und Creator-Settings-Modal */
+
+/* Overlay: voll integriert (kein extra Abstand) */
+#creator-inspiration-modal.creator-modal {
+  padding: 0;
+}
+
+/* Dialog: 95vw × 90vh wie Profil-Modal im Shop */
+#creator-inspiration-modal .creator-modal__dialog--large {
+  width: 95vw;
+  max-width: 1200px;
+  height: 90vh;
+  max-height: 90vh;
+  min-height: 500px;
+  margin: 0;
+  padding: 0;
+  border-radius: 16px;
+}
+
+/* Grid View - Shows all public designs */
+.creator-inspiration-modal__grid-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(90vh - 60px); /* Header height */
+  max-height: calc(90vh - 60px);
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Fixed Search Bar */
+.creator-inspiration-modal__search-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #1f2937;
+  padding: 12px 20px;
+  border-bottom: 1px solid #374151;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.creator-inspiration-modal__search {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px 16px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #e5e7eb;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.creator-inspiration-modal__filter-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #F59E0B;
+  background: #000000;
+  color: #F59E0B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.creator-inspiration-modal__filter-btn:hover {
+  background: #1a1a1a;
+  border-color: #fb923c;
+  transform: scale(1.05);
+}
+
+.creator-inspiration-modal__filter-btn:active {
+  transform: scale(0.95);
+}
+
+.creator-inspiration-modal__filter-btn__icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* Design Count Display */
+.creator-inspiration-modal__count {
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.creator-inspiration-modal__search::placeholder {
+  color: #6b7280;
+}
+
+.creator-inspiration-modal__search:focus {
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+/* Grid Container - Scrollable */
+.creator-inspiration-modal__grid-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 20px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  /* ✅ TODO 4: Overscroll-Verhalten für Stabilität */
+  overscroll-behavior: contain;
+  /* Scrollbar Styling - wie bei Prozessen */
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #111827;
+}
+
+.creator-inspiration-modal__grid-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.creator-inspiration-modal__grid-container::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+.creator-inspiration-modal__grid-container::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.creator-inspiration-modal__grid-container::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.creator-inspiration-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  padding: 0;
+}
+
+/* Design Cards - Like My Creations but smaller, no title */
+.creator-inspiration-modal__card {
+  border: 1px solid #374151;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #1f2937;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  aspect-ratio: 1 / 1;
+}
+
+.creator-inspiration-modal__card:hover {
+  transform: translateY(-2px);
+  border-color: #F59E0B;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+}
+
+.creator-inspiration-modal__card-image-wrapper {
+  aspect-ratio: 1 / 1;
+  background: #020617;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.creator-inspiration-modal__card-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.creator-inspiration-modal__card-no-image {
+  color: #9ca3af;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Loading and Empty States */
+.creator-inspiration-modal__loading,
+.creator-inspiration-modal__empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+/* Detail View - Shows selected design larger with remixes */
+.creator-inspiration-modal__detail-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(80vh - 60px);
+  max-height: calc(80vh - 60px);
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Desktop Layout */
+.creator-inspiration-modal__detail-desktop {
+  display: flex;
+  gap: 20px;
+  padding: 16px 20px;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Left: Design Image + Stats + Buttons - Flexibles Layout */
+.creator-inspiration-modal__detail-left {
+  flex: 0 0 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Bild-Wrapper: Flexibel, nimmt verfügbaren Platz, aber Stats/Buttons haben Priorität */
+.creator-inspiration-modal__detail-image-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  max-height: calc(100% - 120px); /* Platz für Stats (~50px) + Actions (~60px) + Gaps */
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border: 1px solid rgba(246, 246, 246, .18);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  overflow: hidden;
+}
+
+.creator-inspiration-modal__detail-image-wrap img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  border-radius: 12px;
+}
+
+/* Stats - Immer sichtbar, nicht schrumpfen */
+.creator-inspiration-modal__detail-stats {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  display: flex;
+  gap: 24px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid #374151;
+  border-radius: 12px;
+}
+
+.creator-inspiration-modal__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.creator-inspiration-modal__stat-label {
+  font-size: 12px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.creator-inspiration-modal__stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #F59E0B;
+}
+
+/* Right: Remixes Grid */
+.creator-inspiration-modal__detail-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.creator-inspiration-modal__remixes-header {
+  margin-bottom: 16px;
+}
+
+.creator-inspiration-modal__remixes-header h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.creator-inspiration-modal__remixes-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  /* ✅ TODO 4: Overscroll-Verhalten für Stabilität */
+  overscroll-behavior: contain;
+  /* Scrollbar Styling - wie bei Prozessen */
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #111827;
+}
+
+.creator-inspiration-modal__remixes-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.creator-inspiration-modal__remixes-container::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+.creator-inspiration-modal__remixes-container::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.creator-inspiration-modal__remixes-container::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.creator-inspiration-modal__remixes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.creator-inspiration-modal__remix-card {
+  /* Same as regular card, but can be customized if needed */
+}
+
+.creator-inspiration-modal__remixes-loading,
+.creator-inspiration-modal__remixes-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* Detail Actions - Immer sichtbar, nicht schrumpfen */
+.creator-inspiration-modal__detail-actions {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid #374151;
+  margin-top: auto; /* Buttons an den unteren Rand drücken */
+}
+
+.creator-inspiration-modal__btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.creator-inspiration-modal__btn--primary {
+  background: #F59E0B;
+  color: #020617;
+}
+
+.creator-inspiration-modal__btn--primary:hover {
+  background: #FBBF24;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.creator-inspiration-modal__btn--secondary {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.creator-inspiration-modal__btn--secondary:hover {
+  background: #4b5563;
+  transform: translateY(-1px);
+}
+
+/* Mobile Layout */
+.creator-inspiration-modal__detail-mobile {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  gap: 16px;
+}
+
+/* Carousel 1: Main Design */
+.creator-inspiration-modal__mobile-main-carousel {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 16px;
+  min-height: 0;
+  max-height: calc(80vh - 220px); /* Platz für Remixe-Sektion lassen */
+  -webkit-overflow-scrolling: touch;
+  /* ✅ TODO 4: Overscroll-Verhalten für Stabilität */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #111827;
+}
+
+.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 3px;
+}
+
+.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.creator-inspiration-modal__mobile-slide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Carousel 2: Remixes Section */
+.creator-inspiration-modal__mobile-remixes-section {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #374151;
+  padding-top: 16px;
+}
+
+.creator-inspiration-modal__mobile-remixes-section .creator-inspiration-modal__remixes-header {
+  padding: 0 16px 12px 16px;
+  margin: 0;
+}
+
+.creator-inspiration-modal__mobile-remixes-section .creator-inspiration-modal__remixes-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.creator-inspiration-modal__remixes-container-mobile {
+  padding: 0 16px 16px 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* ✅ TODO 4: Overscroll-Verhalten für Stabilität */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #111827;
+  /* Touch-Swipe Support für horizontales Scrollen */
+  touch-action: pan-x;
+}
+
+.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar {
+  height: 6px;
+}
+
+.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 3px;
+}
+
+.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.creator-inspiration-modal__remixes-grid-mobile {
+  display: flex;
+  gap: 12px;
+  min-width: min-content;
+  padding-bottom: 4px; /* Platz für Scrollbar */
+  /* Touch-Swipe Support */
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+
+.creator-inspiration-modal__remixes-grid-mobile .creator-inspiration-modal__card {
+  flex: 0 0 calc(33.333% - 8px);
+  min-width: calc(33.333% - 8px);
+  max-width: calc(33.333% - 8px);
+  aspect-ratio: 1 / 1;
+  /* Verhindere Text-Selektion beim Swipen */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Mobile Responsive - Vollbild wie Profil-Modal im Shop */
+@media (max-width: 768px) {
+  /* Vollbild: 100vw × 100vh/100dvh, keine Rundung */
+  #creator-inspiration-modal .creator-modal__dialog--large {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    min-height: 0;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  @supports (height: 100dvh) {
+    #creator-inspiration-modal .creator-modal__dialog--large {
+      height: 100dvh;
+      max-height: 100dvh;
+    }
+  }
+
+  .creator-inspiration-modal__grid-view {
+    height: calc(100vh - 60px);
+    max-height: calc(100vh - 60px);
+  }
+
+  @supports (height: 100dvh) {
+    .creator-inspiration-modal__grid-view {
+      height: calc(100dvh - 60px);
+      max-height: calc(100dvh - 60px);
+    }
+  }
+
+  .creator-inspiration-modal__grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+  }
+
+  .creator-inspiration-modal__search-wrapper {
+    padding: 10px 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .creator-inspiration-modal__search {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .creator-inspiration-modal__count {
+    font-size: 11px;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+
+  .creator-inspiration-modal__filter-btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .creator-inspiration-modal__filter-btn__icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .creator-inspiration-modal__grid-container {
+    padding: 16px;
+  }
+
+  .creator-inspiration-modal__detail-desktop {
+    display: none !important;
+  }
+
+  .creator-inspiration-modal__detail-mobile {
+    display: flex !important;
+  }
+
+  .creator-inspiration-modal__detail-image-wrap {
+    min-height: 200px;
+    padding: 12px;
+    max-height: 280px;
+  }
+
+  .creator-inspiration-modal__detail-image-wrap img {
+    max-height: 250px;
+  }
+
+  .creator-inspiration-modal__detail-stats {
+    padding: 6px 10px;
+    gap: 16px;
+  }
+
+  .creator-inspiration-modal__stat {
+    gap: 2px;
+  }
+
+  .creator-inspiration-modal__stat-label {
+    font-size: 10px;
+  }
+
+  .creator-inspiration-modal__stat-value {
+    font-size: 18px;
+  }
+
+  .creator-inspiration-modal__detail-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .creator-inspiration-modal__btn {
+    flex: 1;
+    width: auto;
+  }
+}
+

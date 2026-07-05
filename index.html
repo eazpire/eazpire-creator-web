@@ -113,11 +113,72 @@
     </section>
 
     <section class="creator-screen" data-screen="creations" id="creatorScreenCreations" hidden>
-      <div class="panel creator-placeholder">
-        <span class="pill">Phase 3</span>
+      <div class="panel creator-placeholder guest-only">
         <h2>My Creations</h2>
-        <p>Designs and products library — migration from the Shopify theme is in progress.</p>
-        <span class="badge">Coming soon</span>
+        <p>Sign in to browse your designs and products.</p>
+        <button type="button" class="btn primary" data-login>Sign in</button>
+      </div>
+      <div class="creator-screen__body owner-only" data-desktop-screen="creations">
+        <div class="creator-creations" id="creatorCreations">
+          <div class="creator-creations-tabs">
+            <div class="creator-creations-tabs-nav">
+              <button type="button" class="creator-creations-tab is-active" data-tab="designs">Designs</button>
+              <button type="button" class="creator-creations-tab" data-tab="products">Products</button>
+            </div>
+            <button type="button" class="creator-creations-view-btn" id="creatorCreationsViewBtn" aria-label="View mode" aria-haspopup="dialog">
+              <span class="creator-creations-view-icon" id="creatorCreationsViewIcon">
+                <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16.5" y="9.5" width="5" height="5" rx="1"/></svg>
+              </span>
+            </button>
+          </div>
+          <div class="creator-creations-panel" id="creatorCreationsPanelDesigns" data-tab="designs">
+            <div class="creator-creations-toolbar" id="creatorDesignsToolbar">
+              <input type="search" id="creatorDesignsSearch" class="creator-creations-search" placeholder="Search" aria-label="Search">
+              <button type="button" class="creator-creations-filter-btn creator-creations-filter-btn--has-badge" id="creatorDesignsFilter" aria-label="Filter">
+                <span class="creator-creations-filter-btn__rail" aria-hidden="true"></span>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span class="creator-creations-filter-btn__label">Filter</span>
+                <span class="creator-creations-filter-badge" id="creatorDesignsFilterBadge" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="creator-creations-upload-btn" id="creatorDesignsUpload" aria-label="Upload">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </button>
+              <div class="creator-creations-toolbar__meta">
+                <div class="creator-creations-activity-switch" id="creatorDesignsActivitySwitch" role="group" aria-label="Design activity">
+                  <button type="button" class="creator-creations-activity-btn is-active" data-designs-activity="active" aria-pressed="true">Active</button>
+                  <button type="button" class="creator-creations-activity-btn" data-designs-activity="inactive" aria-pressed="false">Inactive</button>
+                </div>
+                <span class="creator-creations-count" id="creatorDesignsCount">0 Designs</span>
+              </div>
+            </div>
+            <div class="creator-creations-grid-wrap">
+              <div id="creatorDesignsLoading" class="creator-creations-loading" style="display:none">Loading…</div>
+              <div id="creatorDesignsEmpty" class="creator-creations-empty" style="display:none">No designs found.</div>
+              <div id="creatorDesignsGrid" class="creator-creations-grid creator-creations-grid--2"></div>
+              <div id="creatorDesignsList" class="creator-creations-list" style="display:none"></div>
+            </div>
+          </div>
+          <div class="creator-creations-panel creator-creations-panel--hidden" id="creatorCreationsPanelProducts" data-tab="products">
+            <div class="creator-creations-toolbar creator-creations-toolbar--no-upload" id="creatorProductsToolbar">
+              <input type="search" id="creatorProductsSearch" class="creator-creations-search" placeholder="Search" aria-label="Search">
+              <button type="button" class="creator-creations-filter-btn creator-creations-filter-btn--has-badge" id="creatorProductsFilter" aria-label="Filter">
+                <span class="creator-creations-filter-btn__rail" aria-hidden="true"></span>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span class="creator-creations-filter-btn__label">Filter</span>
+                <span class="creator-creations-filter-badge" id="creatorProductsFilterBadge" aria-hidden="true"></span>
+              </button>
+              <div class="creator-creations-toolbar__meta creator-creations-toolbar__meta--count-only">
+                <span class="creator-creations-count" id="creatorProductsCount">0 Products</span>
+              </div>
+            </div>
+            <div class="creator-creations-grid-wrap">
+              <div id="creatorProductsLoading" class="creator-creations-loading" style="display:none">Loading…</div>
+              <div id="creatorProductsEmpty" class="creator-creations-empty" style="display:none">No products found.</div>
+              <div id="creatorProductsGrid" class="creator-creations-grid creator-creations-grid--2"></div>
+              <div id="creatorProductsList" class="creator-creations-list" style="display:none"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -140,11 +201,77 @@
     </section>
 
     <section class="creator-screen" data-screen="generator" id="creatorScreenGenerator" hidden>
-      <div class="panel creator-placeholder">
-        <span class="pill">Phase 3</span>
+      <div class="panel creator-placeholder guest-only">
         <h2>Design Generator</h2>
-        <p>The full generator UI will move here from the shop theme.</p>
-        <span class="badge">Coming soon</span>
+        <p>Sign in to generate new designs.</p>
+        <button type="button" class="btn primary" data-login>Sign in</button>
+      </div>
+      <div class="creator-screen__body owner-only">
+        <div class="creator-generator" id="creatorGenerator">
+          <div class="creator-generator__scroll">
+            <div class="creator-generator__pills">
+              <button type="button" class="creator-pill" id="genTargetProduct" aria-haspopup="dialog">
+                <span class="creator-pill__label">Target Product</span>
+                <span class="creator-pill__value" id="genTargetProductVal" data-value="all">Anything</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
+              </button>
+              <button type="button" class="creator-pill" id="genDesignType" aria-haspopup="dialog">
+                <span class="creator-pill__label">Design Type</span>
+                <span class="creator-pill__value" id="genDesignTypeVal" data-value="classic">Classic</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
+              </button>
+            </div>
+            <article class="creator-gen-card creator-gen-card--upload">
+              <span class="creator-gen-upload-optional">Optional</span>
+              <div class="creator-gen-upload-zone" id="genUploadZone" role="button" tabindex="0">
+                <svg class="creator-gen-upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span class="creator-gen-upload-text">Upload</span>
+              </div>
+              <input type="file" id="genImageInput" accept="image/*" multiple class="creator-gen-upload-input" aria-hidden="true" tabindex="-1" />
+            </article>
+            <article class="creator-container creator-gen-card creator-gen-card--selected gen-selected-images" id="genSelectedImagesCard" data-collapsible style="display:none">
+              <button type="button" class="creator-container__header gen-selected-images__header" aria-expanded="true" aria-controls="genSelectedImagesBody">
+                <h3 class="gen-selected-images__title">Reference images</h3>
+                <span class="gen-selected-images__right">
+                  <span class="creator-container__count" id="genSelectedImagesCount">0</span>
+                  <svg class="creator-container__chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="currentColor"/></svg>
+                </span>
+              </button>
+              <div class="creator-container__body gen-selected-images__body" id="genSelectedImagesBody">
+                <div class="gen-selected-images__grid" id="genSelectedImagesGrid"></div>
+              </div>
+            </article>
+            <article class="creator-gen-card creator-gen-card--prompt">
+              <div class="creator-gen-card__bar">
+                <h3 class="creator-gen-card__title">Prompt</h3>
+                <div class="creator-gen-card__actions">
+                  <button type="button" class="creator-gen-btn creator-gen-btn--suggest" id="genSuggest" aria-label="Suggest">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                    Suggest
+                  </button>
+                  <button type="button" class="creator-gen-btn creator-gen-btn--clear" id="genClear" aria-label="Clear">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <textarea id="genPrompt" class="creator-gen-textarea" rows="4" placeholder="Describe your design or upload an image – both optional"></textarea>
+              <div class="creator-gen-prompt-footer">
+                <button type="button" class="creator-gen-link" id="genMoreOptions">More options</button>
+              </div>
+            </article>
+          </div>
+          <footer class="creator-gen-footer creator-gen-footer--portal">
+            <button type="button" class="creator-gen-submit" id="genGenerate" data-eaz-price="10">
+              <span>Generate</span>
+              <span class="creator-gen-submit__badge">10 EAZ</span>
+            </button>
+          </footer>
+        </div>
       </div>
     </section>
   </main>
@@ -190,10 +317,26 @@
 
 <div class="toast" id="toast"><strong id="tTitle">Done</strong><span id="tText">OK</span></div>
 
-<script src="/js/api.js?v=2"></script>
-<script src="/js/auth.js?v=2"></script>
-<script src="/js/router.js?v=2"></script>
-<script src="/js/dashboard.js?v=2"></script>
-<script src="/js/app.js?v=2"></script>
+<div class="creator-view-mode-overlay" id="creatorViewModeOverlay" aria-hidden="true">
+  <div class="creator-view-mode-modal" role="dialog" aria-label="View options">
+    <div class="creator-view-mode-options">
+      <button type="button" class="creator-view-mode-opt" data-view="grid2"><span>2 columns</span></button>
+      <button type="button" class="creator-view-mode-opt" data-view="grid3"><span>3 columns</span></button>
+      <button type="button" class="creator-view-mode-opt" data-view="grid4"><span>4 columns</span></button>
+      <button type="button" class="creator-view-mode-opt" data-view="list"><span>List</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="creatorPortalModals"></div>
+
+<script src="/js/creator-i18n.js?v=3"></script>
+<script src="/js/api.js?v=3"></script>
+<script src="/js/auth.js?v=3"></script>
+<script src="/js/theme-bridge.js?v=3"></script>
+<script src="/js/router.js?v=3"></script>
+<script src="/js/feature-loader.js?v=3"></script>
+<script src="/js/dashboard.js?v=3"></script>
+<script src="/js/app.js?v=3"></script>
 </body>
 </html>

@@ -1,0 +1,442 @@
+<div class="gen-select-overlay" id="genRefImageOverlay" aria-hidden="true">
+  <div class="gen-select-modal gen-ref-image-modal" role="dialog" aria-modal="true" aria-labelledby="genRefImageTitle">
+    <div class="gen-select-modal__header">
+      <h3 class="gen-select-modal__title" id="genRefImageTitle">Select reference</h3>
+      <button type="button" class="gen-select-modal__close" id="genRefImageClose" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="gen-ref-image-options">
+      <button type="button" class="gen-ref-image-card" data-source="device">
+        <span class="gen-ref-image-card__icon gen-ref-image-card__icon--device">
+          <span class="gen-ref-image-card__phone">
+            <span class="gen-ref-image-card__grid">
+              <span style="--c:#f97316"></span><span style="--c:#eab308"></span><span style="--c:#22c55e"></span><span style="--c:#3b82f6"></span>
+            </span>
+          </span>
+        </span>
+        <span class="gen-ref-image-card__text">
+          <span class="gen-ref-image-card__title">Source device</span>
+          <span class="gen-ref-image-card__desc">Source device desc</span>
+        </span>
+      </button>
+      <button type="button" class="gen-ref-image-card" data-source="camera">
+        <span class="gen-ref-image-card__icon gen-ref-image-card__icon--camera">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 8a2 2 0 0 1 2-2h2l1.2-1.6A1 1 0 0 1 10 4h4a1 1 0 0 1 .8.4L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/>
+            <circle cx="12" cy="13" r="3.2"/>
+          </svg>
+        </span>
+        <span class="gen-ref-image-card__text">
+          <span class="gen-ref-image-card__title">Source camera</span>
+          <span class="gen-ref-image-card__desc">Source camera desc</span>
+        </span>
+      </button>
+      <button type="button" class="gen-ref-image-card" data-source="phone">
+        <span class="gen-ref-image-card__icon gen-ref-image-card__icon--phone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="7" y="3" width="10" height="18" rx="2"/>
+            <path d="M10 18h4"/>
+          </svg>
+        </span>
+        <span class="gen-ref-image-card__text">
+          <span class="gen-ref-image-card__title">Source phone</span>
+          <span class="gen-ref-image-card__desc">Source phone desc</span>
+        </span>
+      </button>
+      <button type="button" class="gen-ref-image-card" data-source="inspirations">
+        <span class="gen-ref-image-card__icon gen-ref-image-card__icon--star">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </span>
+        <span class="gen-ref-image-card__text">
+          <span class="gen-ref-image-card__title">Inspirations</span>
+          <span class="gen-ref-image-card__desc">Inspirations desc</span>
+        </span>
+      </button>
+      <button type="button" class="gen-ref-image-card" data-source="designs">
+        <span class="gen-ref-image-card__icon gen-ref-image-card__icon--folder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </span>
+        <span class="gen-ref-image-card__text">
+          <span class="gen-ref-image-card__title">Source designs</span>
+          <span class="gen-ref-image-card__desc">Source designs desc</span>
+        </span>
+      </button>
+      <button type="button" class="gen-ref-image-card" data-source="canvas">
+        <span class="gen-ref-image-card__icon gen-ref-image-card__icon--canvas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </span>
+        <span class="gen-ref-image-card__text">
+          <span class="gen-ref-image-card__title">Source canvas</span>
+          <span class="gen-ref-image-card__desc">Source canvas desc</span>
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="gen-select-overlay" id="genMyDesignsOverlay" aria-hidden="true">
+  <div class="gen-select-modal gen-my-designs-modal" role="dialog" aria-modal="true" aria-labelledby="genMyDesignsTitle">
+    <div class="gen-select-modal__header">
+      <h3 class="gen-select-modal__title" id="genMyDesignsTitle">Source designs</h3>
+      <button type="button" class="gen-select-modal__close" id="genMyDesignsClose" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="gen-my-designs-subheader">
+      <input type="search" id="genMyDesignsSearch" class="gen-my-designs-search" placeholder="Search placeholder" aria-label="Search aria">
+      <span id="genMyDesignsCount" class="gen-my-designs-count">0 designs</span>
+    </div>
+    <div class="gen-my-designs-body">
+      <div id="genMyDesignsLoading" class="gen-my-designs-loading" style="display:none">Loading</div>
+      <div id="genMyDesignsEmpty" class="gen-my-designs-empty" style="display:none">Empty</div>
+      <div id="genMyDesignsGrid" class="gen-my-designs-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="gen-select-overlay" id="genProductInfoOverlay" aria-hidden="true">
+  <div class="gen-select-modal gen-product-info-modal" role="dialog" aria-modal="true" aria-labelledby="genProductInfoTitle">
+    <div class="gen-select-modal__header">
+      <h3 class="gen-select-modal__title" id="genProductInfoTitle">Product info</h3>
+      <button type="button" class="gen-select-modal__close" id="genProductInfoClose" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="gen-select-modal__list gen-product-info-content" id="genProductInfoContent"></div>
+  </div>
+</div>
+
+<div class="gen-select-overlay" id="genConfirmOverlay" aria-hidden="true">
+  <div class="gen-select-modal gen-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="genConfirmTitle">
+    <div class="gen-select-modal__header">
+      
+      
+      <h3 class="gen-select-modal__title" id="genConfirmTitle"></h3>
+      <button type="button" class="gen-select-modal__close" id="genConfirmClose" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="gen-confirm-body">
+      <div id="genConfirmSummary" class="gen-confirm-summary"></div>
+      <div class="gen-confirm-eaz">
+        
+        
+        
+        
+        <span class="gen-confirm-eaz__cost"></span>
+        <span class="gen-confirm-eaz__balance" id="genConfirmBalance"></span>
+      </div>
+      <div class="gen-confirm-actions">
+        
+        
+        
+        
+        <button type="button" class="gen-confirm-btn gen-confirm-btn--cancel" id="genConfirmCancel"></button>
+        <button type="button" class="gen-confirm-btn gen-confirm-btn--confirm" id="genConfirmConfirm"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="gen-select-overlay" id="genSelectOverlay" aria-hidden="true">
+  <div class="gen-select-modal" role="dialog" aria-modal="true" aria-labelledby="genSelectTitle">
+    <div class="gen-select-modal__header">
+      <h3 class="gen-select-modal__title" id="genSelectTitle">Select</h3>
+      <button type="button" class="gen-select-modal__close" id="genSelectClose" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="gen-select-modal__list" id="genSelectList"></div>
+  </div>
+</div>
+
+<div class="gen-options-overlay" id="genOptionsOverlay" aria-hidden="true">
+  <div class="gen-options-modal" role="dialog" aria-modal="true" aria-labelledby="genOptionsTitle">
+    <div class="gen-options-header">
+      <h3 class="gen-options-title" id="genOptionsTitle">More options</h3>
+      <button type="button" class="gen-options-close" id="genOptionsClose" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="gen-options-body">
+      <div class="gen-options-row">
+        <span class="gen-options-label">Ratio title</span>
+        <div class="gen-options-ratio-row">
+          <button type="button" class="gen-options-ratio" data-ratio="square" title="Square"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+          <button type="button" class="gen-options-ratio is-active" data-ratio="portrait" title="Portrait"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+          <button type="button" class="gen-options-ratio" data-ratio="landscape" title="Landscape"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+        </div>
+      </div>
+      <div class="gen-options-row">
+        <span class="gen-options-label">Content type title</span>
+        <div class="gen-options-content-type-grid">
+          <button type="button" class="gen-options-content-type-card is-active" data-content-type="design-text" title="Content design text">
+            <span class="gen-options-content-type-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M5 8l3 4 2-3 2 4"/><path d="M14 12h5"/><path d="M14 15h4"/></svg>
+            </span>
+            <span class="gen-options-content-type-label">Content design text</span>
+          </button>
+          <button type="button" class="gen-options-content-type-card" data-content-type="design-only" title="Content design only">
+            <span class="gen-options-content-type-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l4-6 4 4 4-8 4 10H4z"/><circle cx="18" cy="6" r="2"/></svg>
+            </span>
+            <span class="gen-options-content-type-label">Content design only</span>
+          </button>
+          <button type="button" class="gen-options-content-type-card" data-content-type="text-only" title="Content text only">
+            <span class="gen-options-content-type-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12"/><path d="M12 4v16"/></svg>
+            </span>
+            <span class="gen-options-content-type-label">Content text only</span>
+          </button>
+        </div>
+      </div>
+      <div class="gen-options-row">
+        <span class="gen-options-label">Style title</span>
+        <button type="button" class="gen-options-summary-btn" id="genOptionsStylesBtn">
+          <span id="genOptionsStylesSummary">0 Styles selected</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+      </div>
+      <div class="gen-options-row">
+        <span class="gen-options-label">Language title</span>
+        <button type="button" class="gen-options-summary-btn" id="genOptionsLanguageBtn">
+          <span id="genOptionsLanguageSummary">Language as design</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+      </div>
+      <div class="gen-options-row">
+        <span class="gen-options-label">Design colors</span>
+        <button type="button" class="gen-options-summary-btn" id="genOptionsColorsBtn">
+          <span id="genOptionsColorsSummary">Design summary initial</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <div class="gen-options-colors-preview">
+          <div class="gen-options-colors-cat">
+            <span class="gen-options-colors-cat-label">Design label</span>
+            <div class="gen-options-colors-dots" id="genOptionsDesignDots"></div>
+          </div>
+          <div class="gen-options-colors-cat">
+            <span class="gen-options-colors-cat-label">Background label</span>
+            <div class="gen-options-colors-dots" id="genOptionsBgDots"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="gen-options-footer">
+      <button type="button" class="gen-options-apply" id="genOptionsApply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="gen-styles-overlay" id="genStylesOverlay" aria-hidden="true">
+  <div class="gen-styles-modal" role="dialog" aria-modal="true" aria-labelledby="genStylesTitle">
+    <div class="gen-styles-header">
+      <h3 class="gen-styles-title" id="genStylesTitle">Style title</h3>
+      <button type="button" class="gen-styles-close" id="genStylesClose" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="gen-styles-body">
+      <input type="search" class="gen-styles-search" id="genStylesSearch" placeholder="Search placeholder" aria-label="Search aria">
+      <div class="gen-styles-categories" id="genStylesCategories">
+        <div class="gen-styles-category">
+          <button type="button" class="gen-styles-category-header" aria-expanded="true">
+            <span class="gen-styles-category-title">Modern design</span>
+            <svg class="gen-styles-category-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
+          <div class="gen-styles-category-content">
+            <button type="button" class="gen-styles-chip" data-style="modern">Modern</button>
+            <button type="button" class="gen-styles-chip" data-style="minimalist">Minimalist</button>
+            <button type="button" class="gen-styles-chip" data-style="clean-line-art">Clean line art</button>
+            <button type="button" class="gen-styles-chip" data-style="flat-design">Flat design</button>
+            <button type="button" class="gen-styles-chip" data-style="bold-graphic">Bold graphic</button>
+            <button type="button" class="gen-styles-chip" data-style="geometric">Geometric</button>
+            <button type="button" class="gen-styles-chip" data-style="abstract">Abstract</button>
+            <button type="button" class="gen-styles-chip" data-style="contemporary">Contemporary</button>
+            <button type="button" class="gen-styles-chip" data-style="editorial-style">Editorial style</button>
+            <button type="button" class="gen-styles-chip" data-style="poster-design">Poster design</button>
+          </div>
+        </div>
+
+        <div class="gen-styles-category">
+          <button type="button" class="gen-styles-category-header" aria-expanded="true">
+            <span class="gen-styles-category-title">Drawing illustration</span>
+            <svg class="gen-styles-category-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
+          <div class="gen-styles-category-content">
+            <button type="button" class="gen-styles-chip" data-style="zeichnung">Drawing</button>
+            <button type="button" class="gen-styles-chip" data-style="handgezeichnet">Hand drawn</button>
+            <button type="button" class="gen-styles-chip" data-style="line-art">Line art</button>
+            <button type="button" class="gen-styles-chip" data-style="cartoon">Cartoon</button>
+            <button type="button" class="gen-styles-chip" data-style="comic-style">Comic style</button>
+            <button type="button" class="gen-styles-chip" data-style="manga">Manga</button>
+            <button type="button" class="gen-styles-chip" data-style="sketch">Sketch</button>
+            <button type="button" class="gen-styles-chip" data-style="doodle">Doodle</button>
+            <button type="button" class="gen-styles-chip" data-style="technical-drawing">Technical drawing</button>
+            <button type="button" class="gen-styles-chip" data-style="blueprint-style">Blueprint style</button>
+          </div>
+        </div>
+
+        <div class="gen-styles-category">
+          <button type="button" class="gen-styles-category-header" aria-expanded="true">
+            <span class="gen-styles-category-title">Painting art</span>
+            <svg class="gen-styles-category-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
+          <div class="gen-styles-category-content">
+            <button type="button" class="gen-styles-chip" data-style="painting">Painting</button>
+            <button type="button" class="gen-styles-chip" data-style="acryl">Acryl</button>
+            <button type="button" class="gen-styles-chip" data-style="oelmalerei">Oil painting</button>
+            <button type="button" class="gen-styles-chip" data-style="aquarell">Watercolor</button>
+            <button type="button" class="gen-styles-chip" data-style="gouache">Gouache</button>
+            <button type="button" class="gen-styles-chip" data-style="pastell">Pastel</button>
+            <button type="button" class="gen-styles-chip" data-style="bleistift">Pencil</button>
+            <button type="button" class="gen-styles-chip" data-style="kohlezeichnung">Charcoal drawing</button>
+            <button type="button" class="gen-styles-chip" data-style="mixed-media">Mixed media</button>
+            <button type="button" class="gen-styles-chip" data-style="expressionistisch">Expressionist</button>
+            <button type="button" class="gen-styles-chip" data-style="impressionistisch">Impressionist</button>
+            <button type="button" class="gen-styles-chip" data-style="realistisch">Realistic</button>
+            <button type="button" class="gen-styles-chip" data-style="surrealistisch">Surrealist</button>
+          </div>
+        </div>
+
+        <div class="gen-styles-category">
+          <button type="button" class="gen-styles-category-header" aria-expanded="true">
+            <span class="gen-styles-category-title">Material surface</span>
+            <svg class="gen-styles-category-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
+          <div class="gen-styles-category-content">
+            <button type="button" class="gen-styles-chip" data-style="gestickt">Embroidered</button>
+            <button type="button" class="gen-styles-chip" data-style="stickerei-3d">Embroidery 3d</button>
+            <button type="button" class="gen-styles-chip" data-style="siebdruck">Screen print</button>
+            <button type="button" class="gen-styles-chip" data-style="vintage-print">Vintage print</button>
+            <button type="button" class="gen-styles-chip" data-style="used-look">Used look</button>
+            <button type="button" class="gen-styles-chip" data-style="distressed">Distressed</button>
+            <button type="button" class="gen-styles-chip" data-style="graffiti">Graffiti</button>
+            <button type="button" class="gen-styles-chip" data-style="spray-paint">Spray paint</button>
+            <button type="button" class="gen-styles-chip" data-style="stencil-art">Stencil art</button>
+            <button type="button" class="gen-styles-chip" data-style="holzschnitt">Woodcut</button>
+            <button type="button" class="gen-styles-chip" data-style="linolschnitt">Linocut</button>
+            <button type="button" class="gen-styles-chip" data-style="tattoo-style">Tattoo style</button>
+            <button type="button" class="gen-styles-chip" data-style="neon">Neon</button>
+            <button type="button" class="gen-styles-chip" data-style="metallic">Metallic</button>
+            <button type="button" class="gen-styles-chip" data-style="gold-foil">Gold foil</button>
+            <button type="button" class="gen-styles-chip" data-style="glitch">Glitch</button>
+            <button type="button" class="gen-styles-chip" data-style="pixel-art">Pixel art</button>
+          </div>
+        </div>
+
+        <div class="gen-styles-category">
+          <button type="button" class="gen-styles-category-header" aria-expanded="true">
+            <span class="gen-styles-category-title">Retro eras</span>
+            <svg class="gen-styles-category-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
+          <div class="gen-styles-category-content">
+            <button type="button" class="gen-styles-chip" data-style="retro">Retro</button>
+            <button type="button" class="gen-styles-chip" data-style="70s-style">70s Style</button>
+            <button type="button" class="gen-styles-chip" data-style="80s-style">80s Style</button>
+            <button type="button" class="gen-styles-chip" data-style="90s-style">90s Style</button>
+            <button type="button" class="gen-styles-chip" data-style="y2k">Y2k</button>
+            <button type="button" class="gen-styles-chip" data-style="vintage">Vintage</button>
+            <button type="button" class="gen-styles-chip" data-style="art-deco">Art deco</button>
+            <button type="button" class="gen-styles-chip" data-style="bauhaus">Bauhaus</button>
+            <button type="button" class="gen-styles-chip" data-style="pop-art">Pop art</button>
+          </div>
+        </div>
+
+        <div class="gen-styles-category">
+          <button type="button" class="gen-styles-category-header" aria-expanded="true">
+            <span class="gen-styles-category-title">Special pod</span>
+            <svg class="gen-styles-category-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
+          <div class="gen-styles-category-content">
+            <button type="button" class="gen-styles-chip" data-style="t-shirt-graphic">T shirt graphic</button>
+            <button type="button" class="gen-styles-chip" data-style="streetwear">Streetwear</button>
+            <button type="button" class="gen-styles-chip" data-style="merch-style">Merch style</button>
+            <button type="button" class="gen-styles-chip" data-style="print-ready">Print ready</button>
+            <button type="button" class="gen-styles-chip" data-style="sticker-style">Sticker style</button>
+            <button type="button" class="gen-styles-chip" data-style="patch-style">Patch style</button>
+            <button type="button" class="gen-styles-chip" data-style="emblem">Emblem</button>
+            <button type="button" class="gen-styles-chip" data-style="badge-design">Badge design</button>
+            <button type="button" class="gen-styles-chip" data-style="logo-style">Logo style</button>
+            <button type="button" class="gen-styles-chip" data-style="typography-focus">Typography focus</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="gen-styles-footer">
+      <div class="gen-styles-footer-meta">
+        <p class="gen-styles-hint">Max selected</p>
+        <span class="gen-styles-count-badge" id="genStylesCountBadge">0/5</span>
+      </div>
+      <button type="button" class="gen-styles-apply" id="genStylesApply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="gen-lang-overlay" id="genLangOverlay" aria-hidden="true">
+  <div class="gen-lang-modal" role="dialog" aria-modal="true" aria-labelledby="genLangTitle">
+    <div class="gen-lang-header">
+      <h3 class="gen-lang-title" id="genLangTitle">Language title</h3>
+      <button type="button" class="gen-lang-close" id="genLangClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="gen-lang-body">
+      <div class="gen-lang-mode-row">
+        <span class="gen-lang-mode-label">Language title</span>
+        <div class="gen-lang-mode-opts">
+          <button type="button" class="gen-lang-mode-opt is-selected" data-mode="as-design">Language as design</button>
+          <button type="button" class="gen-lang-mode-opt" data-mode="as-prompt">Language as prompt</button>
+          <button type="button" class="gen-lang-mode-opt" data-mode="manual">Language manual</button>
+        </div>
+      </div>
+      <div class="gen-lang-manual-block" id="genLangManualBlock" style="display:none">
+        <div class="gen-lang-search" id="genLangSearchWrap"><input type="search" id="genLangSearch" placeholder="Search placeholder" aria-label="Search aria"></div>
+        <div class="gen-lang-list-collapsed" id="genLangListCollapsed" style="display:none"><div class="gen-lang-modal-list"></div></div>
+        <div class="gen-lang-list-expanded" id="genLangListExpanded" style="display:none"><div class="gen-lang-modal-list"></div></div>
+        <div class="gen-lang-dialect-script-row" id="genLangDialectScriptRow" style="display:none">
+          <button type="button" class="gen-lang-dialect-btn" id="genLangDialectBtn">Dialect<svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2"/></svg></button>
+          <button type="button" class="gen-lang-script-btn" id="genLangScriptBtn">Script<svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="gen-lang-footer"><button type="button" class="gen-lang-cancel" id="genLangCancel">Cancel</button><button type="button" class="gen-lang-apply" id="genLangApply">Apply</button></div>
+  </div>
+</div>
+
+<div class="gen-color-overlay" id="genColorOverlay" aria-hidden="true">
+  <div class="gen-color-modal" role="dialog" aria-modal="true" aria-labelledby="genColorTitle">
+    <div class="gen-color-header">
+      <h3 class="gen-color-title" id="genColorTitle">Design colors</h3>
+      <button type="button" class="gen-color-close" id="genColorClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="gen-color-tabs"><button type="button" class="gen-color-tab is-active" id="genColorTabDesign">Design label</button><button type="button" class="gen-color-tab" id="genColorTabBackground">Background label</button></div>
+    <div class="gen-color-body">
+      <div class="gen-color-panel" id="genColorPanelDesign" style="display:block">
+        <div class="gen-color-presets"><button type="button" class="gen-color-preset" data-hex="#000000" style="background:#000"></button><button type="button" class="gen-color-preset" data-hex="#ffffff" style="background:#fff;border:1px solid #555"></button><button type="button" class="gen-color-preset" data-hex="#ef4444" style="background:#ef4444"></button><button type="button" class="gen-color-preset" data-hex="#f59e0b" style="background:#f59e0b"></button><button type="button" class="gen-color-preset" data-hex="#22c55e" style="background:#22c55e"></button><button type="button" class="gen-color-preset" data-hex="#3b82f6" style="background:#3b82f6"></button><button type="button" class="gen-color-preset" data-hex="#8b5cf6" style="background:#8b5cf6"></button><button type="button" class="gen-color-preset" data-hex="#ec4899" style="background:#ec4899"></button></div>
+        <div class="gen-color-picker-row"><input type="color" id="genColorDesignPicker" value="#f59e0b" class="gen-color-picker"><input type="text" id="genColorDesignHex" class="gen-color-hex" placeholder="#hex" maxlength="7" value="#f59e0b"><button type="button" id="genColorDesignAdd" class="gen-color-add-btn">Add</button></div>
+        <p class="gen-color-hint">Max colors</p>
+        <div class="gen-color-selected" id="genColorDesignDots"></div>
+      </div>
+      <div class="gen-color-panel" id="genColorPanelBackground" style="display:none">
+        <div class="gen-color-bg-switch-row"><label class="gen-color-bg-switch"><input type="checkbox" id="genColorBgTransparent" checked><span class="gen-color-bg-switch-slider"></span></label><span class="gen-color-bg-label" id="genColorBgLabel">Background transparent</span></div>
+        <div id="genColorBgColorBlock" style="display:none">
+          <div class="gen-color-presets"><button type="button" class="gen-color-preset gen-color-preset-bg" data-hex="#000000" style="background:#000"></button><button type="button" class="gen-color-preset gen-color-preset-bg" data-hex="#ffffff" style="background:#fff;border:1px solid #555"></button><button type="button" class="gen-color-preset gen-color-preset-bg" data-hex="#ef4444" style="background:#ef4444"></button><button type="button" class="gen-color-preset gen-color-preset-bg" data-hex="#f59e0b" style="background:#f59e0b"></button><button type="button" class="gen-color-preset gen-color-preset-bg" data-hex="#22c55e" style="background:#22c55e"></button><button type="button" class="gen-color-preset gen-color-preset-bg" data-hex="#3b82f6" style="background:#3b82f6"></button><button type="button" class="gen-color-preset gen-color-preset-bg" data-hex="#8b5cf6" style="background:#8b5cf6"></button><button type="button" class="gen-color-preset gen-color-preset-bg" data-hex="#ec4899" style="background:#ec4899"></button></div>
+          <div class="gen-color-picker-row"><input type="color" id="genColorBgPicker" value="#ffffff" class="gen-color-picker"><input type="text" id="genColorBgHex" class="gen-color-hex" placeholder="#hex" maxlength="7" value="#ffffff"><button type="button" id="genColorBgAdd" class="gen-color-add-btn">Add</button></div>
+          <p class="gen-color-hint">Max colors</p>
+          <div class="gen-color-selected" id="genColorBgDots"></div>
+        </div>
+      </div>
+    </div>
+    <div class="gen-color-footer"><button type="button" class="gen-color-apply" id="genColorApply">Apply</button></div>
+  </div>
+</div>
+
+<div class="gen-dialect-overlay" id="genDialectOverlay" aria-hidden="true">
+  <div class="gen-dialect-modal" role="dialog" aria-modal="true">
+    <div class="gen-dialect-header">
+      <h3 class="gen-dialect-title" id="genDialectTitle">Dialect</h3>
+      <button type="button" class="gen-dialect-close" id="genDialectClose" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg></button>
+    </div>
+    <div class="gen-dialect-body" id="genDialectBody"></div>
+  </div>
+</div>

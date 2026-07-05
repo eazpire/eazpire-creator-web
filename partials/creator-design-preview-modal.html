@@ -1,0 +1,1329 @@
+<style>
+  /* Modal Overlay */
+  #creatorDesignPreviewModal- {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.96);
+    z-index: 100000; /* Höher als creator-modal (60) und creator-design-modal */
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  #creatorDesignPreviewModal-[aria-hidden="false"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  #creatorDesignPreviewModal-.cdp-modal--open {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Modal Container */
+  .cdp-modal {
+    position: relative;
+    background: rgba(192, 132, 252, 0.18);
+    border-radius: 12px;
+    border: 1px solid #020617;
+    max-width: 1100px;
+    width: 100%;
+    max-height: 72vh; /* mobile überschreibt */
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+
+  /* ✅ Desktop: Modal höher, damit Prompt + Switch sichtbar sind */
+  @media (min-width: 901px) {
+    .cdp-modal {
+      max-height: 90vh;
+    }
+  }
+
+  /* Header */
+  .cdp-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(75, 85, 99, 0.5);
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #e5e7eb;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cdp-modal__close {
+    background: transparent;
+    border: 0;
+    color: #e5e7eb;
+    font-size: 28px;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__close:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Body */
+  .cdp-modal__body {
+    flex: 1;
+    overflow-y: auto !important; /* ✅ Force scrollbar */
+    overflow-x: hidden;
+    padding: 20px;
+    padding-bottom: 28px; /* ✅ Abstand zum Footer (Platz für spätere Meldung) */
+    min-height: 0;
+    display: flex; /* ✅ Ensure flex display */
+    flex-direction: column;
+  }
+
+  /* ✅ Desktop: Scrollbar sichtbar machen */
+  @media (min-width: 901px) {
+    .cdp-modal__body {
+      scrollbar-width: thin; /* Firefox */
+      scrollbar-color: #4b5563 transparent;
+    }
+
+    .cdp-modal__body::-webkit-scrollbar {
+      width: 8px;
+      display: block !important; /* ✅ Force scrollbar visibility */
+    }
+
+    .cdp-modal__body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .cdp-modal__body::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 4px;
+    }
+
+    .cdp-modal__body::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+  }
+
+  /* Mobile: Scrollbar unsichtbar */
+  @media (max-width: 900px) {
+    .cdp-modal__body {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
+    }
+
+    .cdp-modal__body::-webkit-scrollbar {
+      width: 0px;
+      height: 0px;
+      background: transparent;
+    }
+  }
+
+  /* Desktop: 2-Spalten Layout */
+  .cdp-modal__desktop-container {
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  /* Linke Seite: Design */
+  .cdp-modal__desktop-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  /* Rechte Seite: Design Info */
+  .cdp-modal__desktop-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  /* Design Image - Gleicher Stil wie fertiges Design im Job Preview */
+  .cdp-modal__image-wrapper {
+    border-radius: 10px;
+    border: 2px solid #F59E0B;
+    background: #37375A;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    width: 100%;
+    height: 400px;
+    min-height: 400px;
+    max-height: 400px;
+    box-sizing: border-box;
+    /* ✅ Gleicher Stil wie fertiges Design - klar und scharf, kein dim-Effekt */
+    isolation: isolate;
+    transition: filter 0.15s ease;
+    position: relative; /* Für Crop-Icon Positionierung */
+  }
+
+  .cdp-modal__image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 6px;
+    /* No min-width/min-height: they distort the replaced-element box vs object-fit: contain
+       and break natural↔screen coordinate mapping for manual crop. */
+    /* ✅ Fertiges Design: volle Opacity, kein Blur */
+    opacity: 1;
+    filter: none;
+    display: block;
+  }
+
+  /* ✅ Hover-Effekt wie im Creator Widget (nur wenn klickbar) */
+  .cdp-modal__image-wrapper:hover .cdp-modal__image {
+    filter: brightness(1.05);
+  }
+
+  /* Crop Icon Button - Rechts unten im Bild-Container */
+  .cdp-modal__crop-btn {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.9);
+    border: 2px solid #F59E0B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .cdp-modal__crop-btn:hover {
+    background: rgba(245, 158, 11, 1);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .cdp-modal__crop-btn:active {
+    transform: scale(0.95);
+  }
+
+  .cdp-modal__crop-btn--loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .cdp-modal__crop-icon {
+    width: 20px;
+    height: 20px;
+    fill: #020617;
+    stroke: #020617;
+    stroke-width: 1.5;
+  }
+
+  .cdp-modal__crop-btn .cdp-modal__crop-icon--apply {
+    display: none;
+    width: 20px;
+    height: 20px;
+    stroke: #020617;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .cdp-modal__crop-btn--save-mode .cdp-modal__crop-icon--adjust {
+    display: none;
+  }
+
+  .cdp-modal__crop-btn--save-mode .cdp-modal__crop-icon--apply {
+    display: block;
+  }
+
+  .cdp-modal__image-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cdp-manual-crop-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .cdp-manual-crop-layer--active {
+    pointer-events: auto;
+  }
+
+  .cdp-manual-crop-layer[hidden] {
+    display: none !important;
+  }
+
+  .cdp-manual-crop-shade {
+    position: absolute;
+    background: rgba(2, 6, 23, 0.55);
+    pointer-events: auto;
+    cursor: default;
+  }
+
+  .cdp-manual-crop-inner {
+    position: absolute;
+    box-sizing: border-box;
+    cursor: move;
+    touch-action: none;
+  }
+
+  .cdp-manual-crop-border {
+    position: absolute;
+    inset: 0;
+    border: 2px solid #f59e0b;
+    border-radius: 3px;
+    pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  }
+
+  .cdp-manual-crop-handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px;
+    box-sizing: border-box;
+    background: #fff;
+    border: 2px solid #f59e0b;
+    border-radius: 2px;
+    z-index: 2;
+    touch-action: none;
+  }
+
+  .cdp-manual-crop-handle[data-handle="nw"] {
+    left: 0;
+    top: 0;
+    cursor: nwse-resize;
+  }
+
+  .cdp-manual-crop-handle[data-handle="ne"] {
+    right: 0;
+    top: 0;
+    cursor: nesw-resize;
+  }
+
+  .cdp-manual-crop-handle[data-handle="sw"] {
+    left: 0;
+    bottom: 0;
+    cursor: nesw-resize;
+  }
+
+  .cdp-manual-crop-handle[data-handle="se"] {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+  }
+
+  .cdp-manual-crop-handle[data-handle="n"] {
+    left: 50%;
+    top: 0;
+    cursor: ns-resize;
+  }
+
+  .cdp-manual-crop-handle[data-handle="s"] {
+    left: 50%;
+    bottom: 0;
+    cursor: ns-resize;
+  }
+
+  .cdp-manual-crop-handle[data-handle="w"] {
+    left: 0;
+    top: 50%;
+    cursor: ew-resize;
+  }
+
+  .cdp-manual-crop-handle[data-handle="e"] {
+    right: 0;
+    top: 50%;
+    cursor: ew-resize;
+  }
+
+  .cdp-modal__carousel--manual-crop {
+    touch-action: none;
+  }
+
+  /* User Image Wrapper */
+  .cdp-modal__user-image-wrapper {
+    display: none;
+    border-radius: 10px;
+    border: 2px solid #F59E0B;
+    background: #37375A;
+    padding: 8px;
+    overflow: hidden;
+    width: 100%;
+    height: 400px;
+    min-height: 400px;
+    max-height: 400px;
+    box-sizing: border-box;
+  }
+
+  .cdp-modal__user-image-wrapper--visible {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cdp-modal__user-image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+
+  .cdp-modal__user-image-text {
+    color: #9ca3af;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+    margin: 0;
+  }
+
+  /* Design Prompt Section */
+  .cdp-modal__prompt-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cdp-modal__label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e5e7eb;
+    margin: 0;
+  }
+
+  /* ✅ Prompt-Boxen: feste Höhe + eigener Scroll */
+  .cdp-modal__value {
+    margin: 0;
+    font-size: 13px;
+    color: #9ca3af;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    padding: 12px;
+    background: #020617;
+    border: 1px solid #4b5563;
+    border-radius: 8px;
+
+    min-height: 80px;
+    max-height: 140px;
+    overflow-y: auto !important; /* ✅ Force scrollbar */
+    overflow-x: hidden;
+    box-sizing: border-box;
+    width: 100%;
+    display: block; /* ✅ Ensure block display */
+    
+    /* ✅ Scrollbar für Prompt-Boxen sichtbar machen (Desktop + Mobile) */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #4b5563 transparent;
+  }
+
+  .cdp-modal__value::-webkit-scrollbar {
+    width: 6px;
+    display: block !important; /* ✅ Force scrollbar visibility */
+  }
+
+  .cdp-modal__value::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .cdp-modal__value::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+  }
+
+  .cdp-modal__value::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  .cdp-modal__value--empty {
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  textarea.cdp-modal__value {
+    resize: none;
+    font-family: inherit;
+    line-height: 1.5;
+    cursor: default;
+  }
+
+  textarea.cdp-modal__value:read-only {
+    opacity: 1;
+  }
+
+  /* Visibility Section */
+  .cdp-modal__visibility-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cdp-modal__visibility-switch-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Switch Stil wie im Design-Modal */
+  .cdp-modal__visibility-switch-wrapper .creator-switch {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .cdp-modal__visibility-switch-wrapper .creator-switch__text {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  .cdp-modal__visibility-switch-wrapper .creator-switch__text--left {
+    margin-right: 2px;
+  }
+
+  .cdp-modal__visibility-switch-wrapper .creator-switch__text--right {
+    margin-left: 2px;
+  }
+
+  .cdp-modal__visibility-switch-wrapper .creator-switch input {
+    display: none;
+  }
+
+  .cdp-modal__visibility-switch-wrapper .creator-switch__slider {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    flex-shrink: 0;
+    min-width: 40px;
+    border-radius: 999px;
+    background: #374151;
+    transition: background 0.2s ease;
+  }
+
+  .cdp-modal__visibility-switch-wrapper .creator-switch__slider::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #f9fafb;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    transition: transform 0.2s ease;
+  }
+
+  .cdp-modal__visibility-switch-wrapper .creator-switch input:checked + .creator-switch__slider {
+    background: #F59E0B;
+  }
+
+  .cdp-modal__visibility-switch-wrapper .creator-switch input:checked + .creator-switch__slider::before {
+    transform: translateX(20px);
+  }
+
+  /* -----------------------------------------------------------------------
+     ✅ FOOTER BUTTONS (wie "Minimal Action Buttons" Demo) + rechtsbündig
+  ------------------------------------------------------------------------ */
+
+  .cdp-modal__footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end; /* ✅ rechts */
+    padding: 14px;
+    border-top: 1px solid rgba(75, 85, 99, 0.5);
+    flex-shrink: 0;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.04));
+  }
+
+  .cdp-modal__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 14px;
+    padding: 12px 14px;
+
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: .2px;
+
+    cursor: pointer;
+    user-select: none;
+
+    border: 1px solid rgba(255,255,255,.10);
+    color: rgba(255,255,255,.92);
+    background: rgba(255,255,255,.06);
+
+    transition: transform .12s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease, filter .18s ease;
+    outline: none;
+  }
+
+  .cdp-modal__btn svg{
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    opacity: .95;
+  }
+
+  .cdp-modal__btn:focus-visible{
+    box-shadow: 0 0 0 3px rgba(245,158,11,.35);
+    border-color: rgba(245,158,11,.55);
+  }
+
+  .cdp-modal__btn:hover:not(:disabled){
+    transform: translateY(-1px);
+    background: rgba(255,255,255,.10);
+    border-color: rgba(255,255,255,.18);
+  }
+
+  .cdp-modal__btn:active:not(:disabled){
+    transform: translateY(0px) scale(.99);
+    filter: brightness(.98);
+  }
+
+  .cdp-modal__btn:disabled{
+    opacity: .5;
+    cursor: not-allowed;
+  }
+
+  /* Accent (Remix + Similar + Transfer) */
+  .cdp-modal__btn--remix,
+  .cdp-modal__btn--similar,
+  .cdp-modal__btn--transfer {
+    border-color: rgba(245,158,11,.35);
+    background: linear-gradient(180deg, rgba(245,158,11,.16), rgba(255,255,255,.05));
+  }
+
+  .cdp-modal__btn--remix:hover:not(:disabled),
+  .cdp-modal__btn--similar:hover:not(:disabled),
+  .cdp-modal__btn--transfer:hover:not(:disabled) {
+    border-color: rgba(245,158,11,.55);
+    box-shadow: 0 12px 28px rgba(245,158,11,.12);
+  }
+
+  /* Ghost (Download + Speichern) */
+  .cdp-modal__btn--download,
+  .cdp-modal__btn--save {
+    background: transparent;
+    border-color: rgba(255,255,255,.10);
+    color: rgba(255,255,255,.92);
+  }
+  .cdp-modal__btn--download:hover:not(:disabled),
+  .cdp-modal__btn--save:hover:not(:disabled) {
+    background: rgba(255,255,255,.07);
+    border-color: rgba(255,255,255,.16);
+  }
+
+  /* Danger (Delete) */
+  .cdp-modal__btn--delete{
+    border-color: rgba(239,68,68,.40);
+    background: linear-gradient(180deg, rgba(239,68,68,.16), rgba(255,255,255,.04));
+  }
+  .cdp-modal__btn--delete:hover:not(:disabled){
+    border-color: rgba(239,68,68,.65);
+    box-shadow: 0 12px 28px rgba(239,68,68,.14);
+  }
+  .cdp-modal__btn--delete:focus-visible{
+    box-shadow: 0 0 0 3px rgba(239,68,68,.30);
+    border-color: rgba(239,68,68,.70);
+  }
+
+  /* Separator */
+  .cdp-modal__footer-sep{
+    width: 1px;
+    height: 30px;
+    background: rgba(255,255,255,.10);
+    margin: 0 2px;
+    border-radius: 999px;
+    flex: 0 0 auto;
+  }
+
+  /* Mobile Styles */
+  @media (max-width: 900px) {
+    #creatorDesignPreviewModal- {
+      padding: 24px 8px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cdp-modal {
+      max-height: calc(100dvh - 48px);
+      max-height: calc(100vh - 48px);
+      height: auto;
+      min-height: 0;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .cdp-modal__body {
+      padding: 16px;
+      padding-bottom: 22px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .cdp-modal__desktop-container {
+      display: none;
+    }
+
+    .cdp-modal__mobile-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .cdp-modal__image-wrapper {
+      max-height: 256px;
+      min-height: 160px;
+      width: 100%;
+      aspect-ratio: 1;
+      padding: 8px;
+    }
+
+    .cdp-modal__user-image-wrapper {
+      max-height: 300px;
+      min-height: 200px;
+      width: 100%;
+      aspect-ratio: 1;
+      padding: 8px;
+    }
+
+    /* ✅ Mobile Footer: icon-only + rechtsbündig */
+    .cdp-modal__footer{
+      justify-content: flex-end;  /* ✅ rechts */
+      flex-wrap: nowrap;
+      gap: 6px;
+      padding: 10px;
+
+      /* wenn’s doch mal nicht passt, darf es scrollen */
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .cdp-modal__footer::-webkit-scrollbar{ display:none; }
+
+    /* ✅ “Spacer”-Trick: garantiert rechtsbündig, selbst wenn justify-content buggy ist */
+    .cdp-modal__footer > :first-child { margin-left: auto; }
+
+    .cdp-modal__btn{
+      padding: 10px 10px;
+      min-width: 44px;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .cdp-modal__btn-text{ display:none; }
+
+    .cdp-modal__footer-sep{
+      display:block;
+      height:22px;
+      margin: 0 2px;
+      opacity:.9;
+    }
+
+    .cdp-modal__header {
+      padding: 12px 16px;
+    }
+  }
+
+  /* Desktop: Mobile Container ausblenden */
+  @media (min-width: 901px) {
+    .cdp-modal__mobile-container {
+      display: none !important;
+    }
+  }
+
+  /* Desktop: Rechte Seite standardmäßig ausblenden */
+  .cdp-modal__desktop-right { display: none; }
+
+  /* Desktop: Rechte Seite nur anzeigen wenn --generated Klasse vorhanden */
+  .cdp-modal__desktop-right.cdp-modal__desktop-right--generated { display: flex; }
+
+  /* ✅ Desktop: Sichtbarkeits-Slider in rechter Spalte ausblenden, in linker anzeigen */
+  @media (min-width: 901px) {
+    .cdp-modal__visibility-section--desktop-hidden {
+      display: none !important;
+    }
+    .cdp-modal__visibility-section--desktop-visible {
+      display: flex !important;
+    }
+  }
+
+  /* Desktop: Linke Seite Layout */
+  @media (min-width: 901px) {
+    .cdp-modal__desktop-left { flex: 1; }
+
+    .cdp-modal__desktop-right--generated ~ .cdp-modal__desktop-left,
+    .cdp-modal__desktop-container:has(.cdp-modal__desktop-right--generated) .cdp-modal__desktop-left {
+      flex: 1;
+    }
+
+    .cdp-modal__desktop-container:not(:has(.cdp-modal__desktop-right--generated)) .cdp-modal__desktop-left {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  /* Mobile: Carousel Styles */
+  .cdp-modal__carousel {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .cdp-modal__carousel-slide {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .cdp-modal__carousel-slide.cdp-modal__carousel-slide--active { display: flex; }
+
+  .cdp-modal__carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0 0;
+    padding: 0;
+  }
+
+  .cdp-modal__carousel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4b5563;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+  }
+
+  .cdp-modal__carousel-dot.cdp-modal__carousel-dot--active {
+    width: 24px;
+    background: #F59E0B;
+    border-radius: 4px;
+  }
+
+  /* Mobile: Container für generierte Designs (mit Carousel) */
+  .cdp-modal__mobile-container--generated {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Mobile: Container für hochgeladene Designs (ohne Carousel) */
+  .cdp-modal__mobile-container--uploaded {
+    display: none; /* Standard: ausblenden, wird per JS aktiviert wenn nötig */
+  }
+
+  @media (max-width: 900px) {
+    .cdp-modal__mobile-container--generated { display: flex; }
+    .cdp-modal__mobile-container--uploaded { display: none; }
+  }
+
+  /* Crop: full-modal busy overlay + success toast */
+  .cdp-modal__crop-busy {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2, 6, 23, 0.55);
+    backdrop-filter: blur(3px);
+  }
+  .cdp-modal__crop-busy.cdp-modal__crop-busy--visible {
+    display: flex;
+  }
+  .cdp-modal__crop-busy-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 24px 28px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  }
+  .cdp-modal__crop-busy-spinner {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 3px solid rgba(245, 158, 11, 0.22);
+    border-top-color: #F59E0B;
+    animation: cdp-crop-spin 0.72s linear infinite;
+  }
+  @keyframes cdp-crop-spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cdp-modal__crop-busy-spinner {
+      animation: none;
+      border-color: #F59E0B;
+    }
+  }
+  .cdp-modal__crop-busy-text {
+    color: #e5e7eb;
+    font-size: 15px;
+    font-weight: 500;
+    text-align: center;
+    max-width: 260px;
+  }
+
+  .cdp-modal__crop-toast {
+    position: absolute;
+    left: 50%;
+    bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 56px));
+    transform: translateX(-50%) translateY(10px);
+    z-index: 210;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: rgba(21, 128, 61, 0.96);
+    border: 1px solid rgba(74, 222, 128, 0.55);
+    color: #ecfdf5;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    max-width: min(400px, calc(100vw - 32px));
+  }
+  .cdp-modal__crop-toast.cdp-modal__crop-toast--show {
+    display: flex;
+    animation: cdp-crop-toast-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes cdp-crop-toast-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cdp-modal__crop-toast.cdp-modal__crop-toast--show {
+      animation: none;
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+  .cdp-modal__crop-toast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 23px;
+    height: 23px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    font-size: 13px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+
+<div
+  id="creatorDesignPreviewModal-"
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  data-manual-crop-enter="Manual crop enter"
+  data-manual-crop-save="Manual crop save"
+  data-manual-crop-saved="Manual crop saved"
+>
+  <div class="cdp-modal">
+    <div class="cdp-modal__header">
+      <h3 id="cdp-modal-title-" class="cdp-modal__title">Title</h3>
+      <button
+        type="button"
+        class="cdp-modal__close"
+        id="cdp-modal-close-"
+        aria-label="Close"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="cdp-modal__body">
+      <!-- Desktop: 2-Spalten Layout -->
+      <div class="cdp-modal__desktop-container">
+        <!-- Linke Seite: Design Bild + Design Prompt -->
+        <div class="cdp-modal__desktop-left">
+          <div class="cdp-modal__image-wrapper">
+            <div class="cdp-modal__image-frame">
+              <img
+                id="cdp-modal-image-"
+                class="cdp-modal__image"
+                src=""
+                alt="Title"
+              >
+              <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
+                <div class="cdp-manual-crop-shade" data-band="top"></div>
+                <div class="cdp-manual-crop-shade" data-band="left"></div>
+                <div class="cdp-manual-crop-shade" data-band="right"></div>
+                <div class="cdp-manual-crop-shade" data-band="bottom"></div>
+                <div class="cdp-manual-crop-inner">
+                  <div class="cdp-manual-crop-border" aria-hidden="true"></div>
+                  <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              id="cdp-btn-crop-"
+              class="cdp-modal__crop-btn"
+              aria-label="Manual crop enter"
+              title="Manual crop enter"
+            >
+              <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--adjust" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M7 17V9.8c0-1.12.9-2 2-2h7.2M17 7v7.2c0 1.12-.9 2-2 2H9.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 4H4v16h16V4z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--apply" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <path d="M17 21v-8H7v8"/>
+                <path d="M7 3v5h8"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Design Prompt -->
+          <div class="cdp-modal__prompt-section">
+            <label class="cdp-modal__label" for="cdp-design-prompt-">Design prompt label</label>
+            <textarea id="cdp-design-prompt-" class="cdp-modal__value cdp-modal__value--empty" readonly rows="5" autocomplete="off" spellcheck="false">Design prompt default</textarea>
+          </div>
+
+          <!-- ✅ Desktop: Sichtbarkeits-Slider unter User Prompt (nur wenn generiert) -->
+          <div class="cdp-modal__visibility-section cdp-modal__visibility-section--desktop-visible">
+            <label class="cdp-modal__label">Visibility label</label>
+            <div class="cdp-modal__visibility-switch-wrapper">
+              <label class="creator-switch">
+                <span class="creator-switch__text creator-switch__text--left">Visibility private</span>
+                <input type="checkbox" id="cdp-visibility-switch-left-" />
+                <span class="creator-switch__slider"></span>
+                <span class="creator-switch__text creator-switch__text--right">Visibility public</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rechte Seite: User Image + User Prompt (nur für generierte Designs) -->
+        <div class="cdp-modal__desktop-right cdp-modal__desktop-right--generated">
+          <div id="cdp-user-image-wrapper-" class="cdp-modal__user-image-wrapper">
+            <img
+              id="cdp-user-image-"
+              class="cdp-modal__user-image"
+              src=""
+              alt="User Input Image"
+              style="display: none;"
+            >
+            <p id="cdp-user-image-text-" class="cdp-modal__user-image-text" style="display: none;">No image</p>
+          </div>
+
+          <div class="cdp-modal__prompt-section">
+            <label class="cdp-modal__label">User prompt label</label>
+            <div id="cdp-user-prompt-" class="cdp-modal__value cdp-modal__value--empty">Design prompt default</div>
+          </div>
+
+          <!-- ✅ Sichtbarkeits-Slider nach links verschoben (nur Desktop) -->
+          <div class="cdp-modal__visibility-section cdp-modal__visibility-section--desktop-hidden">
+            <label class="cdp-modal__label">Visibility label</label>
+            <div class="cdp-modal__visibility-switch-wrapper">
+              <label class="creator-switch">
+                <span class="creator-switch__text creator-switch__text--left">Visibility private</span>
+                <input type="checkbox" id="cdp-visibility-switch-" />
+                <span class="creator-switch__slider"></span>
+                <span class="creator-switch__text creator-switch__text--right">Visibility public</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile: Touch-Swipe Carousel (nur für generierte Designs) -->
+      <div class="cdp-modal__mobile-container cdp-modal__mobile-container--generated">
+        <div class="cdp-modal__carousel">
+          <div class="cdp-modal__carousel-slide cdp-modal__carousel-slide--active" data-slide="0">
+            <div class="cdp-modal__image-wrapper">
+              <div class="cdp-modal__image-frame">
+                <img
+                  id="cdp-modal-image-mobile-"
+                  class="cdp-modal__image"
+                  src=""
+                  alt="Title"
+                >
+                <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
+                  <div class="cdp-manual-crop-shade" data-band="top"></div>
+                  <div class="cdp-manual-crop-shade" data-band="left"></div>
+                  <div class="cdp-manual-crop-shade" data-band="right"></div>
+                  <div class="cdp-manual-crop-shade" data-band="bottom"></div>
+                  <div class="cdp-manual-crop-inner">
+                    <div class="cdp-manual-crop-border" aria-hidden="true"></div>
+                    <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="cdp-modal__crop-btn"
+                aria-label="Manual crop enter"
+                title="Manual crop enter"
+              >
+                <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--adjust" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M7 17V9.8c0-1.12.9-2 2-2h7.2M17 7v7.2c0 1.12-.9 2-2 2H9.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M20 4H4v16h16V4z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--apply" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                  <path d="M17 21v-8H7v8"/>
+                  <path d="M7 3v5h8"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="cdp-modal__prompt-section">
+              <label class="cdp-modal__label" for="cdp-design-prompt-mobile-">Design prompt label</label>
+              <textarea id="cdp-design-prompt-mobile-" class="cdp-modal__value cdp-modal__value--empty" readonly rows="5" autocomplete="off" spellcheck="false">Design prompt default</textarea>
+            </div>
+
+            <div class="cdp-modal__visibility-section">
+              <label class="cdp-modal__label">Visibility label</label>
+              <div class="cdp-modal__visibility-switch-wrapper">
+                <label class="creator-switch">
+                  <span class="creator-switch__text creator-switch__text--left">Visibility private</span>
+                  <input type="checkbox" id="cdp-visibility-switch-mobile-slide1-" />
+                  <span class="creator-switch__slider"></span>
+                  <span class="creator-switch__text creator-switch__text--right">Visibility public</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="cdp-modal__carousel-slide" data-slide="1">
+            <div id="cdp-user-image-wrapper-mobile-" class="cdp-modal__user-image-wrapper">
+              <img
+                id="cdp-user-image-mobile-"
+                class="cdp-modal__user-image"
+                src=""
+                alt="User Input Image"
+                style="display: none;"
+              >
+              <p id="cdp-user-image-text-mobile-" class="cdp-modal__user-image-text" style="display: none;">No image</p>
+            </div>
+
+            <div class="cdp-modal__prompt-section">
+              <label class="cdp-modal__label">User prompt label</label>
+              <div id="cdp-user-prompt-mobile-" class="cdp-modal__value cdp-modal__value--empty">Design prompt default</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cdp-modal__carousel-dots">
+          <button type="button" class="cdp-modal__carousel-dot cdp-modal__carousel-dot--active" data-slide="0" aria-label="Slide 1"></button>
+          <button type="button" class="cdp-modal__carousel-dot" data-slide="1" aria-label="Slide 2"></button>
+        </div>
+      </div>
+
+      <!-- Mobile: Einfaches Layout für hochgeladene Designs -->
+      <div class="cdp-modal__mobile-container cdp-modal__mobile-container--uploaded">
+        <div class="cdp-modal__image-wrapper">
+          <div class="cdp-modal__image-frame">
+            <img
+              id="cdp-modal-image-mobile-uploaded-"
+              class="cdp-modal__image"
+              src=""
+              alt="Title"
+            >
+            <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
+              <div class="cdp-manual-crop-shade" data-band="top"></div>
+              <div class="cdp-manual-crop-shade" data-band="left"></div>
+              <div class="cdp-manual-crop-shade" data-band="right"></div>
+              <div class="cdp-manual-crop-shade" data-band="bottom"></div>
+              <div class="cdp-manual-crop-inner">
+                <div class="cdp-manual-crop-border" aria-hidden="true"></div>
+                <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
+                <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
+                <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
+                <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
+                <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
+                <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
+                <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
+                <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="cdp-modal__crop-btn"
+            aria-label="Manual crop enter"
+            title="Manual crop enter"
+          >
+            <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--adjust" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M7 17V9.8c0-1.12.9-2 2-2h7.2M17 7v7.2c0 1.12-.9 2-2 2H9.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20 4H4v16h16V4z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--apply" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <path d="M17 21v-8H7v8"/>
+              <path d="M7 3v5h8"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer mit Buttons (Demo-Style, rechtsbündig, inkl. Download) -->
+    <div class="cdp-modal__footer" aria-label="Actions aria">
+      <button type="button" id="cdp-btn-remix-" class="cdp-modal__btn cdp-modal__btn--remix" aria-label="Remix" title="Remix">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 7h-6a4 4 0 0 0-4 4v10"/>
+          <path d="M21 7l-3-3"/>
+          <path d="M21 7l-3 3"/>
+          <path d="M3 17h6a4 4 0 0 0 4-4V3"/>
+          <path d="M3 17l3 3"/>
+          <path d="M3 17l3-3"/>
+        </svg>
+        <span class="cdp-modal__btn-text">Remix</span>
+      </button>
+
+      <button type="button" id="cdp-btn-similar-" class="cdp-modal__btn cdp-modal__btn--similar" aria-label="Similar design" title="Similar design">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+          <path d="M21 3v6h-6"/>
+        </svg>
+        <span class="cdp-modal__btn-text">Similar design</span>
+      </button>
+
+      <button type="button" id="cdp-btn-transfer-" class="cdp-modal__btn cdp-modal__btn--transfer" aria-label="Transfer" title="Transfer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M7 17L17 7"/>
+          <path d="M7 7h10v10"/>
+        </svg>
+        <span class="cdp-modal__btn-text">Transfer</span>
+      </button>
+
+      <div class="cdp-modal__footer-sep" aria-hidden="true"></div>
+
+      <button type="button" id="cdp-btn-download-" class="cdp-modal__btn cdp-modal__btn--download" aria-label="Download" title="Download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <path d="M7 10l5 5 5-5"/>
+          <path d="M12 15V3"/>
+        </svg>
+        <span class="cdp-modal__btn-text">Download</span>
+      </button>
+
+      <button type="button" id="cdp-btn-save-" class="cdp-modal__btn cdp-modal__btn--save" aria-label="Save" title="Save">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <path d="M17 21v-8H7v8"/>
+          <path d="M7 3v5h8"/>
+        </svg>
+        <span class="cdp-modal__btn-text">Save</span>
+      </button>
+
+      <button type="button" id="cdp-btn-delete-" class="cdp-modal__btn cdp-modal__btn--delete" aria-label="Delete" title="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 6h18"/>
+          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/>
+          <path d="M14 11v6"/>
+        </svg>
+        <span class="cdp-modal__btn-text">Delete</span>
+      </button>
+    </div>
+
+    <div
+      id="cdp-crop-busy-"
+      class="cdp-modal__crop-busy"
+      hidden
+      aria-hidden="true"
+      role="status"
+    >
+      <div class="cdp-modal__crop-busy-card">
+        <span class="cdp-modal__crop-busy-spinner" aria-hidden="true"></span>
+        <span class="cdp-modal__crop-busy-text" data-t="creator.preview_modal.crop_processing">Crop processing</span>
+      </div>
+    </div>
+    <div
+      id="cdp-crop-toast-"
+      class="cdp-modal__crop-toast"
+      hidden
+      aria-hidden="true"
+      role="status"
+    >
+      <span class="cdp-modal__crop-toast-icon" aria-hidden="true">&#10003;</span>
+      <span class="cdp-modal__crop-toast-text"></span>
+    </div>
+  </div>
+</div>

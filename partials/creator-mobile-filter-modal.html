@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0" aria-hidden="true">
+  <symbol id="creator-filter-icon-caret" viewBox="0 0 14 14"><path d="M11 5.5L7 9.5L3 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="creator-filter-icon-funnel" viewBox="0 0 20 20"><path fill="currentColor" d="M2 4a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1.586a1 1 0 0 1-.293.707l-5.414 5.414a1 1 0 0 0-.293.707V16l-4-2v-4.586a1 1 0 0 0-.293-.707L3.293 5.707A1 1 0 0 1 3 5V4z"/></symbol>
+</svg>
+
+<div id="creator-filter-modal" class="creator-filter-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="creator-filter-modal-title">
+  <div class="creator-filter-modal__backdrop"></div>
+  <div class="creator-filter-modal__dialog">
+    <div class="creator-filter-modal__header">
+      <div class="creator-filter-modal__title-row">
+        <svg class="creator-filter-modal__icon" aria-hidden="true"><use href="#creator-filter-icon-funnel"/></svg>
+        <h3 id="creator-filter-modal-title" class="creator-filter-modal__title">Filters</h3>
+      </div>
+      <button type="button" class="creator-filter-modal__close" id="creator-filter-modal-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="creator-filter-modal__tabs">
+      <button type="button" class="creator-filter-modal__tab is-active" data-tab="design">Design Filter</button>
+      <button type="button" class="creator-filter-modal__tab" data-tab="product">Product Filter</button>
+    </div>
+
+    <div class="creator-filter-modal__panel is-active" id="creator-filter-panel-design">
+      <div class="creator-filter-modal__body">
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Design Source</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_art" data-value="generated"><span class="filter-option__label">Generated</span><span class="filter-option__count" data-count-for="design_art:generated"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_art" data-value="uploaded"><span class="filter-option__label">Uploaded</span><span class="filter-option__count" data-count-for="design_art:uploaded"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_art" data-value="personalized"><span class="filter-option__label">Personalized</span><span class="filter-option__count" data-count-for="design_art:personalized"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_art" data-value="automation"><span class="filter-option__label">Automation</span><span class="filter-option__count" data-count-for="design_art:automation"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Ratio</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="ratio" data-value="portrait"><span class="filter-option__label">Portrait</span><span class="filter-option__count" data-count-for="ratio:portrait"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="ratio" data-value="landscape"><span class="filter-option__label">Landscape</span><span class="filter-option__count" data-count-for="ratio:landscape"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="ratio" data-value="square"><span class="filter-option__label">Square</span><span class="filter-option__count" data-count-for="ratio:square"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Content Type</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="content_type" data-value="design_text"><span class="filter-option__label">Design + Text</span><span class="filter-option__count" data-count-for="content_type:design_text"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="content_type" data-value="design_only"><span class="filter-option__label">Design Only</span><span class="filter-option__count" data-count-for="content_type:design_only"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="content_type" data-value="text_only"><span class="filter-option__label">Text Only</span><span class="filter-option__count" data-count-for="content_type:text_only"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Design Type</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_type" data-value="classic"><span class="filter-option__label">Classic</span><span class="filter-option__count" data-count-for="design_type:classic"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_type" data-value="pattern"><span class="filter-option__label">Pattern</span><span class="filter-option__count" data-count-for="design_type:pattern"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_type" data-value="all_over"><span class="filter-option__label">All Over</span><span class="filter-option__count" data-count-for="design_type:all_over"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_type" data-value="full_surface"><span class="filter-option__label">Full Surface</span><span class="filter-option__count" data-count-for="design_type:full_surface"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_type" data-value="panorama"><span class="filter-option__label">Panorama / Wrap Around</span><span class="filter-option__count" data-count-for="design_type:panorama"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Personalizable</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <div class="filter-switch">
+              <span class="filter-switch__label">Personalizable</span>
+              <div class="filter-switch__toggle" data-filter="personalizable" data-active="false" role="switch" aria-checked="false" tabindex="0" aria-label="Personalizable"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Language Settings</span>
+            <span class="filter-group__toggle collapsed"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content collapsed">
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_language" data-value="English"><span class="filter-option__label">English</span><span class="filter-option__count" data-count-for="design_language:English"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_language" data-value="German"><span class="filter-option__label">German</span><span class="filter-option__count" data-count-for="design_language:German"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_language" data-value="Bilingual"><span class="filter-option__label">Bilingual</span><span class="filter-option__count" data-count-for="design_language:Bilingual"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="dialect" data-value="Swiss German"><span class="filter-option__label">Swiss German</span><span class="filter-option__count" data-count-for="dialect:Swiss German"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="dialect" data-value="Austrian German"><span class="filter-option__label">Austrian German</span><span class="filter-option__count" data-count-for="dialect:Austrian German"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="dialect" data-value="American English"><span class="filter-option__label">American English</span><span class="filter-option__count" data-count-for="dialect:American English"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="dialect" data-value="British English"><span class="filter-option__label">British English</span><span class="filter-option__count" data-count-for="dialect:British English"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="writing_system" data-value="latin"><span class="filter-option__label">Latin</span><span class="filter-option__count" data-count-for="writing_system:latin"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="writing_system" data-value="cyrillic"><span class="filter-option__label">Cyrillic</span><span class="filter-option__count" data-count-for="writing_system:cyrillic"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="writing_system" data-value="greek"><span class="filter-option__label">Greek</span><span class="filter-option__count" data-count-for="writing_system:greek"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Color Settings</span>
+            <span class="filter-group__toggle collapsed"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content collapsed">
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_color" data-value="colorful"><span class="filter-option__label">Colorful</span><span class="filter-option__count" data-count-for="design_color:colorful"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_color" data-value="light"><span class="filter-option__label">Light</span><span class="filter-option__count" data-count-for="design_color:light"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_color" data-value="dark"><span class="filter-option__label">Dark</span><span class="filter-option__count" data-count-for="design_color:dark"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_color" data-value="white"><span class="filter-option__label">White</span><span class="filter-option__count" data-count-for="design_color:white"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_color" data-value="black"><span class="filter-option__label">Black</span><span class="filter-option__count" data-count-for="design_color:black"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="background" data-value="none"><span class="filter-option__label">None</span><span class="filter-option__count" data-count-for="background:none"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="background" data-value="transparent"><span class="filter-option__label">Transparent</span><span class="filter-option__count" data-count-for="background:transparent"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="background" data-value="semi_transparent"><span class="filter-option__label">Semi-Transparent</span><span class="filter-option__count" data-count-for="background:semi_transparent"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="background" data-value="solid"><span class="filter-option__label">Solid</span><span class="filter-option__count" data-count-for="background:solid"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Design Style</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_style" data-value="minimalist"><span class="filter-option__label">Minimalist</span><span class="filter-option__count" data-count-for="design_style:minimalist"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="design_style" data-value="urban"><span class="filter-option__label">Urban</span><span class="filter-option__count" data-count-for="design_style:urban"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Target Product</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="target_product" data-value="standard"><span class="filter-option__label">Standard</span><span class="filter-option__count" data-count-for="target_product:standard"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="target_product" data-value="poster"><span class="filter-option__label">Poster</span><span class="filter-option__count" data-count-for="target_product:poster"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Topic</span>
+            <span class="filter-group__toggle collapsed"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content collapsed" id="creator-filter-topic-options"></div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Subtopic</span>
+            <span class="filter-group__toggle collapsed"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content collapsed" id="creator-filter-subtopic-options"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="creator-filter-modal__panel" id="creator-filter-panel-product">
+      <div class="creator-filter-modal__body">
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Price</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <div class="filter-price-range">
+              <input type="number" class="filter-price-input" id="creator-filter-price-min" placeholder="Min" min="0" data-filter="price_min" aria-label="Price from">
+              <span class="filter-price-separator">–</span>
+              <input type="number" class="filter-price-input" id="creator-filter-price-max" placeholder="Max" min="0" data-filter="price_max" aria-label="Price to">
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Product Category</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content" id="creator-filter-categories">
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="category" data-value="clothing"><span class="filter-option__label">Clothing</span><span class="filter-option__count" data-count-for="category:clothing"></span></label>
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="category" data-value="accessories"><span class="filter-option__label">Accessories</span><span class="filter-option__count" data-count-for="category:accessories"></span></label>
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="category" data-value="home"><span class="filter-option__label">Home & Living</span><span class="filter-option__count" data-count-for="category:home"></span></label>
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="category" data-value="other"><span class="filter-option__label">Other</span><span class="filter-option__count" data-count-for="category:other"></span></label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Product Type</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content" id="creator-filter-types">
+            <span style="color:#9ca3af;font-size:13px">Loading…</span>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-group__header" data-toggle-filter>
+            <span class="filter-group__title">Sales</span>
+            <span class="filter-group__toggle"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
+          </div>
+          <div class="filter-group__content">
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="sales" data-value="0"><span class="filter-option__label">No sales</span><span class="filter-option__count" data-count-for="sales:0"></span></label>
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="sales" data-value="1-10"><span class="filter-option__label">1-10</span><span class="filter-option__count" data-count-for="sales:1-10"></span></label>
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="sales" data-value="11-50"><span class="filter-option__label">11-50</span><span class="filter-option__count" data-count-for="sales:11-50"></span></label>
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="sales" data-value="51-100"><span class="filter-option__label">51-100</span><span class="filter-option__count" data-count-for="sales:51-100"></span></label>
+            <label class="filter-option"><input type="checkbox" class="products-filter-checkbox" data-filter="sales" data-value="100+"><span class="filter-option__label">100+</span><span class="filter-option__count" data-count-for="sales:100+"></span></label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="creator-filter-modal__footer">
+      <button type="button" class="creator-filter-modal__creator-trigger" id="creator-filter-modal-creator-trigger" data-selected-creator="" aria-haspopup="dialog">
+        <span id="creator-filter-modal-creator-label">Alle Creator</span>
+        <span class="creator-filter-modal__creator-trigger-chevron">▾</span>
+      </button>
+      <span class="creator-filter-modal__filtered-count" id="creator-filter-modal-filtered-count" aria-hidden="true"></span>
+      <button type="button" class="creator-filter-modal__button creator-filter-modal__button--secondary" id="creator-filter-modal-reset">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div id="creator-filter-creator-modal" class="creator-filter-creator-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="creator-filter-creator-modal-title">
+  <div class="creator-filter-creator-modal__backdrop"></div>
+  <div class="creator-filter-creator-modal__dialog">
+    <div class="creator-filter-creator-modal__header">
+      <h4 class="creator-filter-creator-modal__title" id="creator-filter-creator-modal-title">Creator auswählen</h4>
+      <button type="button" class="creator-filter-creator-modal__close" aria-label="Close">×</button>
+    </div>
+    <div class="creator-filter-creator-modal__body" id="creator-filter-creator-modal-list"></div>
+  </div>
+</div>

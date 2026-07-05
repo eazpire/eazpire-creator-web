@@ -56,6 +56,9 @@
     try {
       var me = await global.CreatorPortalApi.me();
       setAuth(me.logged_in, me.owner_id);
+      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+        global.CreatorPortalThemeBridge.notifyContextReady();
+      }
       return me;
     } catch (e) {
       setAuth(false, null);

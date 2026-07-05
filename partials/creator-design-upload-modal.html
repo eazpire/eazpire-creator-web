@@ -1,0 +1,1056 @@
+<style>
+  /* Design Upload Modal */
+  .design-upload-modal{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:none;
+    align-items:stretch;
+    justify-content:stretch;
+    padding:0;
+    box-sizing:border-box;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+  }
+
+  .design-upload-modal[aria-hidden="false"]{
+    display:flex;
+  }
+
+  .design-upload-modal__backdrop{
+    position:absolute;
+    inset:0;
+    background:#0f172a;
+  }
+
+  .design-upload-modal__dialog{
+    position:relative;
+    background:#111827;
+    border:none;
+    border-radius:0;
+    width:100%;
+    max-width:100%;
+    height:100vh;
+    height:100dvh;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+    padding-left:env(safe-area-inset-left);
+    padding-right:env(safe-area-inset-right);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    z-index:1;
+    margin:0;
+  }
+
+  .design-upload-modal__header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:20px 24px;
+    border-bottom:1px solid #374151;
+    background:#0f172a;
+    flex-shrink:0;
+  }
+
+  .design-upload-modal__title{
+    font-size:20px;
+    font-weight:600;
+    color:#e5e7eb;
+    margin:0;
+  }
+
+  .design-upload-modal__close{
+    background:transparent;
+    border:none;
+    color:#9ca3af;
+    font-size:32px;
+    line-height:1;
+    cursor:pointer;
+    padding:0;
+    width:32px;
+    height:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+    transition:all 0.2s ease;
+  }
+
+  .design-upload-modal__close:hover{
+    background:#1f2937;
+    color:#e5e7eb;
+  }
+
+  /* Content-Bereich zwischen Header und Footer: scrollbar bei Überlauf (alle Bildschirmgrößen) */
+  .design-upload-modal__body{
+    padding:24px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+    scrollbar-color:#4b5563 #111827;
+  }
+  .design-upload-modal__body::-webkit-scrollbar{
+    width:8px;
+  }
+  .design-upload-modal__body::-webkit-scrollbar-track{
+    background:#111827;
+  }
+  .design-upload-modal__body::-webkit-scrollbar-thumb{
+    background:#4b5563;
+    border-radius:4px;
+  }
+  .design-upload-modal__body::-webkit-scrollbar-thumb:hover{
+    background:#6b7280;
+  }
+
+  .design-upload-preview-stack{
+    width:100%;
+    max-width:520px;
+    margin:0 auto 24px auto;
+  }
+
+  /* Platzhalter Design Container */
+  .design-upload-placeholder{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    min-height:200px;
+    aspect-ratio: 1;
+    max-height:460px;
+
+    border:2px dashed #4b5563;
+    border-radius:12px;
+    background:#1a1f2e;
+    cursor:pointer;
+    transition:all 0.2s ease;
+    position:relative;
+    overflow:hidden;
+    padding:0;
+    box-sizing:border-box;
+
+    /* default Abstand nach unten nur, wenn keine Leiste da */
+    margin:0;
+  }
+
+  /* Wenn Leiste sichtbar: Placeholder unten gerade (bündig) */
+  .design-upload-preview-stack.has-actions .design-upload-placeholder{
+    border-bottom-left-radius:0;
+    border-bottom-right-radius:0;
+    margin-bottom:0;
+  }
+
+  .design-upload-placeholder:hover{
+    border-color:#f97316;
+    background:#1f2937;
+  }
+
+  .design-upload-placeholder__image{
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:20px;
+    box-sizing:border-box;
+  }
+
+  .design-upload-placeholder__icon{
+    margin-bottom:16px;
+    opacity:0.6;
+  }
+
+  .design-upload-placeholder__icon svg{
+    width:80px;
+    height:80px;
+  }
+
+  .design-upload-placeholder__text p{
+    margin:0 0 8px 0;
+    font-size:18px;
+    font-weight:500;
+    color:#e5e7eb;
+  }
+
+  .design-upload-placeholder__text small{
+    font-size:16px;
+    color:#9ca3af;
+  }
+
+  /* Datei-Vorschau Styles – overflow:visible damit Rahmen (design-upload-frame) und Handles sichtbar sind */
+  .design-upload-preview{
+    position:absolute;
+    inset:30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:visible;
+    border-radius:8px;
+    background:transparent;
+  }
+
+  .design-upload-preview__full-image{
+    width:auto;
+    height:auto;
+    max-width:100%;
+    max-height:100%;
+    object-fit:contain;
+    object-position:center;
+    display:block;
+    border-radius:8px;
+  }
+
+  .design-upload-preview__overlay{
+    display:none !important;
+  }
+
+  .design-upload-preview__info{
+    text-align:center;
+    flex:1;
+  }
+
+  .design-upload-preview__remove{
+    position:absolute;
+    top:8px;
+    right:8px;
+    background:rgba(239, 68, 68, 0.9);
+    color:#ffffff;
+    border:none;
+    padding:6px;
+    border-radius:50%;
+    font-size:16px;
+    line-height:1;
+    cursor:pointer;
+    transition:all 0.2s ease;
+    z-index:10;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:32px;
+    height:32px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.2);
+  }
+
+  .design-upload-preview__remove:hover{
+    background:rgba(0,0,0,0.9);
+  }
+
+  .design-upload-preview__filename{
+    margin:0 0 4px 0;
+    font-size:14px;
+    font-weight:500;
+    color:#e5e7eb;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .design-upload-preview__size{
+    font-size:12px;
+    color:#9ca3af;
+  }
+
+  /* Rahmen um das Design: dünner weißer Rand, verschiebbar (nur Mitte) und skalierbar (Ecken/Kanten) */
+  .design-upload-frame{
+    position:absolute;
+    border:1px solid rgba(255,255,255,0.9);
+    box-sizing:border-box;
+    pointer-events:none;
+    z-index:5;
+  }
+  .design-upload-frame > *{
+    pointer-events:auto;
+  }
+  .design-upload-frame__center{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%, -50%);
+    width:28px;
+    height:28px;
+    cursor:move;
+    z-index:10;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    touch-action:none;
+  }
+  .design-upload-frame__center::before,
+  .design-upload-frame__center::after{
+    content:'';
+    position:absolute;
+    background:rgba(255,255,255,0.85);
+  }
+  .design-upload-frame__center::before{
+    width:2px;
+    height:20px;
+    left:50%;
+    top:50%;
+    margin-left:-1px;
+    margin-top:-10px;
+  }
+  .design-upload-frame__center::after{
+    width:20px;
+    height:2px;
+    left:50%;
+    top:50%;
+    margin-left:-10px;
+    margin-top:-1px;
+  }
+  .design-upload-frame__resize{
+    position:absolute;
+    width:12px;
+    height:12px;
+    background:rgba(255,255,255,0.2);
+    border:1px solid rgba(255,255,255,0.6);
+    border-radius:2px;
+    z-index:8;
+    touch-action:none;
+  }
+  .design-upload-frame__resize:hover{
+    background:rgba(255,255,255,0.4);
+  }
+  .design-upload-frame__resize--tl{ left:-6px; top:-6px; cursor:nwse-resize; }
+  .design-upload-frame__resize--tr{ right:-6px; top:-6px; cursor:nesw-resize; }
+  .design-upload-frame__resize--br{ right:-6px; bottom:-6px; cursor:nwse-resize; }
+  .design-upload-frame__resize--bl{ left:-6px; bottom:-6px; cursor:nesw-resize; }
+  .design-upload-frame__resize--t{ left:50%; top:-6px; margin-left:-6px; cursor:ns-resize; }
+  .design-upload-frame__resize--r{ right:-6px; top:50%; margin-top:-6px; cursor:ew-resize; }
+  .design-upload-frame__resize--b{ left:50%; bottom:-6px; margin-left:-6px; cursor:ns-resize; }
+  .design-upload-frame__resize--l{ left:-6px; top:50%; margin-top:-6px; cursor:ew-resize; }
+
+  /* ✅ Echte Leiste unter dem Bildcontainer */
+  .design-upload-actions-bar{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+
+    padding:12px;
+    background:#0f172a;
+
+    border:2px dashed #4b5563;
+    border-top:none;
+
+    border-radius:0 0 12px 12px;
+    box-sizing:border-box;
+  }
+
+  .design-upload-preview-stack.has-actions .design-upload-actions-bar{
+    border-top-left-radius:0;
+    border-top-right-radius:0;
+  }
+
+  /* ✅ Buttons: EIN Style (kein doppelter Kreis-Block mehr) */
+  .design-upload-action-btn{
+    height:48px;
+    min-width:180px;
+    padding:0 14px;
+
+    border-radius:12px;
+    border:1px solid #374151;
+    background:#0f172a;
+    color:#e5e7eb;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+
+    cursor:pointer;
+    user-select:none;
+    transition:transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+    pointer-events:auto;
+  }
+
+  .design-upload-action-btn:hover:not(:disabled){
+    border-color:#f97316;
+    color:#ffffff;
+    transform:translateY(-1px);
+    box-shadow:0 8px 20px rgba(0,0,0,0.25);
+  }
+
+  .design-upload-action-btn:active:not(:disabled){
+    transform:translateY(0px);
+  }
+
+  .design-upload-action-btn:disabled{
+    opacity:0.45;
+    cursor:not-allowed;
+    transform:none;
+    box-shadow:none;
+  }
+
+  .design-upload-action-btn[data-active="true"]{
+    border-color:#f97316;
+    box-shadow:0 8px 20px rgba(249, 115, 22, 0.25);
+  }
+
+  .design-upload-action-btn .btn-label{
+    font-size:12px;
+    font-weight:600;
+    line-height:1;
+    opacity:0.95;
+  }
+
+  /* Preis-Anzeige in Action Buttons */
+  .design-upload-action-btn .btn-cost{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    padding:4px 8px;
+    background:rgba(249, 115, 22, 0.15);
+    border-radius:6px;
+    margin-left:4px;
+  }
+
+  .design-upload-action-btn .btn-cost span{
+    font-size:11px;
+    font-weight:700;
+    color:#f97316;
+  }
+
+  .eaz-coin-icon{
+    width:16px;
+    height:16px;
+    object-fit:contain;
+  }
+
+  /* Preis-Anzeige im Primary Button (Footer) */
+  .design-upload-modal__button--primary{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .btn-cost-inline{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    padding:3px 6px;
+    background:rgba(255, 255, 255, 0.2);
+    border-radius:4px;
+  }
+
+  .btn-cost-inline span{
+    font-size:12px;
+    font-weight:700;
+  }
+
+  .btn-cost-inline .eaz-coin-icon{
+    width:14px;
+    height:14px;
+  }
+
+  .design-upload-modal__footer{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:12px;
+    padding:16px 24px;
+    border-top:1px solid #374151;
+    background:#0f172a;
+    flex-shrink:0;
+  }
+
+  .design-upload-modal__button{
+    padding:10px 20px;
+    border-radius:999px;
+    border:none;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+
+  .design-upload-modal__button--secondary{
+    background:transparent;
+    color:#9ca3af;
+    border:1px solid #4b5563;
+  }
+
+  .design-upload-modal__button--secondary:hover{
+    background:#1f2937;
+    color:#e5e7eb;
+    border-color:#6b7280;
+  }
+
+  .design-upload-modal__button--primary{
+    background:#f97316;
+    color:#ffffff;
+  }
+
+  .design-upload-modal__button--primary:hover{
+    background:#fb923c;
+  }
+
+  /* Options: Creator-Dropdown + Sichtbarkeit */
+  .design-upload-options{
+    margin-top:24px;
+    padding-top:20px;
+    border-top:1px solid #374151;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+  }
+  .design-upload-options__row{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .design-upload-options__label{
+    font-size:14px;
+    font-weight:600;
+    color:#e5e7eb;
+  }
+  .design-upload-creator-select{
+    background:#111827;
+    border:1px solid #4b5563;
+    border-radius:8px;
+    padding:10px 36px 10px 14px;
+    color:#e5e7eb;
+    font-size:14px;
+    min-width:0;
+    width:100%;
+    max-width:280px;
+    cursor:pointer;
+    transition:border-color 0.2s;
+    box-sizing:border-box;
+  }
+  .design-upload-creator-select:focus{
+    outline:none;
+    border-color:#f97316;
+  }
+  .design-upload-visibility-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .design-upload-visibility-switch{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .design-upload-visibility-switch .design-upload-visibility-slider{
+    position:relative;
+    width:44px;
+    height:24px;
+    background:#374151;
+    border-radius:999px;
+    transition:background 0.2s;
+  }
+  .design-upload-visibility-switch .design-upload-visibility-slider::before{
+    content:'';
+    position:absolute;
+    width:20px;
+    height:20px;
+    left:2px;
+    top:2px;
+    background:#e5e7eb;
+    border-radius:50%;
+    transition:transform 0.2s;
+  }
+  .design-upload-visibility-switch input{
+    position:absolute;
+    opacity:0;
+    width:0;
+    height:0;
+  }
+  .design-upload-visibility-switch input:checked + .design-upload-visibility-slider{
+    background:#f97316;
+  }
+  .design-upload-visibility-switch input:checked + .design-upload-visibility-slider::before{
+    transform:translateX(20px);
+  }
+  .design-upload-visibility-switch .design-upload-visibility-text{
+    font-size:14px;
+    color:#9ca3af;
+  }
+  .design-upload-visibility-switch .design-upload-visibility-text--left{ color:#9ca3af; }
+  .design-upload-visibility-switch .design-upload-visibility-text--right{ color:#9ca3af; }
+  .design-upload-visibility-hint{
+    margin:0;
+    font-size:13px;
+    color:#9ca3af;
+    line-height:1.45;
+  }
+
+  @media (min-width: 992px){
+    .design-upload-modal{
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+
+    .design-upload-modal__backdrop{
+      background:rgba(2, 6, 23, .72);
+    }
+
+    .design-upload-modal__header{
+      padding:12px 18px;
+    }
+
+    .design-upload-modal__title{
+      font-size:18px;
+    }
+
+    .design-upload-modal__dialog{
+      width:min(1040px, 92vw);
+      max-width:1040px;
+      height:min(92vh, 860px);
+      border-radius:14px;
+      border:1px solid #374151;
+      overflow:hidden;
+      margin:0;
+    }
+
+    .design-upload-modal__body{
+      display:grid;
+      grid-template-columns:minmax(0, 1.55fr) minmax(300px, .9fr);
+      gap:16px;
+      align-items:start;
+      padding:14px 16px;
+      /* must scroll: desktop rule previously used overflow:hidden and clipped the grid */
+      overflow-y:auto;
+      overflow-x:hidden;
+      min-height:0;
+      flex:1;
+      -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
+    }
+
+    .design-upload-modal__footer{
+      padding:10px 18px;
+      gap:10px;
+    }
+
+    .design-upload-preview-stack{
+      width:100%;
+      max-width:none;
+      margin:0;
+    }
+
+    .design-upload-placeholder{
+      min-height:320px;
+      aspect-ratio:auto;
+      max-height:none;
+    }
+
+    .design-upload-options{
+      margin-top:0;
+      border-top:0;
+      border-left:1px solid #374151;
+      padding-top:0;
+      padding-left:16px;
+      min-height:0;
+      gap:14px;
+    }
+
+    .design-upload-creator-select{
+      max-width:none;
+    }
+  }
+
+  @media (max-width: 768px){
+    .design-upload-modal__header{
+      flex-shrink:0;
+      padding:14px 16px;
+    }
+
+    .design-upload-modal__body{
+      padding:16px;
+      overflow-y:auto;
+      overflow-x:hidden;
+      flex:1;
+      min-height:0;
+      -webkit-overflow-scrolling:touch;
+      overscroll-behavior:contain;
+    }
+
+    .design-upload-modal__footer{
+      flex-shrink:0;
+      padding:12px 16px;
+    }
+
+    .design-upload-preview-stack{
+      width:100%;
+      max-width:100%;
+      margin:0 auto 16px auto;
+    }
+
+    .design-upload-preview{
+      inset:20px;
+    }
+
+    .design-upload-placeholder__image{
+      padding:16px;
+    }
+
+    .design-upload-placeholder__icon svg{
+      width:64px;
+      height:64px;
+    }
+
+    .design-upload-placeholder__text p{
+      font-size:16px;
+    }
+
+    .design-upload-placeholder__text small{
+      font-size:14px;
+    }
+
+    .design-upload-action-btn{
+      min-width:140px;
+      height:44px;
+    }
+
+    .design-upload-action-btn .btn-label{
+      font-size:11px;
+    }
+  }
+
+  /* Error Messages */
+  .design-upload-error {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .design-upload-error--error {
+    background: #dc2626;
+    color: #fef2f2;
+    border: 1px solid #b91c1c;
+  }
+
+  .design-upload-error--warning {
+    background: #d97706;
+    color: #fffbeb;
+    border: 1px solid #92400e;
+  }
+
+  .design-upload-error--success {
+    background: #16a34a;
+    color: #f0fdf4;
+    border: 1px solid #15803d;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Confirm step before queue upload — i18n via JS; shop-neutral light card */
+  .creator-upload-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 10000050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: max(12px, env(safe-area-inset-top, 0px)) 16px max(12px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+  .creator-upload-confirm-dialog {
+    display: block;
+    flex-shrink: 0;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px 22px;
+    max-width: 400px;
+    width: min(400px, calc(100vw - 32px));
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+    white-space: normal;
+  }
+  /* Theme base.css: img { width:100% } — feste Coin-Größen mit !important */
+  .creator-upload-confirm-dialog .eaz-coin-icon {
+    display: inline-block;
+    width: 18px !important;
+    height: 18px !important;
+    max-width: 18px !important;
+    min-width: 18px !important;
+    flex: 0 0 18px !important;
+    object-fit: contain;
+  }
+  .creator-upload-confirm-dialog__btn .eaz-coin-icon {
+    width: 14px !important;
+    height: 14px !important;
+    max-width: 14px !important;
+    min-width: 14px !important;
+    flex: 0 0 14px !important;
+  }
+  .creator-upload-confirm-dialog h3 {
+    color: #111827;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 14px 0;
+    text-align: center;
+  }
+  .creator-upload-confirm-dialog__summary {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    text-align: left;
+  }
+  .creator-upload-confirm-dialog__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    flex-wrap: nowrap;
+  }
+  .creator-upload-confirm-dialog__row:last-child {
+    margin-bottom: 0;
+  }
+  .creator-upload-confirm-dialog__row--last {
+    margin-bottom: 0;
+  }
+  .creator-upload-confirm-dialog__label {
+    color: #6b7280;
+    flex-shrink: 0;
+  }
+  .creator-upload-confirm-dialog__value {
+    color: #111827;
+    font-weight: 500;
+    text-align: right;
+    min-width: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .creator-upload-confirm-dialog__value--wrap {
+    flex-shrink: 1;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .creator-upload-confirm-dialog__value--cost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #c2410c;
+    width: fit-content;
+    max-width: 100%;
+    margin-left: auto;
+  }
+  .creator-upload-confirm-dialog__value--xp {
+    color: #15803d;
+  }
+  .creator-upload-confirm-dialog__cost {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(251, 191, 36, 0.08));
+    border: 1px solid rgba(249, 115, 22, 0.25);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    text-align: left;
+  }
+  .creator-upload-confirm-dialog__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    align-items: stretch;
+  }
+  @media (min-width: 380px) {
+    .creator-upload-confirm-dialog__actions {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      justify-content: center;
+      align-items: center;
+    }
+    .creator-upload-confirm-dialog__btn {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+  .creator-upload-confirm-dialog__btn {
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    box-sizing: border-box;
+    min-height: 44px;
+    line-height: 1.2;
+  }
+  .creator-upload-confirm-dialog__btn--cancel {
+    background: #f3f4f6;
+    color: #374151;
+  }
+  .creator-upload-confirm-dialog__btn--cancel:hover {
+    background: #e5e7eb;
+  }
+  .creator-upload-confirm-dialog__btn--primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    color: #0f172a;
+  }
+  .creator-upload-confirm-dialog__btn--primary:hover {
+    filter: brightness(1.03);
+  }
+</style>
+
+<!-- Design Upload Modal -->
+<div id="design-upload-modal-" class="design-upload-modal " aria-hidden="true" style="display:none">
+  <div class="design-upload-modal__backdrop"></div>
+
+  <div class="design-upload-modal__dialog">
+    <div class="design-upload-modal__header">
+      <h3 class="design-upload-modal__title">Title</h3>
+      <button type="button" class="design-upload-modal__close" aria-label="Close aria">×</button>
+    </div>
+
+    <div class="design-upload-modal__body">
+      <!-- ✅ Preview Stack: Placeholder + Actionbar (Bar ist außerhalb des Placeholder => klickbar) -->
+      <div class="design-upload-preview-stack">
+        <!-- Platzhalter Design Container -->
+        <div class="design-upload-placeholder">
+          <div class="design-upload-placeholder__image">
+            <div class="design-upload-placeholder__icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="14,2 14,8 20,8" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="16" y1="13" x2="8" y2="13" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="16" y1="17" x2="8" y2="17" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="10,9 9,9 8,9" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="design-upload-placeholder__text">
+              <p>Dropzone text</p>
+              <small>Dropzone hint</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ Action Buttons Leiste unter dem Bild -->
+        <div class="design-upload-actions-bar" style="display:none;">
+          <button type="button" class="design-upload-action-btn" data-action="remove_background" title="Remove background" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M8 12l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="btn-label">Remove background</div>
+            <div class="btn-cost">
+              <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="EAZ" class="eaz-coin-icon">
+              <span data-eaz-cost-feature="bg_remove">0.2</span>
+            </div>
+          </button>
+
+          <button type="button" class="design-upload-action-btn" data-action="crop_image" title="Crop image" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="9" y="9" width="6" height="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="btn-label">Crop image</div>
+          </button>
+        </div>
+      </div>
+
+      
+      <!-- Creator + Sichtbarkeit (wie beim Speichern von Designs) -->
+      <div class="design-upload-options">
+        <div class="design-upload-options__row">
+          <label for="design-upload-creator-select-" class="design-upload-options__label">Creator</label>
+          <select id="design-upload-creator-select-" class="design-upload-creator-select" aria-label="Select creator">
+            <option value="">Loading creator</option>
+          </select>
+        </div>
+        <div class="design-upload-options__row">
+          <span class="design-upload-options__label">Visibility</span>
+          <div class="design-upload-visibility-row">
+            <label class="design-upload-visibility-switch">
+              <span class="design-upload-visibility-text design-upload-visibility-text--left">Visibility private</span>
+              <input type="checkbox" id="design-upload-visibility-" data-visibility="public" checked aria-label="Visibility">
+              <span class="design-upload-visibility-slider"></span>
+              <span class="design-upload-visibility-text design-upload-visibility-text--right">Visibility public</span>
+            </label>
+          </div>
+          <p class="design-upload-visibility-hint">Visibility hint</p>
+        </div>
+      </div>
+      
+    </div>
+
+    
+    <div class="design-upload-modal__footer design-upload-modal__footer--shop-eazy">
+      <div class="eaz-shop-upload-eazy-row" data-eaz-shop-upload-cta-wrap>
+        <div class="eaz-shop-upload-eazy-speech-wrap">
+          <button type="button" class="eaz-shop-upload-eazy-speech__btn" data-eaz-shop-upload-submit aria-label="Upload eazy aria">
+            Upload eazy cta
+          </button>
+        </div>
+        <span class="eaz-shop-upload-eazy-mascot" aria-hidden="true">
+          <svg width="44" height="44" viewBox="0 0 128 128" focusable="false">
+            <defs>
+              <linearGradient id="eaz-shop-upload-eazy-grad" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#ff9a2a"/><stop offset="1" stop-color="#f97316"/>
+              </linearGradient>
+            </defs>
+            <path fill="url(#eaz-shop-upload-eazy-grad)" d="M30,62c0,-26 20,-44 44,-44 22,0 38,16 38,38 0,25 -19,44 -44,44 -5,0 -10,-0.8 -14.5,-2.2l-16.5,9.2 5.8,-16.8C35.7,83 30,73.2 30,62z"/>
+            <path fill="#FFFFFF" d="M56,39c-15,6 -24,20 -24,35 0,19 16,34 36,34 20,0 36,-16 36,-36 0,-21 -17,-38 -38,-38 -4.3,0 -8.4,0.7 -10,0.9z"/>
+            <circle cx="72" cy="52.5" r="5.5" fill="#F97316"/>
+            <circle cx="90" cy="45.5" r="4.5" fill="#F97316"/>
+            <ellipse cx="79" cy="72" rx="6" ry="4.5" fill="#F97316"/>
+            <circle cx="50" cy="21" r="7" fill="#FF9A2A"/>
+          </svg>
+        </span>
+      </div>
+      <div class="eaz-shop-upload-eazy-cost" aria-hidden="true">
+        <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="" width="18" height="18" class="eaz-coin-icon">
+        <span class="design-upload-eaz-cost-upload design-upload-eaz-cost-upload--suffix" data-eaz-cost-feature="design_upload">1 EAZ</span>
+      </div>
+    </div>
+    
+    <div class="design-upload-modal__footer">
+      <button type="button" class="design-upload-modal__button design-upload-modal__button--secondary">Cancel</button>
+      <button type="button" class="design-upload-modal__button design-upload-modal__button--primary">
+        <span>Upload button</span>
+        <span class="btn-cost-inline">
+          <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="EAZ" class="eaz-coin-icon">
+          <span data-eaz-cost-feature="design_upload">1</span>
+        </span>
+      </button>
+    </div>
+    
+  </div>
+</div>

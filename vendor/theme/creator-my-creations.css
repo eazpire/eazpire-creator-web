@@ -1,0 +1,657 @@
+/**
+ * Styles for My Creations page
+ * Focus on filter toolbar, chips, modals, and responsive grid
+ */
+
+:root {
+  --creations-bg: #020617;
+  --creations-panel: #0f172a;
+  --creations-border: #1f2937;
+  --creations-text: #f8fafc;
+  --creations-muted: #94a3b8;
+  --creations-orange: #f97316;
+  --creations-cyan: #0ea5e9;
+  --creations-orange-soft: rgba(249, 115, 22, 0.14);
+  --creations-cyan-soft: rgba(14, 165, 233, 0.18);
+  --creations-green: #22c55e;
+  --creations-red: #f43f5e;
+  --creations-chip-radius: 999px;
+}
+
+.my-creations-section {
+  background: linear-gradient(180deg, #010615 0%, #041228 45%, #030a18 100%);
+  padding: 48px 0 72px;
+  color: var(--creations-text);
+}
+
+.my-creations-section__inner {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.my-creations-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.my-creations-header__eyebrow {
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--creations-muted);
+}
+
+.my-creations-header__title {
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 600;
+  margin: 0;
+}
+
+.my-creations-header__subtitle {
+  color: var(--creations-muted);
+  font-size: 16px;
+  max-width: 720px;
+}
+
+.creations-toolbar {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--creations-border);
+  border-radius: 20px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+
+.creations-filter-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.creations-filter-button {
+  display: flex;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.creations-filter-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.creations-filter-button:hover {
+  transform: translateY(-1px);
+  border-color: currentColor;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.creations-filter-button__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #020617;
+  font-weight: 600;
+}
+
+.creations-filter-button--design .creations-filter-button__icon {
+  background: var(--creations-orange);
+  box-shadow: 0 10px 22px rgba(249, 115, 22, 0.35);
+}
+
+.creations-filter-button--product .creations-filter-button__icon {
+  background: var(--creations-cyan);
+  box-shadow: 0 10px 22px rgba(14, 165, 233, 0.35);
+}
+
+.creations-filter-button__text {
+  flex: 1;
+}
+
+.creations-filter-button__label {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.creations-filter-button__hint {
+  font-size: 13px;
+  color: var(--creations-muted);
+}
+
+.creations-filter-button__badge {
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--creations-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.creations-filter-chips {
+  min-height: 56px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+.creations-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--creations-chip-radius);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  color: var(--creations-text);
+  scroll-snap-align: start;
+}
+
+.creations-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.creations-chip--design {
+  background: var(--creations-orange-soft);
+  border-color: rgba(249, 115, 22, 0.4);
+  color: var(--creations-orange);
+}
+
+.creations-chip--product {
+  background: var(--creations-cyan-soft);
+  border-color: rgba(14, 165, 233, 0.45);
+  color: var(--creations-cyan);
+}
+
+.creations-chip__remove {
+  border: none;
+  background: rgba(0, 0, 0, 0.2);
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.creations-chip__remove:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.creations-chip--empty {
+  opacity: 0.6;
+  font-size: 14px;
+  color: var(--creations-muted);
+}
+
+.creations-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.creations-card {
+  background: var(--creations-panel);
+  border: 1px solid var(--creations-border);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.creations-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.creations-card__image-wrapper {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  background: #353d4c;
+  border-bottom: 1px solid var(--creations-border);
+}
+
+.creations-card__image-wrapper img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transition: transform 0.35s ease;
+}
+
+.creations-card:hover .creations-card__image-wrapper img {
+  transform: scale(1.05);
+}
+
+.creations-card__body {
+  padding: 8px 10px;
+}
+
+.creations-card__title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--creations-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.creations-card__product-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--creations-muted);
+  margin-top: 3px;
+  line-height: 1;
+}
+
+.creations-card__product-count svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.creations-card__creator-overlay {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 6px;
+  z-index: 2;
+  line-height: 1.3;
+  max-width: 80%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.creations-card__published-overlay {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 8px;
+  z-index: 2;
+  line-height: 1;
+}
+
+.creations-card__published-overlay svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.creations-card__no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--creations-panel);
+  color: var(--creations-muted);
+  font-size: 12px;
+}
+
+.creations-card__image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--creations-panel);
+}
+
+.creations-card__badges {
+  display: none;
+}
+
+.creations-card__badge {
+  display: none;
+}
+
+/* D4: Pulsieren wenn Design gerade publiziert wird */
+.creations-card--publishing {
+  animation: creations-card-publish-pulse 1.5s ease-in-out infinite;
+}
+.creations-card__badge--publishing {
+  background: rgba(249, 115, 22, 0.2);
+  border-color: #f97316;
+  color: #f97316;
+  font-weight: 600;
+}
+@keyframes creations-card-publish-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(249, 115, 22, 0); }
+}
+
+.creations-pagination {
+  display: flex;
+  justify-content: center;
+}
+
+.creations-load-more {
+  border: 1px solid var(--creations-border);
+  background: transparent;
+  color: var(--creations-text);
+  padding: 12px 28px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.creations-load-more[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.creations-empty-state {
+  border: 1px dashed var(--creations-border);
+  border-radius: 24px;
+  padding: 42px;
+  text-align: center;
+  color: var(--creations-muted);
+  margin-bottom: 24px;
+}
+
+.creations-loading-state {
+  border: 1px dashed var(--creations-border);
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  color: var(--creations-muted);
+  margin-bottom: 24px;
+}
+
+.creations-locked-state {
+  border: 1px solid var(--creations-border);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  color: var(--creations-muted);
+  background: rgba(2, 6, 23, 0.6);
+}
+
+/* Modals */
+.creations-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.creations-modal[aria-hidden="false"] {
+  display: flex;
+}
+
+.creations-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.65);
+  backdrop-filter: blur(10px);
+}
+
+.creations-modal__dialog {
+  position: relative;
+  background: #020b1f;
+  border: 1px solid #1e293b;
+  border-radius: 24px;
+  width: min(900px, calc(100% - 32px));
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.creations-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--creations-border);
+}
+
+.creations-modal__title {
+  font-size: 20px;
+  margin: 0;
+}
+
+.creations-modal__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--creations-muted);
+  margin: 0 0 4px;
+}
+
+.creations-modal__body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.creations-modal__footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--creations-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.creations-modal__button {
+  border-radius: 999px;
+  padding: 10px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--creations-text);
+  cursor: pointer;
+}
+
+.creations-modal__button--primary {
+  background: linear-gradient(90deg, #f97316, #fbbf24);
+  color: #0f172a;
+  border: none;
+  font-weight: 600;
+}
+
+.creations-modal__close {
+  border: none;
+  background: transparent;
+  color: var(--creations-muted);
+  cursor: pointer;
+  font-size: 20px;
+}
+
+
+.creations-modal__icon-button {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--creations-text);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.creations-info-popover {
+  margin-top: -12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 16px;
+  font-size: 14px;
+  color: var(--creations-muted);
+  background: rgba(15, 23, 42, 0.8);
+  display: none;
+}
+
+.creations-info-popover[data-visible="true"] {
+  display: block;
+}
+
+/* Responsive */
+@media (max-width: 1023px) {
+  .creations-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .my-creations-section {
+    padding: 32px 0 48px;
+  }
+
+  .my-creations-section__inner {
+    padding: 0 16px;
+  }
+
+  .creations-toolbar {
+    padding: 16px;
+  }
+
+  .creations-filter-buttons {
+    flex-direction: column;
+  }
+
+  .creations-filter-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scroll-snap-type: x proximity;
+  }
+
+  .creations-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .creations-modal__dialog {
+    width: calc(100% - 16px);
+    max-height: calc(100vh - 32px);
+    border-radius: 18px;
+  }
+}
+
+/* ========== DRAG & DROP MERGE STYLES ========== */
+
+/* Card drag states */
+.creations-card[draggable="true"] {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none; /* Prevents iOS callout menu */
+  position: relative;
+}
+
+.creations-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.creations-card.is-dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* CRITICAL: Prevent native browser image drag behavior
+   pointer-events:none lets drag events pass through img to the card
+   -webkit-user-drag:none prevents Safari/Chrome native image drag ghost */
+.creations-card[draggable="true"] img {
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  pointer-events: none !important;
+  -webkit-touch-callout: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Merge modal open state - add padding to page */
+body.merge-drag-active .my-creations-section {
+  padding-top: 220px;
+  transition: padding-top 0.3s ease;
+}
+
+@media (max-width: 640px) {
+  body.merge-drag-active .my-creations-section {
+    padding-top: 280px;
+  }
+}
+
+/* Visual hint for draggable cards */
+.creations-card::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.5)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4'/%3E%3C/svg%3E");
+  background-size: contain;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.creations-card:hover::after {
+  opacity: 0.6;
+}
+
+body.merge-drag-active .creations-card::after {
+  opacity: 1;
+}
+

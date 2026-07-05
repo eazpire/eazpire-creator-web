@@ -44,6 +44,15 @@
     }
 
     await afterAuth();
+    if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+      global.CreatorPortalThemeBridge.notifyContextReady();
+    }
+    var route = global.CreatorPortalRouter && global.CreatorPortalRouter.current
+      ? global.CreatorPortalRouter.current()
+      : "dashboard";
+    if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.onRoute === "function") {
+      global.CreatorPortalFeatures.onRoute(route);
+    }
     finishBoot();
   }
 

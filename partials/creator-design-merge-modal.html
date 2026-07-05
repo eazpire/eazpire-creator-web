@@ -1,0 +1,288 @@
+<style>
+  /* Base modal styling (visibility handled by JS inline styles) */
+  .design-merge-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    background: linear-gradient(180deg, rgba(15, 15, 20, 0.98) 0%, rgba(15, 15, 20, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .design-merge-modal__content {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .design-merge-modal__header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .design-merge-modal__title {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
+
+  .design-merge-modal__subtitle {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    margin: 0;
+  }
+
+  .merge-slot {
+    width: 140px;
+    height: 180px;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    position: relative;
+    background: rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+  }
+
+  .merge-slot.drag-over {
+    border-color: #f97316;
+    background: rgba(249, 115, 22, 0.15);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+  }
+
+  .merge-slot.filled {
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .merge-slot__placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    text-align: center;
+    padding: 8px;
+  }
+
+  .merge-slot__placeholder-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+  }
+
+  .merge-slot__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    display: none;
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
+  }
+
+  .merge-slot.filled .merge-slot__image {
+    display: block;
+  }
+
+  .merge-slot.filled .merge-slot__placeholder {
+    display: none;
+  }
+
+  .merge-slot__clear {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 2;
+  }
+
+  .merge-slot.filled .merge-slot__clear {
+    display: flex;
+  }
+
+  .merge-slot__clear:hover {
+    background: #ef4444;
+    transform: scale(1.1);
+  }
+
+  .merge-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+  }
+
+  .merge-icon svg {
+    width: 24px;
+    height: 24px;
+    color: #fff;
+  }
+
+  .merge-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-left: 16px;
+  }
+
+  .merge-button {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .merge-button:disabled {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+    cursor: not-allowed;
+  }
+
+  .merge-button:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.5);
+  }
+
+  .merge-cancel {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .merge-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+  }
+
+  /* Mobile Responsive */
+  @media (max-width: 640px) {
+    .design-merge-modal {
+      padding: 12px;
+    }
+
+    .design-merge-modal__content {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .merge-slot {
+      width: 100px;
+      height: 130px;
+    }
+
+    .merge-icon {
+      width: 36px;
+      height: 36px;
+    }
+
+    .merge-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .merge-actions {
+      flex-direction: row;
+      width: 100%;
+      margin-left: 0;
+      margin-top: 8px;
+    }
+
+    .merge-button,
+    .merge-cancel {
+      flex: 1;
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+  }
+</style>
+
+<div id="design-merge-modal" class="design-merge-modal" style="display:none !important; visibility:hidden; opacity:0;">
+  <div class="design-merge-modal__header">
+    <h3 class="design-merge-modal__title">Title</h3>
+    <p class="design-merge-modal__subtitle">Subtitle</p>
+  </div>
+
+  <div class="design-merge-modal__content">
+    <div class="merge-slot" data-slot="left">
+      <div class="merge-slot__placeholder">
+        <svg class="merge-slot__placeholder-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span>Design 1</span>
+      </div>
+      <img class="merge-slot__image" src="" alt="Design 1" draggable="false">
+      <button class="merge-slot__clear" type="button" aria-label="Remove">&times;</button>
+    </div>
+
+    <div class="merge-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <circle cx="6" cy="4" r="2" stroke-width="2"/>
+        <circle cx="18" cy="4" r="2" stroke-width="2"/>
+        <circle cx="12" cy="20" r="2" stroke-width="2"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6c0 4 6 6 6 12M18 6c0 4-6 6-6 12" />
+      </svg>
+    </div>
+
+    <div class="merge-slot" data-slot="right">
+      <div class="merge-slot__placeholder">
+        <svg class="merge-slot__placeholder-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span>Design 2</span>
+      </div>
+      <img class="merge-slot__image" src="" alt="Design 2" draggable="false">
+      <button class="merge-slot__clear" type="button" aria-label="Remove">&times;</button>
+    </div>
+
+    <div class="merge-actions">
+      <button class="merge-button" id="merge-execute-btn" disabled>
+        Button
+      </button>
+      <button class="merge-cancel" id="merge-cancel-btn">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>

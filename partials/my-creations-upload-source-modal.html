@@ -1,0 +1,94 @@
+<dialog class="creator-base-modal my-creations-upload-source-modal" id="my-creations-upload-source-modal" aria-labelledby="my-creations-upload-source-title">
+  <div class="creator-base-modal__header">
+    <h3 id="my-creations-upload-source-title" class="creator-base-modal__title" data-t="creator.my_creations.upload_choose_title">
+      Add your finished design
+    </h3>
+    <button type="button" class="creator-base-modal__close" id="my-creations-upload-source-close" aria-label="Close">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="creator-base-modal__body">
+    <p class="my-creations-upload-source-modal__lead" data-t="creator.my_creations.upload_choose_subtitle">Where is the file?</p>
+    <div class="my-creations-upload-source-modal__options">
+      <button type="button" class="my-creations-upload-source-modal__option" data-my-creations-upload-source="device">
+        <span class="my-creations-upload-source-modal__icon" aria-hidden="true">&#128187;</span>
+        <span class="my-creations-upload-source-modal__label" data-t="creator.my_creations.upload_from_device">This device</span>
+        <small class="my-creations-upload-source-modal__desc" data-t="creator.my_creations.upload_from_device_desc">Choose PNG, JPG, or SVG from your computer</small>
+      </button>
+      <button type="button" class="my-creations-upload-source-modal__option" data-my-creations-upload-source="mobile">
+        <span class="my-creations-upload-source-modal__icon" aria-hidden="true">&#128241;</span>
+        <span class="my-creations-upload-source-modal__label" data-t="creator.my_creations.upload_from_mobile">Mobile</span>
+        <small class="my-creations-upload-source-modal__desc" data-t="creator.my_creations.upload_from_mobile_desc">Scan the QR code with your phone, then continue with title and options here</small>
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  .my-creations-upload-source-modal__lead {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+  .my-creations-upload-source-modal__options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .my-creations-upload-source-modal__option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .my-creations-upload-source-modal__option:hover {
+    border-color: #f59e0b;
+    background: rgba(249, 115, 22, 0.06);
+  }
+  .my-creations-upload-source-modal__icon {
+    font-size: 28px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .my-creations-upload-source-modal__label {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .my-creations-upload-source-modal__desc {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.35;
+  }
+  body.creator-mode .my-creations-upload-source-modal__option,
+  body[data-creator-mode="true"] .my-creations-upload-source-modal__option {
+    border-color: rgba(148, 163, 184, 0.35);
+    background: rgba(15, 23, 42, 0.5);
+  }
+  body.creator-mode .my-creations-upload-source-modal__option:hover,
+  body[data-creator-mode="true"] .my-creations-upload-source-modal__option:hover {
+    border-color: rgba(245, 158, 11, 0.65);
+    background: rgba(245, 158, 11, 0.08);
+  }
+  body.creator-mode .my-creations-upload-source-modal__label,
+  body[data-creator-mode="true"] .my-creations-upload-source-modal__label {
+    color: #f9fafb;
+  }
+  body.creator-mode .my-creations-upload-source-modal__desc,
+  body[data-creator-mode="true"] .my-creations-upload-source-modal__desc,
+  body.creator-mode .my-creations-upload-source-modal__lead,
+  body[data-creator-mode="true"] .my-creations-upload-source-modal__lead {
+    color: #9ca3af;
+  }
+</style>

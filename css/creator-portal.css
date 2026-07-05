@@ -460,6 +460,15 @@ body[data-role="owner"] .owner-only { display: revert; }
   line-height: 1.2;
 }
 
+.creator-screen__body { min-height: 40vh; }
+
+.creator-gen-footer--portal {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 0 4px;
+  margin-top: 12px;
+}
+
 @media (min-width: 900px) {
   .creator-nav {
     position: static;

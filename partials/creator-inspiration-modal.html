@@ -1,0 +1,186 @@
+<div
+  id="creator-inspiration-modal"
+  class="creator-modal creator-modal--strong-backdrop"
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="creator-inspiration-modal-title"
+>
+  <div class="creator-modal__dialog creator-modal__dialog--large">
+    <div class="creator-modal__header">
+      <h3 id="creator-inspiration-modal-title" class="creator-modal__title">Title</h3>
+      <button
+        type="button"
+        class="creator-modal__close"
+        aria-label="Close"
+      >
+        ✕
+      </button>
+    </div>
+    <div class="creator-modal__body creator-modal__body--no-padding">
+      <!-- Grid View: Shows all public designs -->
+      <div id="creator-inspiration-modal-grid-view" class="creator-inspiration-modal__grid-view">
+        <!-- Fixed Search Bar -->
+        <div class="creator-inspiration-modal__search-wrapper">
+          <input
+            type="search"
+            id="creator-inspiration-modal-search"
+            class="creator-inspiration-modal__search"
+            placeholder="Search placeholder"
+            autocomplete="off"
+            aria-label="Search aria"
+          >
+          <span id="creator-inspiration-modal-count" class="creator-inspiration-modal__count">0 Designs</span>
+          <button
+            type="button"
+            id="creator-inspiration-filter-btn"
+            class="creator-inspiration-modal__filter-btn"
+            aria-label="Filter"
+          >
+            <svg class="creator-inspiration-modal__filter-btn__icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 5H17M6 10H14M8 15H12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="3" cy="5" r="1.5" fill="currentColor"/>
+              <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="15" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <!-- Scrollable Grid Container -->
+        <div class="creator-inspiration-modal__grid-container" data-allow-scroll="true">
+          <div id="creator-inspiration-modal-loading" class="creator-inspiration-modal__loading" style="display: none;">
+            Loading
+          </div>
+          <div id="creator-inspiration-modal-empty" class="creator-inspiration-modal__empty" style="display: none;">
+            Empty
+          </div>
+          <div id="creator-inspiration-modal-grid" class="creator-inspiration-modal__grid">
+            <!-- Designs will be loaded via JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail View: Shows selected design larger with remixes -->
+      <div id="creator-inspiration-modal-detail-view" class="creator-inspiration-modal__detail-view" style="display: none;">
+        <!-- Desktop Layout: Left (Design + Stats) + Right (Remixes) -->
+        <div class="creator-inspiration-modal__detail-desktop">
+          <!-- Left: Design Image + Stats -->
+          <div class="creator-inspiration-modal__detail-left">
+            <div class="creator-inspiration-modal__detail-image-wrap">
+              <img
+                id="creator-inspiration-modal-detail-image"
+                src=""
+                alt=""
+                loading="lazy"
+              >
+            </div>
+            <div class="creator-inspiration-modal__detail-stats">
+              <div class="creator-inspiration-modal__stat">
+                <span class="creator-inspiration-modal__stat-label">Remixes</span>
+                <span id="creator-inspiration-modal-remix-count" class="creator-inspiration-modal__stat-value">0</span>
+              </div>
+              <div class="creator-inspiration-modal__stat">
+                <span class="creator-inspiration-modal__stat-label">Sales</span>
+                <span id="creator-inspiration-modal-sales-count" class="creator-inspiration-modal__stat-value">0</span>
+              </div>
+            </div>
+            <div class="creator-inspiration-modal__detail-actions">
+              <button
+                type="button"
+                id="creator-inspiration-modal-close-detail"
+                class="creator-inspiration-modal__btn creator-inspiration-modal__btn--secondary"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                id="creator-inspiration-modal-apply"
+                class="creator-inspiration-modal__btn creator-inspiration-modal__btn--primary"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+          
+          <!-- Right: Remixes Grid -->
+          <div class="creator-inspiration-modal__detail-right">
+            <div class="creator-inspiration-modal__remixes-header">
+              <h4>Remixes</h4>
+            </div>
+            <div id="creator-inspiration-modal-remixes-container" class="creator-inspiration-modal__remixes-container" data-allow-scroll="true">
+              <div id="creator-inspiration-modal-remixes-grid" class="creator-inspiration-modal__remixes-grid">
+                <!-- Remixes will be loaded via JavaScript -->
+              </div>
+              <div id="creator-inspiration-modal-remixes-loading" class="creator-inspiration-modal__remixes-loading" style="display: none;">
+                Remixes loading
+              </div>
+              <div id="creator-inspiration-modal-remixes-empty" class="creator-inspiration-modal__remixes-empty" style="display: none;">
+                Remixes empty
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile Layout: 2 separate Carousels (Main Design + Remixes) -->
+        <div class="creator-inspiration-modal__detail-mobile">
+          <!-- Carousel 1: Main Design -->
+          <div class="creator-inspiration-modal__mobile-main-carousel" data-allow-scroll="true">
+            <div class="creator-inspiration-modal__mobile-slide">
+              <div class="creator-inspiration-modal__detail-image-wrap">
+                <img
+                  id="creator-inspiration-modal-detail-image-mobile"
+                  src=""
+                  alt=""
+                  loading="lazy"
+                >
+              </div>
+              <div class="creator-inspiration-modal__detail-stats">
+                <div class="creator-inspiration-modal__stat">
+                  <span class="creator-inspiration-modal__stat-label">Remixes</span>
+                  <span id="creator-inspiration-modal-remix-count-mobile" class="creator-inspiration-modal__stat-value">0</span>
+                </div>
+                <div class="creator-inspiration-modal__stat">
+                  <span class="creator-inspiration-modal__stat-label">Sales</span>
+                  <span id="creator-inspiration-modal-sales-count-mobile" class="creator-inspiration-modal__stat-value">0</span>
+                </div>
+              </div>
+              <div class="creator-inspiration-modal__detail-actions">
+                <button
+                  type="button"
+                  id="creator-inspiration-modal-close-detail-mobile"
+                  class="creator-inspiration-modal__btn creator-inspiration-modal__btn--secondary"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  id="creator-inspiration-modal-apply-mobile"
+                  class="creator-inspiration-modal__btn creator-inspiration-modal__btn--primary"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carousel 2: Remixes (horizontal scroll, max 3 visible) -->
+          <div class="creator-inspiration-modal__mobile-remixes-section">
+            <div class="creator-inspiration-modal__remixes-header">
+              <h4>Remixes</h4>
+            </div>
+            <div id="creator-inspiration-modal-remixes-container-mobile" class="creator-inspiration-modal__remixes-container-mobile" data-allow-scroll="true">
+              <div id="creator-inspiration-modal-remixes-grid-mobile" class="creator-inspiration-modal__remixes-grid-mobile">
+                <!-- Remixes will be loaded via JavaScript -->
+              </div>
+              <div id="creator-inspiration-modal-remixes-loading-mobile" class="creator-inspiration-modal__remixes-loading" style="display: none;">
+                Remixes loading
+              </div>
+              <div id="creator-inspiration-modal-remixes-empty-mobile" class="creator-inspiration-modal__remixes-empty" style="display: none;">
+                Remixes empty
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
