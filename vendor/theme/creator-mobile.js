@@ -467,6 +467,7 @@
 
   function replaceCreatorShellHashForIndex(index) {
     if (!creatorShellPathSupportsDashboardTabHash()) return;
+    if (window.__CREATOR_PORTAL_HOST__) return;
     var name = CREATOR_SHELL_HASH_SCREENS[index];
     if (!name) return;
     try {

@@ -970,6 +970,8 @@
     var wrap = document.getElementById('cjSidebarBalance');
     var val = document.getElementById('cjSidebarBalanceValue');
     if (!wrap || !val) return;
+    var coin = wrap.querySelector('.cj-sidebar__balance-coin');
+    if (coin && !coin.getAttribute('src')) coin.setAttribute('src', EAZ_COIN_URL);
     if (!journeyData || !journeyData.is_creator || journeyData.balance_eaz == null) {
       wrap.hidden = true;
       return;

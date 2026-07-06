@@ -3203,6 +3203,7 @@
   mountDesktopMarketingScreen();
   mountDesktopAutomationsScreen();
   mountDesktopShellModals();
+  window.mountCreatorDesktopShellModals = mountDesktopShellModals;
   renderTimeBasedWelcome();
   initHeroParticles();
   // Design reveal animation paused per current desktop request.

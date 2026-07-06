@@ -108,6 +108,33 @@
     }
   }
 
+  /** Shell nav (drawer, dots, desktop nav) bypasses showScreen — sync path + lazy features. */
+  function syncFromShellScreen(screenName, options) {
+    options = options || {};
+    var name = normalizeRoute(screenName);
+    current = name;
+    setTitle(name);
+    if (!options.skipUrl && usesPathRouting()) {
+      var expected = pathForScreen(name);
+      var path = (global.location.pathname || "/").replace(/\/$/, "") || "/";
+      if (path !== expected || global.location.hash) {
+        updateBrowserUrl(name, { replace: !!options.replace });
+      }
+    }
+    if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.onRoute === "function") {
+      global.CreatorPortalFeatures.onRoute(name);
+    }
+  }
+
+  function bindShellScreenUrlSync() {
+    if (!usesPathRouting()) return;
+    document.addEventListener("creator:shell-screen-change", function (e) {
+      var screen = e.detail && e.detail.screen;
+      if (!screen) return;
+      syncFromShellScreen(screen, { replace: false });
+    });
+  }
+
   function updateBrowserUrl(name, options) {
     options = options || {};
     if (usesPathRouting()) {
@@ -133,10 +160,8 @@
     if (usesThemeShell()) {
       setTitle(current);
       if (!options.skipUrl) updateBrowserUrl(current, { replace: !!options.replace });
-      syncThemeShell(current);
-      if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.onRoute === "function") {
-        global.CreatorPortalFeatures.onRoute(current);
-      }
+      if (!options.skipShell) syncThemeShell(current);
+      /* onRoute runs via creator:shell-screen-change from goTo / switchScreen */
       return;
     }
 
@@ -187,6 +212,7 @@
 
   function initFromLocation() {
     bindNav();
+    bindShellScreenUrlSync();
     migrateLegacyHashToPath();
     var route = readPathRoute();
     showScreen(route, { replace: true, skipUrl: true });
@@ -200,6 +226,7 @@
   global.CreatorPortalRouter = {
     init: initFromLocation,
     go: go,
+    syncFromShellScreen: syncFromShellScreen,
     current: function () {
       return current;
     },

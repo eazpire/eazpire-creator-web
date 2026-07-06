@@ -206,6 +206,10 @@
       await injectPartial("reference-influence-modal.html");
       await injectPartial("creator-inspiration-modal.html");
 
+      if (typeof global.mountCreatorDesktopShellModals === "function") {
+        global.mountCreatorDesktopShellModals();
+      }
+
       await loadScriptsSequential([
         asset("eaz-cost-catalog.js"),
         asset("creator-widget.payload.js"),
@@ -221,6 +225,10 @@
         asset("creator-phone-upload-modal.js"),
         asset("creator-generator.js"),
       ]);
+
+      if (global.CreatorGenerator && typeof global.CreatorGenerator.init === "function") {
+        global.CreatorGenerator.init();
+      }
     })();
 
     try {

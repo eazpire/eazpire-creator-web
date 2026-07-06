@@ -78,6 +78,11 @@
   }
 
   function init() {
+    if (window.__creatorGeneratorFullyInited) return true;
+    var targetBtn = document.getElementById('genTargetProduct');
+    var overlay = document.getElementById('genSelectOverlay');
+    if (!targetBtn || !overlay) return false;
+    window.__creatorGeneratorFullyInited = true;
     initPills();
     initUpload();
     initSuggest();
@@ -90,6 +95,7 @@
         window.__creatorGenOptionsState = opts || {};
       };
     }
+    return true;
   }
 
   function initUpload() {
@@ -1305,6 +1311,9 @@
     window.CreatorGenerator = window.CreatorGenerator || {};
     window.CreatorGenerator.triggerGenerate = runGenerateFlow;
   }
+
+  window.CreatorGenerator = window.CreatorGenerator || {};
+  window.CreatorGenerator.init = init;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
