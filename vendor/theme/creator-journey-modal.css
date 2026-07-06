@@ -510,6 +510,16 @@
   position: relative;
   appearance: none;
   -webkit-appearance: none;
+  user-select: none;
+}
+
+#cjTreeFilters > .cj-cat-tab:focus {
+  outline: none;
+}
+
+#cjTreeFilters > .cj-cat-tab:focus-visible {
+  outline: 2px solid rgba(255, 157, 0, 0.85);
+  outline-offset: 2px;
 }
 
 #cjTreeFilters > .cj-cat-tab:hover {
@@ -528,12 +538,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
+  justify-content: center;
+  gap: 4px;
   width: 100%;
   min-width: 0;
   flex: 1 1 auto;
   min-height: 0;
+  padding-top: 2px;
+}
+
+#cjTreeFilters > .cj-cat-tab:has(.cj-cat-tab__pin-wrap) .cj-cat-tab__body {
+  padding-top: 10px;
 }
 
 #cjTreeFilters .cj-cat-tab__icon {
@@ -2092,6 +2107,7 @@
   top: 3px;
   right: 3px;
   z-index: 2;
+  pointer-events: none;
 }
 
 .cj-cat-tab__pin {
@@ -2106,6 +2122,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
 }
 
 .cj-cat-tab__pin.is-pinned {
