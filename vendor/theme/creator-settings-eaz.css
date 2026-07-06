@@ -108,9 +108,25 @@
 
 .creator-eaz-wallet-card__coin {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
+}
+
+.creator-eaz-inline-coin,
+.creator-eaz-earned-convert__avail-coin {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  vertical-align: -3px;
+}
+
+.creator-eaz-wallet-card__row-label--with-coin,
+.creator-eaz-earned-convert__avail-label--with-coin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .creator-eaz-pkg-coin {

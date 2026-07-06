@@ -395,7 +395,7 @@
     var amount = Number(amountEl && amountEl.value);
     var min = earnedConvertCfg.min_convert_eaz || 100;
     if (!oid || !amount || amount < min) {
-      var minMsg = (window.CreatorI18n && window.CreatorI18n.eaz_convert_min_tpl) || 'Minimum {{min}} EAZ.';
+      var minMsg = (window.CreatorI18n && window.CreatorI18n.eaz_convert_min_tpl) || 'Minimum {{min}} EAZC.';
       alert(minMsg.replace(/\{\{min\}\}/g, String(min)));
       return;
     }
@@ -1048,7 +1048,7 @@
       coinImg.src =
         window.EazCoinBrand && window.EazCoinBrand.urlEazv
           ? window.EazCoinBrand.urlEazv()
-          : 'https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png';
+          : 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazv_coin_logo';
       titleRow.appendChild(coinImg);
       var titleText = document.createElement('span');
       titleText.textContent = p.label || eazNum + ' EAZV';

@@ -117,7 +117,13 @@
     if (!isMobileLayout()) closeMobileSidebar();
   }
 
-  var EAZ_COIN_URL = 'https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png';
+  function eazvCoinUrl() {
+    return window.EazCoinBrand && window.EazCoinBrand.urlEazv
+      ? window.EazCoinBrand.urlEazv()
+      : 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazv_coin_logo';
+  }
+
+  var EAZ_COIN_URL = eazvCoinUrl();
 
   var TREE_TAB_ORDER = [
     'royalty',
@@ -346,7 +352,7 @@
     if (cost <= 0) {
       return t('creator.journey.eaz_free', 'Free');
     }
-    return tpl('creator.journey.eaz_badge', '{{ committed }}/{{ cost }} EAZ', {
+    return tpl('creator.journey.eaz_badge', '{{ committed }}/{{ cost }} EAZV', {
       committed: String(Math.round(committed * 100) / 100),
       cost: String(Math.round(cost * 100) / 100)
     });
@@ -568,14 +574,14 @@
   function eazSkillMeta(node) {
     var parts = [];
     if (node.is_axis_gate) {
-      if (node.activation_cost_eaz > 0) parts.push(node.activation_cost_eaz + ' EAZ');
+      if (node.activation_cost_eaz > 0) parts.push(node.activation_cost_eaz + ' EAZV');
       if (node.mascot_min_level) parts.push(tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(node.mascot_min_level) }));
       return parts.join(' · ');
     }
     var bonus = eazBonusLabel(node.axis, node.bonus_pct);
     if (bonus) parts.push(bonus);
     if (node.mascot_min_level) parts.push(tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(node.mascot_min_level) }));
-    if (node.activation_cost_eaz > 0) parts.push(node.activation_cost_eaz + ' EAZ');
+    if (node.activation_cost_eaz > 0) parts.push(node.activation_cost_eaz + ' EAZV');
     return parts.join(' · ');
   }
 
@@ -690,7 +696,7 @@
     var html = '<div class="cj-eaz-economy">';
 
     html += '<nav class="cj-eaz-economy__axis-tabs" id="cjEazAxisTabs" role="tablist" aria-label="' +
-      escapeHtml(t('creator.eaz_economy.axis_tabs_aria', 'EAZ economy categories')) + '">';
+      escapeHtml(t('creator.eaz_economy.axis_tabs_aria', 'EAZV economy categories')) + '">';
     EAZ_AXIS_TAB_ORDER.forEach(function (ax) {
       html += '<button type="button" role="tab" class="cj-eaz-economy__axis-tab' + (ax === tab ? ' is-active' : '') +
         '" data-cj-eaz-axis="' + ax + '" aria-selected="' + (ax === tab ? 'true' : 'false') + '">' +
@@ -711,7 +717,7 @@
 
     if (!axisOpen) {
       html += '<p class="cj-eaz-economy__axis-hint">' +
-        escapeHtml(t('creator.eaz_economy.axis_unlock_hint', 'Unlock this category with EAZ to access its skills.')) + '</p>';
+        escapeHtml(t('creator.eaz_economy.axis_unlock_hint', 'Unlock this category with EAZV to access its skills.')) + '</p>';
       html += '</div></div>';
       return html;
     }
@@ -981,13 +987,17 @@
     var val = document.getElementById('cjSidebarBalanceValue');
     if (!wrap || !val) return;
     var coin = wrap.querySelector('.cj-sidebar__balance-coin');
-    if (coin && !coin.getAttribute('src')) coin.setAttribute('src', EAZ_COIN_URL);
+    if (coin) {
+      coin.setAttribute('data-eaz-coin', 'eazv');
+      coin.src = eazvCoinUrl();
+      if (window.EazCoinBrand && window.EazCoinBrand.hydrate) window.EazCoinBrand.hydrate(wrap);
+    }
     if (!journeyData || !journeyData.is_creator || journeyData.balance_eaz == null) {
       wrap.hidden = true;
       return;
     }
     wrap.hidden = false;
-    val.textContent = String(Math.round(Number(journeyData.balance_eaz) * 10) / 10) + ' EAZ';
+    val.textContent = String(Math.round(Number(journeyData.balance_eaz) * 10) / 10) + ' EAZV';
   }
 
   function clearContentBg() {
@@ -1053,7 +1063,7 @@
       nodeEl.hidden = !nodeEl.textContent;
     }
     if (availEl) {
-      availEl.textContent = tpl('creator.journey.commit_modal_available', 'Available: {{ amount }} EAZ', {
+      availEl.textContent = tpl('creator.journey.commit_modal_available', 'Available: {{ amount }} EAZV', {
         amount: String(Math.round(avail * 100) / 100)
       });
     }
@@ -1288,7 +1298,7 @@
       }
       html += renderOverviewStatCard(
         'eaz_free',
-        t('creator.journey.overview_stat_eaz_economy', 'EAZ Economy'),
+        t('creator.journey.overview_stat_eaz_economy', 'EAZV Economy'),
         parts.length ? t('creator.journey.overview_economy_unlocked', 'Skills unlocked') : '—',
         sub || t('creator.journey.overview_economy_none', 'No skills yet')
       );
@@ -1342,11 +1352,11 @@
         renderOverviewStatCard('quest_daily', t('creator.journey.quests_daily', 'Daily Quests'), q.side_completed + '/' + q.side_total, t('creator.journey.overview_completed', 'Completed'))
       ].join(''),
       eaz: [
-        renderOverviewStatCard('eaz_free', t('creator.journey.overview_eaz_free', 'Free'), fmtEazOverview(eaz.balance_free) + ' EAZ', t('creator.journey.overview_balance_now', 'Current balance')),
-        renderOverviewStatCard('eaz_purchased', t('creator.journey.overview_eaz_purchased', 'Purchased'), fmtEazOverview(eaz.balance_purchased) + ' EAZ', t('creator.journey.overview_balance_now', 'Current balance')),
-        renderOverviewStatCard('eaz_earned', t('creator.journey.overview_eaz_earned', 'Earned'), fmtEazOverview(eaz.balance_earned_total) + ' EAZ', t('creator.journey.overview_balance_now', 'Current balance')),
-        renderOverviewStatCard('eaz_won', t('creator.journey.overview_eaz_won', 'Won'), fmtEazOverview(eaz.lifetime_won) + ' EAZ', t('creator.journey.overview_lifetime', 'Lifetime')),
-        renderOverviewStatCard('eaz_spent', t('creator.journey.overview_eaz_spent', 'Spent'), fmtEazOverview(eaz.lifetime_spent) + ' EAZ', t('creator.journey.overview_lifetime', 'Lifetime'))
+        renderOverviewStatCard('eaz_free', t('creator.journey.overview_eaz_free', 'Free'), fmtEazOverview(eaz.balance_free) + ' EAZV', t('creator.journey.overview_balance_now', 'Current balance')),
+        renderOverviewStatCard('eaz_purchased', t('creator.journey.overview_eaz_purchased', 'Purchased'), fmtEazOverview(eaz.balance_purchased) + ' EAZV', t('creator.journey.overview_balance_now', 'Current balance')),
+        renderOverviewStatCard('eaz_earned', t('creator.journey.overview_eaz_earned', 'Earned'), fmtEazOverview(eaz.balance_earned_total) + ' EAZC', t('creator.journey.overview_balance_now', 'Current balance')),
+        renderOverviewStatCard('eaz_won', t('creator.journey.overview_eaz_won', 'Won'), fmtEazOverview(eaz.lifetime_won) + ' EAZV', t('creator.journey.overview_lifetime', 'Lifetime')),
+        renderOverviewStatCard('eaz_spent', t('creator.journey.overview_eaz_spent', 'Spent'), fmtEazOverview(eaz.lifetime_spent) + ' EAZV', t('creator.journey.overview_lifetime', 'Lifetime'))
       ].join(''),
       unlocks: renderOverviewUnlockCards(stats)
     };
