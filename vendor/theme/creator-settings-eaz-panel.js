@@ -81,6 +81,17 @@
   }
 
   function parsePackages() {
+    var panel = document.getElementById('creatorEazPanel');
+    var raw = panel && panel.getAttribute('data-eaz-packages');
+    if (raw) {
+      try {
+        var fromAttr = JSON.parse(raw);
+        if (Array.isArray(fromAttr) && fromAttr.length) {
+          fromAttr = fromAttr.slice().sort(function (a, b) { return (a.eaz || 0) - (b.eaz || 0); });
+          return fromAttr.slice(0, 3);
+        }
+      } catch (e) { /* fall through */ }
+    }
     var el = document.getElementById('creator-eaz-packages-json');
     if (!el) return [];
     try {
@@ -317,7 +328,7 @@
     }
     var tpl =
       (window.CreatorI18n && window.CreatorI18n.eazc_convert_to_eazg_preview) ||
-      'You receive {{amount}} EAZG (1:1)';
+      'You receive {{amount}} EAZV (1:1)';
     preview.textContent = tpl.replace(/\{\{amount\}\}/g, fmtEaz(amount));
   }
 
@@ -361,7 +372,7 @@
     }
     var confirmTpl =
       (window.CreatorI18n && window.CreatorI18n.eazc_convert_to_eazg_confirm) ||
-      'Convert {{amount}} EAZC to {{amount}} EAZG? This reduces your cash-out balance.';
+      'Convert {{amount}} EAZC to {{amount}} EAZV? This reduces your cash-out balance.';
     if (!window.confirm(confirmTpl.replace(/\{\{amount\}\}/g, fmtEaz(amount)))) return;
     try {
       var res = await apiPost('convert-eazc-to-eazg', { owner_id: oid, amount_eaz: amount });
@@ -567,7 +578,7 @@
       } else if (hasDiscount) {
         var baseEl = document.createElement('span');
         baseEl.className = 'creator-eaz-costs-row__base';
-        baseEl.textContent = catalog.fmtEaz(baseCost) + ' EAZ';
+        baseEl.textContent = catalog.fmtEaz(baseCost) + ' EAZV';
 
         var discEl = document.createElement('span');
         discEl.className = 'creator-eaz-costs-row__discount';
@@ -575,13 +586,13 @@
 
         var effEl = document.createElement('span');
         effEl.className = 'creator-eaz-costs-row__effective';
-        effEl.textContent = catalog.fmtEaz(cost) + ' EAZ';
+        effEl.textContent = catalog.fmtEaz(cost) + ' EAZV';
 
         priceWrap.appendChild(baseEl);
         priceWrap.appendChild(discEl);
         priceWrap.appendChild(effEl);
       } else {
-        priceWrap.textContent = catalog.fmtEaz(cost) + ' EAZ';
+        priceWrap.textContent = catalog.fmtEaz(cost) + ' EAZV';
       }
 
       row.appendChild(name);
@@ -724,7 +735,7 @@
       if (refillEl) {
         var pfx = window.CreatorI18n && window.CreatorI18n.eazRefillPrefix;
         var n = fmtEaz(nextAmt != null ? nextAmt : 0);
-        refillEl.textContent = pfx ? pfx.replace(/%\{N\}/g, n).replace(/%N/g, n) : 'Up to ' + n + ' EAZ at the next daily reset.';
+        refillEl.textContent = pfx ? pfx.replace(/%\{N\}/g, n).replace(/%N/g, n) : 'Up to ' + n + ' EAZV at the next daily reset.';
       }
       if (nextAt && cdLabel && bar && fill) {
         startCountdown(cdLabel, bar, fill, Number(nextAt));
@@ -756,8 +767,8 @@
     if (r.reason === 'eaz_pack_dry_run' && window.CreatorI18n && window.CreatorI18n.eazLedgerReasonEazPackDryRun) {
       return window.CreatorI18n.eazLedgerReasonEazPackDryRun;
     }
-    if (r.reason === 'eaz_convert:to_eazg') return 'EAZC → EAZG';
-    if (r.reason === 'eaz_convert:from_eazc') return 'EAZC → EAZG credit';
+    if (r.reason === 'eaz_convert:to_eazg') return 'EAZC → EAZV';
+    if (r.reason === 'eaz_convert:from_eazc') return 'EAZC → EAZV credit';
     if (r.reason === 'eaz_convert:fiat') return 'EAZC → fiat';
     if (r.reason === 'eaz_convert:gift_card') return 'EAZC → gift card';
     return String(r.reason || r.type || '').slice(0, 96);
@@ -1026,7 +1037,23 @@
       header.className = 'creator-eaz-pkg-header';
       var title = document.createElement('div');
       title.className = 'creator-eaz-pkg-title';
-      title.textContent = p.label || eazNum + ' EAZ';
+      var titleRow = document.createElement('div');
+      titleRow.className = 'creator-eaz-pkg-title-row';
+      var coinImg = document.createElement('img');
+      coinImg.className = 'creator-eaz-pkg-coin';
+      coinImg.alt = '';
+      coinImg.width = 22;
+      coinImg.height = 22;
+      coinImg.setAttribute('data-eaz-coin', 'eazv');
+      coinImg.src =
+        window.EazCoinBrand && window.EazCoinBrand.urlEazv
+          ? window.EazCoinBrand.urlEazv()
+          : 'https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png';
+      titleRow.appendChild(coinImg);
+      var titleText = document.createElement('span');
+      titleText.textContent = p.label || eazNum + ' EAZV';
+      titleRow.appendChild(titleText);
+      title.appendChild(titleRow);
       var priceEl = document.createElement('div');
       priceEl.className = 'creator-eaz-pkg-pack-price';
       var usdAmt = pkgUsdPrice(p);
@@ -1046,7 +1073,7 @@
         per10Line.textContent =
           per10Tpl && per10Tpl.trim()
             ? tpl(per10Tpl, { price: per10Str })
-            : per10Str + ' per 10 EAZ';
+            : per10Str + ' per 10 EAZV';
       } else {
         per10Line.textContent = '\u2014';
         per10Line.classList.add('creator-eaz-pkg-line--placeholder');
@@ -1071,15 +1098,15 @@
             gens +
             ' design generations (' +
             cost +
-            ' EAZ each)\nUp to ' +
+            ' EAZV each)\nUp to ' +
             packUploads +
             ' uploads (' +
             ucStr +
-            ' EAZ each)\nFree pool: up to ' +
+            ' EAZV each)\nFree pool: up to ' +
             freeUploads +
             ' uploads (' +
             fmtEaz(freeCap) +
-            ' EAZ cap)';
+            ' EAZV cap)';
       stack.appendChild(gensLine);
 
       var discSlot = document.createElement('div');

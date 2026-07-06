@@ -26,9 +26,9 @@
       '<div class="creator-global-footer__right">' +
       '<div class="creator-global-footer__balance creator-global-footer__balance--eaz" role="button" tabindex="0" data-footer-eaz-mode="balance">' +
       '<span class="creator-global-footer__eaz-normal" data-footer-eaz-normal>' +
-      '<img class="creator-global-footer__balance-coin" src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="" width="14" height="14" loading="lazy">' +
+      '<img class="creator-global-footer__balance-coin" src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="" width="14" height="14" loading="lazy" data-eaz-coin="eazv">' +
       '<span class="creator-global-footer__balance-value" id="creator-footer-eaz-value">—</span>' +
-      '<span class="creator-global-footer__balance-unit">EAZ</span>' +
+      '<span class="creator-global-footer__balance-unit">EAZV</span>' +
       "</span></div></div></footer>"
     );
   }

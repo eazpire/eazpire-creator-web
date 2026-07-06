@@ -72,7 +72,7 @@
       wrap = document.createElement('div');
       wrap.id = 'eazy-snap-reward-toast';
       wrap.className = 'eazy-snap-reward-toast';
-      wrap.innerHTML = '<div class="eazy-snap-reward-toast__inner"><div class="eazy-snap-reward-toast__glow"></div><div class="eazy-snap-reward-toast__coin"><img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="" width="48" height="48"></div><span class="eazy-snap-reward-toast__value">+0.01</span><span class="eazy-snap-reward-toast__unit">EAZ</span><div class="eazy-snap-reward-toast__sparkles"><span></span><span></span><span></span><span></span><span></span><span></span></div></div>';
+      wrap.innerHTML = '<div class="eazy-snap-reward-toast__inner"><div class="eazy-snap-reward-toast__glow"></div><div class="eazy-snap-reward-toast__coin"><img src="' + (window.EazCoinBrand && window.EazCoinBrand.urlEazv ? window.EazCoinBrand.urlEazv() : 'https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png') + '" alt="" width="48" height="48" data-eaz-coin="eazv"></div><span class="eazy-snap-reward-toast__value">+0.01</span><span class="eazy-snap-reward-toast__unit">EAZV</span><div class="eazy-snap-reward-toast__sparkles"><span></span><span></span><span></span><span></span><span></span><span></span></div></div>';
       wrap.setAttribute('aria-live', 'polite');
       document.body.appendChild(wrap);
     }
