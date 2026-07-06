@@ -5,17 +5,19 @@
   'use strict';
 
   var R2 = 'https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin';
-  var LEGACY_EAZV = R2 + '/eaz-coin-logo.png';
+  var ENGINE = 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
+  var DEFAULT_EAZV = ENGINE + '?op=platform-asset-public&slot=eazv_coin_logo';
+  var DEFAULT_EAZC = ENGINE + '?op=platform-asset-public&slot=eazc_coin_logo';
 
   var FALLBACK = {
-    eazv_coin_logo: LEGACY_EAZV,
-    eazc_coin_logo: R2 + '/eazc-coin-logo.png',
+    eazv_coin_logo: DEFAULT_EAZV,
+    eazc_coin_logo: DEFAULT_EAZC,
   };
 
   function slotUrl(slot) {
     var map = global.__EazCoinUrls;
     if (map && map[slot]) return map[slot];
-    return FALLBACK[slot] || LEGACY_EAZV;
+    return FALLBACK[slot] || DEFAULT_EAZV;
   }
 
   function urlEazv() {
@@ -55,6 +57,9 @@
         if (data.assets.eazv_coin_logo) global.__EazCoinUrls.eazv_coin_logo = data.assets.eazv_coin_logo;
         if (data.assets.eazc_coin_logo) global.__EazCoinUrls.eazc_coin_logo = data.assets.eazc_coin_logo;
         applyCoinImages(document);
+        try {
+          document.dispatchEvent(new CustomEvent('eaz:coin-brand-hydrated', { detail: global.__EazCoinUrls }));
+        } catch (e) { /* ignore */ }
       })
       .catch(function () {
         /* keep fallbacks */

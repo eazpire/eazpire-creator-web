@@ -199,7 +199,7 @@ body.creator-mobile-page .creator-mobile-app {
   color: #fff;
   flex-shrink: 0;
 }
-.creator-global-footer__balance-coin,
+.creator-global-footer__balance-coin { width: 20px; height: 20px; flex-shrink: 0; }
 .creator-global-footer__balance-icon { width: 14px; height: 14px; flex-shrink: 0; }
 .creator-global-footer__balance-icon { opacity: 0.85; }
 .creator-global-footer__balance-value {
