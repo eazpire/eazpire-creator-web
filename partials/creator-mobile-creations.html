@@ -24,48 +24,9 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </button>
       <div class="creator-creations-toolbar__meta">
-        <div class="creator-creations-activity-switch" id="creatorDesignsActivitySwitch" role="group" aria-label="
-
-
-
-
-  
-  
-  
-    
-  
-    
-  
-
-">
-          <button type="button" class="creator-creations-activity-btn is-active" data-designs-activity="active" aria-pressed="true">
-
-
-
-
-  
-  
-  
-    
-  
-    
-  
-
-</button>
-          <button type="button" class="creator-creations-activity-btn" data-designs-activity="inactive" aria-pressed="false">
-
-
-
-
-  
-  
-  
-    
-  
-    
-  
-
-</button>
+        <div class="creator-creations-activity-switch" id="creatorDesignsActivitySwitch" role="group" aria-label="Active: saved designs in your library. Inactive: generated designs not saved yet.">
+          <button type="button" class="creator-creations-activity-btn is-active" data-designs-activity="active" aria-pressed="true" data-t="creator.creations.designs_tab_active">Active</button>
+          <button type="button" class="creator-creations-activity-btn" data-designs-activity="inactive" aria-pressed="false" data-t="creator.creations.designs_tab_inactive">Inactive</button>
         </div>
         <span class="creator-creations-count" id="creatorDesignsCount">0 Designs</span>
       </div>

@@ -81,18 +81,18 @@
 
         <div class="creator-automations-field creator-automations-field--full creator-automations-gen-pool" id="creatorAutomationsGenPool">
           <span class="creator-automations-gen-pool__title">More options (random pool)</span>
-          <p class="creator-automations-gen-pool__hint">Select one or more values per row. Each run picks a random combination.</p>
+          <p class="creator-automations-gen-pool__hint">Select one or more values per row. Each scheduled run picks a random combination from your selections.</p>
 
           <div class="creator-automations-gen-pool__row">
             <span class="creator-automations-gen-pool__label">Ratio</span>
             <div class="creator-automations-gen-pool__ratio-row">
-              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="square" title="Square" aria-pressed="false">
+              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="square" title="Ratio square" aria-pressed="false">
                 <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
               </button>
-              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="portrait" title="Portrait" aria-pressed="false">
+              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="portrait" title="Ratio portrait" aria-pressed="false">
                 <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
               </button>
-              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="landscape" title="Landscape" aria-pressed="false">
+              <button type="button" class="gen-options-ratio" data-auto-pool-ratio="landscape" title="Ratio landscape" aria-pressed="false">
                 <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
               </button>
             </div>
@@ -102,8 +102,8 @@
             <span class="creator-automations-gen-pool__label">Content type</span>
             <div class="gen-options-content-type-grid creator-automations-gen-pool__content-grid">
               <button type="button" class="gen-options-content-type-card" data-auto-pool-content="design-text">Design + Text</button>
-              <button type="button" class="gen-options-content-type-card" data-auto-pool-content="design-only">Design only</button>
-              <button type="button" class="gen-options-content-type-card" data-auto-pool-content="text-only">Text only</button>
+              <button type="button" class="gen-options-content-type-card" data-auto-pool-content="design-only">Design Only</button>
+              <button type="button" class="gen-options-content-type-card" data-auto-pool-content="text-only">Text Only</button>
             </div>
           </div>
 
@@ -140,7 +140,7 @@
           </div>
 
           <div class="creator-automations-gen-pool__row">
-            <span class="creator-automations-gen-pool__label">Reference influence %</span>
+            <span class="creator-automations-gen-pool__label">{% render 't-safe', key: 'creator.automations.pool_ref_strength', fallback: 'Reference influence %' %}</span>
             <div class="creator-automations-gen-pool__chips">
               <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-refstr="50">50</button>
               <button type="button" class="creator-automations-gen-pool__chip" data-auto-pool-refstr="65">65</button>
