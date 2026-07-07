@@ -554,9 +554,20 @@
           </div>
           <div class="eazy-verify__subheader-row">
             <div class="eazy-verify__segment" role="group" aria-label="Queue">
-              <button type="button" class="eazy-verify__segment-btn is-active" data-eazy-verify-view="available">Available</button>
-              <button type="button" class="eazy-verify__segment-btn" data-eazy-verify-view="completed">Completed</button>
+              <button type="button" class="eazy-verify__segment-btn is-active" data-eazy-verify-view="available">
+                Available
+                <span class="eazy-verify__tab-count" id="eazy-verify-count-available" aria-label="">0</span>
+              </button>
+              <button type="button" class="eazy-verify__segment-btn" data-eazy-verify-view="completed">
+                Completed
+                <span class="eazy-verify__tab-count" id="eazy-verify-count-completed" aria-label="">0</span>
+              </button>
             </div>
+          </div>
+          <div class="eazy-verify__admin-bar" id="eazy-verify-admin-bar" hidden>
+            <button type="button" class="eazy-verify__btn eazy-verify__btn--approve-all" id="eazy-verify-approve-all">
+              Approve all designs & products
+            </button>
           </div>
         </div>
         <div class="eazy-verify__outcome-bar" id="eazy-verify-completed-block" hidden>

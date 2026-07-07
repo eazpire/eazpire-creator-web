@@ -16,6 +16,9 @@
     termsAccepted: false,
     touchStartX: 0,
     touchStartY: 0,
+    counts: { available: 0, completed: 0 },
+    isAdmin: false,
+    approveAllBusy: false,
   };
 
   var QUALITY_SUB_PREFIX = "quality_sub:";
@@ -73,6 +76,39 @@
   function syncCompletedNavVisibility() {
     var block = document.getElementById("eazy-verify-completed-block");
     if (block) block.hidden = !state.termsAccepted || state.view !== "completed";
+    syncAdminBarVisibility();
+  }
+
+  function syncAdminBarVisibility() {
+    var bar = document.getElementById("eazy-verify-admin-bar");
+    if (!bar) return;
+    bar.hidden = !state.isAdmin || !state.termsAccepted || state.view !== "available";
+  }
+
+  function updateTabCounts(counts) {
+    if (!counts) return;
+    state.counts = {
+      available: Math.max(0, Number(counts.available) || 0),
+      completed: Math.max(0, Number(counts.completed) || 0),
+    };
+    var availEl = document.getElementById("eazy-verify-count-available");
+    var compEl = document.getElementById("eazy-verify-count-completed");
+    if (availEl) {
+      availEl.textContent = String(state.counts.available);
+      availEl.setAttribute("aria-label", state.counts.available + " available");
+    }
+    if (compEl) {
+      compEl.textContent = String(state.counts.completed);
+      compEl.setAttribute("aria-label", state.counts.completed + " completed");
+    }
+  }
+
+  function applyVerifyMeta(d) {
+    if (d && d.counts) updateTabCounts(d.counts);
+    if (d && typeof d.is_admin === "boolean") {
+      state.isAdmin = d.is_admin;
+      syncAdminBarVisibility();
+    }
   }
 
   function setActiveButtons(selector, attr, value) {
@@ -139,6 +175,62 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ confirm_16_plus: true }),
         }).catch(function () {});
+      });
+    }
+
+    var approveAllBtn = document.getElementById("eazy-verify-approve-all");
+    if (approveAllBtn) {
+      approveAllBtn.addEventListener("click", function () {
+        if (state.approveAllBusy) return;
+        var msg = t(
+          "eazy_verify.admin_approve_all_confirm",
+          "Approve every pending design and product in the review queue? This cannot be undone."
+        );
+        if (!window.confirm(msg)) return;
+        state.approveAllBusy = true;
+        approveAllBtn.disabled = true;
+        fetch(apiUrl("verify-admin-approve-all"), {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            applyVerifyMeta(d);
+            if (d && d.ok) {
+              var n = Number(d.approved) || 0;
+              var stage = document.getElementById("eazy-verify-stage");
+              if (stage) {
+                stage.innerHTML =
+                  '<p class="eazy-verify__empty">' +
+                  t("eazy_verify.admin_approve_all_done", "Approved {{ count }} item(s).").replace(
+                    "{{ count }}",
+                    String(n)
+                  ) +
+                  "</p>";
+              }
+              state.currentItem = null;
+              window.setTimeout(function () {
+                loadBootstrap();
+              }, 1200);
+              return;
+            }
+            window.alert(
+              t("eazy_verify.admin_approve_all_fail", "Could not approve all items. Try again.")
+            );
+          })
+          .catch(function () {
+            window.alert(
+              t("eazy_verify.admin_approve_all_fail", "Could not approve all items. Try again.")
+            );
+          })
+          .finally(function () {
+            state.approveAllBusy = false;
+            approveAllBtn.disabled = false;
+          });
       });
     }
   }
@@ -325,6 +417,7 @@
     }
     if (d && d.reject_reasons) state.rejectReasons = d.reject_reasons;
     if (d && d.quality_sub_reasons) state.qualitySubReasons = d.quality_sub_reasons;
+    applyVerifyMeta(d);
     renderAvailableItem((d && d.item) || null);
   }
 
@@ -606,6 +699,7 @@
         vote: vote,
         reject_reasons: reasons || [],
         note: note || "",
+        entity_type: state.entityType,
       }),
     })
       .then(function (r) {
@@ -622,6 +716,7 @@
           }
           return;
         }
+        applyVerifyMeta(d);
         loadAvailable();
       });
   }
@@ -708,6 +803,7 @@
         return r.json();
       })
       .then(function (d) {
+        applyVerifyMeta(d);
         renderCompletedList(d.items || []);
       })
       .catch(function () {
@@ -728,9 +824,12 @@
     state.entityType = "design";
     state.view = "available";
     state.completedOutcome = "verified";
+    state.isAdmin = false;
+    state.counts = { available: 0, completed: 0 };
     setActiveButtons("[data-eazy-verify-entity]", "data-eazy-verify-entity", "design");
     setActiveButtons("[data-eazy-verify-view]", "data-eazy-verify-view", "available");
     setActiveButtons("[data-eazy-verify-outcome]", "data-eazy-verify-outcome", "verified");
+    updateTabCounts(state.counts);
     syncCompletedNavVisibility();
   }
 
