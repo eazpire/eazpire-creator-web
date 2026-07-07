@@ -331,30 +331,40 @@
   body.creator-mobile-page .gen-options-body {
     padding: 14px 16px;
     gap: 14px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  body.creator-mobile-page .gen-options-body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   body.creator-mobile-page .gen-options-row {
     gap: 8px;
   }
 
+  /* Design ratio: full-width 3-column square grid (same pattern as mobile) */
   body.creator-mobile-page .gen-options-ratio-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
-    grid-template-columns: unset;
     padding: 0;
+    width: 100%;
   }
 
   body.creator-mobile-page .gen-options-ratio {
-    aspect-ratio: unset;
-    width: 44px;
-    height: 44px;
-    padding: 8px;
-    flex-shrink: 0;
+    aspect-ratio: 1;
+    width: 100%;
+    height: auto;
+    padding: 12px;
+    min-height: 0;
   }
 
   body.creator-mobile-page .gen-options-ratio svg {
-    width: 24px;
-    height: 24px;
+    width: min(48px, 55%);
+    height: min(48px, 55%);
   }
 
   body.creator-mobile-page .gen-options-content-type-grid {
