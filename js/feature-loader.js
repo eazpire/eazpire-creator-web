@@ -25,7 +25,7 @@
     if (!href || document.querySelector('link[data-portal-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href + "?v=4";
+    link.href = href + "?v=5";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
