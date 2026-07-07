@@ -63,35 +63,42 @@
         await global.CreatorPortalShell.loadShell();
       }
 
-      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
-        global.CreatorPortalThemeBridge.notifyContextReady();
-      }
-
-      if (global.CreatorPortalShell && typeof global.CreatorPortalShell.loadThemeRuntime === "function") {
-        try {
-          await global.CreatorPortalShell.loadThemeRuntime();
-        } catch (e) {
-          console.warn("[CreatorPortal] theme runtime load failed", e);
-        }
-      }
-
       if (global.CreatorPortalRouter && typeof global.CreatorPortalRouter.init === "function") {
         global.CreatorPortalRouter.init();
       }
 
-      await afterAuth();
+      clearTimeout(bootTimeout);
+      finishBoot();
 
-      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
-        global.CreatorPortalThemeBridge.notifyContextReady();
-      }
+      var runtimeWork = (async function () {
+        if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+          global.CreatorPortalThemeBridge.notifyContextReady();
+        }
 
-      var route =
-        global.CreatorPortalRouter && global.CreatorPortalRouter.current
-          ? global.CreatorPortalRouter.current()
-          : "dashboard";
-      if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.onRoute === "function") {
-        global.CreatorPortalFeatures.onRoute(route);
-      }
+        if (global.CreatorPortalShell && typeof global.CreatorPortalShell.loadThemeRuntime === "function") {
+          try {
+            await global.CreatorPortalShell.loadThemeRuntime();
+          } catch (e) {
+            console.warn("[CreatorPortal] theme runtime load failed", e);
+          }
+        }
+
+        await afterAuth();
+
+        if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+          global.CreatorPortalThemeBridge.notifyContextReady();
+        }
+
+        var route =
+          global.CreatorPortalRouter && global.CreatorPortalRouter.current
+            ? global.CreatorPortalRouter.current()
+            : "dashboard";
+        if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.onRoute === "function") {
+          global.CreatorPortalFeatures.onRoute(route);
+        }
+      })();
+
+      await runtimeWork;
     } finally {
       clearTimeout(bootTimeout);
       finishBoot();

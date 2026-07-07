@@ -118,6 +118,10 @@
     var modal = document.getElementById('creator-desktop-xp-hint-modal');
     var btn = document.getElementById('creator-desktop-xp-hint-info');
     if (!modal || !btn) return;
+    // Header backdrop-filter creates a containing block — portal to body for viewport centering.
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
     function closeM() {
       modal.hidden = true;
       btn.setAttribute('aria-expanded', 'false');

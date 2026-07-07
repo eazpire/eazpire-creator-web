@@ -205,10 +205,7 @@
 
 <dialog class="creator-base-modal creator-audio-modal" id="creatorAudioModal" aria-labelledby="creator-audio-modal-title">
   <div class="creator-audio-modal__header">
-    <h3 id="creator-audio-modal-title" class="creator-base-modal__title">
-      
-      
-    </h3>
+    <h3 id="creator-audio-modal-title" class="creator-base-modal__title" data-t="creator.audio.title">Audio Library</h3>
     <button type="button" class="creator-base-modal__close" id="creatorAudioModalClose" aria-label="Close">
       <svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     </button>
@@ -238,11 +235,9 @@
     <div class="creator-audio-modal__actions">
       <label class="creator-audio-modal__add-btn">
         <input type="file" id="creatorAudioModalFileInput" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm" hidden>
-        <span></span>
+        <span data-t="creator.audio.add">Add</span>
       </label>
-      <button type="button" class="creator-audio-modal__use-btn" id="creatorAudioModalUseBtn" disabled>
-        
-      </button>
+      <button type="button" class="creator-audio-modal__use-btn" id="creatorAudioModalUseBtn" disabled data-t="creator.audio.use">Use</button>
     </div>
   </div>
 </dialog>

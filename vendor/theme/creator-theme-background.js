@@ -233,30 +233,60 @@
     ) {
       return;
     }
-    if (window.EazAnim && typeof window.EazAnim.whenReady === "function") {
-      try {
-        await window.EazAnim.whenReady();
-      } catch (_e) {}
-    }
+
+    var fallbackPayload = {
+      backgrounds: {
+        mobile: resolveBg(null, "mobile"),
+        desktop: resolveBg(null, "desktop"),
+      },
+    };
+    applyAll(fallbackPayload);
+
+    var cacheKey = "creator_theme_bg_v1";
     try {
-      var u = new URL(apiBase(), window.location.origin);
-      u.searchParams.set("op", "get-creator-area-backgrounds");
-      var res = await fetch(u.toString(), { credentials: "omit" });
-      var data = await res.json().catch(function () {
-        return {};
-      });
-      if (!data.ok) throw new Error(data.error || "load_failed");
-      window.__CREATOR_THEME_LAST_PAYLOAD__ = data;
-      applyAll(data);
-    } catch (err) {
-      console.warn("[creator-theme-background]", err);
-      applyAll({
-        backgrounds: {
-          mobile: resolveBg(null, "mobile"),
-          desktop: resolveBg(null, "desktop"),
-        },
-      });
-    }
+      var cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        var parsed = JSON.parse(cached);
+        if (parsed && parsed.expires > Date.now() && parsed.data) {
+          window.__CREATOR_THEME_LAST_PAYLOAD__ = parsed.data;
+          applyAll(parsed.data);
+        }
+      }
+    } catch (_cacheRead) {}
+
+    var fetchPromise = (async function () {
+      if (window.EazAnim && typeof window.EazAnim.whenReady === "function") {
+        try {
+          await Promise.race([
+            window.EazAnim.whenReady(),
+            new Promise(function (resolve) {
+              setTimeout(resolve, 400);
+            }),
+          ]);
+        } catch (_e) {}
+      }
+      try {
+        var u = new URL(apiBase(), window.location.origin);
+        u.searchParams.set("op", "get-creator-area-backgrounds");
+        var res = await fetch(u.toString(), { credentials: "omit", cache: "default" });
+        var data = await res.json().catch(function () {
+          return {};
+        });
+        if (!data.ok) throw new Error(data.error || "load_failed");
+        window.__CREATOR_THEME_LAST_PAYLOAD__ = data;
+        applyAll(data);
+        try {
+          sessionStorage.setItem(
+            cacheKey,
+            JSON.stringify({ expires: Date.now() + 120000, data: data })
+          );
+        } catch (_cacheWrite) {}
+      } catch (err) {
+        console.warn("[creator-theme-background]", err);
+      }
+    })();
+
+    return fetchPromise;
   }
 
   if (typeof MOBILE_QUERY.addEventListener === "function") {

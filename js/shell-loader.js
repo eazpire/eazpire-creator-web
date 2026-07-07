@@ -93,6 +93,40 @@
     host.dataset.loaded = "1";
   }
 
+  function setupCreatorAudioI18n() {
+    if (global.CreatorAudioI18n) return;
+    var pt = global.CreatorPortalI18n && global.CreatorPortalI18n.t;
+    function audioT(shortKey, fallback) {
+      if (pt) {
+        var val = pt("creator.audio." + shortKey);
+        if (val) return val;
+      }
+      return fallback || shortKey;
+    }
+    global.CreatorAudioI18n = {
+      play: audioT("play", "Play"),
+      pause: audioT("pause", "Pause"),
+      empty: audioT("empty", "No audio files yet. Add one to get started."),
+      add: audioT("add", "Add"),
+      use: audioT("use", "Use"),
+      mute: audioT("mute", "Mute"),
+      unmute: audioT("unmute", "Unmute"),
+      upload_error: audioT("upload_error", "Upload failed"),
+      login_required: pt ? pt("creator.common.login_required") || "Please log in" : "Please log in",
+      time_format: audioT("time_format", "0:00 / 0:00"),
+      selected: audioT("selected", "Selected"),
+      remove: audioT("remove", "Remove"),
+      remove_confirm: audioT("remove_confirm", "Remove?"),
+      remove_confirm_desc: audioT("remove_confirm_desc", "This cannot be undone."),
+      cancel: audioT("cancel", "Cancel"),
+      tap_to_start: audioT("tap_to_start", "Tap to start music"),
+      tap_to_start_after_switch: audioT(
+        "tap_to_start_after_switch",
+        "You switched to Creator – tap once to start music"
+      ),
+    };
+  }
+
   async function loadAudioModal() {
     var host = document.getElementById("creatorPortalModals");
     if (!host || host.querySelector('[data-partial="creator-audio-modal.html"]')) return;
@@ -105,6 +139,7 @@
       if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
         global.CreatorPortalI18n.applyDataT(wrap);
       }
+      setupCreatorAudioI18n();
       await loadScript("/vendor/theme/creator-audio-modal.js");
       await loadScript("/vendor/theme/creator-audio-party.js");
     } catch (e) {
@@ -118,7 +153,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=6";
+      s.src = src + "?v=8";
       s.defer = true;
       s.setAttribute("data-portal-runtime", src);
       s.onload = function () {
@@ -133,19 +168,23 @@
 
   async function loadThemeRuntime() {
     await loadScript("/js/portal-balances.js");
-    await loadScript("/vendor/theme/eaz-coin-brand.js");
-    await loadScript("/vendor/theme/creator-creator-area-api.js");
+    await Promise.all([
+      loadScript("/vendor/theme/eaz-coin-brand.js"),
+      loadScript("/vendor/theme/creator-creator-area-api.js"),
+      loadScript("/vendor/theme/creator-footer-eaz-ui.js"),
+      loadScript("/vendor/theme/creator-theme-background.js"),
+    ]);
     await loadScript("/vendor/theme/creator-dashboard-data.js");
-    await loadScript("/vendor/theme/particle-reveal.js");
-    await loadScript("/vendor/theme/design-particle-reveal.js");
-    await loadScript("/vendor/theme/drawer-aquarium.js");
-    await loadScript("/vendor/theme/creator-footer-eaz-ui.js");
-    await loadScript("/vendor/theme/creator-mobile.js");
-    await loadScript("/vendor/theme/creator-desktop.js");
-    await loadScript("/vendor/theme/creator-theme-background.js");
-    await loadScript("/vendor/theme/creator-shop-portal-handoff.js");
-    await loadScript("/vendor/theme/creator-switch-page-transition.js");
-    await loadScript("/js/creator-portal-switch.js");
+    await Promise.all([
+      loadScript("/vendor/theme/particle-reveal.js"),
+      loadScript("/vendor/theme/design-particle-reveal.js"),
+      loadScript("/vendor/theme/drawer-aquarium.js"),
+      loadScript("/vendor/theme/creator-shop-portal-handoff.js"),
+      loadScript("/vendor/theme/creator-switch-page-transition.js"),
+      loadScript("/js/creator-portal-switch.js"),
+      loadScript("/vendor/theme/creator-mobile.js"),
+      loadScript("/vendor/theme/creator-desktop.js"),
+    ]);
     await loadAudioModal();
     if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
       try {

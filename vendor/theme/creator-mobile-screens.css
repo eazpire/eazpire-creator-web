@@ -3958,8 +3958,21 @@ body.creator-video-motion-info-modal-open {
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.gen-confirm-eaz__coin {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.gen-confirm-eaz__details {
+  display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 .gen-confirm-eaz__cost {
   font-size: 15px;

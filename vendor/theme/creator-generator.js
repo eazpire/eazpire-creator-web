@@ -1008,6 +1008,10 @@
         confirmOverlay.classList.remove('is-open');
         confirmOverlay.setAttribute('aria-hidden', 'true');
       }
+      try {
+        document.documentElement.classList.remove('gen-confirm-open');
+      } catch (e) {}
+      if (typeof window.refreshCreatorGenEazyUi === 'function') window.refreshCreatorGenEazyUi();
     }
 
     function openConfirmModal() {
@@ -1015,7 +1019,28 @@
         confirmOverlay.classList.add('is-open');
         confirmOverlay.setAttribute('aria-hidden', 'false');
       }
+      try {
+        document.documentElement.classList.add('gen-confirm-open');
+      } catch (e2) {}
+      if (window.EazCoinBrand && typeof window.EazCoinBrand.applyCoinImages === 'function') {
+        window.EazCoinBrand.applyCoinImages(confirmOverlay);
+      }
+      if (typeof window.refreshCreatorGenEazyUi === 'function') window.refreshCreatorGenEazyUi();
     }
+
+    function ensureConfirmModalLabels() {
+      var titleEl = document.getElementById('genConfirmTitle');
+      if (titleEl && !String(titleEl.textContent || '').trim()) {
+        titleEl.textContent = tCreator('generatorConfirmTitle', 'Generate design?');
+      }
+      if (confirmCancel && !String(confirmCancel.textContent || '').trim()) {
+        confirmCancel.textContent = tCreator('commonCancel', 'Cancel');
+      }
+      if (confirmConfirm && !String(confirmConfirm.textContent || '').trim()) {
+        confirmConfirm.textContent = tCreator('generatorConfirmGenerate', 'Generate');
+      }
+    }
+    ensureConfirmModalLabels();
 
     if (confirmClose) confirmClose.addEventListener('click', closeConfirmModal);
     if (confirmCancel) confirmCancel.addEventListener('click', closeConfirmModal);
@@ -1209,15 +1234,15 @@
           .catch(function () {})
           .then(function () {
             if (confirmSummary) confirmSummary.innerHTML = buildSummaryHtml();
-            var costTpl = tCreator('generatorConfirmCost', 'Cost: {{ cost }} EAZ');
+            var costTpl = tCreator('generatorConfirmCost', 'Cost: {{ cost }} EAZV');
             var costFreeLine = tCreator('generatorConfirmCostFree', 'Cost: Free');
-            var balanceTpl = tCreator('generatorConfirmBalance', 'Available: {{ balance }} EAZ');
+            var balanceTpl = tCreator('generatorConfirmBalance', 'Available: {{ balance }} EAZV');
             var isCostFree = confirmIsFreeGeneration;
             if (confirmBalance) {
               var balOut = applyCostBalanceTpl(balanceTpl, costStr, balanceVal);
               confirmBalance.textContent = (balOut && balOut.indexOf('{{') === -1 && balOut.indexOf('__BALANCE__') === -1)
                 ? balOut
-                : ('Available: ' + balanceVal + ' EAZ');
+                : ('Available: ' + balanceVal + ' EAZV');
             }
             var costEl = document.querySelector('.gen-confirm-eaz__cost');
             if (costEl) {
@@ -1228,7 +1253,7 @@
                 var costOut = applyCostBalanceTpl(costTpl, costStr, balanceVal);
                 costEl.textContent = (costOut && costOut.indexOf('{{') === -1 && costOut.indexOf('__COST__') === -1)
                   ? costOut
-                  : ('Cost: ' + costStr + ' EAZ');
+                  : ('Cost: ' + costStr + ' EAZV');
               }
             }
             openConfirmModal();

@@ -339,7 +339,9 @@
 
       if (requireLogin()) {
         if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
-        await ensureSettings();
+        ensureSettings().catch(function (e) {
+          console.warn("[CreatorPortalFeatures] settings preload failed", e);
+        });
       }
     })();
 

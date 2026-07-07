@@ -138,6 +138,15 @@
   z-index: 0;
 }
 
+/* Design generator confirm modal — no Eazy / speech bubble inside overlay */
+html.gen-confirm-open #eazy-mascot,
+html.gen-confirm-open #creatorEazyCluster,
+html.gen-confirm-open .creator-header-eazy-speech {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* Docked header Eazy: speech row lives in screen anchor (scrolls); decorative Eazy left, bubble right, tail toward Eazy */
 .creator-eazy-cluster--docked-speech-below {
   position: relative !important;

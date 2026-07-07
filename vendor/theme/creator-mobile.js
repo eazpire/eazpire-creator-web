@@ -276,6 +276,12 @@
     var speechBtn = document.getElementById('creatorHeaderEazySpeechBtn');
     if (!speechWrap || !speechBtn) return;
 
+    var confirmOpen = false;
+    try {
+      var confirmOverlay = document.getElementById('genConfirmOverlay');
+      confirmOpen = !!(confirmOverlay && confirmOverlay.classList.contains('is-open'));
+    } catch (eConfirm) {}
+
     var genReady = computeCreatorGenReady();
     var sp = window.selectedHeroProducts || {};
     var heroProductsReady = !!(sp.top || sp.addition);
@@ -289,7 +295,7 @@
     var disabled = true;
 
     if (mobileVis) {
-      if (slideIdx === 1 && genReady) {
+      if (slideIdx === 1 && genReady && !confirmOpen) {
         show = true;
         disabled = false;
       } else if (slideIdx === 3 && heroProductsReady && heroBtn) {
@@ -297,7 +303,7 @@
         disabled = !!heroBtn.disabled;
       }
     } else {
-      if (dsk === 'generator' && genReady) {
+      if (dsk === 'generator' && genReady && !confirmOpen) {
         show = true;
         disabled = false;
       } else if (dsk === 'marketing' && heroProductsReady && heroBtn) {
