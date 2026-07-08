@@ -1,6 +1,6 @@
 <style>
   /* Modal Overlay */
-  #creatorDesignPreviewModal- {
+  #creatorDesignPreviewModal-design-preview {
     display: none;
     position: fixed;
     inset: 0;
@@ -12,13 +12,13 @@
     box-sizing: border-box;
   }
 
-  #creatorDesignPreviewModal-[aria-hidden="false"] {
+  #creatorDesignPreviewModal-design-preview[aria-hidden="false"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
   }
 
-  #creatorDesignPreviewModal-.cdp-modal--open {
+  #creatorDesignPreviewModal-design-preview.cdp-modal--open {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
@@ -686,7 +686,7 @@
 
   /* Mobile Styles */
   @media (max-width: 900px) {
-    #creatorDesignPreviewModal- {
+    #creatorDesignPreviewModal-design-preview {
       padding: 24px 8px;
       align-items: center;
       justify-content: center;
@@ -1071,7 +1071,7 @@
 
 
 <div
-  id="creatorDesignPreviewModal-"
+  id="creatorDesignPreviewModal-design-preview"
   aria-hidden="true"
   role="dialog"
   aria-modal="true"
@@ -1081,11 +1081,11 @@
 >
   <div class="cdp-modal">
     <div class="cdp-modal__header">
-      <h3 id="cdp-modal-title-" class="cdp-modal__title">Design</h3>
+      <h3 id="cdp-modal-title-design-preview" class="cdp-modal__title">Design</h3>
       <button
         type="button"
         class="cdp-modal__close"
-        id="cdp-modal-close-"
+        id="cdp-modal-close-design-preview"
         aria-label="Close"
       >
         ✕
@@ -1100,7 +1100,7 @@
           <div class="cdp-modal__image-wrapper">
             <div class="cdp-modal__image-frame">
               <img
-                id="cdp-modal-image-"
+                id="cdp-modal-image-design-preview"
                 class="cdp-modal__image"
                 src=""
                 alt="Design"
@@ -1125,7 +1125,7 @@
             </div>
             <button
               type="button"
-              id="cdp-btn-crop-"
+              id="cdp-btn-crop-design-preview"
               class="cdp-modal__crop-btn"
               aria-label="Adjust crop area"
               title="Adjust crop area"
@@ -1144,8 +1144,8 @@
 
           <!-- Design Prompt -->
           <div class="cdp-modal__prompt-section">
-            <label class="cdp-modal__label" for="cdp-design-prompt-">Design Prompt:</label>
-            <textarea id="cdp-design-prompt-" class="cdp-modal__value cdp-modal__value--empty" readonly rows="5" autocomplete="off" spellcheck="false">–</textarea>
+            <label class="cdp-modal__label" for="cdp-design-prompt-design-preview">Design Prompt:</label>
+            <textarea id="cdp-design-prompt-design-preview" class="cdp-modal__value cdp-modal__value--empty" readonly rows="5" autocomplete="off" spellcheck="false">–</textarea>
           </div>
 
           <!-- ✅ Desktop: Sichtbarkeits-Slider unter User Prompt (nur wenn generiert) -->
@@ -1154,7 +1154,7 @@
             <div class="cdp-modal__visibility-switch-wrapper">
               <label class="creator-switch">
                 <span class="creator-switch__text creator-switch__text--left">Private</span>
-                <input type="checkbox" id="cdp-visibility-switch-left-" />
+                <input type="checkbox" id="cdp-visibility-switch-left-design-preview" />
                 <span class="creator-switch__slider"></span>
                 <span class="creator-switch__text creator-switch__text--right">Public</span>
               </label>
@@ -1164,20 +1164,20 @@
 
         <!-- Rechte Seite: User Image + User Prompt (nur für generierte Designs) -->
         <div class="cdp-modal__desktop-right cdp-modal__desktop-right--generated">
-          <div id="cdp-user-image-wrapper-" class="cdp-modal__user-image-wrapper">
+          <div id="cdp-user-image-wrapper-design-preview" class="cdp-modal__user-image-wrapper">
             <img
-              id="cdp-user-image-"
+              id="cdp-user-image-design-preview"
               class="cdp-modal__user-image"
               src=""
               alt="User Input Image"
               style="display: none;"
             >
-            <p id="cdp-user-image-text-" class="cdp-modal__user-image-text" style="display: none;">No image uploaded</p>
+            <p id="cdp-user-image-text-design-preview" class="cdp-modal__user-image-text" style="display: none;">No image uploaded</p>
           </div>
 
           <div class="cdp-modal__prompt-section">
             <label class="cdp-modal__label">User Prompt:</label>
-            <div id="cdp-user-prompt-" class="cdp-modal__value cdp-modal__value--empty">–</div>
+            <div id="cdp-user-prompt-design-preview" class="cdp-modal__value cdp-modal__value--empty">–</div>
           </div>
 
           <!-- ✅ Sichtbarkeits-Slider nach links verschoben (nur Desktop) -->
@@ -1186,7 +1186,7 @@
             <div class="cdp-modal__visibility-switch-wrapper">
               <label class="creator-switch">
                 <span class="creator-switch__text creator-switch__text--left">Private</span>
-                <input type="checkbox" id="cdp-visibility-switch-" />
+                <input type="checkbox" id="cdp-visibility-switch-design-preview" />
                 <span class="creator-switch__slider"></span>
                 <span class="creator-switch__text creator-switch__text--right">Public</span>
               </label>
@@ -1202,7 +1202,7 @@
             <div class="cdp-modal__image-wrapper">
               <div class="cdp-modal__image-frame">
                 <img
-                  id="cdp-modal-image-mobile-"
+                  id="cdp-modal-image-mobile-design-preview"
                   class="cdp-modal__image"
                   src=""
                   alt="Design"
@@ -1244,8 +1244,8 @@
             </div>
 
             <div class="cdp-modal__prompt-section">
-              <label class="cdp-modal__label" for="cdp-design-prompt-mobile-">Design Prompt:</label>
-              <textarea id="cdp-design-prompt-mobile-" class="cdp-modal__value cdp-modal__value--empty" readonly rows="5" autocomplete="off" spellcheck="false">–</textarea>
+              <label class="cdp-modal__label" for="cdp-design-prompt-mobile-design-preview">Design Prompt:</label>
+              <textarea id="cdp-design-prompt-mobile-design-preview" class="cdp-modal__value cdp-modal__value--empty" readonly rows="5" autocomplete="off" spellcheck="false">–</textarea>
             </div>
 
             <div class="cdp-modal__visibility-section">
@@ -1253,7 +1253,7 @@
               <div class="cdp-modal__visibility-switch-wrapper">
                 <label class="creator-switch">
                   <span class="creator-switch__text creator-switch__text--left">Private</span>
-                  <input type="checkbox" id="cdp-visibility-switch-mobile-slide1-" />
+                  <input type="checkbox" id="cdp-visibility-switch-mobile-slide1-design-preview" />
                   <span class="creator-switch__slider"></span>
                   <span class="creator-switch__text creator-switch__text--right">Public</span>
                 </label>
@@ -1262,20 +1262,20 @@
           </div>
 
           <div class="cdp-modal__carousel-slide" data-slide="1">
-            <div id="cdp-user-image-wrapper-mobile-" class="cdp-modal__user-image-wrapper">
+            <div id="cdp-user-image-wrapper-mobile-design-preview" class="cdp-modal__user-image-wrapper">
               <img
-                id="cdp-user-image-mobile-"
+                id="cdp-user-image-mobile-design-preview"
                 class="cdp-modal__user-image"
                 src=""
                 alt="User Input Image"
                 style="display: none;"
               >
-              <p id="cdp-user-image-text-mobile-" class="cdp-modal__user-image-text" style="display: none;">No image uploaded</p>
+              <p id="cdp-user-image-text-mobile-design-preview" class="cdp-modal__user-image-text" style="display: none;">No image uploaded</p>
             </div>
 
             <div class="cdp-modal__prompt-section">
               <label class="cdp-modal__label">User Prompt:</label>
-              <div id="cdp-user-prompt-mobile-" class="cdp-modal__value cdp-modal__value--empty">–</div>
+              <div id="cdp-user-prompt-mobile-design-preview" class="cdp-modal__value cdp-modal__value--empty">–</div>
             </div>
           </div>
         </div>
@@ -1291,7 +1291,7 @@
         <div class="cdp-modal__image-wrapper">
           <div class="cdp-modal__image-frame">
             <img
-              id="cdp-modal-image-mobile-uploaded-"
+              id="cdp-modal-image-mobile-uploaded-design-preview"
               class="cdp-modal__image"
               src=""
               alt="Design"
@@ -1336,7 +1336,7 @@
 
     <!-- Footer mit Buttons (Demo-Style, rechtsbündig, inkl. Download) -->
     <div class="cdp-modal__footer" aria-label="Actions">
-      <button type="button" id="cdp-btn-remix-" class="cdp-modal__btn cdp-modal__btn--remix" aria-label="Remix" title="Remix">
+      <button type="button" id="cdp-btn-remix-design-preview" class="cdp-modal__btn cdp-modal__btn--remix" aria-label="Remix" title="Remix">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 7h-6a4 4 0 0 0-4 4v10"/>
           <path d="M21 7l-3-3"/>
@@ -1348,7 +1348,7 @@
         <span class="cdp-modal__btn-text">Remix</span>
       </button>
 
-      <button type="button" id="cdp-btn-similar-" class="cdp-modal__btn cdp-modal__btn--similar" aria-label="Similar Design" title="Similar Design">
+      <button type="button" id="cdp-btn-similar-design-preview" class="cdp-modal__btn cdp-modal__btn--similar" aria-label="Similar Design" title="Similar Design">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
           <path d="M21 3v6h-6"/>
@@ -1356,7 +1356,7 @@
         <span class="cdp-modal__btn-text">Similar Design</span>
       </button>
 
-      <button type="button" id="cdp-btn-transfer-" class="cdp-modal__btn cdp-modal__btn--transfer" aria-label="Transfer" title="Transfer">
+      <button type="button" id="cdp-btn-transfer-design-preview" class="cdp-modal__btn cdp-modal__btn--transfer" aria-label="Transfer" title="Transfer">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M7 17L17 7"/>
           <path d="M7 7h10v10"/>
@@ -1366,7 +1366,7 @@
 
       <div class="cdp-modal__footer-sep" aria-hidden="true"></div>
 
-      <button type="button" id="cdp-btn-download-" class="cdp-modal__btn cdp-modal__btn--download" aria-label="Download" title="Download">
+      <button type="button" id="cdp-btn-download-design-preview" class="cdp-modal__btn cdp-modal__btn--download" aria-label="Download" title="Download">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <path d="M7 10l5 5 5-5"/>
@@ -1375,7 +1375,7 @@
         <span class="cdp-modal__btn-text">Download</span>
       </button>
 
-      <button type="button" id="cdp-btn-save-" class="cdp-modal__btn cdp-modal__btn--save" aria-label="Save" title="Save">
+      <button type="button" id="cdp-btn-save-design-preview" class="cdp-modal__btn cdp-modal__btn--save" aria-label="Save" title="Save">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
           <path d="M17 21v-8H7v8"/>
@@ -1384,7 +1384,7 @@
         <span class="cdp-modal__btn-text">Save</span>
       </button>
 
-      <button type="button" id="cdp-btn-delete-" class="cdp-modal__btn cdp-modal__btn--delete" aria-label="Delete" title="Delete">
+      <button type="button" id="cdp-btn-delete-design-preview" class="cdp-modal__btn cdp-modal__btn--delete" aria-label="Delete" title="Delete">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 6h18"/>
           <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -1397,7 +1397,7 @@
     </div>
 
     <div
-      id="cdp-crop-busy-"
+      id="cdp-crop-busy-design-preview"
       class="cdp-modal__crop-busy"
       hidden
       aria-hidden="true"
@@ -1409,7 +1409,7 @@
       </div>
     </div>
     <div
-      id="cdp-crop-toast-"
+      id="cdp-crop-toast-design-preview"
       class="cdp-modal__crop-toast"
       hidden
       aria-hidden="true"
