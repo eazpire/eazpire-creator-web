@@ -276,12 +276,29 @@
     if (!buttons.length) return;
     var allowed = { dashboard: true, generator: true, creations: true, marketing: true, automations: true };
     var order = ['dashboard', 'generator', 'creations', 'marketing', 'automations'];
+    function portalScreenFromPath() {
+      if (!window.__CREATOR_PORTAL_HOST__) return '';
+      try {
+        var path = String(window.location.pathname || '/').replace(/\/+$/, '').toLowerCase() || '/';
+        if (path === '/' || path === '/dashboard') return 'dashboard';
+        if (path === '/generator') return 'generator';
+        if (path === '/creations') return 'creations';
+        if (path === '/marketing') return 'marketing';
+        if (path === '/automations') return 'automations';
+      } catch (_portalPathErr) {}
+      return '';
+    }
     var activeScreen = 'dashboard';
     if (embedDashboard) {
       try {
-        var sp = new URLSearchParams(window.location.search);
-        var req = String(sp.get('screen') || 'generator').toLowerCase();
-        activeScreen = allowed[req] ? req : 'generator';
+        var portalPathScreen = portalScreenFromPath();
+        if (portalPathScreen) {
+          activeScreen = portalPathScreen;
+        } else {
+          var sp = new URLSearchParams(window.location.search);
+          var req = String(sp.get('screen') || 'generator').toLowerCase();
+          activeScreen = allowed[req] ? req : 'generator';
+        }
       } catch (e2) {
         activeScreen = 'generator';
       }

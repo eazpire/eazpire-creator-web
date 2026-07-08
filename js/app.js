@@ -93,6 +93,21 @@
           global.CreatorPortalRouter && global.CreatorPortalRouter.current
             ? global.CreatorPortalRouter.current()
             : "dashboard";
+        if (usesThemeShell()) {
+          try {
+            if (global.CreatorDesktopShell && typeof global.CreatorDesktopShell.switchScreen === "function") {
+              global.CreatorDesktopShell.switchScreen(route);
+            }
+            if (typeof global.__creatorGoTo === "function" && global.CreatorPortalRouter && typeof global.CreatorPortalRouter.slideIndex === "function") {
+              var slideIndex = global.CreatorPortalRouter.slideIndex(route);
+              if (typeof slideIndex === "number") {
+                global.__creatorGoTo(slideIndex);
+              }
+            }
+          } catch (e) {
+            console.warn("[CreatorPortal] route sync after runtime failed", e);
+          }
+        }
         if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.onRoute === "function") {
           global.CreatorPortalFeatures.onRoute(route);
         }

@@ -543,14 +543,25 @@
         encodeURIComponent(owner) +
         '&limit=500';
 
-      var saved = await fetchAllSavedDesignPages(owner);
+      var savedPromise = fetchAllSavedDesignPages(owner);
+      var generatedPromise = fetch(genUrl, { credentials: 'include' })
+        .then(function (resGen) {
+          return resGen.json().catch(function () { return { ok: false, items: [] }; });
+        })
+        .then(function (dataGen) {
+          return (dataGen.ok && dataGen.items) ? dataGen.items : [];
+        })
+        .catch(function () {
+          return [];
+        });
+      var listJobsBundlePromise = fetchListJobsDesignMergeBundle(owner).catch(function () {
+        return { kvDone: [], savingJobIds: new Set(), savingJobs: [] };
+      });
 
-      var resGen = await fetch(genUrl, { credentials: 'include' });
-      var dataGen = await resGen.json().catch(function () { return { ok: false, items: [] }; });
-
-      var generated = (dataGen.ok && dataGen.items) ? dataGen.items : [];
-
-      var listJobsBundle = await fetchListJobsDesignMergeBundle(owner);
+      var results = await Promise.all([savedPromise, generatedPromise, listJobsBundlePromise]);
+      var saved = results[0];
+      var generated = results[1];
+      var listJobsBundle = results[2];
       var kvDone = listJobsBundle.kvDone;
       var savingJobIds = listJobsBundle.savingJobIds;
       var savingJobs = listJobsBundle.savingJobs || [];
@@ -562,7 +573,12 @@
       });
 
       var merged = saved.map(normalizeSaved);
+      var mergedJobIds = new Set();
       var d1JobIds = new Set();
+      merged.forEach(function (d) {
+        var mj = d && d.job_id != null ? String(d.job_id).trim() : '';
+        if (mj) mergedJobIds.add(mj);
+      });
       generated.forEach(function (g) {
         var gj = g.job_id != null ? String(g.job_id) : '';
         if (gj) d1JobIds.add(gj);
@@ -571,6 +587,7 @@
           var genNorm = normalizeGenerated(g);
           if (gj && savingJobIds.has(gj)) genNorm.saving_to_library = true;
           merged.push(genNorm);
+          if (gj) mergedJobIds.add(gj);
         }
       });
 
@@ -580,6 +597,7 @@
         if (suppressedGeneratedJobIds.has(jid)) return;
         if (isHeroGenerateListJob(j)) return;
         merged.push(normalizeGeneratedFromListJobs(j));
+        mergedJobIds.add(jid);
       });
 
       savingJobs.forEach(function (j) {
@@ -587,13 +605,11 @@
         if (!jid || savedJobIds.has(jid) || d1JobIds.has(jid)) return;
         if (suppressedGeneratedJobIds.has(jid)) return;
         if (isHeroGenerateListJob(j)) return;
-        var exists = merged.some(function (d) {
-          return d.job_id != null && String(d.job_id) === jid;
-        });
-        if (exists) return;
+        if (mergedJobIds.has(jid)) return;
         var savingNorm = normalizeGeneratedFromListJobs(j);
         savingNorm.saving_to_library = true;
         merged.push(savingNorm);
+        mergedJobIds.add(jid);
       });
 
       sortDesignsNewestFirst(merged);
@@ -1756,11 +1772,20 @@
   function appendDesignCardsToGrid(fromIndex, toIndex) {
     var grid = document.getElementById('creatorDesignsGrid');
     if (!grid) return;
+    var fragment = document.createDocumentFragment();
+    var canReveal = canUseCreationsCardReveal();
+    var revealQueue = [];
     for (var i = fromIndex; i < toIndex && i < currentRenderDesigns.length; i++) {
-      var card = createDesignCard(currentRenderDesigns[i], canUseCreationsCardReveal(), i);
-      grid.appendChild(card);
-      if (card.dataset.particleUrl && canUseCreationsCardReveal()) {
-        var particleUrl = card.dataset.particleUrl;
+      var card = createDesignCard(currentRenderDesigns[i], canReveal, i);
+      fragment.appendChild(card);
+      if (card.dataset.particleUrl && canReveal) {
+        revealQueue.push(card);
+      }
+    }
+    grid.appendChild(fragment);
+    revealQueue.forEach(function (card) {
+      var particleUrl = card.dataset.particleUrl;
+      if (particleUrl) {
         var media = card.querySelector('.creator-creations-card-media');
         var canvas = media && media.querySelector('canvas');
         if (canvas && media) {
@@ -1795,7 +1820,7 @@
           })(media, canvas, particleUrl);
         }
       }
-    }
+    });
   }
 
   var designsScrollObserver = null;
@@ -1893,10 +1918,12 @@
   function appendProductCardsToGrid(fromIndex, toIndex) {
     var grid = document.getElementById('creatorProductsGrid');
     if (!grid) return;
+    var fragment = document.createDocumentFragment();
     for (var i = fromIndex; i < toIndex && i < filteredProducts.length; i++) {
       var card = createProductCard(filteredProducts[i], i);
-      grid.appendChild(card);
+      fragment.appendChild(card);
     }
+    grid.appendChild(fragment);
   }
 
   var productsScrollObserver = null;
