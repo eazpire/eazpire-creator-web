@@ -7,10 +7,43 @@
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
 
+  function fetchWithTimeout(url, timeoutMs) {
+    var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = setTimeout(function () {
+      if (controller) controller.abort();
+    }, timeoutMs);
+    return fetch(url, { cache: "no-store", signal: controller ? controller.signal : undefined }).finally(function () {
+      clearTimeout(timer);
+    });
+  }
+
   async function fetchPartial(name) {
-    var res = await fetch("/partials/" + name, { cache: "no-store" });
+    var res = await fetchWithTimeout("/partials/" + name, 12000);
     if (!res.ok) throw new Error("Failed to load partial " + name);
     return res.text();
+  }
+
+  function ensureShellVisible() {
+    var route = "dashboard";
+    if (global.CreatorPortalRouter && typeof global.CreatorPortalRouter.current === "function") {
+      route = global.CreatorPortalRouter.current() || "dashboard";
+    }
+    var slideMap = { dashboard: 0, generator: 1, creations: 2, marketing: 3, automations: 4 };
+    var slide = slideMap[route];
+    var viewport = document.getElementById("creatorMobileSwipeViewport");
+    if (viewport && typeof slide === "number") {
+      viewport.className = "creator-swipe-viewport slide-" + slide;
+    }
+    var hero = document.getElementById("creatorDesktopHero");
+    var screen = String(route || "dashboard").toLowerCase();
+    if (hero) hero.setAttribute("data-desktop-active-screen", screen);
+    document.querySelectorAll("[data-desktop-screen]").forEach(function (panel) {
+      var panelScreen = String(panel.getAttribute("data-desktop-screen") || "").toLowerCase();
+      var isActive = panelScreen === screen;
+      panel.classList.toggle("is-active", isActive);
+      panel.hidden = !isActive;
+      panel.setAttribute("aria-hidden", isActive ? "false" : "true");
+    });
   }
 
   var CREATOR_COIN_URL =
@@ -206,5 +239,6 @@
     loadShell: loadShell,
     loadThemeRuntime: loadThemeRuntime,
     loadAudioModal: loadAudioModal,
+    ensureShellVisible: ensureShellVisible,
   };
 })(typeof window !== "undefined" ? window : globalThis);

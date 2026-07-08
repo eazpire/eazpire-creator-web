@@ -116,6 +116,10 @@ body.is-boot-loading #creatorPortalApp {
   visibility: hidden;
 }
 
+#creatorPortalApp:not([hidden]) {
+  visibility: visible !important;
+}
+
 .creator-boot {
   position: fixed;
   inset: 0;

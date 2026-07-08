@@ -33,6 +33,17 @@
     });
   }
 
+  function withTimeout(promise, ms, fallback) {
+    return Promise.race([
+      promise,
+      new Promise(function (resolve) {
+        setTimeout(function () {
+          resolve(fallback);
+        }, ms);
+      }),
+    ]);
+  }
+
   function usesThemeShell() {
     return !!document.getElementById("creatorDesktopApp") || !!document.getElementById("creatorMobileApp");
   }
@@ -47,30 +58,40 @@
 
   async function init() {
     fixBootLogo();
-    var bootTimeout = setTimeout(finishBoot, 12000);
+    var bootTimeout = setTimeout(finishBoot, 8000);
 
     try {
       try {
-        var bootData = await global.CreatorPortalApi.bootstrap();
-        applyBootstrap(bootData);
+        var bootData = await withTimeout(global.CreatorPortalApi.bootstrap(), 5000, null);
+        if (bootData) applyBootstrap(bootData);
       } catch (e) {}
 
-      if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.refreshSession === "function") {
-        await global.CreatorPortalAuth.refreshSession();
-      }
-
       if (global.CreatorPortalShell && typeof global.CreatorPortalShell.loadShell === "function") {
-        await global.CreatorPortalShell.loadShell();
+        try {
+          await withTimeout(global.CreatorPortalShell.loadShell(), 15000, null);
+        } catch (e) {
+          console.warn("[CreatorPortal] shell load failed", e);
+        }
       }
 
       if (global.CreatorPortalRouter && typeof global.CreatorPortalRouter.init === "function") {
         global.CreatorPortalRouter.init();
       }
 
+      if (global.CreatorPortalShell && typeof global.CreatorPortalShell.ensureShellVisible === "function") {
+        global.CreatorPortalShell.ensureShellVisible();
+      }
+
       clearTimeout(bootTimeout);
       finishBoot();
 
       var runtimeWork = (async function () {
+        if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.refreshSession === "function") {
+          try {
+            await withTimeout(global.CreatorPortalAuth.refreshSession(), 8000, null);
+          } catch (e) {}
+        }
+
         if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
           global.CreatorPortalThemeBridge.notifyContextReady();
         }
@@ -113,7 +134,9 @@
         }
       })();
 
-      await runtimeWork;
+      runtimeWork.catch(function (e) {
+        console.warn("[CreatorPortal] runtime load failed", e);
+      });
     } finally {
       clearTimeout(bootTimeout);
       finishBoot();
