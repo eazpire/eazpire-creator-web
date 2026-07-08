@@ -270,12 +270,87 @@
   let cropToastTextEl = null;
   let cropToastHideTimer = null;
 
+  // Sidebar / tabs
+  let modalShell = null;
+  let drawerToggle = null;
+  let drawerBackdrop = null;
+  let sidebarNav = null;
+  let activeTab = 'overview';
+  let draftMeta = null;
+  let metaDirty = false;
+  let metaSaving = false;
+  let metaHistoryOpen = false;
+
   // Get modal element
   function getModal() {
     if (!modal) {
       modal = document.getElementById('creatorDesignPreviewModal-design-preview');
     }
     return modal;
+  }
+
+  function tPreview(key, fallback) {
+    var map = window.CreatorI18n || {};
+    var full = 'creator.preview_modal.' + key;
+    if (map[full] != null && String(map[full]).trim() !== '') return String(map[full]);
+    if (map[key] != null && String(map[key]).trim() !== '') return String(map[key]);
+    return fallback || key;
+  }
+
+  function parseDesignMetadata(design) {
+    if (!design || !design.metadata) return {};
+    try {
+      return typeof design.metadata === 'string' ? JSON.parse(design.metadata) : Object.assign({}, design.metadata);
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function cloneMeta(meta) {
+    try {
+      return JSON.parse(JSON.stringify(meta || {}));
+    } catch (e) {
+      return Object.assign({}, meta || {});
+    }
+  }
+
+  function normalizeStringList(value) {
+    if (Array.isArray(value)) {
+      return value.map(function (v) { return String(v || '').trim(); }).filter(Boolean);
+    }
+    if (typeof value === 'string') {
+      return value.split(',').map(function (v) { return v.trim(); }).filter(Boolean);
+    }
+    return [];
+  }
+
+  function setDrawerOpen(open) {
+    getDOMElements();
+    if (!modalShell) return;
+    modalShell.classList.toggle('is-drawer-open', !!open);
+    if (drawerToggle) drawerToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function setActiveTab(tabName) {
+    getDOMElements();
+    var next = String(tabName || 'overview').toLowerCase();
+    if (next !== 'overview' && next !== 'reference' && next !== 'metadata') next = 'overview';
+    activeTab = next;
+    if (!modal) return;
+    modal.querySelectorAll('[data-cdp-tab]').forEach(function (btn) {
+      var on = String(btn.getAttribute('data-cdp-tab') || '') === next;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    modal.querySelectorAll('[data-cdp-panel]').forEach(function (panel) {
+      var on = String(panel.getAttribute('data-cdp-panel') || '') === next;
+      panel.classList.toggle('is-active', on);
+      if (on) panel.removeAttribute('hidden');
+      else panel.setAttribute('hidden', '');
+    });
+    setDrawerOpen(false);
+    if (next === 'reference') renderReferencePanel(currentDesign);
+    if (next === 'metadata') renderMetadataPanel(currentDesign);
   }
 
   // Get all DOM elements
@@ -325,6 +400,11 @@
     cropBusyOverlay = document.getElementById('cdp-crop-busy-' + sectionId);
     cropToast = document.getElementById('cdp-crop-toast-' + sectionId);
     cropToastTextEl = cropToast ? cropToast.querySelector('.cdp-modal__crop-toast-text') : null;
+
+    modalShell = modal ? modal.querySelector('.cdp-modal') : null;
+    drawerToggle = document.getElementById('cdp-drawer-toggle-' + sectionId);
+    drawerBackdrop = document.getElementById('cdp-drawer-backdrop-' + sectionId);
+    sidebarNav = document.getElementById('cdp-sidebar-' + sectionId);
 
     return true;
   }
@@ -1166,6 +1246,9 @@
     if (btnDelete) {
       btnDelete.addEventListener('click', handleDelete);
     }
+
+    bindSidebarControls();
+    setActiveTab('overview');
   }
 
   // Truncate long text to one line with ellipsis (max 80 chars)
@@ -1212,7 +1295,13 @@
     currentVisibility = null;
     hasUnsavedChanges = false;
     isSaving = false;
+    draftMeta = null;
+    metaDirty = false;
+    metaSaving = false;
+    metaHistoryOpen = false;
     resetDeleteButtonState();
+    setActiveTab('overview');
+    setDrawerOpen(false);
 
     // Optional: Close other modals that might be open (like the design modal)
     // This ensures the preview modal is on top
@@ -1939,6 +2028,469 @@
     
     // Update button states based on design type and available data
     updateButtonStates(design);
+    renderReferencePanel(design);
+    if (!draftMeta || activeTab === 'metadata') {
+      renderMetadataPanel(design, { forceReset: activeTab !== 'metadata' || !metaDirty });
+    }
+  }
+
+  function setRefText(el, value) {
+    if (!el) return;
+    var text = value != null && String(value).trim() !== '' ? String(value) : '–';
+    el.textContent = text;
+  }
+
+  function uniqueUrls(list) {
+    var out = [];
+    var seen = {};
+    (list || []).forEach(function (url) {
+      var u = String(url || '').trim();
+      if (!u || seen[u]) return;
+      seen[u] = true;
+      out.push(u);
+    });
+    return out;
+  }
+
+  function renderReferencePanel(design) {
+    if (!modal) getDOMElements();
+    if (!modal) return;
+    var metadata = parseDesignMetadata(design);
+    var imagesEl = document.getElementById('cdp-ref-images-' + sectionId);
+    var emptyEl = document.getElementById('cdp-ref-images-empty-' + sectionId);
+    var genEl = document.getElementById('cdp-ref-generation-prompt-' + sectionId);
+    var designPromptEl = document.getElementById('cdp-ref-design-prompt-' + sectionId);
+    var userPromptEl = document.getElementById('cdp-ref-user-prompt-' + sectionId);
+    var parentWrap = document.getElementById('cdp-ref-parent-wrap-' + sectionId);
+    var parentEl = document.getElementById('cdp-ref-parent-' + sectionId);
+    var moreEl = document.getElementById('cdp-ref-more-' + sectionId);
+
+    var urls = uniqueUrls([
+      design && design.preview_url,
+      design && design.original_url,
+      metadata.user_image_url,
+      metadata.image_url,
+      metadata.baseImageUrl,
+      design && design.image_url
+    ]);
+
+    if (imagesEl) {
+      imagesEl.innerHTML = '';
+      urls.forEach(function (url) {
+        var img = document.createElement('img');
+        img.className = 'cdp-modal__ref-image';
+        img.src = url;
+        img.alt = '';
+        img.loading = 'lazy';
+        imagesEl.appendChild(img);
+      });
+    }
+    if (emptyEl) emptyEl.hidden = urls.length > 0;
+
+    setRefText(genEl, design && design.prompt ? design.prompt : metadata.prompt);
+    setRefText(designPromptEl, metadata.design_prompt || metadata.final_prompt);
+    setRefText(userPromptEl, metadata.user_prompt);
+
+    var parentId = design && (design.parent_design_id || metadata.parent_design_id);
+    if (parentWrap && parentEl) {
+      if (parentId) {
+        parentWrap.hidden = false;
+        parentEl.textContent = String(parentId);
+      } else {
+        parentWrap.hidden = true;
+        parentEl.textContent = '–';
+      }
+    }
+
+    if (moreEl) {
+      moreEl.innerHTML = '';
+      ['design_source', 'ratio', 'design_art'].forEach(function (key) {
+        var val = metadata[key];
+        if (val == null || String(val).trim() === '') return;
+        var row = document.createElement('div');
+        row.className = 'cdp-modal__list-row';
+        row.innerHTML =
+          '<strong style="min-width:110px;color:#9ca3af;font-size:12px;text-transform:capitalize;">' +
+          key.replace(/_/g, ' ') +
+          '</strong><span style="color:#e5e7eb;font-size:13px;">' +
+          String(val) +
+          '</span>';
+        moreEl.appendChild(row);
+      });
+      if (!moreEl.children.length) {
+        var empty = document.createElement('p');
+        empty.className = 'cdp-modal__ref-empty';
+        empty.textContent = '–';
+        moreEl.appendChild(empty);
+      }
+    }
+  }
+
+  function ensureDraftMeta(design, forceReset) {
+    if (forceReset || !draftMeta) {
+      draftMeta = cloneMeta(parseDesignMetadata(design));
+      if (!Array.isArray(draftMeta.tags)) draftMeta.tags = normalizeStringList(draftMeta.tags);
+      if (!Array.isArray(draftMeta.topics)) {
+        draftMeta.topics = normalizeStringList(draftMeta.topics || draftMeta.topic);
+      }
+      if (!Array.isArray(draftMeta.subtopics)) {
+        draftMeta.subtopics = normalizeStringList(draftMeta.subtopics || draftMeta.subtopic);
+      }
+      metaDirty = false;
+    }
+    return draftMeta;
+  }
+
+  function renderChipList(hostId, values, onRemove) {
+    var host = document.getElementById(hostId);
+    if (!host) return;
+    host.innerHTML = '';
+    (values || []).forEach(function (value, index) {
+      var chip = document.createElement('span');
+      chip.className = 'cdp-modal__chip';
+      chip.textContent = value + ' ';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cdp-modal__chip-remove';
+      btn.setAttribute('aria-label', 'Remove');
+      btn.textContent = '×';
+      btn.addEventListener('click', function () {
+        onRemove(index);
+      });
+      chip.appendChild(btn);
+      host.appendChild(chip);
+    });
+  }
+
+  function renderEditableList(hostId, values, onChange) {
+    var host = document.getElementById(hostId);
+    if (!host) return;
+    host.innerHTML = '';
+    (values || []).forEach(function (value, index) {
+      var row = document.createElement('div');
+      row.className = 'cdp-modal__list-row';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.value = value;
+      input.addEventListener('input', function () {
+        values[index] = input.value;
+        metaDirty = true;
+        updateMetadataSaveState();
+      });
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cdp-modal__row-remove';
+      btn.textContent = '×';
+      btn.addEventListener('click', function () {
+        values.splice(index, 1);
+        metaDirty = true;
+        onChange();
+      });
+      row.appendChild(input);
+      row.appendChild(btn);
+      host.appendChild(row);
+    });
+  }
+
+  function updateMetadataSaveState() {
+    var saveBtn = document.getElementById('cdp-meta-save-' + sectionId);
+    if (!saveBtn) return;
+    saveBtn.disabled = !metaDirty || metaSaving || !currentDesign || !currentDesign.id;
+  }
+
+  function renderMetadataPanel(design, options) {
+    options = options || {};
+    if (!modal) getDOMElements();
+    if (!modal) return;
+    var meta = ensureDraftMeta(design, !!options.forceReset);
+    var titleEl = document.getElementById('cdp-meta-title-' + sectionId);
+    var descEl = document.getElementById('cdp-meta-description-' + sectionId);
+    if (titleEl && document.activeElement !== titleEl) titleEl.value = meta.title || '';
+    if (descEl && document.activeElement !== descEl) descEl.value = meta.description || '';
+
+    renderChipList('cdp-meta-tags-' + sectionId, meta.tags || [], function (index) {
+      meta.tags.splice(index, 1);
+      metaDirty = true;
+      renderMetadataPanel(currentDesign);
+    });
+    renderEditableList('cdp-meta-topics-' + sectionId, meta.topics || [], function () {
+      renderMetadataPanel(currentDesign);
+    });
+    renderEditableList('cdp-meta-subtopics-' + sectionId, meta.subtopics || [], function () {
+      renderMetadataPanel(currentDesign);
+    });
+    updateMetadataSaveState();
+  }
+
+  function collectMetadataDraftFromDom() {
+    var meta = ensureDraftMeta(currentDesign, false);
+    var titleEl = document.getElementById('cdp-meta-title-' + sectionId);
+    var descEl = document.getElementById('cdp-meta-description-' + sectionId);
+    if (titleEl) meta.title = titleEl.value.trim();
+    if (descEl) meta.description = descEl.value.trim();
+    meta.tags = normalizeStringList(meta.tags);
+    meta.topics = normalizeStringList(meta.topics);
+    meta.subtopics = normalizeStringList(meta.subtopics);
+    meta.topic = meta.topics;
+    meta.subtopic = meta.subtopics;
+    return meta;
+  }
+
+  function resolveOwnerIdForPreview() {
+    if (currentDesign && currentDesign.owner_id) return String(currentDesign.owner_id);
+    try {
+      var urlParams = new URLSearchParams(window.location.search);
+      var fromUrl = urlParams.get('logged_in_customer_id') || urlParams.get('owner_id');
+      if (fromUrl) return String(fromUrl);
+    } catch (e) {}
+    if (window.__EAZ_OWNER_ID) return String(window.__EAZ_OWNER_ID);
+    if (window.CreatorWidget && typeof window.CreatorWidget.getOwnerId === 'function') {
+      var oid = window.CreatorWidget.getOwnerId();
+      if (oid) return String(oid);
+    }
+    if (window.Shopify && window.Shopify.customerId) return String(window.Shopify.customerId);
+    return '';
+  }
+
+  async function saveMetadataDraft() {
+    if (!currentDesign || !currentDesign.id || metaSaving) return;
+    var ownerId = resolveOwnerIdForPreview();
+    if (!ownerId) {
+      alert(window.CreatorI18n?.noUserId || 'Error: No user ID found. Please sign in.');
+      return;
+    }
+    var metadata = collectMetadataDraftFromDom();
+    metaSaving = true;
+    updateMetadataSaveState();
+    try {
+      var apiBaseUrl = resolveCreatorDispatchBase();
+      var updateUrl = apiBaseUrl + '?op=update-design&logged_in_customer_id=' + encodeURIComponent(ownerId);
+      var response = await fetch(updateUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          design_id: currentDesign.id,
+          metadata: metadata,
+          history_source: 'manual_save'
+        })
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.error || 'save_failed');
+      }
+      currentDesign.metadata = metadata;
+      if (metadata.title) currentDesign.title = metadata.title;
+      draftMeta = cloneMeta(metadata);
+      metaDirty = false;
+      if (modalTitle && metadata.title) modalTitle.textContent = truncateTitle(String(metadata.title), 80);
+      showCropSuccessToast(tPreview('meta_save', 'Save metadata'));
+    } catch (err) {
+      console.error('[CreatorDesignPreviewModal] metadata save failed', err);
+      alert(window.CreatorI18n?.errorSaving || 'Error saving');
+    } finally {
+      metaSaving = false;
+      updateMetadataSaveState();
+    }
+  }
+
+  async function regenerateMetadataDraft() {
+    if (!currentDesign || !currentDesign.id) return;
+    var ownerId = resolveOwnerIdForPreview();
+    if (!ownerId) {
+      alert(window.CreatorI18n?.noUserId || 'Error: No user ID found. Please sign in.');
+      return;
+    }
+    var btn = document.getElementById('cdp-meta-regenerate-' + sectionId);
+    if (btn) btn.disabled = true;
+    try {
+      var apiBaseUrl = resolveCreatorDispatchBase();
+      var url = apiBaseUrl + '?op=regenerate-design-metadata&logged_in_customer_id=' + encodeURIComponent(ownerId);
+      var response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ design_id: currentDesign.id, owner_id: ownerId })
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok || data.ok === false) throw new Error(data.error || 'regenerate_failed');
+      var nextMeta = data.metadata || data.design && data.design.metadata || data;
+      if (typeof nextMeta === 'string') {
+        try { nextMeta = JSON.parse(nextMeta); } catch (e) { nextMeta = {}; }
+      }
+      if (!nextMeta || typeof nextMeta !== 'object') nextMeta = {};
+      currentDesign.metadata = nextMeta;
+      draftMeta = null;
+      metaDirty = false;
+      renderMetadataPanel(currentDesign, { forceReset: true });
+      if (nextMeta.title && modalTitle) modalTitle.textContent = truncateTitle(String(nextMeta.title), 80);
+    } catch (err) {
+      console.error('[CreatorDesignPreviewModal] regenerate metadata failed', err);
+      alert(window.CreatorI18n?.errorSaving || 'Error regenerating metadata');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function toggleMetadataHistory() {
+    var list = document.getElementById('cdp-meta-history-list-' + sectionId);
+    if (!list) return;
+    metaHistoryOpen = !metaHistoryOpen;
+    list.classList.toggle('is-open', metaHistoryOpen);
+    if (!metaHistoryOpen) return;
+    list.innerHTML = '<p class="cdp-modal__ref-empty">…</p>';
+    var ownerId = resolveOwnerIdForPreview();
+    if (!ownerId || !currentDesign || !currentDesign.id) {
+      list.innerHTML = '<p class="cdp-modal__ref-empty">' + tPreview('meta_history_empty', 'No snapshots yet') + '</p>';
+      return;
+    }
+    try {
+      var apiBaseUrl = resolveCreatorDispatchBase();
+      var url =
+        apiBaseUrl +
+        '?op=list-design-metadata-history&design_id=' +
+        encodeURIComponent(currentDesign.id) +
+        '&owner_id=' +
+        encodeURIComponent(ownerId) +
+        '&limit=40';
+      var response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+      var data = await response.json().catch(function () { return {}; });
+      var items = (data && (data.items || data.history || data.snapshots)) || [];
+      if (!items.length) {
+        list.innerHTML = '<p class="cdp-modal__ref-empty">' + tPreview('meta_history_empty', 'No snapshots yet') + '</p>';
+        return;
+      }
+      list.innerHTML = '';
+      items.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'cdp-modal__history-item';
+        var metaWrap = document.createElement('div');
+        metaWrap.className = 'cdp-modal__history-meta';
+        var strong = document.createElement('strong');
+        strong.textContent = item.created_at || item.timestamp || item.saved_at || 'Snapshot';
+        var span = document.createElement('span');
+        span.textContent = item.source || item.history_source || item.label || '';
+        metaWrap.appendChild(strong);
+        metaWrap.appendChild(span);
+        var restoreBtn = document.createElement('button');
+        restoreBtn.type = 'button';
+        restoreBtn.className = 'cdp-modal__meta-btn';
+        restoreBtn.textContent = tPreview('meta_history_restore', 'Restore');
+        restoreBtn.addEventListener('click', function () {
+          var snapMeta = item.metadata || item.meta || item;
+          if (typeof snapMeta === 'string') {
+            try { snapMeta = JSON.parse(snapMeta); } catch (e) { snapMeta = {}; }
+          }
+          draftMeta = cloneMeta(snapMeta);
+          draftMeta.tags = normalizeStringList(draftMeta.tags);
+          draftMeta.topics = normalizeStringList(draftMeta.topics || draftMeta.topic);
+          draftMeta.subtopics = normalizeStringList(draftMeta.subtopics || draftMeta.subtopic);
+          metaDirty = true;
+          renderMetadataPanel(currentDesign);
+        });
+        row.appendChild(metaWrap);
+        row.appendChild(restoreBtn);
+        list.appendChild(row);
+      });
+    } catch (err) {
+      console.error('[CreatorDesignPreviewModal] history load failed', err);
+      list.innerHTML = '<p class="cdp-modal__ref-empty">' + tPreview('meta_history_empty', 'No snapshots yet') + '</p>';
+    }
+  }
+
+  function bindSidebarControls() {
+    if (!modal) return;
+    if (drawerToggle && !drawerToggle.__cdpBound) {
+      drawerToggle.__cdpBound = true;
+      drawerToggle.addEventListener('click', function () {
+        var open = !(modalShell && modalShell.classList.contains('is-drawer-open'));
+        setDrawerOpen(open);
+      });
+    }
+    if (drawerBackdrop && !drawerBackdrop.__cdpBound) {
+      drawerBackdrop.__cdpBound = true;
+      drawerBackdrop.addEventListener('click', function () {
+        setDrawerOpen(false);
+      });
+    }
+    if (sidebarNav && !sidebarNav.__cdpBound) {
+      sidebarNav.__cdpBound = true;
+      sidebarNav.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-cdp-tab]');
+        if (!btn) return;
+        setActiveTab(btn.getAttribute('data-cdp-tab'));
+      });
+    }
+
+    var titleEl = document.getElementById('cdp-meta-title-' + sectionId);
+    var descEl = document.getElementById('cdp-meta-description-' + sectionId);
+    if (titleEl && !titleEl.__cdpBound) {
+      titleEl.__cdpBound = true;
+      titleEl.addEventListener('input', function () {
+        ensureDraftMeta(currentDesign, false).title = titleEl.value;
+        metaDirty = true;
+        updateMetadataSaveState();
+      });
+    }
+    if (descEl && !descEl.__cdpBound) {
+      descEl.__cdpBound = true;
+      descEl.addEventListener('input', function () {
+        ensureDraftMeta(currentDesign, false).description = descEl.value;
+        metaDirty = true;
+        updateMetadataSaveState();
+      });
+    }
+
+    function bindAdd(inputId, addId, kind) {
+      var input = document.getElementById(inputId);
+      var addBtn = document.getElementById(addId);
+      if (!input || !addBtn || addBtn.__cdpBound) return;
+      addBtn.__cdpBound = true;
+      function commit() {
+        var raw = String(input.value || '').trim();
+        if (!raw) return;
+        var meta = ensureDraftMeta(currentDesign, false);
+        if (kind === 'tags') {
+          raw.split(',').map(function (v) { return v.trim(); }).filter(Boolean).forEach(function (tag) {
+            if (meta.tags.indexOf(tag) === -1) meta.tags.push(tag);
+          });
+        } else if (kind === 'topics') {
+          meta.topics.push(raw);
+        } else {
+          meta.subtopics.push(raw);
+        }
+        input.value = '';
+        metaDirty = true;
+        renderMetadataPanel(currentDesign);
+      }
+      addBtn.addEventListener('click', commit);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commit();
+        }
+      });
+    }
+
+    bindAdd('cdp-meta-tags-input-' + sectionId, 'cdp-meta-tags-add-' + sectionId, 'tags');
+    bindAdd('cdp-meta-topics-input-' + sectionId, 'cdp-meta-topics-add-' + sectionId, 'topics');
+    bindAdd('cdp-meta-subtopics-input-' + sectionId, 'cdp-meta-subtopics-add-' + sectionId, 'subtopics');
+
+    var regen = document.getElementById('cdp-meta-regenerate-' + sectionId);
+    var saveMeta = document.getElementById('cdp-meta-save-' + sectionId);
+    var hist = document.getElementById('cdp-meta-history-' + sectionId);
+    if (regen && !regen.__cdpBound) {
+      regen.__cdpBound = true;
+      regen.addEventListener('click', function () { regenerateMetadataDraft(); });
+    }
+    if (saveMeta && !saveMeta.__cdpBound) {
+      saveMeta.__cdpBound = true;
+      saveMeta.addEventListener('click', function () { saveMetadataDraft(); });
+    }
+    if (hist && !hist.__cdpBound) {
+      hist.__cdpBound = true;
+      hist.addEventListener('click', function () { toggleMetadataHistory(); });
+    }
   }
 
   // Update user image display
@@ -3202,6 +3754,11 @@
     }
 
     exitManualCropMode();
+    setDrawerOpen(false);
+    setActiveTab('overview');
+    draftMeta = null;
+    metaDirty = false;
+    metaHistoryOpen = false;
 
     // Remove focus from any focused element within modal before hiding
     // This prevents accessibility warnings about aria-hidden on focused elements

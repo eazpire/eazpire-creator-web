@@ -684,6 +684,324 @@
     flex: 0 0 auto;
   }
 
+  /* Sidebar layout (desktop icon rail + mobile drawer) */
+  .cdp-modal__layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+
+  .cdp-modal__sidebar {
+    flex: 0 0 56px;
+    width: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 0;
+    background: rgba(7, 11, 20, 0.92);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .cdp-modal__sidebar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  .cdp-modal__nav-item {
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+    padding: 0;
+  }
+
+  .cdp-modal__nav-item svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .cdp-modal__nav-item:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .cdp-modal__nav-item.is-active {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.2);
+  }
+
+  .cdp-modal__nav-label {
+    display: none;
+  }
+
+  .cdp-modal__drawer-toggle,
+  .cdp-modal__drawer-backdrop {
+    display: none;
+  }
+
+  .cdp-modal__main {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cdp-modal__panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .cdp-modal__panel.is-active {
+    display: flex !important;
+    flex-direction: column;
+  }
+
+  .cdp-modal__panel--overview.is-active .cdp-modal__body {
+    flex: 1;
+  }
+
+  .cdp-modal__panel-inner {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .cdp-modal__section-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e5e7eb;
+  }
+
+  .cdp-modal__meta-field,
+  .cdp-modal__ref-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cdp-modal__meta-input,
+  .cdp-modal__meta-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.72);
+    color: #e5e7eb;
+    padding: 10px 12px;
+    font: inherit;
+    resize: vertical;
+  }
+
+  .cdp-modal__meta-textarea {
+    min-height: 96px;
+  }
+
+  .cdp-modal__chip-row,
+  .cdp-modal__list-rows {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cdp-modal__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.16);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fde68a;
+    font-size: 12px;
+  }
+
+  .cdp-modal__chip-remove,
+  .cdp-modal__row-remove {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    font-size: 14px;
+  }
+
+  .cdp-modal__list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .cdp-modal__list-row input {
+    flex: 1;
+    min-width: 0;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.72);
+    color: #e5e7eb;
+    padding: 8px 10px;
+    font: inherit;
+  }
+
+  .cdp-modal__meta-add-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .cdp-modal__meta-add-row input {
+    flex: 1;
+    min-width: 0;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.72);
+    color: #e5e7eb;
+    padding: 8px 10px;
+    font: inherit;
+  }
+
+  .cdp-modal__meta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .cdp-modal__meta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(15, 23, 42, 0.8);
+    color: #e5e7eb;
+    padding: 8px 12px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .cdp-modal__meta-btn:hover {
+    border-color: rgba(245, 158, 11, 0.5);
+    color: #fde68a;
+  }
+
+  .cdp-modal__meta-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .cdp-modal__meta-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .cdp-modal__ref-images {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .cdp-modal__ref-images::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cdp-modal__ref-image {
+    flex: 0 0 160px;
+    width: 160px;
+    height: 160px;
+    border-radius: 10px;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    background: #37375a;
+    object-fit: contain;
+  }
+
+  .cdp-modal__ref-empty {
+    color: #9ca3af;
+    font-size: 13px;
+    margin: 0;
+  }
+
+  .cdp-modal__ref-value {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #d1d5db;
+    font-size: 13px;
+    line-height: 1.45;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .cdp-modal__history {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .cdp-modal__history.is-open {
+    display: flex;
+  }
+
+  .cdp-modal__history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(15, 23, 42, 0.55);
+  }
+
+  .cdp-modal__history-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .cdp-modal__history-meta strong {
+    color: #e5e7eb;
+    font-size: 13px;
+  }
+
+  .cdp-modal__history-meta span {
+    color: #9ca3af;
+    font-size: 12px;
+  }
+
   /* Mobile Styles */
   @media (max-width: 900px) {
     #creatorDesignPreviewModal-design-preview {
@@ -701,6 +1019,93 @@
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
+    }
+
+    .cdp-modal__header {
+      gap: 8px;
+    }
+
+    .cdp-modal__drawer-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      margin-right: 4px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #e5e7eb;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .cdp-modal__drawer-toggle:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .cdp-modal__drawer-toggle svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .cdp-modal__layout {
+      flex-direction: column;
+    }
+
+    .cdp-modal__drawer-backdrop {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.55);
+      z-index: 4;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .cdp-modal.is-drawer-open .cdp-modal__drawer-backdrop {
+      display: block;
+    }
+
+    .cdp-modal__sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 5;
+      width: min(280px, 82vw);
+      flex-basis: auto;
+      align-items: stretch;
+      padding: 16px 12px;
+      gap: 6px;
+      transform: translateX(-105%);
+      transition: transform 0.2s ease;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 12px 0 28px rgba(0, 0, 0, 0.35);
+    }
+
+    .cdp-modal.is-drawer-open .cdp-modal__sidebar {
+      transform: translateX(0);
+    }
+
+    .cdp-modal__nav-item {
+      width: 100%;
+      height: 44px;
+      justify-content: flex-start;
+      gap: 12px;
+      padding: 0 12px;
+      border-radius: 10px;
+    }
+
+    .cdp-modal__nav-label {
+      display: inline;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .cdp-modal__panel-inner {
+      padding: 16px;
     }
 
     .cdp-modal__body {
@@ -1081,6 +1486,20 @@
 >
   <div class="cdp-modal">
     <div class="cdp-modal__header">
+      <button
+        type="button"
+        class="cdp-modal__drawer-toggle"
+        id="cdp-drawer-toggle-design-preview"
+        aria-label="Menu"
+        aria-expanded="false"
+        aria-controls="cdp-sidebar-design-preview"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
       <h3 id="cdp-modal-title-design-preview" class="cdp-modal__title">Design</h3>
       <button
         type="button"
@@ -1092,6 +1511,25 @@
       </button>
     </div>
 
+    <div class="cdp-modal__layout">
+      <button type="button" class="cdp-modal__drawer-backdrop" id="cdp-drawer-backdrop-design-preview" aria-label="Close"></button>
+      <nav class="cdp-modal__sidebar" id="cdp-sidebar-design-preview" aria-label="Design sections">
+        <button type="button" class="cdp-modal__nav-item is-active" data-cdp-tab="overview" aria-label="Overview" title="Overview">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+          <span class="cdp-modal__nav-label" data-t="creator.preview_modal.tab_overview">Overview</span>
+        </button>
+        <button type="button" class="cdp-modal__nav-item" data-cdp-tab="reference" aria-label="Reference" title="Reference">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+          <span class="cdp-modal__nav-label" data-t="creator.preview_modal.tab_reference">Reference</span>
+        </button>
+        <button type="button" class="cdp-modal__nav-item" data-cdp-tab="metadata" aria-label="Metadata" title="Metadata">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h8"></path><path d="M8 9h2"></path></svg>
+          <span class="cdp-modal__nav-label" data-t="creator.preview_modal.tab_metadata">Metadata</span>
+        </button>
+      </nav>
+
+      <div class="cdp-modal__main">
+        <div class="cdp-modal__panel cdp-modal__panel--overview is-active" data-cdp-panel="overview">
     <div class="cdp-modal__body">
       <!-- Desktop: 2-Spalten Layout -->
       <div class="cdp-modal__desktop-container">
@@ -1330,6 +1768,90 @@
               <path d="M7 3v5h8"/>
             </svg>
           </button>
+        </div>
+      </div>
+    </div>
+        </div>
+
+        <div class="cdp-modal__panel cdp-modal__panel--reference" data-cdp-panel="reference" hidden>
+          <div class="cdp-modal__panel-inner">
+            <h4 class="cdp-modal__section-title" data-t="creator.preview_modal.reference_images_title">Reference images</h4>
+            <div id="cdp-ref-images-design-preview" class="cdp-modal__ref-images"></div>
+            <p id="cdp-ref-images-empty-design-preview" class="cdp-modal__ref-empty" data-t="creator.preview_modal.reference_no_images">No reference images</p>
+
+            <div class="cdp-modal__ref-block">
+              <label class="cdp-modal__label" data-t="creator.preview_modal.reference_section_prompt">Generation prompt</label>
+              <p id="cdp-ref-generation-prompt-design-preview" class="cdp-modal__ref-value">–</p>
+            </div>
+            <div class="cdp-modal__ref-block">
+              <label class="cdp-modal__label" data-t="creator.preview_modal.reference_design_prompt_label">Design prompt</label>
+              <p id="cdp-ref-design-prompt-design-preview" class="cdp-modal__ref-value">–</p>
+            </div>
+            <div class="cdp-modal__ref-block">
+              <label class="cdp-modal__label" data-t="creator.preview_modal.reference_user_prompt_label">User prompt</label>
+              <p id="cdp-ref-user-prompt-design-preview" class="cdp-modal__ref-value">–</p>
+            </div>
+            <div class="cdp-modal__ref-block" id="cdp-ref-parent-wrap-design-preview" hidden>
+              <label class="cdp-modal__label" data-t="creator.preview_modal.reference_parent_design">Parent design</label>
+              <p id="cdp-ref-parent-design-preview" class="cdp-modal__ref-value">–</p>
+            </div>
+            <div class="cdp-modal__ref-block">
+              <label class="cdp-modal__label" data-t="creator.preview_modal.reference_section_more">More</label>
+              <div id="cdp-ref-more-design-preview" class="cdp-modal__list-rows"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cdp-modal__panel cdp-modal__panel--metadata" data-cdp-panel="metadata" hidden>
+          <div class="cdp-modal__panel-inner">
+            <div class="cdp-modal__meta-field">
+              <label class="cdp-modal__label" for="cdp-meta-title-design-preview" data-t="creator.preview_modal.meta_title">Title</label>
+              <input type="text" id="cdp-meta-title-design-preview" class="cdp-modal__meta-input" autocomplete="off">
+            </div>
+            <div class="cdp-modal__meta-field">
+              <label class="cdp-modal__label" for="cdp-meta-description-design-preview" data-t="creator.preview_modal.meta_description">Design description</label>
+              <textarea id="cdp-meta-description-design-preview" class="cdp-modal__meta-textarea" rows="4"></textarea>
+            </div>
+            <div class="cdp-modal__meta-field">
+              <label class="cdp-modal__label" data-t="creator.preview_modal.meta_tags">Tags</label>
+              <div id="cdp-meta-tags-design-preview" class="cdp-modal__chip-row"></div>
+              <div class="cdp-modal__meta-add-row">
+                <input type="text" id="cdp-meta-tags-input-design-preview" placeholder="Add tags, comma-separated" autocomplete="off">
+                <button type="button" class="cdp-modal__meta-btn" id="cdp-meta-tags-add-design-preview" data-t="creator.preview_modal.meta_add">Add</button>
+              </div>
+            </div>
+            <div class="cdp-modal__meta-field">
+              <label class="cdp-modal__label" data-t="creator.preview_modal.meta_topics">Topics</label>
+              <div id="cdp-meta-topics-design-preview" class="cdp-modal__list-rows"></div>
+              <div class="cdp-modal__meta-add-row">
+                <input type="text" id="cdp-meta-topics-input-design-preview" placeholder="Add…" autocomplete="off">
+                <button type="button" class="cdp-modal__meta-btn" id="cdp-meta-topics-add-design-preview" data-t="creator.preview_modal.meta_add">Add</button>
+              </div>
+            </div>
+            <div class="cdp-modal__meta-field">
+              <label class="cdp-modal__label" data-t="creator.preview_modal.meta_subtopics">Subtopics</label>
+              <div id="cdp-meta-subtopics-design-preview" class="cdp-modal__list-rows"></div>
+              <div class="cdp-modal__meta-add-row">
+                <input type="text" id="cdp-meta-subtopics-input-design-preview" placeholder="Add…" autocomplete="off">
+                <button type="button" class="cdp-modal__meta-btn" id="cdp-meta-subtopics-add-design-preview" data-t="creator.preview_modal.meta_add">Add</button>
+              </div>
+            </div>
+            <div class="cdp-modal__meta-actions">
+              <button type="button" class="cdp-modal__meta-btn" id="cdp-meta-regenerate-design-preview">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 13l.8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8L19 13z"/></svg>
+                <span data-t="creator.preview_modal.meta_regenerate">Regenerate metadata</span>
+              </button>
+              <button type="button" class="cdp-modal__meta-btn" id="cdp-meta-save-design-preview">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+                <span data-t="creator.preview_modal.meta_save">Save metadata</span>
+              </button>
+              <button type="button" class="cdp-modal__meta-btn" id="cdp-meta-history-design-preview">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <span data-t="creator.preview_modal.meta_history">History</span>
+              </button>
+            </div>
+            <div id="cdp-meta-history-list-design-preview" class="cdp-modal__history" aria-label="Snapshot history"></div>
+          </div>
         </div>
       </div>
     </div>
