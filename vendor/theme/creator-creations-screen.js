@@ -549,10 +549,13 @@
           return resGen.json().catch(function () { return { ok: false, items: [] }; });
         })
         .then(function (dataGen) {
-          return (dataGen.ok && dataGen.items) ? dataGen.items : [];
+          return {
+            ok: !!dataGen.ok,
+            items: dataGen.ok && dataGen.items ? dataGen.items : [],
+          };
         })
         .catch(function () {
-          return [];
+          return { ok: false, items: [] };
         });
       var listJobsBundlePromise = fetchListJobsDesignMergeBundle(owner).catch(function () {
         return { kvDone: [], savingJobIds: new Set(), savingJobs: [] };
@@ -560,7 +563,8 @@
 
       var results = await Promise.all([savedPromise, generatedPromise, listJobsBundlePromise]);
       var saved = results[0];
-      var generated = results[1];
+      var generatedBundle = results[1];
+      var generated = generatedBundle.items || [];
       var listJobsBundle = results[2];
       var kvDone = listJobsBundle.kvDone;
       var savingJobIds = listJobsBundle.savingJobIds;
@@ -616,7 +620,7 @@
       console.info('[CreationsScreen] fetchDesigns debug', {
         owner_id: owner,
         list_saved_total: saved.length,
-        list_generated_ok: !!dataGen.ok,
+        list_generated_ok: !!generatedBundle.ok,
         generated_count: generated.length,
         kv_done_count: kvDone.length,
         saving_to_library_count: savingJobIds.size,
