@@ -941,33 +941,22 @@
   .cdp-modal__edit-layout {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    align-items: center;
+    gap: 14px;
     width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
   }
 
-  @media (min-width: 901px) {
-    .cdp-modal__edit-layout {
-      flex-direction: row;
-      align-items: flex-start;
-      gap: 24px;
-    }
-
-    .cdp-modal__edit-preview {
-      flex: 1 1 55%;
-      min-width: 0;
-    }
-
-    .cdp-modal__edit-tools {
-      flex: 0 0 280px;
-      width: 280px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
+  .cdp-modal__panel--edit .cdp-modal__panel-inner {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 12px;
   }
 
   .cdp-modal__edit-preview {
     position: relative;
+    width: 100%;
   }
 
   .cdp-modal__edit-image-wrap {
@@ -981,10 +970,11 @@
     justify-content: center;
     overflow: hidden;
     width: 100%;
-    min-height: 280px;
-    max-height: 480px;
+    min-height: 260px;
+    max-height: min(52vh, 440px);
     aspect-ratio: 1;
     box-sizing: border-box;
+    margin: 0 auto;
   }
 
   .cdp-modal__edit-image {
@@ -1008,8 +998,8 @@
 
   .cdp-modal__edit-image-wrap.cdp-modal__image-wrapper {
     height: auto;
-    min-height: 280px;
-    max-height: 480px;
+    min-height: 260px;
+    max-height: min(52vh, 440px);
     aspect-ratio: 1;
   }
 
@@ -1018,7 +1008,8 @@
     height: 100%;
   }
 
-  .cdp-modal__edit-mask-canvas {
+  .cdp-modal__edit-mask-canvas,
+  .cdp-modal__edit-color-canvas {
     position: absolute;
     inset: 8px;
     width: calc(100% - 16px);
@@ -1027,25 +1018,91 @@
     z-index: 2;
   }
 
-  .cdp-modal__edit-image-wrap.is-brushing .cdp-modal__edit-mask-canvas {
-    pointer-events: auto;
+  .cdp-modal__edit-color-canvas {
+    z-index: 1;
+    opacity: 0.72;
   }
 
-  .cdp-modal__edit-tool {
+  .cdp-modal__edit-image-wrap.is-brushing .cdp-modal__edit-mask-canvas {
+    pointer-events: auto;
+    z-index: 3;
+  }
+
+  .cdp-modal__edit-history-btn {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    z-index: 5;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid rgba(245, 158, 11, 0.55);
+    background: rgba(15, 23, 42, 0.88);
+    color: #fbbf24;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .cdp-modal__edit-history-btn:hover {
+    background: rgba(245, 158, 11, 0.22);
+  }
+
+  .cdp-modal__edit-history-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cdp-modal__edit-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .cdp-modal__edit-tool-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 3px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.28);
+  }
+
+  .cdp-modal__edit-tool-tab {
+    flex: 1;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #9ca3af;
+    padding: 9px 6px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .cdp-modal__edit-tool-tab.is-active {
+    background: rgba(245, 158, 11, 0.22);
+    color: #f59e0b;
+  }
+
+  .cdp-modal__edit-tool-panel {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 12px;
     background: rgba(15, 23, 42, 0.55);
     padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
   }
 
-  .cdp-modal__edit-tool-title {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: #e5e7eb;
+  .cdp-modal__edit-tool-panel.is-active {
+    display: flex;
   }
 
   .cdp-modal__edit-tool-hint {
@@ -1149,7 +1206,11 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    min-height: 28px;
+    min-height: 0;
+  }
+
+  .cdp-modal__edit-color-chips:empty {
+    display: none;
   }
 
   .cdp-modal__edit-color-chip {
@@ -1186,8 +1247,13 @@
     color: #fff;
   }
 
+  .cdp-modal__edit-clear-mask[hidden] {
+    display: none !important;
+  }
+
   /* Edit History overlay */
-  .cdp-modal__edit-history {
+  .cdp-modal__edit-history,
+  .cdp-modal__design-colors {
     position: absolute;
     inset: 0;
     z-index: 40;
@@ -1199,13 +1265,15 @@
     box-sizing: border-box;
   }
 
-  .cdp-modal__edit-history.is-open {
+  .cdp-modal__edit-history.is-open,
+  .cdp-modal__design-colors.is-open {
     display: flex;
   }
 
-  .cdp-modal__edit-history-card {
-    width: min(720px, 100%);
-    max-height: min(90vh, 860px);
+  .cdp-modal__edit-history-card,
+  .cdp-modal__design-colors-card {
+    width: min(420px, 100%);
+    max-height: min(88vh, 720px);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -1215,23 +1283,27 @@
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
   }
 
-  .cdp-modal__edit-history-header {
+  .cdp-modal__edit-history-header,
+  .cdp-modal__design-colors-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     padding: 14px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
   }
 
-  .cdp-modal__edit-history-header h4 {
+  .cdp-modal__edit-history-header h4,
+  .cdp-modal__design-colors-header h4 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
     color: #e5e7eb;
   }
 
-  .cdp-modal__edit-history-close {
+  .cdp-modal__edit-history-close,
+  .cdp-modal__design-colors-close {
     border: 0;
     background: transparent;
     color: #9ca3af;
@@ -1241,27 +1313,32 @@
     padding: 4px 8px;
   }
 
-  .cdp-modal__edit-history-close:hover {
+  .cdp-modal__edit-history-close:hover,
+  .cdp-modal__design-colors-close:hover {
     color: #fff;
   }
 
-  .cdp-modal__edit-history-body {
+  .cdp-modal__edit-history-body,
+  .cdp-modal__design-colors-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    align-items: center;
+    gap: 12px;
     scrollbar-width: thin;
     scrollbar-color: #4b5563 transparent;
   }
 
-  .cdp-modal__edit-history-body::-webkit-scrollbar {
+  .cdp-modal__edit-history-body::-webkit-scrollbar,
+  .cdp-modal__design-colors-body::-webkit-scrollbar {
     width: 8px;
   }
 
-  .cdp-modal__edit-history-body::-webkit-scrollbar-thumb {
+  .cdp-modal__edit-history-body::-webkit-scrollbar-thumb,
+  .cdp-modal__design-colors-body::-webkit-scrollbar-thumb {
     background: #4b5563;
     border-radius: 4px;
   }
@@ -1269,6 +1346,7 @@
   .cdp-modal__edit-history-carousel {
     position: relative;
     width: 100%;
+    max-width: 360px;
   }
 
   .cdp-modal__edit-history-slide-wrap {
@@ -1276,13 +1354,14 @@
     border-radius: 10px;
     border: 2px solid rgba(245, 158, 11, 0.55);
     background: #37375A;
-    min-height: 240px;
-    max-height: 420px;
+    min-height: 220px;
+    max-height: 360px;
     aspect-ratio: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    width: 100%;
   }
 
   .cdp-modal__edit-history-slide-wrap img {
@@ -1296,8 +1375,8 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: rgba(0, 0, 0, 0.55);
@@ -1319,6 +1398,7 @@
 
   .cdp-modal__edit-history-meta {
     text-align: center;
+    width: 100%;
   }
 
   .cdp-modal__edit-history-label {
@@ -1367,36 +1447,68 @@
     background: #f59e0b;
   }
 
-  .cdp-modal__edit-history-actions {
+  .cdp-modal__edit-history-actions,
+  .cdp-modal__design-colors-footer {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     justify-content: center;
+    width: 100%;
+    padding: 12px 16px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+    box-sizing: border-box;
   }
 
-  .cdp-modal__edit-history-actions .cdp-modal__edit-btn {
+  .cdp-modal__edit-history-actions .cdp-modal__edit-btn,
+  .cdp-modal__design-colors-footer .cdp-modal__edit-btn {
     width: auto;
-    min-width: 120px;
+    min-width: 110px;
+    flex: 1 1 auto;
   }
 
-  .cdp-modal__edit-history-empty {
+  .cdp-modal__edit-history-empty,
+  .cdp-modal__design-colors-empty {
     margin: 24px 0;
     text-align: center;
     color: #9ca3af;
     font-size: 14px;
   }
 
+  .cdp-modal__design-colors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .cdp-modal__design-colors-swatch {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    background-clip: padding-box;
+  }
+
+  .cdp-modal__design-colors-swatch.is-selected {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+  }
+
   @media (max-width: 900px) {
+    .cdp-modal__edit-layout {
+      max-width: 100%;
+    }
+
     .cdp-modal__edit-image-wrap {
-      max-height: 320px;
+      max-height: 300px;
       min-height: 200px;
     }
 
-    .cdp-modal__edit-tools {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+    .cdp-modal__edit-tool-tab {
+      font-size: 11px;
+      padding: 8px 4px;
     }
   }
 
@@ -2317,35 +2429,36 @@
                       </div>
                     </div>
                   </div>
+                  <canvas id="cdp-edit-color-canvas-design-preview" class="cdp-modal__edit-color-canvas" aria-hidden="true"></canvas>
                   <canvas id="cdp-edit-mask-canvas-design-preview" class="cdp-modal__edit-mask-canvas" aria-hidden="true"></canvas>
                   <button
                     type="button"
-                    id="cdp-btn-edit-crop-design-preview"
-                    class="cdp-modal__crop-btn"
-                    aria-label="Adjust crop area"
-                    title="Adjust crop area"
+                    id="cdp-edit-history-open-design-preview"
+                    class="cdp-modal__edit-history-btn"
+                    aria-label="Edit History"
+                    title="Edit History"
                   >
-                    <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--adjust" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M7 17V9.8c0-1.12.9-2 2-2h7.2M17 7v7.2c0 1.12-.9 2-2 2H9.8" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M20 4H4v16h16V4z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--apply" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                      <path d="M17 21v-8H7v8"/>
-                      <path d="M7 3v5h8"/>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9"/>
+                      <path d="M12 7v5l3 2"/>
                     </svg>
                   </button>
                 </div>
               </div>
 
-              <div class="cdp-modal__edit-tools" id="cdp-edit-tools-design-preview">
-                <div class="cdp-modal__edit-tool">
-                  <h4 class="cdp-modal__edit-tool-title" data-t="creator.preview_modal.edit_crop">Crop</h4>
-                  <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-crop-trigger-design-preview" data-t="creator.preview_modal.edit_crop">Crop</button>
+              <div class="cdp-modal__edit-footer" id="cdp-edit-tools-design-preview">
+                <div class="cdp-modal__edit-tool-tabs" role="tablist" aria-label="Edit Design">
+                  <button type="button" class="cdp-modal__edit-tool-tab is-active" data-cdp-edit-tool="crop" id="cdp-edit-tool-crop-design-preview" data-t="creator.preview_modal.edit_crop">Crop</button>
+                  <button type="button" class="cdp-modal__edit-tool-tab" data-cdp-edit-tool="remove_bg" id="cdp-edit-tool-bg-design-preview" data-t="creator.preview_modal.edit_remove_bg">Remove Background</button>
+                  <button type="button" class="cdp-modal__edit-tool-tab" data-cdp-edit-tool="remove_color" id="cdp-edit-tool-color-design-preview" data-t="creator.preview_modal.edit_remove_color">Remove Color</button>
+                  <button type="button" class="cdp-modal__edit-tool-tab" data-cdp-edit-tool="remove_object" id="cdp-edit-tool-object-design-preview" data-t="creator.preview_modal.edit_remove_object">Remove Object</button>
                 </div>
 
-                <div class="cdp-modal__edit-tool">
-                  <h4 class="cdp-modal__edit-tool-title" data-t="creator.preview_modal.edit_remove_bg">Remove Background</h4>
+                <div class="cdp-modal__edit-tool-panel is-active" data-cdp-edit-panel="crop" id="cdp-edit-panel-crop-design-preview">
+                  <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-crop-trigger-design-preview" data-t="creator.preview_modal.edit_crop">Crop</button>
+                </div>
+
+                <div class="cdp-modal__edit-tool-panel" data-cdp-edit-panel="remove_bg" id="cdp-edit-panel-bg-design-preview" hidden>
                   <div class="cdp-modal__edit-seg" role="group" aria-label="Remove Background">
                     <button type="button" class="cdp-modal__edit-seg-btn is-active" data-cdp-bg-mode="complete" id="cdp-edit-bg-mode-complete-design-preview" data-t="creator.preview_modal.edit_remove_bg_complete">Completely</button>
                     <button type="button" class="cdp-modal__edit-seg-btn" data-cdp-bg-mode="outside" id="cdp-edit-bg-mode-outside-design-preview" data-t="creator.preview_modal.edit_remove_bg_outside">Outside the design</button>
@@ -2353,31 +2466,44 @@
                   <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-remove-bg-apply-design-preview" data-t="creator.preview_modal.edit_remove_bg_apply">Apply</button>
                 </div>
 
-                <div class="cdp-modal__edit-tool">
-                  <h4 class="cdp-modal__edit-tool-title" data-t="creator.preview_modal.edit_remove_color">Remove Color</h4>
+                <div class="cdp-modal__edit-tool-panel" data-cdp-edit-panel="remove_color" id="cdp-edit-panel-color-design-preview" hidden>
                   <p class="cdp-modal__edit-tool-hint" data-t="creator.preview_modal.edit_remove_color_pick">Click the design to pick colors</p>
                   <div class="cdp-modal__edit-color-chips" id="cdp-edit-color-chips-design-preview"></div>
                   <div class="cdp-modal__edit-slider-row">
                     <label for="cdp-edit-color-tolerance-design-preview" data-t="creator.preview_modal.edit_remove_color_tolerance">Similar colors intensity</label>
                     <input type="range" id="cdp-edit-color-tolerance-design-preview" min="0" max="100" value="30" />
                   </div>
-                  <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-remove-color-apply-design-preview" data-t="creator.preview_modal.edit_remove_color_apply">Apply</button>
+                  <div class="cdp-modal__edit-btn-row">
+                    <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-design-colors-open-design-preview" data-t="creator.preview_modal.edit_design_colors">Design Colors</button>
+                    <button
+                      type="button"
+                      class="cdp-modal__edit-btn cdp-modal__edit-btn--primary"
+                      id="cdp-edit-remove-color-apply-design-preview"
+                      data-t="creator.preview_modal.edit_choose_color"
+                      data-label-choose="Choose Color"
+                      data-label-apply="Apply"
+                    >Choose Color</button>
+                  </div>
                 </div>
 
-                <div class="cdp-modal__edit-tool">
-                  <h4 class="cdp-modal__edit-tool-title" data-t="creator.preview_modal.edit_remove_object">Remove Object</h4>
+                <div class="cdp-modal__edit-tool-panel" data-cdp-edit-panel="remove_object" id="cdp-edit-panel-object-design-preview" hidden>
                   <p class="cdp-modal__edit-tool-hint" data-t="creator.preview_modal.edit_remove_object_hint">Paint over the object to remove</p>
                   <div class="cdp-modal__edit-slider-row">
                     <label for="cdp-edit-brush-size-design-preview" data-t="creator.preview_modal.edit_brush_size">Brush size</label>
                     <input type="range" id="cdp-edit-brush-size-design-preview" min="8" max="80" value="28" />
                   </div>
                   <div class="cdp-modal__edit-btn-row">
-                    <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--ghost" id="cdp-edit-clear-mask-design-preview" data-t="creator.preview_modal.edit_clear_mask">Clear mask</button>
-                    <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-remove-object-apply-design-preview" data-t="creator.preview_modal.edit_remove_object_apply">Apply</button>
+                    <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--ghost cdp-modal__edit-clear-mask" id="cdp-edit-clear-mask-design-preview" hidden data-t="creator.preview_modal.edit_clear_mask">Clear mask</button>
+                    <button
+                      type="button"
+                      class="cdp-modal__edit-btn cdp-modal__edit-btn--primary"
+                      id="cdp-edit-remove-object-apply-design-preview"
+                      data-t="creator.preview_modal.edit_choose_object"
+                      data-label-choose="Choose Object"
+                      data-label-apply="Apply"
+                    >Choose Object</button>
                   </div>
                 </div>
-
-                <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-history-open-design-preview" data-t="creator.preview_modal.edit_history">Edit History</button>
               </div>
             </div>
           </div>
@@ -2528,11 +2654,35 @@
             <span class="cdp-modal__edit-history-badge" id="cdp-edit-history-applied-badge-design-preview" hidden data-t="creator.preview_modal.edit_history_applied">Applied</span>
           </div>
           <div class="cdp-modal__edit-history-dots" id="cdp-edit-history-dots-design-preview"></div>
-          <div class="cdp-modal__edit-history-actions">
-            <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-history-apply-design-preview" data-t="creator.preview_modal.edit_history_apply">Apply</button>
-            <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-history-delete-design-preview" data-t="creator.preview_modal.edit_history_delete">Delete</button>
-            <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-history-save-new-design-preview" data-t="creator.preview_modal.edit_history_save_as_new">Save as new design</button>
-          </div>
+        </div>
+        <div class="cdp-modal__edit-history-actions">
+          <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-history-apply-design-preview" data-t="creator.preview_modal.edit_history_apply">Apply</button>
+          <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-history-delete-design-preview" data-t="creator.preview_modal.edit_history_delete">Delete</button>
+          <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-history-save-new-design-preview" data-t="creator.preview_modal.edit_history_save_as_new">Save as new design</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="cdp-design-colors-modal-design-preview"
+      class="cdp-modal__design-colors"
+      hidden
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cdp-design-colors-title-design-preview"
+    >
+      <div class="cdp-modal__design-colors-card">
+        <div class="cdp-modal__design-colors-header">
+          <h4 id="cdp-design-colors-title-design-preview" data-t="creator.preview_modal.edit_design_colors_title">Design Colors</h4>
+          <button type="button" class="cdp-modal__design-colors-close" id="cdp-design-colors-close-design-preview" aria-label="Close">✕</button>
+        </div>
+        <div class="cdp-modal__design-colors-body">
+          <p id="cdp-design-colors-empty-design-preview" class="cdp-modal__design-colors-empty" hidden data-t="creator.preview_modal.edit_design_colors_empty">No colors found in this design</p>
+          <div class="cdp-modal__design-colors-grid" id="cdp-design-colors-grid-design-preview"></div>
+        </div>
+        <div class="cdp-modal__design-colors-footer">
+          <button type="button" class="cdp-modal__edit-btn" id="cdp-design-colors-done-design-preview" data-t="creator.preview_modal.edit_design_colors_done">Done</button>
         </div>
       </div>
     </div>

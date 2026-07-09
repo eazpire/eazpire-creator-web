@@ -285,18 +285,27 @@
   let editImageEl = null;
   let editImageWrap = null;
   let editMaskCanvas = null;
+  let editColorCanvas = null;
   let editVersions = [];
   let editHistoryIndex = 0;
   let editHistoryOpen = false;
+  let editDesignColorsOpen = false;
   let editBgMode = 'complete';
   let editPickedColors = [];
+  let editPaletteColors = [];
   let editColorTolerance = 30;
   let editBrushSize = 28;
   let editToolMode = null; // 'eyedropper' | 'brush' | null
+  let editActiveTool = 'crop'; // 'crop' | 'remove_bg' | 'remove_color' | 'remove_object'
   let editBrushPainting = false;
   let editMaskDirty = false;
   let editOpBusy = false;
   let editHistoryTouchX = null;
+  let editColorPreviewTimer = null;
+  let editSourceImageData = null;
+  let editSourceImageKey = '';
+  let editSourceNaturalW = 0;
+  let editSourceNaturalH = 0;
 
   // Get modal element
   function getModal() {
@@ -368,7 +377,7 @@
     setDrawerOpen(false);
     if (next === 'edit') {
       refreshEditPreviewImage();
-      resetEditToolModes();
+      setEditActiveTool(editActiveTool || 'crop', { force: true });
       loadEditVersions();
     }
     if (next === 'metadata') renderMetadataPanel(currentDesign);
@@ -425,6 +434,7 @@
     editImageEl = document.getElementById('cdp-edit-image-' + sectionId);
     editImageWrap = document.getElementById('cdp-edit-image-wrap-' + sectionId);
     editMaskCanvas = document.getElementById('cdp-edit-mask-canvas-' + sectionId);
+    editColorCanvas = document.getElementById('cdp-edit-color-canvas-' + sectionId);
 
     modalShell = modal ? modal.querySelector('.cdp-modal') : null;
     drawerToggle = document.getElementById('cdp-drawer-toggle-' + sectionId);
@@ -1216,6 +1226,10 @@
           closeEditHistoryModal();
           return;
         }
+        if (editDesignColorsOpen) {
+          closeDesignColorsModal();
+          return;
+        }
         if (manualCropActive) {
           exitManualCropMode();
           return;
@@ -1344,15 +1358,22 @@
     editVersions = [];
     editHistoryIndex = 0;
     editPickedColors = [];
+    editPaletteColors = [];
     editBgMode = 'complete';
     editToolMode = null;
+    editActiveTool = 'crop';
     editMaskDirty = false;
+    editSourceImageData = null;
+    editSourceImageKey = '';
     closeEditHistoryModal();
+    closeDesignColorsModal();
+    clearColorPreview();
     resetDeleteButtonState();
     setActiveTab('overview');
     setDrawerOpen(false);
     renderEditColorChips();
     clearEditMask(true);
+    updateEditActionButtons();
 
     // Optional: Close other modals that might be open (like the design modal)
     // This ensures the preview modal is on top
@@ -2115,9 +2136,17 @@
     var url = cacheBustSrc(normalizePersistedFileUrl(raw));
     if (url) {
       try { editImageEl.crossOrigin = 'anonymous'; } catch (_) {}
+      editImageEl.onload = function () {
+        editSourceImageData = null;
+        editSourceImageKey = '';
+        syncEditMaskCanvasSize();
+        syncEditColorCanvasSize();
+        if (editActiveTool === 'remove_color') scheduleColorPreview();
+      };
       editImageEl.src = url;
     }
     syncEditMaskCanvasSize();
+    syncEditColorCanvasSize();
   }
 
   function applyDesignFromEditResponse(designOut) {
@@ -2175,13 +2204,51 @@
       // mask cleared only when explicitly requested
     }
     syncEditMaskCanvasSize();
+    syncEditColorCanvasSize();
     updateEditToolModeUi();
+    updateEditActionButtons();
   }
 
   function updateEditToolModeUi() {
     if (!editImageWrap) return;
     editImageWrap.classList.toggle('is-eyedropper', editToolMode === 'eyedropper');
     editImageWrap.classList.toggle('is-brushing', editToolMode === 'brush');
+  }
+
+  function setEditActiveTool(tool, opts) {
+    opts = opts || {};
+    var next = String(tool || 'crop');
+    if (['crop', 'remove_bg', 'remove_color', 'remove_object'].indexOf(next) < 0) next = 'crop';
+    if (!opts.force && editActiveTool === next) {
+      // still refresh modes for current tool
+    } else {
+      editActiveTool = next;
+    }
+    if (!modal) getDOMElements();
+    if (modal) {
+      modal.querySelectorAll('[data-cdp-edit-tool]').forEach(function (btn) {
+        btn.classList.toggle('is-active', btn.getAttribute('data-cdp-edit-tool') === editActiveTool);
+      });
+      modal.querySelectorAll('[data-cdp-edit-panel]').forEach(function (panel) {
+        var on = panel.getAttribute('data-cdp-edit-panel') === editActiveTool;
+        panel.classList.toggle('is-active', on);
+        if (on) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+      });
+    }
+    if (manualCropActive && editActiveTool !== 'crop') exitManualCropMode();
+    if (editActiveTool === 'remove_color') {
+      enableEyedropperMode();
+      scheduleColorPreview();
+    } else if (editActiveTool === 'remove_object') {
+      enableBrushMode();
+      clearColorPreview();
+    } else {
+      editToolMode = null;
+      updateEditToolModeUi();
+      clearColorPreview();
+    }
+    updateEditActionButtons();
   }
 
   function enableEyedropperMode() {
@@ -2197,31 +2264,35 @@
     updateEditToolModeUi();
   }
 
-  function syncEditMaskCanvasSize() {
-    if (!editMaskCanvas || !editImageEl) return;
-    var wrap = editImageWrap || editMaskCanvas.parentElement;
-    if (!wrap) return;
+  function syncEditOverlayCanvas(canvas) {
+    if (!canvas || !editImageEl) return false;
+    var wrap = editImageWrap || canvas.parentElement;
+    if (!wrap) return false;
     var rect = wrap.getBoundingClientRect();
     var w = Math.max(1, Math.round(rect.width - 16));
     var h = Math.max(1, Math.round(rect.height - 16));
-    if (editMaskCanvas.width !== w || editMaskCanvas.height !== h) {
-      var prev = null;
-      try {
-        if (editMaskDirty) prev = editMaskCanvas.toDataURL('image/png');
-      } catch (_) {}
-      editMaskCanvas.width = w;
-      editMaskCanvas.height = h;
-      if (prev) {
-        var img = new Image();
-        img.onload = function () {
-          var ctx = editMaskCanvas.getContext('2d');
-          if (ctx) ctx.drawImage(img, 0, 0, w, h);
-        };
-        img.src = prev;
+    if (canvas.width === w && canvas.height === h) return false;
+    canvas.width = w;
+    canvas.height = h;
+    return true;
+  }
+
+  function syncEditMaskCanvasSize() {
+    if (!editMaskCanvas || !editImageEl) return;
+    var resized = syncEditOverlayCanvas(editMaskCanvas);
+    if (resized) {
+      if (editMaskDirty) {
+        // previous strokes lost on resize — keep dirty false if empty
+        clearEditMask(true);
       } else {
         clearEditMask(true);
       }
     }
+  }
+
+  function syncEditColorCanvasSize() {
+    if (!editColorCanvas) return;
+    syncEditOverlayCanvas(editColorCanvas);
   }
 
   function clearEditMask(silent) {
@@ -2230,7 +2301,28 @@
     if (!ctx) return;
     ctx.clearRect(0, 0, editMaskCanvas.width, editMaskCanvas.height);
     editMaskDirty = false;
-    if (!silent) enableBrushMode();
+    updateEditActionButtons();
+    if (!silent && editActiveTool === 'remove_object') enableBrushMode();
+  }
+
+  function updateEditActionButtons() {
+    var colorBtn = document.getElementById('cdp-edit-remove-color-apply-' + sectionId);
+    if (colorBtn) {
+      var chooseColor = colorBtn.getAttribute('data-label-choose') || tPreview('edit_choose_color', 'Choose Color');
+      var applyColor = colorBtn.getAttribute('data-label-apply') || tPreview('edit_remove_color_apply', 'Apply');
+      colorBtn.textContent = editPickedColors.length ? applyColor : chooseColor;
+    }
+    var objBtn = document.getElementById('cdp-edit-remove-object-apply-' + sectionId);
+    if (objBtn) {
+      var chooseObj = objBtn.getAttribute('data-label-choose') || tPreview('edit_choose_object', 'Choose Object');
+      var applyObj = objBtn.getAttribute('data-label-apply') || tPreview('edit_remove_object_apply', 'Apply');
+      objBtn.textContent = editMaskDirty ? applyObj : chooseObj;
+    }
+    var clearMask = document.getElementById('cdp-edit-clear-mask-' + sectionId);
+    if (clearMask) {
+      if (editMaskDirty) clearMask.removeAttribute('hidden');
+      else clearMask.setAttribute('hidden', '');
+    }
   }
 
   function paintEditBrush(clientX, clientY) {
@@ -2246,6 +2338,7 @@
     ctx.arc(x, y, Math.max(4, editBrushSize / 2), 0, Math.PI * 2);
     ctx.fill();
     editMaskDirty = true;
+    updateEditActionButtons();
   }
 
   function buildMaskDataUrlForServer() {
@@ -2303,6 +2396,145 @@
     return out.toDataURL('image/png');
   }
 
+  function colorDistance(a, b) {
+    var dr = a.r - b.r;
+    var dg = a.g - b.g;
+    var db = a.b - b.b;
+    return Math.sqrt(dr * dr + dg * dg + db * db);
+  }
+
+  function ensureEditSourcePixels() {
+    if (!editImageEl || !editImageEl.naturalWidth) return null;
+    var key = String(editImageEl.currentSrc || editImageEl.src || '') + '|' + editImageEl.naturalWidth + 'x' + editImageEl.naturalHeight;
+    if (editSourceImageData && editSourceImageKey === key) return editSourceImageData;
+    var canvas = document.createElement('canvas');
+    canvas.width = editImageEl.naturalWidth;
+    canvas.height = editImageEl.naturalHeight;
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    try {
+      ctx.drawImage(editImageEl, 0, 0);
+      editSourceImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      editSourceImageKey = key;
+      editSourceNaturalW = canvas.width;
+      editSourceNaturalH = canvas.height;
+      return editSourceImageData;
+    } catch (err) {
+      console.warn('[CDP] source pixels unavailable (CORS?)', err);
+      return null;
+    }
+  }
+
+  function extractDesignPalette(maxColors) {
+    maxColors = maxColors || 36;
+    var src = ensureEditSourcePixels();
+    if (!src) return [];
+    var data = src.data;
+    var step = Math.max(1, Math.floor((src.width * src.height) / 12000));
+    var buckets = {};
+    for (var i = 0; i < data.length; i += 4 * step) {
+      var a = data[i + 3];
+      if (a < 40) continue;
+      var r = data[i];
+      var g = data[i + 1];
+      var b = data[i + 2];
+      // skip near-transparent / extreme noise by quantizing
+      var qr = Math.round(r / 16) * 16;
+      var qg = Math.round(g / 16) * 16;
+      var qb = Math.round(b / 16) * 16;
+      var key = qr + ',' + qg + ',' + qb;
+      if (!buckets[key]) buckets[key] = { r: qr, g: qg, b: qb, count: 0 };
+      buckets[key].count += 1;
+    }
+    var list = Object.keys(buckets).map(function (k) { return buckets[k]; });
+    list.sort(function (a, b) { return b.count - a.count; });
+    var out = [];
+    list.forEach(function (c) {
+      var tooClose = out.some(function (o) { return colorDistance(o, c) < 28; });
+      if (!tooClose) out.push({ r: c.r, g: c.g, b: c.b, count: c.count });
+    });
+    return out.slice(0, maxColors);
+  }
+
+  function clearColorPreview() {
+    if (editColorPreviewTimer) {
+      clearTimeout(editColorPreviewTimer);
+      editColorPreviewTimer = null;
+    }
+    if (!editColorCanvas) return;
+    var ctx = editColorCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, editColorCanvas.width, editColorCanvas.height);
+  }
+
+  function scheduleColorPreview() {
+    if (editColorPreviewTimer) clearTimeout(editColorPreviewTimer);
+    editColorPreviewTimer = setTimeout(function () {
+      editColorPreviewTimer = null;
+      renderColorSelectionOverlay();
+    }, 60);
+  }
+
+  function renderColorSelectionOverlay() {
+    if (!editColorCanvas || !editImageEl) return;
+    syncEditColorCanvasSize();
+    var ctx = editColorCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, editColorCanvas.width, editColorCanvas.height);
+    if (!editPickedColors.length || editActiveTool !== 'remove_color') return;
+    var src = ensureEditSourcePixels();
+    if (!src) return;
+
+    var imgRect = editImageEl.getBoundingClientRect();
+    var canvasRect = editColorCanvas.getBoundingClientRect();
+    if (imgRect.width < 1 || canvasRect.width < 1) return;
+
+    var scaleX = editColorCanvas.width / canvasRect.width;
+    var scaleY = editColorCanvas.height / canvasRect.height;
+    var dx = (imgRect.left - canvasRect.left) * scaleX;
+    var dy = (imgRect.top - canvasRect.top) * scaleY;
+    var dw = imgRect.width * scaleX;
+    var dh = imgRect.height * scaleY;
+
+    var sampleW = Math.max(1, Math.round(Math.min(src.width, 360)));
+    var sampleH = Math.max(1, Math.round(sampleW * (src.height / src.width)));
+    var tmp = document.createElement('canvas');
+    tmp.width = sampleW;
+    tmp.height = sampleH;
+    var tctx = tmp.getContext('2d');
+    if (!tctx) return;
+    var full = document.createElement('canvas');
+    full.width = src.width;
+    full.height = src.height;
+    var fctx = full.getContext('2d');
+    if (!fctx) return;
+    fctx.putImageData(src, 0, 0);
+    tctx.drawImage(full, 0, 0, sampleW, sampleH);
+    var sampled = tctx.getImageData(0, 0, sampleW, sampleH);
+    var data = sampled.data;
+    var tol = Math.max(0, Math.min(100, Number(editColorTolerance) || 0));
+    var maxDist = 8 + (tol / 100) * 140;
+    for (var i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 20) {
+        data[i + 3] = 0;
+        continue;
+      }
+      var pixel = { r: data[i], g: data[i + 1], b: data[i + 2] };
+      var match = editPickedColors.some(function (c) {
+        return colorDistance(pixel, c) <= maxDist;
+      });
+      if (match) {
+        data[i] = 245;
+        data[i + 1] = 158;
+        data[i + 2] = 11;
+        data[i + 3] = 150;
+      } else {
+        data[i + 3] = 0;
+      }
+    }
+    tctx.putImageData(sampled, 0, 0);
+    ctx.drawImage(tmp, 0, 0, sampleW, sampleH, dx, dy, dw, dh);
+  }
+
   function renderEditColorChips() {
     var host = document.getElementById('cdp-edit-color-chips-' + sectionId);
     if (!host) return;
@@ -2322,38 +2554,97 @@
       btn.addEventListener('click', function () {
         editPickedColors.splice(index, 1);
         renderEditColorChips();
+        updateEditActionButtons();
+        scheduleColorPreview();
+        if (editDesignColorsOpen) renderDesignColorsGrid();
       });
       chip.appendChild(swatch);
       chip.appendChild(label);
       chip.appendChild(btn);
       host.appendChild(chip);
     });
+    updateEditActionButtons();
+    scheduleColorPreview();
+  }
+
+  function isColorSelected(color) {
+    return editPickedColors.some(function (c) {
+      return c.r === color.r && c.g === color.g && c.b === color.b;
+    });
+  }
+
+  function togglePickedColor(color) {
+    if (!color) return;
+    var idx = editPickedColors.findIndex(function (c) {
+      return c.r === color.r && c.g === color.g && c.b === color.b;
+    });
+    if (idx >= 0) editPickedColors.splice(idx, 1);
+    else editPickedColors.push({ r: color.r, g: color.g, b: color.b });
+    renderEditColorChips();
+    if (editDesignColorsOpen) renderDesignColorsGrid();
   }
 
   function pickColorFromEditImage(clientX, clientY) {
     if (!editImageEl || !editImageEl.naturalWidth) return;
     var nat = pointerToNatural(editImageEl, clientX, clientY);
     if (!nat) return;
-    var canvas = document.createElement('canvas');
-    canvas.width = editImageEl.naturalWidth;
-    canvas.height = editImageEl.naturalHeight;
-    var ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-    try {
-      ctx.drawImage(editImageEl, 0, 0);
-      var px = ctx.getImageData(Math.max(0, Math.min(canvas.width - 1, Math.round(nat.px))), Math.max(0, Math.min(canvas.height - 1, Math.round(nat.py))), 1, 1).data;
-      var color = { r: px[0], g: px[1], b: px[2] };
-      var exists = editPickedColors.some(function (c) {
-        return c.r === color.r && c.g === color.g && c.b === color.b;
-      });
-      if (!exists) {
-        editPickedColors.push(color);
-        renderEditColorChips();
-      }
-    } catch (err) {
-      console.warn('[CDP] eyedropper failed (CORS?)', err);
+    var src = ensureEditSourcePixels();
+    if (!src) {
       alert(tPreview('edit_pick_color_first', 'Pick at least one color first.'));
+      return;
     }
+    var x = Math.max(0, Math.min(src.width - 1, Math.round(nat.px)));
+    var y = Math.max(0, Math.min(src.height - 1, Math.round(nat.py)));
+    var i = (y * src.width + x) * 4;
+    var color = { r: src.data[i], g: src.data[i + 1], b: src.data[i + 2] };
+    if (!isColorSelected(color)) {
+      editPickedColors.push(color);
+      renderEditColorChips();
+    }
+  }
+
+  function openDesignColorsModal() {
+    var el = document.getElementById('cdp-design-colors-modal-' + sectionId);
+    if (!el) return;
+    editDesignColorsOpen = true;
+    el.classList.add('is-open');
+    el.removeAttribute('hidden');
+    el.setAttribute('aria-hidden', 'false');
+    editPaletteColors = extractDesignPalette(36);
+    renderDesignColorsGrid();
+  }
+
+  function closeDesignColorsModal() {
+    var el = document.getElementById('cdp-design-colors-modal-' + sectionId);
+    if (!el) return;
+    editDesignColorsOpen = false;
+    el.classList.remove('is-open');
+    el.setAttribute('hidden', '');
+    el.setAttribute('aria-hidden', 'true');
+  }
+
+  function renderDesignColorsGrid() {
+    var grid = document.getElementById('cdp-design-colors-grid-' + sectionId);
+    var emptyEl = document.getElementById('cdp-design-colors-empty-' + sectionId);
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (!editPaletteColors.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+    editPaletteColors.forEach(function (c) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cdp-modal__design-colors-swatch' + (isColorSelected(c) ? ' is-selected' : '');
+      btn.style.background = 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')';
+      btn.title = c.r + ', ' + c.g + ', ' + c.b;
+      btn.setAttribute('aria-pressed', isColorSelected(c) ? 'true' : 'false');
+      btn.addEventListener('click', function () {
+        togglePickedColor(c);
+      });
+      grid.appendChild(btn);
+    });
   }
 
   function versionTypeLabel(version) {
@@ -2658,8 +2949,8 @@
 
   async function applyRemoveColor() {
     if (!editPickedColors.length) {
+      setEditActiveTool('remove_color');
       enableEyedropperMode();
-      alert(tPreview('edit_pick_color_first', 'Pick at least one color first.'));
       return;
     }
     setEditBusy(true);
@@ -2673,6 +2964,7 @@
       if (data && data.design) applyDesignFromEditResponse(data.design);
       editPickedColors = [];
       renderEditColorChips();
+      clearColorPreview();
       showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
       await loadEditVersions();
       try {
@@ -2685,10 +2977,16 @@
       alert((err && err.message) || 'Remove color failed');
     } finally {
       setEditBusy(false);
+      updateEditActionButtons();
     }
   }
 
   async function applyRemoveObject() {
+    if (!editMaskDirty) {
+      setEditActiveTool('remove_object');
+      enableBrushMode();
+      return;
+    }
     var maskDataUrl = buildMaskDataUrlForServer();
     if (!maskDataUrl) {
       enableBrushMode();
@@ -2714,6 +3012,7 @@
       alert((err && err.message) || 'Remove object failed');
     } finally {
       setEditBusy(false);
+      updateEditActionButtons();
     }
   }
 
@@ -2724,11 +3023,19 @@
     editImageEl = document.getElementById('cdp-edit-image-' + sectionId);
     editImageWrap = document.getElementById('cdp-edit-image-wrap-' + sectionId);
     editMaskCanvas = document.getElementById('cdp-edit-mask-canvas-' + sectionId);
+    editColorCanvas = document.getElementById('cdp-edit-color-canvas-' + sectionId);
+
+    modal.querySelectorAll('[data-cdp-edit-tool]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setEditActiveTool(btn.getAttribute('data-cdp-edit-tool'));
+      });
+    });
 
     var cropTrigger = document.getElementById('cdp-edit-crop-trigger-' + sectionId);
     if (cropTrigger) {
       cropTrigger.addEventListener('click', function (e) {
         e.preventDefault();
+        setEditActiveTool('crop');
         handleCrop(e);
       });
     }
@@ -2749,10 +3056,29 @@
     if (colorApply) {
       colorApply.addEventListener('click', function () { applyRemoveColor(); });
     }
+    var designColorsOpen = document.getElementById('cdp-edit-design-colors-open-' + sectionId);
+    if (designColorsOpen) {
+      designColorsOpen.addEventListener('click', function () {
+        setEditActiveTool('remove_color');
+        openDesignColorsModal();
+      });
+    }
+    var designColorsClose = document.getElementById('cdp-design-colors-close-' + sectionId);
+    if (designColorsClose) designColorsClose.addEventListener('click', closeDesignColorsModal);
+    var designColorsDone = document.getElementById('cdp-design-colors-done-' + sectionId);
+    if (designColorsDone) designColorsDone.addEventListener('click', closeDesignColorsModal);
+    var designColorsModal = document.getElementById('cdp-design-colors-modal-' + sectionId);
+    if (designColorsModal) {
+      designColorsModal.addEventListener('click', function (e) {
+        if (e.target === designColorsModal) closeDesignColorsModal();
+      });
+    }
+
     var tol = document.getElementById('cdp-edit-color-tolerance-' + sectionId);
     if (tol) {
       tol.addEventListener('input', function () {
         editColorTolerance = Number(tol.value) || 0;
+        scheduleColorPreview();
       });
       editColorTolerance = Number(tol.value) || 30;
     }
@@ -2770,7 +3096,13 @@
     if (objApply) objApply.addEventListener('click', function () { applyRemoveObject(); });
 
     var histOpen = document.getElementById('cdp-edit-history-open-' + sectionId);
-    if (histOpen) histOpen.addEventListener('click', function () { openEditHistoryModal(); });
+    if (histOpen) {
+      histOpen.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openEditHistoryModal();
+      });
+    }
     var histClose = document.getElementById('cdp-edit-history-close-' + sectionId);
     if (histClose) histClose.addEventListener('click', function () { closeEditHistoryModal(); });
     var histModal = document.getElementById('cdp-edit-history-modal-' + sectionId);
@@ -2809,21 +3141,18 @@
     // Eyedropper / brush on edit preview
     if (editImageWrap) {
       editImageWrap.addEventListener('click', function (e) {
-        if (editOpBusy || manualCropActive) return;
-        if (editToolMode === 'eyedropper') {
+        if (editOpBusy || manualCropActive || editHistoryOpen || editDesignColorsOpen) return;
+        if (e.target && e.target.closest && e.target.closest('.cdp-modal__edit-history-btn')) return;
+        if (editActiveTool === 'remove_color' || editToolMode === 'eyedropper') {
+          if (editToolMode !== 'eyedropper') enableEyedropperMode();
           pickColorFromEditImage(e.clientX, e.clientY);
-          return;
-        }
-        // Clicking image while color tool is idle enables eyedropper
-        if (e.target === editImageEl || e.target === editImageWrap) {
-          if (editToolMode !== 'brush') enableEyedropperMode();
         }
       });
     }
 
     if (editMaskCanvas) {
       editMaskCanvas.addEventListener('pointerdown', function (e) {
-        if (editOpBusy || manualCropActive) return;
+        if (editOpBusy || manualCropActive || editActiveTool !== 'remove_object') return;
         enableBrushMode();
         editBrushPainting = true;
         try { editMaskCanvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -2843,22 +3172,26 @@
       editMaskCanvas.addEventListener('pointercancel', endBrush);
     }
 
-    // Auto-enable brush when interacting with brush size / clear
     if (brush) {
-      brush.addEventListener('pointerdown', function () { enableBrushMode(); });
+      brush.addEventListener('pointerdown', function () {
+        setEditActiveTool('remove_object');
+        enableBrushMode();
+      });
     }
     if (clearMask) {
-      clearMask.addEventListener('pointerdown', function () { enableBrushMode(); });
-    }
-    // Auto-enable eyedropper when focusing color tool
-    if (colorApply) {
-      colorApply.addEventListener('pointerdown', function () {
-        if (!editPickedColors.length) enableEyedropperMode();
+      clearMask.addEventListener('pointerdown', function () {
+        setEditActiveTool('remove_object');
+        enableBrushMode();
       });
     }
     window.addEventListener('resize', function () {
-      if (activeTab === 'edit') syncEditMaskCanvasSize();
+      if (activeTab === 'edit') {
+        syncEditMaskCanvasSize();
+        syncEditColorCanvasSize();
+        if (editActiveTool === 'remove_color') scheduleColorPreview();
+      }
     });
+    updateEditActionButtons();
   }
 
   function ensureDraftMeta(design, forceReset) {
@@ -4494,6 +4827,8 @@
 
     exitManualCropMode();
     closeEditHistoryModal();
+    closeDesignColorsModal();
+    clearColorPreview();
     resetEditToolModes();
     clearEditMask(true);
     setDrawerOpen(false);
