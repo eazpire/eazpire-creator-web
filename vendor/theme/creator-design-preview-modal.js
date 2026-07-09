@@ -2678,6 +2678,9 @@
     if (!editImageWrap) return;
     editImageWrap.classList.toggle('is-eyedropper', editToolMode === 'eyedropper' && !isViewerPanMode(editImageWrap));
     editImageWrap.classList.toggle('is-brushing', editToolMode === 'brush' && !isViewerPanMode(editImageWrap));
+    if (editToolMode !== 'eyedropper' || editActiveTool !== 'remove_color') {
+      syncPipetteSwatchFromSelection();
+    }
   }
 
   function setEditActiveTool(tool, opts) {
@@ -2902,6 +2905,7 @@
     if (!opts.keepEyedropper) editPickReplaceTarget = false;
     updateReplaceTargetUi();
     updateEditActionButtons();
+    syncPipetteSwatchFromSelection();
     scheduleColorPreview();
   }
 
@@ -3382,6 +3386,7 @@
       chip.appendChild(btn);
       host.appendChild(chip);
     });
+    syncPipetteSwatchFromSelection();
     updateEditActionButtons();
     scheduleColorPreview();
   }
@@ -3403,26 +3408,58 @@
     if (editDesignColorsOpen) renderDesignColorsGrid();
   }
 
-  function pickColorFromEditImage(clientX, clientY) {
-    if (!editImageEl || !editImageEl.naturalWidth) return;
+  function sampleColorAtClientPoint(clientX, clientY, opts) {
+    opts = opts || {};
+    if (!editImageEl || !editImageEl.naturalWidth) return null;
     var nat = pointerToNatural(editImageEl, clientX, clientY);
-    if (!nat) return;
+    if (!nat) return null;
     var src = ensureEditSourcePixels();
-    if (!src) {
-      alert(tPreview('edit_pick_color_first', 'Pick at least one color first.'));
-      return;
-    }
+    if (!src) return null;
     var x = Math.max(0, Math.min(src.width - 1, Math.round(nat.px)));
     var y = Math.max(0, Math.min(src.height - 1, Math.round(nat.py)));
-    if (editMaskDirty) {
+    if (!opts.ignoreBrushMask && editMaskDirty && !editPickReplaceTarget) {
       var maskBits = buildNaturalBrushMaskBits();
-      if (maskBits && !isNaturalPixelInBrushMask(maskBits, x, y)) {
-        // Outside brushed area: ignore pick for source colors (still allow replace eyedropper).
-        if (!editPickReplaceTarget) return;
-      }
+      if (maskBits && !isNaturalPixelInBrushMask(maskBits, x, y)) return null;
     }
     var i = (y * src.width + x) * 4;
-    var color = { r: src.data[i], g: src.data[i + 1], b: src.data[i + 2] };
+    return { r: src.data[i], g: src.data[i + 1], b: src.data[i + 2] };
+  }
+
+  function updatePipetteSwatch(color) {
+    var swatch = document.getElementById('cdp-edit-pipette-swatch-' + sectionId);
+    if (!swatch) return;
+    if (color && typeof color.r === 'number') {
+      swatch.classList.remove('is-empty');
+      swatch.style.background = 'rgb(' + color.r + ',' + color.g + ',' + color.b + ')';
+    } else {
+      swatch.classList.add('is-empty');
+      swatch.style.background = '';
+    }
+  }
+
+  function syncPipetteSwatchFromSelection() {
+    if (editPickReplaceTarget && editReplaceTargetColor) {
+      updatePipetteSwatch(editReplaceTargetColor);
+      return;
+    }
+    if (editPickedColors.length) {
+      updatePipetteSwatch(editPickedColors[editPickedColors.length - 1]);
+      return;
+    }
+    updatePipetteSwatch(null);
+  }
+
+  function pickColorFromEditImage(clientX, clientY) {
+    var color = sampleColorAtClientPoint(clientX, clientY, {
+      ignoreBrushMask: !!editPickReplaceTarget
+    });
+    if (!color) {
+      if (!ensureEditSourcePixels()) {
+        alert(tPreview('edit_pick_color_first', 'Pick at least one color first.'));
+      }
+      return;
+    }
+    updatePipetteSwatch(color);
     if (editPickReplaceTarget) {
       setReplaceTargetColor(color);
       return;
@@ -4362,6 +4399,22 @@
         if (editToolMode === 'brush' && !editPickReplaceTarget) return;
         if (editToolMode !== 'eyedropper') enableEyedropperMode();
         pickColorFromEditImage(e.clientX, e.clientY);
+      });
+      // Live pipette swatch: preview pixel color under cursor while choosing colors.
+      editImageWrap.addEventListener('pointermove', function (e) {
+        if (editOpBusy || manualCropActive || editHistoryOpen || editDesignColorsOpen || viewerBgModalOpen) return;
+        if (editActiveTool !== 'remove_color') return;
+        if (editToolMode !== 'eyedropper' && !editPickReplaceTarget) return;
+        if (isViewerPanMode(editImageWrap)) return;
+        if (editBrushPainting) return;
+        if (e.target && e.target.closest && e.target.closest('.cdp-modal__zoom-chrome')) return;
+        // Hover preview shows the raw pixel under the cursor (no brush-mask rebuild).
+        var hoverColor = sampleColorAtClientPoint(e.clientX, e.clientY, { ignoreBrushMask: true });
+        if (hoverColor) updatePipetteSwatch(hoverColor);
+      });
+      editImageWrap.addEventListener('pointerleave', function () {
+        if (editActiveTool !== 'remove_color') return;
+        syncPipetteSwatchFromSelection();
       });
     }
 
