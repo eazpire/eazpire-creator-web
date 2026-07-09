@@ -381,14 +381,139 @@
     if (drawerToggle) drawerToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
+  function inferScriptAssetUrl(filename) {
+    var scripts = document.querySelectorAll('script[src*="' + filename + '"]');
+    if (scripts && scripts.length) return scripts[scripts.length - 1].src;
+    return null;
+  }
+
+  function productsPanelScriptUrl() {
+    if (window.__CREATOR_PRODUCTS_MODAL_JS) return window.__CREATOR_PRODUCTS_MODAL_JS;
+    var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE || [];
+    for (var i = 0; i < bundle.length; i++) {
+      if (String(bundle[i] || '').indexOf('creator-design-products-modal.js') !== -1) return bundle[i];
+    }
+    return inferScriptAssetUrl('creator-design-products-modal.js');
+  }
+
+  var productsPanelLoadPromise = null;
+
+  function ensureProductsPanelScript() {
+    if (window.CreatorDesignProductsPanel && typeof window.CreatorDesignProductsPanel.mount === 'function') {
+      return Promise.resolve();
+    }
+    var url = productsPanelScriptUrl();
+    if (!url) return Promise.reject(new Error('products_panel_script_missing'));
+    if (productsPanelLoadPromise) return productsPanelLoadPromise;
+    if (window.__CreatorLazyModals && typeof window.__CreatorLazyModals.loadScript === 'function') {
+      productsPanelLoadPromise = window.__CreatorLazyModals.loadScript(url);
+      return productsPanelLoadPromise;
+    }
+    productsPanelLoadPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error('products_script_load_failed')); };
+      document.head.appendChild(s);
+    });
+    return productsPanelLoadPromise;
+  }
+
+  function studioScriptUrl() {
+    if (window.__CREATOR_STUDIO_MODAL_JS) return window.__CREATOR_STUDIO_MODAL_JS;
+    var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE || [];
+    for (var i = 0; i < bundle.length; i++) {
+      if (String(bundle[i] || '').indexOf('creator-design-studio-modal.js') !== -1) return bundle[i];
+    }
+    return inferScriptAssetUrl('creator-design-studio-modal.js');
+  }
+
+  var studioScriptLoadPromise = null;
+
+  function ensureStudioScript() {
+    if (window.CreatorDesignStudioModal && typeof window.CreatorDesignStudioModal.open === 'function') {
+      return Promise.resolve();
+    }
+    var url = studioScriptUrl();
+    if (!url) return Promise.reject(new Error('studio_script_missing'));
+    if (studioScriptLoadPromise) return studioScriptLoadPromise;
+    if (window.__CreatorLazyModals && typeof window.__CreatorLazyModals.loadScript === 'function') {
+      studioScriptLoadPromise = window.__CreatorLazyModals.loadScript(url);
+      return studioScriptLoadPromise;
+    }
+    studioScriptLoadPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error('studio_script_load_failed')); };
+      document.head.appendChild(s);
+    });
+    return studioScriptLoadPromise;
+  }
+
+  function openDesignStudioFromProductsCard(productKey, productTitle) {
+    if (!currentDesign || !productKey) return;
+    var meta = { title: productTitle || productKey, product_key: productKey };
+    ensureStudioScript()
+      .then(function () {
+        if (window.CreatorDesignStudioModal && typeof window.CreatorDesignStudioModal.open === 'function') {
+          window.CreatorDesignStudioModal.open(currentDesign, productKey, meta);
+        } else {
+          console.warn('[CreatorDesignPreviewModal] CreatorDesignStudioModal.open unavailable');
+        }
+      })
+      .catch(function (err) {
+        console.warn('[CreatorDesignPreviewModal] design studio load failed', err);
+      });
+  }
+
+  function bindProductsGridStudioOpen() {
+    if (!modal || modal.__cdpProductsStudioBound) return;
+    modal.__cdpProductsStudioBound = true;
+    modal.addEventListener('click', function (e) {
+      if (activeTab !== 'products') return;
+      var card = e.target.closest && e.target.closest('.creator-design-products-modal__card');
+      if (!card || !modal.contains(card)) return;
+      if (e.target.closest && e.target.closest('input[type="checkbox"]')) return;
+      if (e.target.closest && e.target.closest('.creator-design-products-modal__card-nav')) return;
+      var pk = card.getAttribute('data-product-key');
+      if (!pk) {
+        var cb = card.querySelector('input[data-product-key]');
+        pk = cb && cb.getAttribute('data-product-key');
+      }
+      if (!pk) return;
+      var titleEl = card.querySelector('.creator-design-products-modal__card-title');
+      var title = titleEl ? String(titleEl.textContent || '').trim() : pk;
+      e.preventDefault();
+      e.stopPropagation();
+      openDesignStudioFromProductsCard(pk, title);
+    });
+  }
+
   function mountProductsPanelIfNeeded() {
-    var panelApi = window.CreatorDesignProductsPanel;
-    if (!panelApi || typeof panelApi.mount !== 'function' || !currentDesign) return;
+    if (!currentDesign) return;
     var host =
       document.getElementById('cdp-products-root-' + sectionId) ||
       (modal && modal.querySelector('[data-cdp-products-root]'));
     if (!host) return;
-    panelApi.mount({ host: host, design: currentDesign });
+
+    function doMount() {
+      var panelApi = window.CreatorDesignProductsPanel;
+      if (!panelApi || typeof panelApi.mount !== 'function') return;
+      panelApi.mount({ host: host, design: currentDesign });
+    }
+
+    if (window.CreatorDesignProductsPanel && typeof window.CreatorDesignProductsPanel.mount === 'function') {
+      doMount();
+      return;
+    }
+    ensureProductsPanelScript()
+      .then(doMount)
+      .catch(function (err) {
+        console.warn('[CreatorDesignPreviewModal] products panel load failed', err);
+      });
   }
 
   function unmountProductsPanel() {
@@ -4917,6 +5042,14 @@
         var btn = e.target.closest('[data-cdp-tab]');
         if (!btn) return;
         setActiveTab(btn.getAttribute('data-cdp-tab'));
+      });
+    }
+    bindProductsGridStudioOpen();
+
+    if (!window.__cdpCreationsBundleRetryBound) {
+      window.__cdpCreationsBundleRetryBound = true;
+      window.addEventListener('creator-creations-bundle-ready', function () {
+        if (activeTab === 'products') mountProductsPanelIfNeeded();
       });
     }
 
