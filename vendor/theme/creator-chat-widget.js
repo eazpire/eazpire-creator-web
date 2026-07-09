@@ -1896,6 +1896,10 @@
     _panelOpen = true;
     updateMobileViewportMetrics();
     try { document.body.dispatchEvent(new CustomEvent("creator-chat-open")); } catch (e) {}
+    if (window.__EAZ_DEFER_EAZY_VOICE__) {
+      window.__EAZ_DEFER_EAZY_VOICE__ = false;
+      loadEazyVoiceMap();
+    }
     bindOutsidePanelClose();
     showBackdrop();
     fetchRateLimit();
@@ -2986,7 +2990,14 @@
     initUploadModal();
     initChatUpload();
     if (window.EazyFunctions) window.EazyFunctions.init();
-    loadEazyVoiceMap();
+    var pathInit = window.location.pathname || "";
+    var onShopHomeInit = pathInit === "/" || pathInit === "";
+    // Shop homepage: defer voice map until panel open (saves a network hop on first paint).
+    if (onShopHomeInit) {
+      window.__EAZ_DEFER_EAZY_VOICE__ = true;
+    } else {
+      loadEazyVoiceMap();
+    }
 
     setTimeout(resumeGenCompleted, 1500);
 
@@ -3000,6 +3011,9 @@
         var onCreatorDashboard =
           path.indexOf("/pages/creator-dashboard") !== -1 ||
           path.indexOf("/pages/creator-overview") !== -1;
+        var onShopHome = path === "/" || path === "";
+        // Shop homepage: skip auto-open network storm (list-jobs + notif count) — user opens chat manually.
+        if (onShopHome) return;
 
         // Restore active save job: after reload, show jobs view so user can see save progress
         try {

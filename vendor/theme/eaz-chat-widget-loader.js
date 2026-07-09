@@ -70,6 +70,15 @@
 
   window.eazLoadCreatorChatBundle = loadChatBundle;
 
+  function isShopHome() {
+    try {
+      return document.documentElement.classList.contains('eaz-switched') &&
+        (window.location.pathname === '/' || window.location.pathname === '');
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function scheduleIdleWarmup() {
     try {
       if (localStorage.getItem('eazy_docked') === 'true') {
@@ -77,13 +86,16 @@
         return;
       }
     } catch (_e) {}
+    // Shop homepage: do not warm the ~22-script chat bundle during first paint —
+    // load only on toggle hover/click so create-from-scratch can use the network.
+    if (isShopHome()) return;
     var run = function () {
       loadChatBundle().catch(function () {});
     };
     if (typeof requestIdleCallback === 'function') {
-      requestIdleCallback(run, { timeout: 15000 });
+      requestIdleCallback(run, { timeout: 45000 });
     } else {
-      setTimeout(run, 10000);
+      setTimeout(run, 30000);
     }
   }
 

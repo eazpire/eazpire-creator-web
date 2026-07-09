@@ -161,6 +161,7 @@
         asset("creator-creations-library-actions.js"),
         asset("creator-creations-bulk.js"),
         asset("creator-design-products-modal.js"),
+        asset("creator-design-studio-modal.js"),
         asset("creator-design-preview-modal.js"),
         asset("creator-creations-screen.js"),
       ];

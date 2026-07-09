@@ -96,6 +96,7 @@
   var btnUpdate = null;
   var btnSelAll = null;
   var btnDeselAll = null;
+  var selectedCountEl = null;
   var statusEl = null;
   var hintEl = null;
   var filterTabsEl = null;
@@ -423,6 +424,7 @@
     btnUpdate = root.querySelector('#cdp-products-update-design-preview') || root.querySelector('[id^="cdp-products-update-"]');
     btnSelAll = root.querySelector('#cdp-products-select-all-design-preview') || root.querySelector('[id^="cdp-products-select-all-"]');
     btnDeselAll = root.querySelector('#cdp-products-deselect-all-design-preview') || root.querySelector('[id^="cdp-products-deselect-all-"]');
+    selectedCountEl = root.querySelector('#cdp-products-selected-count-design-preview') || root.querySelector('[id^="cdp-products-selected-count-"]');
     statusEl = root.querySelector('#cdp-products-status-design-preview') || root.querySelector('[id^="cdp-products-status-"]');
     hintEl = root.querySelector('.cdp-modal__products-hint');
     filterTabsEl = root.querySelector('#cdp-products-filter-tabs-design-preview') || root.querySelector('[id^="cdp-products-filter-tabs-"]');
@@ -440,6 +442,7 @@
         syncCheckboxInputs();
         refreshAllCardBadges();
         refreshDirty();
+        refreshSelectedCount();
       });
     }
     if (btnDeselAll) {
@@ -449,6 +452,7 @@
         syncCheckboxInputs();
         refreshAllCardBadges();
         refreshDirty();
+        refreshSelectedCount();
       });
     }
     if (btnUpdate) {
@@ -474,7 +478,6 @@
     if (btnSelAll) btnSelAll.textContent = M.designProductsSelectAll || 'Select all';
     if (btnDeselAll) btnDeselAll.textContent = M.designProductsDeselectAll || 'Deselect all';
     if (btnUpdate) btnUpdate.textContent = M.designProductsUpdate || 'Update';
-    if (hintEl) hintEl.textContent = M.designProductsEligibleHint || 'Eligible for auto-publish';
     if (gridEl) gridEl.setAttribute('aria-label', M.designProductsGridAria || '');
     if (filterTabsEl) {
       var q = filterTabsEl.querySelector('[data-cdp-products-filter="queue"]');
@@ -511,10 +514,32 @@
     }
   }
 
+  function refreshSelectedCount() {
+    if (!selectedCountEl) return;
+    var keys = visibleKeys();
+    var n = 0;
+    for (var i = 0; i < keys.length; i++) {
+      if (ctxChecked[keys[i]]) n += 1;
+    }
+    var tpl = Mi().designProductsSelectedCount || '{{count}} selected';
+    selectedCountEl.textContent = tpl.replace('{{count}}', String(n)).replace('{count}', String(n));
+  }
+
   function refreshDirty() {
     var nextExcluded = computeExcludedKeys(ctxEligibleKeys, ctxChecked, ctxMetaExcludedSnapshot);
     var dirty = !arraysEqualJson(nextExcluded, ctxInitialExcluded);
     if (btnUpdate) btnUpdate.disabled = !dirty || !ctxEligibleKeys.length;
+    refreshSelectedCount();
+  }
+
+  function openStudioForProduct(productKey, productMeta) {
+    if (!ctxDesign || !productKey) return;
+    var api = window.CreatorDesignStudioModal;
+    if (api && typeof api.open === 'function') {
+      api.open(ctxDesign, productKey, productMeta || null);
+      return;
+    }
+    console.warn('[creator-design-products-modal] CreatorDesignStudioModal.open unavailable');
   }
 
   function renderGrid(products) {
@@ -525,17 +550,36 @@
       var p = products[i];
       var pk = String(p.product_key || '').trim();
       if (!pk) continue;
-      var card = document.createElement('label');
+      var card = document.createElement('div');
       card.className = 'creator-design-products-modal__card';
+      card.setAttribute('role', 'group');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('data-product-key', pk);
       var cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.setAttribute('data-product-key', pk);
       cb.checked = !!ctxChecked[pk];
+      cb.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+      });
       cb.addEventListener('change', function (ev) {
+        ev.stopPropagation();
         var key = ev.target.getAttribute('data-product-key');
         ctxChecked[key] = !!ev.target.checked;
         refreshCardBadges(ev.target.closest('.creator-design-products-modal__card'), key);
         refreshDirty();
+      });
+      card.addEventListener('click', function (ev) {
+        if (ev.target && ev.target.closest && ev.target.closest('input[type="checkbox"]')) return;
+        if (ev.target && ev.target.closest && ev.target.closest('.creator-design-products-modal__card-nav')) return;
+        openStudioForProduct(pk, p);
+      });
+      card.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          if (ev.target && ev.target.matches && ev.target.matches('input[type="checkbox"]')) return;
+          ev.preventDefault();
+          openStudioForProduct(pk, p);
+        }
       });
       var media = document.createElement('div');
       media.className = 'creator-design-products-modal__card-media';
