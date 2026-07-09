@@ -11,8 +11,10 @@
   var btnClose = null;
   var btnReset = null;
   var viewerEl = null;
+  var viewerStageEl = null;
   var mockImgEl = null;
   var viewerEmptyEl = null;
+  var printZoneEl = null;
   var designWrapEl = null;
   var designImgEl = null;
   var designChromeEl = null;
@@ -89,7 +91,7 @@
 
   function ensurePrintArea() {
     draft.print_area = draft.print_area || {};
-    draft.print_area.primary = draft.print_area.primary || { x: 0.5, y: 0.5, scale: 1, rotate: 0 };
+    draft.print_area.primary = draft.print_area.primary || { x: 0.5, y: 0.5, scale: 0.95, rotate: 0 };
     draft.print_area.additional = draft.print_area.additional || [];
     draft.print_area.pattern = draft.print_area.pattern || {
       enabled: false,
@@ -120,8 +122,10 @@
     btnClose = root.querySelector('#cds-btn-close');
     btnReset = root.querySelector('#cds-btn-reset');
     viewerEl = root.querySelector('#cds-viewer');
+    viewerStageEl = root.querySelector('#cds-viewer-stage');
     mockImgEl = root.querySelector('#cds-mock-img');
     viewerEmptyEl = root.querySelector('#cds-viewer-empty');
+    printZoneEl = root.querySelector('#cds-print-zone');
     designWrapEl = root.querySelector('#cds-design-wrap');
     designImgEl = root.querySelector('#cds-primary-design');
     designChromeEl = root.querySelector('#cds-design-chrome');
@@ -222,8 +226,48 @@
     return '';
   }
 
+  function parseZoneFrac(f) {
+    var def = { l: 0.28, t: 0.22, w: 0.44, h: 0.48 };
+    if (!f || typeof f !== 'object') return def;
+    var l = Number(f.l != null ? f.l : f.left);
+    var t = Number(f.t != null ? f.t : f.top);
+    var w = Number(f.w != null ? f.w : f.width);
+    var h = Number(f.h != null ? f.h : f.height);
+    if (![l, t, w, h].every(function (x) { return Number.isFinite(x); })) return def;
+    return { l: l, t: t, w: w, h: h };
+  }
+
+  function currentZoneFrac() {
+    var mock = mockEntryForPosition(currentPosition());
+    return parseZoneFrac(mock && mock.print_area_frac);
+  }
+
+  function measureMockRect() {
+    if (!viewerStageEl || !mockImgEl || mockImgEl.hidden || !mockImgEl.naturalWidth) {
+      var sw = viewerStageEl ? viewerStageEl.clientWidth : (viewerEl ? viewerEl.clientWidth : 1);
+      var sh = viewerStageEl ? viewerStageEl.clientHeight : (viewerEl ? viewerEl.clientHeight : 1);
+      return { left: 0, top: 0, width: Math.max(1, sw), height: Math.max(1, sh) };
+    }
+    var nw = mockImgEl.naturalWidth;
+    var nh = mockImgEl.naturalHeight;
+    var cw = mockImgEl.clientWidth || mockImgEl.offsetWidth;
+    var ch = mockImgEl.clientHeight || mockImgEl.offsetHeight;
+    if (!cw || !ch) {
+      cw = viewerStageEl.clientWidth || 1;
+      ch = viewerStageEl.clientHeight || 1;
+      var scale = Math.min(cw / nw, ch / nh);
+      cw = nw * scale;
+      ch = nh * scale;
+    }
+    return { left: 0, top: 0, width: cw, height: ch };
+  }
+
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
   function applyTransformToDesignImg() {
-    if (!designImgEl) return;
+    if (!designImgEl || !designWrapEl || !printZoneEl) return;
     var tr = activeTransform();
     var x = Number(tr.x);
     var y = Number(tr.y);
@@ -231,30 +275,52 @@
     var rot = Number(tr.rotate);
     if (!Number.isFinite(x)) x = 0.5;
     if (!Number.isFinite(y)) y = 0.5;
-    if (!Number.isFinite(scale) || scale <= 0) scale = 1;
+    if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
     if (!Number.isFinite(rot)) rot = 0;
-    designImgEl.style.left = (x * 100) + '%';
-    designImgEl.style.top = (y * 100) + '%';
-    designImgEl.style.transform = 'translate(-50%, -50%) scale(' + scale + ') rotate(' + rot + 'deg)';
-    syncDesignChrome();
+
+    var zoneW = printZoneEl.offsetWidth || 1;
+    var zoneH = printZoneEl.offsetHeight || 1;
+    var designW = Math.max(24, zoneW * scale);
+    designImgEl.style.width = designW + 'px';
+    designImgEl.style.height = 'auto';
+    designImgEl.style.maxWidth = 'none';
+    designImgEl.style.maxHeight = 'none';
+    designImgEl.style.left = '';
+    designImgEl.style.top = '';
+    designImgEl.style.transform = '';
+
+    // x/y are center position inside the print zone (0..1)
+    var dx = (x - 0.5) * zoneW;
+    var dy = (y - 0.5) * zoneH;
+    designWrapEl.style.left = '50%';
+    designWrapEl.style.top = '50%';
+    designWrapEl.style.transform =
+      'translate(-50%, -50%) translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg)';
+
+    if (designChromeEl) {
+      designChromeEl.hidden = false;
+      designChromeEl.classList.add('is-visible');
+      designChromeEl.style.left = '0';
+      designChromeEl.style.top = '0';
+      designChromeEl.style.width = '100%';
+      designChromeEl.style.height = '100%';
+    }
+  }
+
+  function layoutPrintZone() {
+    if (!printZoneEl || !viewerStageEl) return;
+    var fr = measureMockRect();
+    var z = currentZoneFrac();
+    printZoneEl.style.left = (z.l * fr.width) + 'px';
+    printZoneEl.style.top = (z.t * fr.height) + 'px';
+    printZoneEl.style.width = (z.w * fr.width) + 'px';
+    printZoneEl.style.height = (z.h * fr.height) + 'px';
+    printZoneEl.hidden = false;
+    applyTransformToDesignImg();
   }
 
   function syncDesignChrome() {
-    if (!designChromeEl || !designImgEl || !viewerEl) return;
-    if (!designImgEl.offsetParent && designImgEl.hidden) {
-      designChromeEl.hidden = true;
-      designChromeEl.classList.remove('is-visible');
-      return;
-    }
-    var vr = viewerEl.getBoundingClientRect();
-    var dr = designImgEl.getBoundingClientRect();
-    if (!vr.width || !dr.width) return;
-    designChromeEl.hidden = false;
-    designChromeEl.classList.add('is-visible');
-    designChromeEl.style.left = (dr.left - vr.left) + 'px';
-    designChromeEl.style.top = (dr.top - vr.top) + 'px';
-    designChromeEl.style.width = dr.width + 'px';
-    designChromeEl.style.height = dr.height + 'px';
+    // Chrome is sized to the design wrap via CSS (100%); nothing to sync.
   }
 
   function renderPositionBar() {
@@ -292,26 +358,42 @@
     var mock = mockEntryForPosition(pos);
     var mockUrl = mock && (mock.editor_mock_url || mock.clean_mock_url || mock.mock_url);
 
+    function afterMockReady() {
+      layoutPrintZone();
+    }
+
     if (mockImgEl && mockUrl) {
       mockImgEl.hidden = false;
-      mockImgEl.src = mockUrl;
       if (viewerEmptyEl) viewerEmptyEl.hidden = true;
+      if (mockImgEl.src !== mockUrl) {
+        mockImgEl.onload = afterMockReady;
+        mockImgEl.src = mockUrl;
+      } else if (mockImgEl.complete && mockImgEl.naturalWidth) {
+        afterMockReady();
+      } else {
+        mockImgEl.onload = afterMockReady;
+      }
     } else {
       if (mockImgEl) mockImgEl.hidden = true;
       if (viewerEmptyEl) viewerEmptyEl.hidden = false;
+      if (printZoneEl) printZoneEl.hidden = true;
     }
 
     var url = designUrlForAsset(activeAssetKey);
     if (designWrapEl && designImgEl && url) {
       designWrapEl.hidden = false;
       designImgEl.hidden = false;
-      designImgEl.src = url;
-      designImgEl.onload = function () {
-        applyTransformToDesignImg();
-      };
-      applyTransformToDesignImg();
+      if (designImgEl.src !== url) {
+        designImgEl.onload = function () {
+          layoutPrintZone();
+        };
+        designImgEl.src = url;
+      } else {
+        layoutPrintZone();
+      }
     } else if (designWrapEl) {
       designWrapEl.hidden = true;
+      if (designChromeEl) designChromeEl.hidden = true;
     }
   }
 
@@ -619,81 +701,82 @@
   }
 
   function bindViewerTransform() {
-    if (!designImgEl || designImgEl.__cdsTransformBound) return;
-    designImgEl.__cdsTransformBound = true;
+    if (!designWrapEl || designWrapEl.__cdsTransformBound) return;
+    designWrapEl.__cdsTransformBound = true;
 
-    designImgEl.addEventListener('pointerdown', function (e) {
-      if (e.button !== 0) return;
-      transformDrag = {
-        mode: 'move',
-        startX: e.clientX,
-        startY: e.clientY,
-        startTr: Object.assign({}, activeTransform()),
-        viewerRect: viewerEl.getBoundingClientRect(),
-      };
-      designImgEl.setPointerCapture(e.pointerId);
-      e.preventDefault();
-    });
-
-    designImgEl.addEventListener('pointermove', function (e) {
-      if (!transformDrag || transformDrag.mode !== 'move') return;
-      var vr = transformDrag.viewerRect;
-      var dx = (e.clientX - transformDrag.startX) / vr.width;
-      var dy = (e.clientY - transformDrag.startY) / vr.height;
+    function onPointerMove(e) {
+      if (!transformDrag) return;
       var tr = activeTransform();
-      tr.x = Math.max(0.05, Math.min(0.95, transformDrag.startTr.x + dx));
-      tr.y = Math.max(0.05, Math.min(0.95, transformDrag.startTr.y + dy));
+      var zoneW = printZoneEl ? printZoneEl.offsetWidth || 1 : 1;
+      var zoneH = printZoneEl ? printZoneEl.offsetHeight || 1 : 1;
+
+      if (transformDrag.mode === 'move') {
+        var dx = (e.clientX - transformDrag.startX) / zoneW;
+        var dy = (e.clientY - transformDrag.startY) / zoneH;
+        tr.x = clamp(transformDrag.startTr.x + dx, 0.05, 0.95);
+        tr.y = clamp(transformDrag.startTr.y + dy, 0.05, 0.95);
+      } else if (transformDrag.mode === 'rotate') {
+        var c = transformDrag.center;
+        var ang = Math.atan2(e.clientY - c.cy, e.clientX - c.cx);
+        var ang0 = Math.atan2(transformDrag.startY - c.cy, transformDrag.startX - c.cx);
+        tr.rotate = clamp(transformDrag.startTr.rotate + ((ang - ang0) * 180) / Math.PI, -180, 180);
+      } else if (transformDrag.mode === 'scale') {
+        var startDist = Math.hypot(transformDrag.startX - transformDrag.center.cx, transformDrag.startY - transformDrag.center.cy);
+        var curDist = Math.hypot(e.clientX - transformDrag.center.cx, e.clientY - transformDrag.center.cy);
+        var ratio = startDist > 1 ? curDist / startDist : 1;
+        tr.scale = clamp(transformDrag.startTr.scale * ratio, 0.15, 2.5);
+      }
       applyTransformToDesignImg();
       syncTransformInputs();
       markDirtyUi();
-    });
+    }
 
-    designImgEl.addEventListener('pointerup', function () {
+    function onPointerUp() {
       transformDrag = null;
-    });
-    designImgEl.addEventListener('pointercancel', function () {
-      transformDrag = null;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    }
+
+    function startDrag(mode, e, rz) {
+      if (e.button != null && e.button !== 0) return;
+      var rect = designWrapEl.getBoundingClientRect();
+      transformDrag = {
+        mode: mode,
+        rz: rz || null,
+        startX: e.clientX,
+        startY: e.clientY,
+        startTr: Object.assign({}, activeTransform()),
+        center: {
+          cx: rect.left + rect.width / 2,
+          cy: rect.top + rect.height / 2,
+        },
+      };
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    designWrapEl.addEventListener('pointerdown', function (e) {
+      if (e.target && e.target.closest && e.target.closest('[data-cds-rz]')) return;
+      startDrag('move', e);
     });
 
     if (designChromeEl && !designChromeEl.__cdsChromeBound) {
       designChromeEl.__cdsChromeBound = true;
       designChromeEl.querySelectorAll('[data-cds-rz]').forEach(function (handle) {
         handle.addEventListener('pointerdown', function (e) {
-          e.stopPropagation();
-          if (e.button !== 0) return;
           var mode = handle.getAttribute('data-cds-rz');
-          transformDrag = {
-            mode: mode === 'rotate' ? 'rotate' : 'scale',
-            rz: mode,
-            startX: e.clientX,
-            startY: e.clientY,
-            startTr: Object.assign({}, activeTransform()),
-            center: designImgEl.getBoundingClientRect(),
-          };
-          handle.setPointerCapture(e.pointerId);
-          e.preventDefault();
+          startDrag(mode === 'rotate' ? 'rotate' : 'scale', e, mode);
         });
-        handle.addEventListener('pointermove', function (e) {
-          if (!transformDrag) return;
-          var tr = activeTransform();
-          if (transformDrag.mode === 'rotate') {
-            var c = transformDrag.center;
-            var ang = Math.atan2(e.clientY - (c.top + c.height / 2), e.clientX - (c.left + c.width / 2));
-            var ang0 = Math.atan2(transformDrag.startY - (c.top + c.height / 2), transformDrag.startX - (c.left + c.width / 2));
-            tr.rotate = transformDrag.startTr.rotate + ((ang - ang0) * 180) / Math.PI;
-          } else {
-            var dist = Math.hypot(e.clientX - transformDrag.startX, e.clientY - transformDrag.startY);
-            tr.scale = Math.max(0.15, Math.min(3, transformDrag.startTr.scale + dist / 400));
-          }
-          applyTransformToDesignImg();
-          syncTransformInputs();
-          markDirtyUi();
-        });
-        handle.addEventListener('pointerup', function () { transformDrag = null; });
       });
     }
 
-    window.addEventListener('resize', syncDesignChrome);
+    window.addEventListener('resize', function () {
+      if (isOpen) layoutPrintZone();
+    });
   }
 
   function openAddMenu() {
@@ -870,7 +953,7 @@
     draft.print_area = {
       position: positions[0] || 'front',
       color_key: resolveColorKey() || colors[0] || 'default',
-      primary: { x: 0.5, y: 0.5, scale: 1, rotate: 0 },
+      primary: { x: 0.5, y: 0.5, scale: 0.95, rotate: 0 },
       additional: [],
       public_additional: null,
       alignment: { h: 'center', v: 'center' },

@@ -26,20 +26,24 @@
       <section class="cds-viewer-column" aria-label="Product mock preview">
         <div class="cds-viewer-pos-bar" id="cds-pos-bar" role="tablist" aria-label="Print position"></div>
         <div class="cds-viewer" id="cds-viewer">
-          <img class="cds-viewer__mock" id="cds-mock-img" alt="" hidden decoding="async">
-          <p class="cds-viewer__empty" id="cds-viewer-empty" hidden data-t="creator.design_studio.no_mock">No mock available for this view.</p>
-          <div class="cds-viewer__design-wrap" id="cds-design-wrap" hidden>
-            <img class="cds-viewer__design" id="cds-primary-design" alt="" decoding="async">
-            <div class="cds-design-chrome" id="cds-design-chrome" hidden>
-              <span class="cds-design-handle cds-design-handle--nw" data-cds-rz="nw"></span>
-              <span class="cds-design-handle cds-design-handle--n" data-cds-rz="n"></span>
-              <span class="cds-design-handle cds-design-handle--ne" data-cds-rz="ne"></span>
-              <span class="cds-design-handle cds-design-handle--e" data-cds-rz="e"></span>
-              <span class="cds-design-handle cds-design-handle--se" data-cds-rz="se"></span>
-              <span class="cds-design-handle cds-design-handle--s" data-cds-rz="s"></span>
-              <span class="cds-design-handle cds-design-handle--sw" data-cds-rz="sw"></span>
-              <span class="cds-design-handle cds-design-handle--w" data-cds-rz="w"></span>
-              <span class="cds-design-handle cds-design-handle--rotate" data-cds-rz="rotate"></span>
+          <div class="cds-viewer__stage" id="cds-viewer-stage">
+            <img class="cds-viewer__mock" id="cds-mock-img" alt="" hidden decoding="async">
+            <p class="cds-viewer__empty" id="cds-viewer-empty" hidden data-t="creator.design_studio.no_mock">No mock available for this view.</p>
+            <div class="cds-print-zone" id="cds-print-zone" hidden>
+              <div class="cds-viewer__design-wrap" id="cds-design-wrap" hidden>
+                <img class="cds-viewer__design" id="cds-primary-design" alt="" decoding="async" draggable="false">
+                <div class="cds-design-chrome" id="cds-design-chrome" hidden>
+                  <span class="cds-design-handle cds-design-handle--nw" data-cds-rz="nw"></span>
+                  <span class="cds-design-handle cds-design-handle--n" data-cds-rz="n"></span>
+                  <span class="cds-design-handle cds-design-handle--ne" data-cds-rz="ne"></span>
+                  <span class="cds-design-handle cds-design-handle--e" data-cds-rz="e"></span>
+                  <span class="cds-design-handle cds-design-handle--se" data-cds-rz="se"></span>
+                  <span class="cds-design-handle cds-design-handle--s" data-cds-rz="s"></span>
+                  <span class="cds-design-handle cds-design-handle--sw" data-cds-rz="sw"></span>
+                  <span class="cds-design-handle cds-design-handle--w" data-cds-rz="w"></span>
+                  <span class="cds-design-handle cds-design-handle--rotate" data-cds-rz="rotate"></span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
