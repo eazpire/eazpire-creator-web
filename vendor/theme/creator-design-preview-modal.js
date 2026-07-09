@@ -407,6 +407,12 @@
     var prevTab = activeTab;
     activeTab = next;
     if (!modal) return;
+    // Leaving Edit (or switching screens) must drop eyedropper / pan capture.
+    if (prevTab === 'edit' && next !== 'edit') {
+      teardownColorPickInteraction({ clearBusy: true });
+      resetAllViewerZooms();
+      clearColorPreview();
+    }
     modal.querySelectorAll('[data-cdp-tab]').forEach(function (btn) {
       var on = String(btn.getAttribute('data-cdp-tab') || '') === next;
       btn.classList.toggle('is-active', on);
@@ -1640,6 +1646,18 @@
     
     setupEventListeners();
     initCarousel();
+
+    // Boot safety: never leave a closed modal / body lock capturing the page.
+    // Pick mode is never restored from storage.
+    try {
+      if (modal) {
+        modal.setAttribute('aria-hidden', 'true');
+        modal.classList.remove('cdp-modal--open', 'creator-modal--open', 'creator-modal');
+        modal.style.pointerEvents = '';
+      }
+      setCropBusyVisible(false);
+      forceClearBodyInteractionLocks();
+    } catch (_) {}
     
     // Initially disable save button
     if (btnSave) {
@@ -1671,29 +1689,78 @@
       });
     }
 
-    // Escape key — nested overlays first, then crop mode, then main modal
+    // Escape key — nested overlays first, then pick/crop modes, then main modal
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal && modal.getAttribute('aria-hidden') === 'false') {
-        e.preventDefault();
-        if (viewerBgModalOpen) {
-          closeViewerBgModal();
-          return;
-        }
-        if (editHistoryOpen) {
-          closeEditHistoryModal();
-          return;
-        }
-        if (editDesignColorsOpen) {
-          closeDesignColorsModal();
-          return;
-        }
-        if (manualCropActive) {
-          exitManualCropMode();
-          return;
-        }
-        closeModal(false); // false = nicht forciert, prüfe auf ungespeicherte Änderungen
+      if (e.key !== 'Escape') return;
+      if (!modal || modal.getAttribute('aria-hidden') !== 'false') return;
+      e.preventDefault();
+      if (viewerBgModalOpen) {
+        closeViewerBgModal();
+        return;
       }
+      if (editHistoryOpen) {
+        closeEditHistoryModal();
+        return;
+      }
+      if (editDesignColorsOpen) {
+        closeDesignColorsModal();
+        return;
+      }
+      if (manualCropActive) {
+        exitManualCropMode();
+        return;
+      }
+      // Exit eyedropper / replace-target pick without closing the whole modal.
+      if (
+        activeTab === 'edit' &&
+        (editToolMode === 'eyedropper' || editPickReplaceTarget || editBrushPainting || viewerPanDrag)
+      ) {
+        teardownColorPickInteraction();
+        if (editActiveTool === 'remove_color') {
+          // Stay on Remove Color, but leave pick mode (user can re-enter via Choose Color).
+          editToolMode = null;
+          updateEditToolModeUi();
+          updateReplaceTargetUi();
+        } else if (editActiveTool === 'remove_object') {
+          enableBrushMode();
+        }
+        return;
+      }
+      closeModal(false); // false = nicht forciert, prüfe auf ungespeicherte Änderungen
     });
+
+    // Hard stop for stuck pick/pan/busy overlays when the page is hidden or unloaded.
+    // Pick mode is never restored from storage.
+    if (!window.__cdpPreviewPageLifecycleBound) {
+      window.__cdpPreviewPageLifecycleBound = true;
+      var onPickModeLifecycleTeardown = function (opts) {
+        opts = opts || {};
+        try {
+          teardownColorPickInteraction({ clearBusy: true });
+          if (viewerPanDrag) endViewerPanDrag();
+          if (manualCropActive) exitManualCropMode();
+          if (opts.closeModal && modal && modal.getAttribute('aria-hidden') === 'false') {
+            doCloseModal({ forceUnlock: true });
+          }
+        } catch (_) {}
+      };
+      window.addEventListener('pagehide', function () {
+        onPickModeLifecycleTeardown({ closeModal: true });
+      });
+      window.addEventListener('pageshow', function (ev) {
+        // bfcache restore must not leave a stuck pick overlay / body lock.
+        if (ev && ev.persisted) {
+          onPickModeLifecycleTeardown({ closeModal: true });
+          forceClearBodyInteractionLocks();
+        }
+      });
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') {
+          // Tab switch: drop pick/pan capture only — keep modal open.
+          onPickModeLifecycleTeardown({ closeModal: false });
+        }
+      });
+    }
 
     ensureManualCropDocListeners();
     if (modal) {
@@ -1807,6 +1874,8 @@
 
     exitManualCropMode();
     unmountProductsPanel();
+    // Never resume a previous pick/pan session (not stored; also clear any leftover UI).
+    teardownColorPickInteraction({ clearBusy: true });
 
     // Initialize visibility state - will be set properly in updateDesignInfo, but set defaults here
     originalVisibility = null;
@@ -1823,6 +1892,7 @@
     editPaletteColors = [];
     editBgMode = 'complete';
     editToolMode = null;
+    editPickReplaceTarget = false;
     editActiveTool = 'crop';
     editMaskDirty = false;
     editSourceImageData = null;
@@ -2662,8 +2732,9 @@
     opts = opts || {};
     editToolMode = null;
     editBrushPainting = false;
+    editPickReplaceTarget = false;
     if (editImageWrap) {
-      editImageWrap.classList.remove('is-eyedropper', 'is-brushing');
+      editImageWrap.classList.remove('is-eyedropper', 'is-brushing', 'is-panning');
     }
     if (!opts.keepMask) {
       // mask cleared only when explicitly requested
@@ -2671,7 +2742,73 @@
     syncEditMaskCanvasSize();
     syncEditColorCanvasSize();
     updateEditToolModeUi();
+    updateReplaceTargetUi();
     updateEditActionButtons();
+    syncPipetteSwatchFromSelection();
+  }
+
+  /**
+   * Fully exit color-pick / eyedropper / brush interaction so nothing can
+   * keep capturing pointers or leave a blocking cursor/overlay behind.
+   * Never persisted — pick mode must not survive reload or modal close.
+   */
+  function teardownColorPickInteraction(opts) {
+    opts = opts || {};
+    editBrushPainting = false;
+    editPickReplaceTarget = false;
+    if (viewerPanDrag) endViewerPanDrag();
+    if (manualCropDrag) {
+      try {
+        var cap = manualCropDrag.captureEl;
+        if (cap && cap.releasePointerCapture && manualCropDrag.pointerId != null) {
+          cap.releasePointerCapture(manualCropDrag.pointerId);
+        }
+      } catch (_) {}
+      manualCropDrag = null;
+    }
+    if (editImageWrap && editImageWrap.releasePointerCapture && viewerPanDrag) {
+      // pan drag already ended above; keep class cleanup below
+    }
+    if (opts.resetTool !== false) {
+      editToolMode = null;
+      if (editImageWrap) {
+        editImageWrap.classList.remove('is-eyedropper', 'is-brushing', 'is-panning');
+      }
+    } else if (editImageWrap) {
+      editImageWrap.classList.remove('is-panning');
+    }
+    if (opts.clearBusy) {
+      if (editOpBusy) setEditBusy(false);
+      else setCropBusyVisible(false);
+    }
+    updateEditToolModeUi();
+    updateReplaceTargetUi();
+    updateEditActionButtons();
+    syncPipetteSwatchFromSelection();
+  }
+
+  function forceClearBodyInteractionLocks() {
+    try {
+      if (window.CreatorModalPhysics && typeof window.CreatorModalPhysics.forceUnlockBodyScroll === 'function') {
+        window.CreatorModalPhysics.forceUnlockBodyScroll();
+      } else {
+        preventBodyScroll(false);
+        var body = document.body;
+        if (body) {
+          body.style.position = '';
+          body.style.top = '';
+          body.style.width = '';
+          body.style.overflow = '';
+          body.style.touchAction = '';
+          body.style.pointerEvents = '';
+          body.style.cursor = '';
+        }
+        if (document.documentElement) {
+          document.documentElement.style.pointerEvents = '';
+          document.documentElement.style.cursor = '';
+        }
+      }
+    } catch (_) {}
   }
 
   function updateEditToolModeUi() {
@@ -2706,6 +2843,10 @@
       });
     }
     if (manualCropActive && editActiveTool !== 'crop') exitManualCropMode();
+    if (prevTool !== editActiveTool) {
+      // Tool switch always drops replace-target pick + pan drag leftovers.
+      teardownColorPickInteraction({ resetTool: false });
+    }
     if (prevTool !== editActiveTool && editPendingPreviewVersion) {
       clearPendingEditPreview({ restoreBaseline: true, silent: true });
     }
@@ -4079,6 +4220,8 @@
       renderEditColorChips();
       clearEditMask(true);
       clearColorPreview();
+      teardownColorPickInteraction();
+      if (editActiveTool === 'remove_color') enableEyedropperMode();
       showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
       await loadEditVersions();
       try {
@@ -4401,7 +4544,10 @@
         pickColorFromEditImage(e.clientX, e.clientY);
       });
       // Live pipette swatch: preview pixel color under cursor while choosing colors.
+      // Scoped to editImageWrap only — never document-level (must not block the page).
       editImageWrap.addEventListener('pointermove', function (e) {
+        if (!modal || modal.getAttribute('aria-hidden') !== 'false') return;
+        if (activeTab !== 'edit') return;
         if (editOpBusy || manualCropActive || editHistoryOpen || editDesignColorsOpen || viewerBgModalOpen) return;
         if (editActiveTool !== 'remove_color') return;
         if (editToolMode !== 'eyedropper' && !editPickReplaceTarget) return;
@@ -4413,6 +4559,7 @@
         if (hoverColor) updatePipetteSwatch(hoverColor);
       });
       editImageWrap.addEventListener('pointerleave', function () {
+        if (!modal || modal.getAttribute('aria-hidden') !== 'false') return;
         if (editActiveTool !== 'remove_color') return;
         syncPipetteSwatchFromSelection();
       });
@@ -6107,7 +6254,8 @@
   }
   
   // Actually close the modal (without checking for unsaved changes)
-  function doCloseModal() {
+  function doCloseModal(opts) {
+    opts = opts || {};
     // Ensure we have modal reference
     if (!modal) {
       if (!getDOMElements()) return;
@@ -6119,13 +6267,35 @@
     closeDesignColorsModal();
     closeViewerBgModal();
     clearColorPreview();
+    teardownColorPickInteraction({ clearBusy: true });
     resetEditToolModes();
+    resetAllViewerZooms();
     clearEditMask(true);
     setDrawerOpen(false);
-    setActiveTab('overview');
+    // Avoid setActiveTab('overview') re-entering edit tool setup while closing.
+    activeTab = 'overview';
+    if (modal) {
+      modal.querySelectorAll('[data-cdp-tab]').forEach(function (btn) {
+        var on = String(btn.getAttribute('data-cdp-tab') || '') === 'overview';
+        btn.classList.toggle('is-active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      modal.querySelectorAll('[data-cdp-panel]').forEach(function (panel) {
+        var on = String(panel.getAttribute('data-cdp-panel') || '') === 'overview';
+        panel.classList.toggle('is-active', on);
+        if (on) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+      });
+      if (modalShell) modalShell.classList.remove('cdp-modal--products-tab');
+    }
     draftMeta = null;
     metaDirty = false;
     metaHistoryOpen = false;
+    editPickReplaceTarget = false;
+    editToolMode = null;
+    editActiveTool = 'crop';
+    editPickedColors = [];
+    editOpBusy = false;
 
     // Remove focus from any focused element within modal before hiding
     // This prevents accessibility warnings about aria-hidden on focused elements
@@ -6140,9 +6310,13 @@
       window.CreatorModalPhysics.removeModalScrollLock(modal);
     }
 
-    preventBodyScroll(false);
+    if (opts.forceUnlock) {
+      forceClearBodyInteractionLocks();
+    } else {
+      preventBodyScroll(false);
+    }
 
-    // Hide modal - multiple ways to ensure it's hidden
+    // Hide modal - multiple ways to ensure it's hidden and never blocks the page
     modal.setAttribute('aria-hidden', 'true');
     
     // ✅ TODO 1: Creator-Modal Klassen entfernen
@@ -6151,11 +6325,16 @@
       modal.classList.remove('creator-modal');
       modal.classList.remove('cdp-modal--open');
     }
+    if (modalShell) {
+      modalShell.classList.remove('cdp-modal--crop-busy');
+    }
+    setCropBusyVisible(false);
     
     // Reset inline styles (remove them to let CSS take over)
     modal.style.display = '';
     modal.style.visibility = '';
     modal.style.opacity = '';
+    modal.style.pointerEvents = '';
     
     // Clear content
     if (modalImage) modalImage.src = '';
@@ -6170,6 +6349,7 @@
     hasUnsavedChanges = false;
     isSaving = false;
     resetDeleteButtonState();
+    syncPipetteSwatchFromSelection();
   }
   
   // Show confirmation dialog when closing with unsaved changes

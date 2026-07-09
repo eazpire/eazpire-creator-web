@@ -24,6 +24,14 @@
     opacity: 1 !important;
   }
 
+  /* Closed modal must never capture clicks (even if an open class is stuck). */
+  #creatorDesignPreviewModal-design-preview[aria-hidden="true"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
   /* Modal Container — dark shell aligned with Products picker */
   .cdp-modal {
     position: relative;
@@ -2591,9 +2599,16 @@
     justify-content: center;
     background: rgba(2, 6, 23, 0.55);
     backdrop-filter: blur(3px);
+    pointer-events: none;
   }
   .cdp-modal__crop-busy.cdp-modal__crop-busy--visible {
     display: flex;
+    pointer-events: auto;
+  }
+  .cdp-modal__crop-busy[hidden],
+  .cdp-modal__crop-busy:not(.cdp-modal__crop-busy--visible) {
+    display: none !important;
+    pointer-events: none !important;
   }
   .cdp-modal__crop-busy-card {
     display: flex;
