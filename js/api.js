@@ -27,12 +27,25 @@
       init.body = JSON.stringify(options.body);
     }
 
-    const res = await fetch(url.toString(), init);
-    const data = await res.json().catch(function () {
-      return {};
-    });
+    const isGet = method === "GET" || method === "HEAD";
+    const maxAttempts = isGet ? 3 : 1;
+    let res = null;
+    let data = {};
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt > 1) {
+        await new Promise(function (r) {
+          setTimeout(r, 160 * attempt * attempt);
+        });
+      }
+      res = await fetch(url.toString(), init);
+      data = await res.json().catch(function () {
+        return {};
+      });
+      const retryable = isGet && attempt < maxAttempts && res.status >= 502 && res.status <= 504;
+      if (!retryable) break;
+    }
     if (!res.ok && !data.error) data.error = "request_failed";
-    data._status = res.status;
+    data._status = res ? res.status : 0;
     return data;
   }
 

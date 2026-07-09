@@ -1737,7 +1737,10 @@
       badgeBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        if (typeof window.openCreatorDesignProductsModal === 'function') {
+        var previewApi = window.CreatorDesignPreviewModal;
+        if (previewApi && typeof previewApi.open === 'function') {
+          previewApi.open(design, { screen: 'products' });
+        } else if (typeof window.openCreatorDesignProductsModal === 'function') {
           window.openCreatorDesignProductsModal({ design: design });
         }
       });
@@ -2216,7 +2219,10 @@
           prodBadge.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            if (typeof window.openCreatorDesignProductsModal === 'function') {
+            var previewApi = window.CreatorDesignPreviewModal;
+            if (previewApi && typeof previewApi.open === 'function') {
+              previewApi.open(design, { screen: 'products' });
+            } else if (typeof window.openCreatorDesignProductsModal === 'function') {
               window.openCreatorDesignProductsModal({ design: design });
             }
           });
@@ -2975,6 +2981,17 @@
     ) {
       loadDesigns(true);
     }
+  });
+
+  // Desktop↔mobile shell remount (creator-desktop.js) moves #creatorCreations between hosts.
+  // Re-apply grid after the node is visible again so cards are not left in a hidden desktop host.
+  window.addEventListener('creator:shell-layout-change', function () {
+    applyCreationsGridPerfConstants();
+    if (!designsLoadedOnce) return;
+    try {
+      if (currentTab === 'designs') renderDesignsGrid();
+      else if (currentTab === 'products' && productsLoadedOnce) renderProductsGrid();
+    } catch (_layoutRender) {}
   });
 
   if (document.readyState === 'loading') {

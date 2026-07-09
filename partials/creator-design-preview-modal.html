@@ -24,19 +24,19 @@
     opacity: 1 !important;
   }
 
-  /* Modal Container */
+  /* Modal Container — dark shell aligned with Products picker */
   .cdp-modal {
     position: relative;
-    background: rgba(192, 132, 252, 0.18);
+    background: rgba(22, 22, 26, 0.98);
     border-radius: 12px;
-    border: 1px solid #020617;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     max-width: 1100px;
     width: 100%;
     max-height: 72vh; /* mobile überschreibt */
     height: auto;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
     overflow: hidden;
   }
 
@@ -274,6 +274,86 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /* Viewer zoom / pan — top-right inside image wrappers */
+  .cdp-modal__zoom-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  .cdp-modal__zoom-chrome {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .cdp-modal__zoom-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(245, 158, 11, 0.55);
+    background: rgba(15, 23, 42, 0.88);
+    color: #fbbf24;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex: 0 0 auto;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .cdp-modal__zoom-btn:hover:not(:disabled) {
+    background: rgba(245, 158, 11, 0.22);
+  }
+
+  .cdp-modal__zoom-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .cdp-modal__zoom-btn.is-active {
+    background: rgba(245, 158, 11, 0.32);
+    border-color: #fbbf24;
+    color: #fff;
+  }
+
+  .cdp-modal__zoom-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cdp-modal__image-wrapper.is-pan-mode,
+  .cdp-modal__edit-image-wrap.is-pan-mode {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .cdp-modal__image-wrapper.is-pan-mode.is-panning,
+  .cdp-modal__edit-image-wrap.is-pan-mode.is-panning {
+    cursor: grabbing;
+  }
+
+  .cdp-modal__image-wrapper.is-pan-mode .cdp-modal__edit-mask-canvas,
+  .cdp-modal__edit-image-wrap.is-pan-mode .cdp-modal__edit-mask-canvas,
+  .cdp-modal__image-wrapper.is-pan-mode .cdp-manual-crop-layer--active,
+  .cdp-modal__edit-image-wrap.is-pan-mode .cdp-manual-crop-layer--active {
+    pointer-events: none !important;
   }
 
   .cdp-manual-crop-layer {
@@ -742,8 +822,8 @@
   }
 
   .cdp-modal__nav-item.is-active {
-    color: #f59e0b;
-    background: rgba(245, 158, 11, 0.2);
+    color: #fb923c;
+    background: rgba(249, 115, 22, 0.22);
   }
 
   .cdp-modal__nav-label {
@@ -999,11 +1079,11 @@
     -webkit-user-drag: none;
   }
 
-  .cdp-modal__edit-image-wrap.is-eyedropper {
+  .cdp-modal__edit-image-wrap.is-eyedropper:not(.is-pan-mode) {
     cursor: crosshair;
   }
 
-  .cdp-modal__edit-image-wrap.is-brushing {
+  .cdp-modal__edit-image-wrap.is-brushing:not(.is-pan-mode) {
     cursor: crosshair;
   }
 
@@ -1014,6 +1094,7 @@
     aspect-ratio: auto;
   }
 
+  .cdp-modal__edit-image-wrap .cdp-modal__zoom-stage,
   .cdp-modal__edit-image-wrap .cdp-modal__image-frame {
     width: 100%;
     height: 100%;
@@ -1022,9 +1103,9 @@
   .cdp-modal__edit-mask-canvas,
   .cdp-modal__edit-color-canvas {
     position: absolute;
-    inset: 8px;
-    width: calc(100% - 16px);
-    height: calc(100% - 16px);
+    inset: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
     z-index: 2;
   }
@@ -1049,11 +1130,26 @@
     z-index: 3;
   }
 
-  .cdp-modal__edit-history-btn {
+  /* Edit Design: bg swatch + Edit History clustered bottom-right */
+  .cdp-modal__edit-viewer-chrome {
     position: absolute;
     right: 12px;
     bottom: 12px;
     z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cdp-modal__edit-viewer-chrome .cdp-modal__viewer-bg-btn {
+    position: static;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+  }
+
+  .cdp-modal__edit-history-btn {
+    position: static;
     width: 40px;
     height: 40px;
     border-radius: 10px;
@@ -1065,6 +1161,7 @@
     justify-content: center;
     cursor: pointer;
     padding: 0;
+    flex: 0 0 auto;
   }
 
   .cdp-modal__edit-history-btn:hover {
@@ -1995,6 +2092,187 @@
     font-size: 12px;
   }
 
+  /* Products panel (integrated from design-products modal) */
+  .cdp-modal__panel--products.is-active {
+    display: flex !important;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .cdp-modal__products {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    background: rgba(22, 22, 26, 0.98);
+  }
+
+  .cdp-modal__products-head {
+    padding: 14px 16px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__products-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .cdp-modal__products-hint {
+    margin: 6px 0 8px;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .cdp-modal__products-filter-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px 0;
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__products-filter-tabs[hidden] {
+    display: none !important;
+  }
+
+  .cdp-modal__products-filter-tab {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.78);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .cdp-modal__products-filter-tab:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .cdp-modal__products-filter-tab.is-active {
+    color: #fff;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border-color: transparent;
+  }
+
+  .cdp-modal__products-toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 16px 8px;
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__products-btn-secondary {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+
+  .cdp-modal__products-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .cdp-modal__products-status {
+    min-height: 1.2em;
+    padding: 0 16px;
+    font-size: 0.82rem;
+    color: rgba(249, 115, 22, 0.95);
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 12px;
+    padding: 10px 16px 16px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 160px;
+    scrollbar-width: thin;
+    scrollbar-color: #f97316 #141418;
+  }
+
+  .cdp-modal__products-grid::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .cdp-modal__products-grid::-webkit-scrollbar-track {
+    background: #141418;
+    border-radius: 4px;
+  }
+
+  .cdp-modal__products-grid::-webkit-scrollbar-thumb {
+    background: #f97316;
+    border-radius: 4px;
+  }
+
+  .cdp-modal__products-grid::-webkit-scrollbar-thumb:hover {
+    background: #fb923c;
+  }
+
+  .cdp-modal__products-footer {
+    padding: 12px 16px 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__products-btn-primary {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+  }
+
+  .cdp-modal__products-btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .cdp-modal--products-tab .cdp-modal__footer {
+    display: none;
+  }
+
+  .cdp-modal__products .creator-design-products-modal__card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .cdp-modal__products .creator-design-products-modal__card input[type='checkbox'] {
+    accent-color: #f97316;
+  }
+
+  @media (min-width: 901px) {
+    .cdp-modal__products-grid {
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+      gap: 14px;
+      padding: 12px 18px 18px;
+    }
+  }
+
   /* Mobile Styles */
   @media (max-width: 900px) {
     #creatorDesignPreviewModal-design-preview {
@@ -2519,6 +2797,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h8"></path><path d="M8 9h2"></path></svg>
           <span class="cdp-modal__nav-label" data-t="creator.preview_modal.tab_metadata">Metadata</span>
         </button>
+        <button type="button" class="cdp-modal__nav-item" data-cdp-tab="products" aria-label="Products" title="Products">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+          <span class="cdp-modal__nav-label" data-t="creator.preview_modal.tab_products">Products</span>
+        </button>
       </nav>
 
       <div class="cdp-modal__main">
@@ -2529,30 +2811,61 @@
         <!-- Linke Seite: Design Bild + Design Prompt -->
         <div class="cdp-modal__desktop-left">
           <div class="cdp-modal__image-wrapper">
-            <div class="cdp-modal__image-frame">
-              <img
-                id="cdp-modal-image-design-preview"
-                class="cdp-modal__image"
-                src=""
-                alt="Design"
-              >
-              <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
-                <div class="cdp-manual-crop-shade" data-band="top"></div>
-                <div class="cdp-manual-crop-shade" data-band="left"></div>
-                <div class="cdp-manual-crop-shade" data-band="right"></div>
-                <div class="cdp-manual-crop-shade" data-band="bottom"></div>
-                <div class="cdp-manual-crop-inner">
-                  <div class="cdp-manual-crop-border" aria-hidden="true"></div>
-                  <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
-                  <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
-                  <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
-                  <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
-                  <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
-                  <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
-                  <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
-                  <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+            <div class="cdp-modal__zoom-stage" data-cdp-zoom-stage="overview-desktop">
+              <div class="cdp-modal__image-frame">
+                <img
+                  id="cdp-modal-image-design-preview"
+                  class="cdp-modal__image"
+                  src=""
+                  alt="Design"
+                >
+                <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
+                  <div class="cdp-manual-crop-shade" data-band="top"></div>
+                  <div class="cdp-manual-crop-shade" data-band="left"></div>
+                  <div class="cdp-manual-crop-shade" data-band="right"></div>
+                  <div class="cdp-manual-crop-shade" data-band="bottom"></div>
+                  <div class="cdp-manual-crop-inner">
+                    <div class="cdp-manual-crop-border" aria-hidden="true"></div>
+                    <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
+                    <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+                  </div>
                 </div>
               </div>
+            </div>
+            <div class="cdp-modal__zoom-chrome" data-cdp-zoom-chrome="overview-desktop">
+              <button
+                type="button"
+                class="cdp-modal__zoom-btn"
+                data-cdp-zoom-out
+                aria-label="Zoom out"
+                title="Zoom out"
+              >−</button>
+              <button
+                type="button"
+                class="cdp-modal__zoom-btn"
+                data-cdp-zoom-in
+                aria-label="Zoom in"
+                title="Zoom in"
+              >+</button>
+              <button
+                type="button"
+                class="cdp-modal__zoom-btn"
+                data-cdp-pan-toggle
+                aria-label="Move image"
+                title="Move image"
+                aria-pressed="false"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M8 12h8M12 8v8"/>
+                  <path d="M5 9l-2 3 2 3M19 9l2 3-2 3M9 5l3-2 3 2M9 19l3 2 3-2"/>
+                </svg>
+              </button>
             </div>
             <button
               type="button"
@@ -2624,30 +2937,61 @@
         <div class="cdp-modal__carousel">
           <div class="cdp-modal__carousel-slide cdp-modal__carousel-slide--active" data-slide="0">
             <div class="cdp-modal__image-wrapper">
-              <div class="cdp-modal__image-frame">
-                <img
-                  id="cdp-modal-image-mobile-design-preview"
-                  class="cdp-modal__image"
-                  src=""
-                  alt="Design"
-                >
-                <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
-                  <div class="cdp-manual-crop-shade" data-band="top"></div>
-                  <div class="cdp-manual-crop-shade" data-band="left"></div>
-                  <div class="cdp-manual-crop-shade" data-band="right"></div>
-                  <div class="cdp-manual-crop-shade" data-band="bottom"></div>
-                  <div class="cdp-manual-crop-inner">
-                    <div class="cdp-manual-crop-border" aria-hidden="true"></div>
-                    <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
-                    <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
-                    <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
-                    <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
-                    <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
-                    <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
-                    <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
-                    <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+              <div class="cdp-modal__zoom-stage" data-cdp-zoom-stage="overview-mobile">
+                <div class="cdp-modal__image-frame">
+                  <img
+                    id="cdp-modal-image-mobile-design-preview"
+                    class="cdp-modal__image"
+                    src=""
+                    alt="Design"
+                  >
+                  <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
+                    <div class="cdp-manual-crop-shade" data-band="top"></div>
+                    <div class="cdp-manual-crop-shade" data-band="left"></div>
+                    <div class="cdp-manual-crop-shade" data-band="right"></div>
+                    <div class="cdp-manual-crop-shade" data-band="bottom"></div>
+                    <div class="cdp-manual-crop-inner">
+                      <div class="cdp-manual-crop-border" aria-hidden="true"></div>
+                      <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
+                      <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
+                      <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
+                      <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
+                      <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
+                      <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
+                      <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
+                      <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+                    </div>
                   </div>
                 </div>
+              </div>
+              <div class="cdp-modal__zoom-chrome" data-cdp-zoom-chrome="overview-mobile">
+                <button
+                  type="button"
+                  class="cdp-modal__zoom-btn"
+                  data-cdp-zoom-out
+                  aria-label="Zoom out"
+                  title="Zoom out"
+                >−</button>
+                <button
+                  type="button"
+                  class="cdp-modal__zoom-btn"
+                  data-cdp-zoom-in
+                  aria-label="Zoom in"
+                  title="Zoom in"
+                >+</button>
+                <button
+                  type="button"
+                  class="cdp-modal__zoom-btn"
+                  data-cdp-pan-toggle
+                  aria-label="Move image"
+                  title="Move image"
+                  aria-pressed="false"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 12h8M12 8v8"/>
+                    <path d="M5 9l-2 3 2 3M19 9l2 3-2 3M9 5l3-2 3 2M9 19l3 2 3-2"/>
+                  </svg>
+                </button>
               </div>
               <button
                 type="button"
@@ -2706,30 +3050,61 @@
       <!-- Mobile: Einfaches Layout für hochgeladene Designs -->
       <div class="cdp-modal__mobile-container cdp-modal__mobile-container--uploaded">
         <div class="cdp-modal__image-wrapper">
-          <div class="cdp-modal__image-frame">
-            <img
-              id="cdp-modal-image-mobile-uploaded-design-preview"
-              class="cdp-modal__image"
-              src=""
-              alt="Design"
-            >
-            <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
-              <div class="cdp-manual-crop-shade" data-band="top"></div>
-              <div class="cdp-manual-crop-shade" data-band="left"></div>
-              <div class="cdp-manual-crop-shade" data-band="right"></div>
-              <div class="cdp-manual-crop-shade" data-band="bottom"></div>
-              <div class="cdp-manual-crop-inner">
-                <div class="cdp-manual-crop-border" aria-hidden="true"></div>
-                <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
-                <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
-                <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
-                <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
-                <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
-                <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
-                <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
-                <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+          <div class="cdp-modal__zoom-stage" data-cdp-zoom-stage="overview-mobile-uploaded">
+            <div class="cdp-modal__image-frame">
+              <img
+                id="cdp-modal-image-mobile-uploaded-design-preview"
+                class="cdp-modal__image"
+                src=""
+                alt="Design"
+              >
+              <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
+                <div class="cdp-manual-crop-shade" data-band="top"></div>
+                <div class="cdp-manual-crop-shade" data-band="left"></div>
+                <div class="cdp-manual-crop-shade" data-band="right"></div>
+                <div class="cdp-manual-crop-shade" data-band="bottom"></div>
+                <div class="cdp-manual-crop-inner">
+                  <div class="cdp-manual-crop-border" aria-hidden="true"></div>
+                  <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
+                  <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+                </div>
               </div>
             </div>
+          </div>
+          <div class="cdp-modal__zoom-chrome" data-cdp-zoom-chrome="overview-mobile-uploaded">
+            <button
+              type="button"
+              class="cdp-modal__zoom-btn"
+              data-cdp-zoom-out
+              aria-label="Zoom out"
+              title="Zoom out"
+            >−</button>
+            <button
+              type="button"
+              class="cdp-modal__zoom-btn"
+              data-cdp-zoom-in
+              aria-label="Zoom in"
+              title="Zoom in"
+            >+</button>
+            <button
+              type="button"
+              class="cdp-modal__zoom-btn"
+              data-cdp-pan-toggle
+              aria-label="Move image"
+              title="Move image"
+              aria-pressed="false"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 12h8M12 8v8"/>
+                <path d="M5 9l-2 3 2 3M19 9l2 3-2 3M9 5l3-2 3 2M9 19l3 2 3-2"/>
+              </svg>
+            </button>
           </div>
           <button
             type="button"
@@ -2750,45 +3125,88 @@
             <div class="cdp-modal__edit-layout">
               <div class="cdp-modal__edit-preview">
                 <div class="cdp-modal__image-wrapper cdp-modal__edit-image-wrap" id="cdp-edit-image-wrap-design-preview">
-                  <div class="cdp-modal__image-frame">
-                    <img
-                      id="cdp-edit-image-design-preview"
-                      class="cdp-modal__image cdp-modal__edit-image"
-                      src=""
-                      alt="Edit Design"
-                    >
-                    <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
-                      <div class="cdp-manual-crop-shade" data-band="top"></div>
-                      <div class="cdp-manual-crop-shade" data-band="left"></div>
-                      <div class="cdp-manual-crop-shade" data-band="right"></div>
-                      <div class="cdp-manual-crop-shade" data-band="bottom"></div>
-                      <div class="cdp-manual-crop-inner">
-                        <div class="cdp-manual-crop-border" aria-hidden="true"></div>
-                        <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
-                        <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
-                        <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
-                        <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
-                        <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
-                        <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
-                        <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
-                        <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+                  <div class="cdp-modal__zoom-stage" data-cdp-zoom-stage="edit">
+                    <div class="cdp-modal__image-frame">
+                      <img
+                        id="cdp-edit-image-design-preview"
+                        class="cdp-modal__image cdp-modal__edit-image"
+                        src=""
+                        alt="Edit Design"
+                      >
+                      <div class="cdp-manual-crop-layer" hidden aria-hidden="true">
+                        <div class="cdp-manual-crop-shade" data-band="top"></div>
+                        <div class="cdp-manual-crop-shade" data-band="left"></div>
+                        <div class="cdp-manual-crop-shade" data-band="right"></div>
+                        <div class="cdp-manual-crop-shade" data-band="bottom"></div>
+                        <div class="cdp-manual-crop-inner">
+                          <div class="cdp-manual-crop-border" aria-hidden="true"></div>
+                          <span class="cdp-manual-crop-handle" data-handle="nw" role="presentation" aria-hidden="true"></span>
+                          <span class="cdp-manual-crop-handle" data-handle="ne" role="presentation" aria-hidden="true"></span>
+                          <span class="cdp-manual-crop-handle" data-handle="sw" role="presentation" aria-hidden="true"></span>
+                          <span class="cdp-manual-crop-handle" data-handle="se" role="presentation" aria-hidden="true"></span>
+                          <span class="cdp-manual-crop-handle" data-handle="n" role="presentation" aria-hidden="true"></span>
+                          <span class="cdp-manual-crop-handle" data-handle="e" role="presentation" aria-hidden="true"></span>
+                          <span class="cdp-manual-crop-handle" data-handle="s" role="presentation" aria-hidden="true"></span>
+                          <span class="cdp-manual-crop-handle" data-handle="w" role="presentation" aria-hidden="true"></span>
+                        </div>
                       </div>
                     </div>
+                    <canvas id="cdp-edit-color-canvas-design-preview" class="cdp-modal__edit-color-canvas" aria-hidden="true"></canvas>
+                    <canvas id="cdp-edit-mask-canvas-design-preview" class="cdp-modal__edit-mask-canvas" aria-hidden="true"></canvas>
                   </div>
-                  <canvas id="cdp-edit-color-canvas-design-preview" class="cdp-modal__edit-color-canvas" aria-hidden="true"></canvas>
-                  <canvas id="cdp-edit-mask-canvas-design-preview" class="cdp-modal__edit-mask-canvas" aria-hidden="true"></canvas>
-                  <button
-                    type="button"
-                    id="cdp-edit-history-open-design-preview"
-                    class="cdp-modal__edit-history-btn"
-                    aria-label="Edit History"
-                    title="Edit History"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="9"/>
-                      <path d="M12 7v5l3 2"/>
-                    </svg>
-                  </button>
+                  <div class="cdp-modal__zoom-chrome" data-cdp-zoom-chrome="edit">
+                    <button
+                      type="button"
+                      class="cdp-modal__zoom-btn"
+                      data-cdp-zoom-out
+                      aria-label="Zoom out"
+                      title="Zoom out"
+                    >−</button>
+                    <button
+                      type="button"
+                      class="cdp-modal__zoom-btn"
+                      data-cdp-zoom-in
+                      aria-label="Zoom in"
+                      title="Zoom in"
+                    >+</button>
+                    <button
+                      type="button"
+                      class="cdp-modal__zoom-btn"
+                      data-cdp-pan-toggle
+                      aria-label="Move image"
+                      title="Move image"
+                      aria-pressed="false"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M8 12h8M12 8v8"/>
+                        <path d="M5 9l-2 3 2 3M19 9l2 3-2 3M9 5l3-2 3 2M9 19l3 2 3-2"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="cdp-modal__edit-viewer-chrome">
+                    <button
+                      type="button"
+                      id="cdp-edit-viewer-bg-btn-design-preview"
+                      class="cdp-modal__viewer-bg-btn"
+                      aria-label="Preview background"
+                      title="Preview background"
+                      data-cdp-viewer-bg-open
+                    >
+                      <span class="cdp-modal__viewer-bg-swatch" aria-hidden="true"></span>
+                    </button>
+                    <button
+                      type="button"
+                      id="cdp-edit-history-open-design-preview"
+                      class="cdp-modal__edit-history-btn"
+                      aria-label="Edit History"
+                      title="Edit History"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 7v5l3 2"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2816,7 +3234,10 @@
                     <button type="button" class="cdp-modal__edit-seg-btn is-active" data-cdp-bg-mode="complete" id="cdp-edit-bg-mode-complete-design-preview" data-t="creator.preview_modal.edit_remove_bg_complete">Completely</button>
                     <button type="button" class="cdp-modal__edit-seg-btn" data-cdp-bg-mode="outside" id="cdp-edit-bg-mode-outside-design-preview" data-t="creator.preview_modal.edit_remove_bg_outside">Outside the design</button>
                   </div>
-                  <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-remove-bg-apply-design-preview" data-t="creator.preview_modal.edit_remove_bg_apply">Apply</button>
+                  <div class="cdp-modal__edit-btn-row">
+                    <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-remove-bg-preview-design-preview" data-t="creator.preview_modal.edit_preview">Preview</button>
+                    <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-remove-bg-apply-design-preview" data-t="creator.preview_modal.edit_remove_bg_apply">Apply</button>
+                  </div>
                 </div>
 
                 <div class="cdp-modal__edit-tool-panel" data-cdp-edit-panel="remove_color" id="cdp-edit-panel-color-design-preview" hidden>
@@ -2866,6 +3287,13 @@
                   </div>
                   <div class="cdp-modal__edit-btn-row">
                     <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--ghost cdp-modal__edit-clear-mask" id="cdp-edit-clear-mask-design-preview" hidden data-t="creator.preview_modal.edit_clear_mask">Clear mask</button>
+                    <button
+                      type="button"
+                      class="cdp-modal__edit-btn"
+                      id="cdp-edit-remove-object-preview-design-preview"
+                      hidden
+                      data-t="creator.preview_modal.edit_preview"
+                    >Preview</button>
                     <button
                       type="button"
                       class="cdp-modal__edit-btn cdp-modal__edit-btn--primary"
@@ -2930,6 +3358,54 @@
               </button>
             </div>
             <div id="cdp-meta-history-list-design-preview" class="cdp-modal__history" aria-label="Snapshot history"></div>
+          </div>
+        </div>
+
+        <div class="cdp-modal__panel cdp-modal__panel--products" data-cdp-panel="products" hidden>
+          <div
+            class="cdp-modal__products"
+            id="cdp-products-root-design-preview"
+            data-cdp-products-root
+          >
+            <div class="cdp-modal__products-head">
+              <h4 class="cdp-modal__products-title" data-t="creator.creations.design_products_modal_title">Products</h4>
+              <p class="cdp-modal__products-hint" data-t="creator.creations.design_products_eligible_hint">Eligible for auto-publish</p>
+            </div>
+            <div
+              class="cdp-modal__products-filter-tabs"
+              id="cdp-products-filter-tabs-design-preview"
+              role="tablist"
+              aria-label="Filter products by status"
+              hidden
+            >
+              <button
+                type="button"
+                class="cdp-modal__products-filter-tab is-active"
+                data-cdp-products-filter="queue"
+                role="tab"
+                aria-selected="true"
+              >Queue</button>
+              <button
+                type="button"
+                class="cdp-modal__products-filter-tab"
+                data-cdp-products-filter="active"
+                role="tab"
+                aria-selected="false"
+              >Active</button>
+            </div>
+            <div class="cdp-modal__products-toolbar">
+              <button type="button" class="cdp-modal__products-btn-secondary" id="cdp-products-select-all-design-preview">Select all</button>
+              <button type="button" class="cdp-modal__products-btn-secondary" id="cdp-products-deselect-all-design-preview">Deselect all</button>
+            </div>
+            <div class="cdp-modal__products-status" id="cdp-products-status-design-preview" role="status"></div>
+            <div
+              class="cdp-modal__products-grid creator-design-products-modal__grid"
+              id="cdp-products-grid-design-preview"
+              aria-label="Choose which catalog products may auto-publish for this design"
+            ></div>
+            <div class="cdp-modal__products-footer">
+              <button type="button" class="cdp-modal__products-btn-primary" id="cdp-products-update-design-preview" disabled>Update</button>
+            </div>
           </div>
         </div>
       </div>

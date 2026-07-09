@@ -186,7 +186,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=8";
+      s.src = src + "?v=9";
       s.defer = true;
       s.setAttribute("data-portal-runtime", src);
       s.onload = function () {

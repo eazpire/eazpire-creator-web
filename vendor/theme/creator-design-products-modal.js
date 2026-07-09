@@ -1,5 +1,6 @@
 /**
- * Creations — modal to choose which catalog products may auto-publish for a design.
+ * Creations — catalog products picker (auto-publish scope).
+ * Embedded in Design Preview Modal (products panel). Card media helpers also used by library activate flow.
  * Persists publish_excluded_product_keys via op=update-design; queues unpublish for removed published keys.
  */
 (function () {
@@ -33,13 +34,6 @@
       return window.CreatorHeroRegions.resolveCatalogRegion();
     }
     return 'EU';
-  }
-
-  function escapeHtml(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/"/g, '&quot;');
   }
 
   function parseExcludedFromMeta(meta) {
@@ -89,25 +83,36 @@
     return JSON.stringify(a) === JSON.stringify(b);
   }
 
-  var overlay = null;
-  var dialogEl = null;
+  function resolveLibraryStatus(d) {
+    if (!d) return 'inactive';
+    var ls = d.library_status;
+    if (ls === 'active' || ls === 'inactive') return ls;
+    var id = d.id != null ? String(d.id).trim() : '';
+    return id !== '' ? 'active' : 'inactive';
+  }
+
+  var hostEl = null;
   var gridEl = null;
   var btnUpdate = null;
-  var btnClose = null;
   var btnSelAll = null;
   var btnDeselAll = null;
   var statusEl = null;
   var hintEl = null;
+  var filterTabsEl = null;
+  var boundHost = null;
 
   var ctxEligibleKeys = [];
   var ctxChecked = {};
   var ctxInitialExcluded = [];
-  /** Snapshot of publish_excluded_product_keys from metadata when modal opened (preserves off-catalog keys). */
+  /** Snapshot of publish_excluded_product_keys from metadata when panel opened (preserves off-catalog keys). */
   var ctxMetaExcludedSnapshot = [];
   var ctxPublishedRows = [];
   /** First published_designs row per product_key (for handle + badge). */
   var ctxPubRowByKey = {};
   var ctxDesign = null;
+  var ctxAllProducts = [];
+  /** 'all' | 'queue' | 'active' — queue/active only for active library designs */
+  var ctxFilter = 'all';
 
   var ROTATION_MS = 1500;
   /** @type {Map<string, number>} product_key -> interval id */
@@ -371,100 +376,117 @@
     }
   }
 
-  function ensureShell() {
-    if (overlay) return;
-    overlay = document.createElement('div');
-    overlay.className = 'creator-design-products-modal-overlay';
-    overlay.setAttribute('hidden', '');
-    overlay.innerHTML =
-      '<div class="creator-design-products-modal" role="dialog" aria-modal="true" aria-labelledby="creator-design-products-modal-title">' +
-      '<div class="creator-design-products-modal__panel">' +
-      '<div class="creator-design-products-modal__head">' +
-      '<h2 id="creator-design-products-modal-title" class="creator-design-products-modal__title"></h2>' +
-      '<button type="button" class="creator-design-products-modal__close" aria-label="">&times;</button>' +
-      '</div>' +
-      '<p class="creator-design-products-modal__hint"></p>' +
-      '<div class="creator-design-products-modal__toolbar">' +
-      '<button type="button" class="creator-design-products-modal__btn-secondary creator-design-products-modal__select-all"></button>' +
-      '<button type="button" class="creator-design-products-modal__btn-secondary creator-design-products-modal__deselect-all"></button>' +
-      '</div>' +
-      '<div class="creator-design-products-modal__status" role="status"></div>' +
-      '<div class="creator-design-products-modal__grid"></div>' +
-      '<div class="creator-design-products-modal__footer">' +
-      '<button type="button" class="creator-design-products-modal__btn-primary creator-design-products-modal__update" disabled></button>' +
-      '</div>' +
-      '</div>' +
-      '</div>';
+  function visibleKeys() {
+    var products = filteredProducts();
+    return products
+      .map(function (p) {
+        return String(p.product_key || '').trim();
+      })
+      .filter(Boolean);
+  }
 
-    document.body.appendChild(overlay);
-    dialogEl = overlay.querySelector('.creator-design-products-modal');
-    gridEl = overlay.querySelector('.creator-design-products-modal__grid');
-    btnUpdate = overlay.querySelector('.creator-design-products-modal__update');
-    btnClose = overlay.querySelector('.creator-design-products-modal__close');
-    btnSelAll = overlay.querySelector('.creator-design-products-modal__select-all');
-    btnDeselAll = overlay.querySelector('.creator-design-products-modal__deselect-all');
-    statusEl = overlay.querySelector('.creator-design-products-modal__status');
-    hintEl = overlay.querySelector('.creator-design-products-modal__hint');
+  function filteredProducts() {
+    if (ctxFilter === 'all') return ctxAllProducts.slice();
+    return ctxAllProducts.filter(function (p) {
+      var pk = String(p.product_key || '').trim();
+      if (!pk) return false;
+      var isOnline = !!ctxPubRowByKey[pk];
+      if (ctxFilter === 'active') return isOnline;
+      if (ctxFilter === 'queue') return !isOnline;
+      return true;
+    });
+  }
 
-    overlay.addEventListener('click', function (e) {
-      if (e.target === overlay) closeModal();
-    });
-    btnClose.addEventListener('click', closeModal);
-    btnSelAll.addEventListener('click', function () {
-      for (var i = 0; i < ctxEligibleKeys.length; i++) ctxChecked[ctxEligibleKeys[i]] = true;
-      syncCheckboxInputs();
-      refreshAllCardBadges();
-      refreshDirty();
-    });
-    btnDeselAll.addEventListener('click', function () {
-      for (var j = 0; j < ctxEligibleKeys.length; j++) ctxChecked[ctxEligibleKeys[j]] = false;
-      syncCheckboxInputs();
-      refreshAllCardBadges();
-      refreshDirty();
-    });
-    btnUpdate.addEventListener('click', onConfirmUpdate);
+  function syncFilterTabsUi() {
+    if (!filterTabsEl) return;
+    var showTabs = resolveLibraryStatus(ctxDesign) === 'active';
+    if (showTabs) {
+      filterTabsEl.removeAttribute('hidden');
+      if (ctxFilter === 'all') ctxFilter = 'queue';
+    } else {
+      filterTabsEl.setAttribute('hidden', '');
+      ctxFilter = 'all';
+    }
+    var tabs = filterTabsEl.querySelectorAll('[data-cdp-products-filter]');
+    for (var i = 0; i < tabs.length; i++) {
+      var tab = tabs[i];
+      var key = String(tab.getAttribute('data-cdp-products-filter') || '');
+      var on = key === ctxFilter;
+      tab.classList.toggle('is-active', on);
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+  }
 
-    document.addEventListener('keydown', function (ev) {
-      if (!overlay || overlay.hasAttribute('hidden')) return;
-      if (ev.key === 'Escape') closeModal();
-    });
+  function cacheHostRefs(root) {
+    hostEl = root;
+    gridEl = root.querySelector('#cdp-products-grid-design-preview') || root.querySelector('[id^="cdp-products-grid-"]') || root.querySelector('.cdp-modal__products-grid');
+    btnUpdate = root.querySelector('#cdp-products-update-design-preview') || root.querySelector('[id^="cdp-products-update-"]');
+    btnSelAll = root.querySelector('#cdp-products-select-all-design-preview') || root.querySelector('[id^="cdp-products-select-all-"]');
+    btnDeselAll = root.querySelector('#cdp-products-deselect-all-design-preview') || root.querySelector('[id^="cdp-products-deselect-all-"]');
+    statusEl = root.querySelector('#cdp-products-status-design-preview') || root.querySelector('[id^="cdp-products-status-"]');
+    hintEl = root.querySelector('.cdp-modal__products-hint');
+    filterTabsEl = root.querySelector('#cdp-products-filter-tabs-design-preview') || root.querySelector('[id^="cdp-products-filter-tabs-"]');
+  }
+
+  function bindHostOnce(root) {
+    if (!root || boundHost === root) return;
+    boundHost = root;
+    cacheHostRefs(root);
+
+    if (btnSelAll) {
+      btnSelAll.addEventListener('click', function () {
+        var keys = visibleKeys();
+        for (var i = 0; i < keys.length; i++) ctxChecked[keys[i]] = true;
+        syncCheckboxInputs();
+        refreshAllCardBadges();
+        refreshDirty();
+      });
+    }
+    if (btnDeselAll) {
+      btnDeselAll.addEventListener('click', function () {
+        var keys = visibleKeys();
+        for (var j = 0; j < keys.length; j++) ctxChecked[keys[j]] = false;
+        syncCheckboxInputs();
+        refreshAllCardBadges();
+        refreshDirty();
+      });
+    }
+    if (btnUpdate) {
+      btnUpdate.addEventListener('click', onConfirmUpdate);
+    }
+    if (filterTabsEl) {
+      filterTabsEl.addEventListener('click', function (e) {
+        var tab = e.target && e.target.closest ? e.target.closest('[data-cdp-products-filter]') : null;
+        if (!tab) return;
+        var next = String(tab.getAttribute('data-cdp-products-filter') || '');
+        if (next !== 'queue' && next !== 'active') return;
+        if (ctxFilter === next) return;
+        ctxFilter = next;
+        syncFilterTabsUi();
+        renderGrid(filteredProducts());
+        refreshDirty();
+      });
+    }
   }
 
   function applyStaticLabels() {
     var M = Mi();
-    if (dialogEl) {
-      var t = dialogEl.querySelector('.creator-design-products-modal__title');
-      if (t)
-        t.textContent =
-          M.designProductsModalTitle || 'Products';
-    }
-    if (btnClose)
-      btnClose.setAttribute(
-        'aria-label',
-        M.designProductsClose || 'Close'
-      );
     if (btnSelAll) btnSelAll.textContent = M.designProductsSelectAll || 'Select all';
     if (btnDeselAll) btnDeselAll.textContent = M.designProductsDeselectAll || 'Deselect all';
     if (btnUpdate) btnUpdate.textContent = M.designProductsUpdate || 'Update';
-    if (hintEl)
-      hintEl.textContent =
-        M.designProductsEligibleHint || 'Eligible for auto-publish';
+    if (hintEl) hintEl.textContent = M.designProductsEligibleHint || 'Eligible for auto-publish';
     if (gridEl) gridEl.setAttribute('aria-label', M.designProductsGridAria || '');
+    if (filterTabsEl) {
+      var q = filterTabsEl.querySelector('[data-cdp-products-filter="queue"]');
+      var a = filterTabsEl.querySelector('[data-cdp-products-filter="active"]');
+      if (q) q.textContent = M.designProductsTabQueue || 'Queue';
+      if (a) a.textContent = M.designProductsTabActive || 'Active';
+    }
   }
 
-  function openModal() {
-    ensureShell();
-    applyStaticLabels();
-    overlay.removeAttribute('hidden');
-    document.documentElement.classList.add('creator-design-products-modal-open');
-  }
-
-  function closeModal() {
-    if (!overlay) return;
+  function resetPanelState() {
     clearAllRotations();
     rotationPausedKeys.clear();
-    overlay.setAttribute('hidden', '');
-    document.documentElement.classList.remove('creator-design-products-modal-open');
     ctxDesign = null;
     ctxEligibleKeys = [];
     ctxChecked = {};
@@ -472,8 +494,11 @@
     ctxMetaExcludedSnapshot = [];
     ctxPublishedRows = [];
     ctxPubRowByKey = {};
+    ctxAllProducts = [];
+    ctxFilter = 'all';
     if (gridEl) gridEl.innerHTML = '';
     if (statusEl) statusEl.textContent = '';
+    if (filterTabsEl) filterTabsEl.setAttribute('hidden', '');
   }
 
   function syncCheckboxInputs() {
@@ -569,6 +594,7 @@
       });
 
       var products = (catData.ok && Array.isArray(catData.products) ? catData.products : []).slice();
+      ctxAllProducts = products;
 
       ctxEligibleKeys = products
         .map(function (x) {
@@ -589,11 +615,23 @@
       ctxPublishedRows = pubData.ok && Array.isArray(pubData.rows) ? pubData.rows : [];
       rebuildPublishedRowMap(ctxPublishedRows);
 
+      syncFilterTabsUi();
+
+      var visible = filteredProducts();
       if (!products.length) {
         if (statusEl) statusEl.textContent = M.designProductsEmpty || 'No products.';
-      } else if (statusEl) statusEl.textContent = '';
+      } else if (!visible.length) {
+        if (statusEl) {
+          statusEl.textContent =
+            ctxFilter === 'active'
+              ? M.designProductsEmptyActive || 'No active products.'
+              : M.designProductsEmptyQueue || 'No queued products.';
+        }
+      } else if (statusEl) {
+        statusEl.textContent = '';
+      }
 
-      renderGrid(products);
+      renderGrid(visible);
       refreshDirty();
     } catch (e) {
       console.warn('[creator-design-products-modal]', e);
@@ -674,11 +712,24 @@
       }
 
       ctxInitialExcluded = nextExcluded.slice();
+      // Refresh published rows map after unpublish enqueue so badges stay accurate
+      rebuildPublishedRowMap(
+        ctxPublishedRows.filter(function (row) {
+          return row && !excludedSet.has(String(row.product_key || '').trim());
+        })
+      );
+      ctxPublishedRows = ctxPublishedRows.filter(function (row) {
+        return row && !excludedSet.has(String(row.product_key || '').trim());
+      });
+      syncFilterTabsUi();
+      renderGrid(filteredProducts());
       refreshDirty();
       if (typeof window.refreshCreationsDesignProductState === 'function') {
         window.refreshCreationsDesignProductState();
       }
-      closeModal();
+      if (statusEl && !statusEl.textContent) {
+        statusEl.textContent = M.designProductsSaved || 'Saved.';
+      }
     } catch (err) {
       console.warn('[creator-design-products-modal] save', err);
       if (statusEl) statusEl.textContent = M.designProductsSaveError || 'Could not save.';
@@ -690,10 +741,16 @@
     }
   }
 
-  window.openCreatorDesignProductsModal = function (opts) {
+  /**
+   * Mount / refresh products UI inside Design Preview products panel.
+   * @param {{ host: Element, design: object }} opts
+   */
+  function mountPanel(opts) {
+    var root = opts && opts.host;
     var design = opts && opts.design;
-    if (!design || !design.id) return;
-    ensureShell();
+    if (!root || !design || !design.id) return;
+    bindHostOnce(root);
+    cacheHostRefs(root);
     applyStaticLabels();
     ctxDesign = design;
     ctxEligibleKeys = [];
@@ -701,9 +758,42 @@
     ctxInitialExcluded = [];
     ctxPublishedRows = [];
     ctxPubRowByKey = {};
-    openModal();
+    ctxAllProducts = [];
+    ctxFilter = resolveLibraryStatus(design) === 'active' ? 'queue' : 'all';
+    if (gridEl) gridEl.innerHTML = '';
+    if (statusEl) statusEl.textContent = '';
+    syncFilterTabsUi();
     loadAndRender(design);
+  }
+
+  function unmountPanel() {
+    resetPanelState();
+  }
+
+  window.CreatorDesignProductsPanel = {
+    mount: mountPanel,
+    unmount: unmountPanel,
+    isMounted: function () {
+      return !!ctxDesign;
+    },
   };
 
-  window.closeCreatorDesignProductsModal = closeModal;
+  /**
+   * Legacy entry: open Design Preview on Products screen (standalone overlay removed).
+   */
+  window.openCreatorDesignProductsModal = function (opts) {
+    var design = opts && opts.design;
+    if (!design || !design.id) return;
+    var api = window.CreatorDesignPreviewModal;
+    if (api && typeof api.open === 'function') {
+      api.open(design, { screen: 'products' });
+      return;
+    }
+    console.warn('[creator-design-products-modal] CreatorDesignPreviewModal.open unavailable');
+  };
+
+  window.closeCreatorDesignProductsModal = function () {
+    var api = window.CreatorDesignPreviewModal;
+    if (api && typeof api.close === 'function') api.close();
+  };
 })();

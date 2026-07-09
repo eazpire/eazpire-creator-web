@@ -310,6 +310,13 @@
   const VIEWER_BG_DEFAULT = '#37375A';
   const VIEWER_BG_STORAGE_KEY = 'eaz_cdp_viewer_bg';
   let viewerBgValue = VIEWER_BG_DEFAULT;
+  const VIEWER_ZOOM_MIN = 1;
+  const VIEWER_ZOOM_MAX = 4;
+  const VIEWER_ZOOM_STEP = 0.25;
+  /** Per-wrapper zoom/pan: key → { scale, x, y, panMode } */
+  let viewerZoomStates = Object.create(null);
+  let viewerPanDrag = null;
+  let viewerZoomDocListenersBound = false;
   let editColorPreviewTimer = null;
   let editColorPreviewRaf = null;
   let editColorPreviewWorking = null; // reused sample canvas
@@ -319,6 +326,10 @@
   let editSourceImageKey = '';
   let editSourceNaturalW = 0;
   let editSourceNaturalH = 0;
+  /** Server preview version shown in viewer but not yet applied to the live design. */
+  let editPendingPreviewVersion = null;
+  let editPendingPreviewTool = null;
+  let editPendingPreviewBaselineUrl = null;
 
   // Get modal element
   function getModal() {
@@ -370,10 +381,30 @@
     if (drawerToggle) drawerToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
+  function mountProductsPanelIfNeeded() {
+    var panelApi = window.CreatorDesignProductsPanel;
+    if (!panelApi || typeof panelApi.mount !== 'function' || !currentDesign) return;
+    var host =
+      document.getElementById('cdp-products-root-' + sectionId) ||
+      (modal && modal.querySelector('[data-cdp-products-root]'));
+    if (!host) return;
+    panelApi.mount({ host: host, design: currentDesign });
+  }
+
+  function unmountProductsPanel() {
+    var panelApi = window.CreatorDesignProductsPanel;
+    if (panelApi && typeof panelApi.unmount === 'function') {
+      panelApi.unmount();
+    }
+  }
+
   function setActiveTab(tabName) {
     getDOMElements();
     var next = String(tabName || 'overview').toLowerCase();
-    if (next !== 'overview' && next !== 'edit' && next !== 'metadata') next = 'overview';
+    if (next !== 'overview' && next !== 'edit' && next !== 'metadata' && next !== 'products') {
+      next = 'overview';
+    }
+    var prevTab = activeTab;
     activeTab = next;
     if (!modal) return;
     modal.querySelectorAll('[data-cdp-tab]').forEach(function (btn) {
@@ -394,6 +425,14 @@
       loadEditVersions();
     }
     if (next === 'metadata') renderMetadataPanel(currentDesign);
+    if (modalShell) {
+      modalShell.classList.toggle('cdp-modal--products-tab', next === 'products');
+    }
+    if (next === 'products') {
+      mountProductsPanelIfNeeded();
+    } else if (prevTab === 'products') {
+      unmountProductsPanel();
+    }
   }
 
   // Get all DOM elements
@@ -654,7 +693,7 @@
     var isChecker = viewerBgValue === 'checker';
     var color = isChecker ? VIEWER_BG_DEFAULT : viewerBgValue;
     var targets = modal.querySelectorAll(
-      '.cdp-modal__panel--overview .cdp-modal__image-wrapper, .cdp-modal__edit-history-slide-wrap'
+      '.cdp-modal__panel--overview .cdp-modal__image-wrapper, .cdp-modal__edit-image-wrap, .cdp-modal__edit-history-slide-wrap'
     );
     targets.forEach(function (el) {
       if (isChecker) {
@@ -780,6 +819,218 @@
         if (e.target === bgModal) closeViewerBgModal();
       });
     }
+  }
+
+  function viewerZoomKeyForWrap(wrap) {
+    if (!wrap) return 'default';
+    if (wrap.id) return wrap.id;
+    var stage = wrap.querySelector('[data-cdp-zoom-stage]');
+    if (stage) return 'stage:' + (stage.getAttribute('data-cdp-zoom-stage') || 'anon');
+    return 'wrap';
+  }
+
+  function getViewerZoomState(wrap) {
+    var key = viewerZoomKeyForWrap(wrap);
+    if (!viewerZoomStates[key]) {
+      viewerZoomStates[key] = { scale: 1, x: 0, y: 0, panMode: false };
+    }
+    return viewerZoomStates[key];
+  }
+
+  function isViewerPanMode(wrap) {
+    return !!(wrap && getViewerZoomState(wrap).panMode);
+  }
+
+  function clampViewerPan(wrap, state) {
+    if (!wrap || !state) return;
+    if (state.scale <= 1.001) {
+      state.x = 0;
+      state.y = 0;
+      return;
+    }
+    var w = wrap.clientWidth || 0;
+    var h = wrap.clientHeight || 0;
+    var maxX = Math.max(0, (w * (state.scale - 1)) / 2);
+    var maxY = Math.max(0, (h * (state.scale - 1)) / 2);
+    state.x = Math.max(-maxX, Math.min(maxX, state.x));
+    state.y = Math.max(-maxY, Math.min(maxY, state.y));
+  }
+
+  function applyViewerZoomTransform(wrap) {
+    if (!wrap) return;
+    var state = getViewerZoomState(wrap);
+    clampViewerPan(wrap, state);
+    var stage = wrap.querySelector('.cdp-modal__zoom-stage');
+    if (stage) {
+      stage.style.transform =
+        'translate(' + state.x + 'px, ' + state.y + 'px) scale(' + state.scale + ')';
+    }
+    wrap.classList.toggle('is-pan-mode', !!state.panMode);
+    wrap.classList.toggle('is-zoomed', state.scale > 1.001);
+    var chrome = wrap.querySelector('.cdp-modal__zoom-chrome');
+    if (chrome) {
+      var outBtn = chrome.querySelector('[data-cdp-zoom-out]');
+      var inBtn = chrome.querySelector('[data-cdp-zoom-in]');
+      var panBtn = chrome.querySelector('[data-cdp-pan-toggle]');
+      if (outBtn) outBtn.disabled = state.scale <= VIEWER_ZOOM_MIN + 0.001;
+      if (inBtn) inBtn.disabled = state.scale >= VIEWER_ZOOM_MAX - 0.001;
+      if (panBtn) {
+        panBtn.classList.toggle('is-active', !!state.panMode);
+        panBtn.setAttribute('aria-pressed', state.panMode ? 'true' : 'false');
+        var panLabel = state.panMode
+          ? tPreview('viewer_pan_mode_active', 'Exit move mode')
+          : tPreview('viewer_pan_mode', 'Move image');
+        panBtn.setAttribute('aria-label', panLabel);
+        panBtn.setAttribute('title', panLabel);
+      }
+    }
+  }
+
+  function setViewerZoom(wrap, nextScale, opts) {
+    opts = opts || {};
+    if (!wrap) return;
+    var state = getViewerZoomState(wrap);
+    var scale = Math.max(VIEWER_ZOOM_MIN, Math.min(VIEWER_ZOOM_MAX, Number(nextScale) || 1));
+    // Round to avoid float drift on repeated +/- clicks.
+    scale = Math.round(scale / VIEWER_ZOOM_STEP) * VIEWER_ZOOM_STEP;
+    state.scale = scale;
+    if (scale <= 1.001) {
+      state.x = 0;
+      state.y = 0;
+      if (!opts.keepPanMode) state.panMode = false;
+    }
+    applyViewerZoomTransform(wrap);
+    if (wrap === editImageWrap) updateEditToolModeUi();
+  }
+
+  function nudgeViewerZoom(wrap, delta) {
+    if (!wrap) return;
+    var state = getViewerZoomState(wrap);
+    setViewerZoom(wrap, state.scale + delta);
+  }
+
+  function setViewerPanMode(wrap, enabled) {
+    if (!wrap) return;
+    var state = getViewerZoomState(wrap);
+    state.panMode = !!enabled;
+    if (!state.panMode && viewerPanDrag && viewerPanDrag.wrap === wrap) {
+      endViewerPanDrag();
+    }
+    applyViewerZoomTransform(wrap);
+    if (wrap === editImageWrap) updateEditToolModeUi();
+  }
+
+  function resetViewerZoom(wrap) {
+    if (!wrap) return;
+    var key = viewerZoomKeyForWrap(wrap);
+    viewerZoomStates[key] = { scale: 1, x: 0, y: 0, panMode: false };
+    wrap.classList.remove('is-panning');
+    applyViewerZoomTransform(wrap);
+  }
+
+  function resetAllViewerZooms() {
+    if (!modal) return;
+    if (viewerPanDrag) endViewerPanDrag();
+    modal.querySelectorAll('.cdp-modal__image-wrapper, .cdp-modal__edit-image-wrap').forEach(function (wrap) {
+      if (wrap.querySelector('.cdp-modal__zoom-stage')) resetViewerZoom(wrap);
+    });
+  }
+
+  function endViewerPanDrag() {
+    if (!viewerPanDrag) return;
+    var wrap = viewerPanDrag.wrap;
+    if (wrap) wrap.classList.remove('is-panning');
+    viewerPanDrag = null;
+  }
+
+  function onViewerPanPointerMove(e) {
+    if (!viewerPanDrag) return;
+    if (viewerPanDrag.pointerId != null && e.pointerId !== viewerPanDrag.pointerId) return;
+    var state = getViewerZoomState(viewerPanDrag.wrap);
+    state.x = viewerPanDrag.startX + (e.clientX - viewerPanDrag.originX);
+    state.y = viewerPanDrag.startY + (e.clientY - viewerPanDrag.originY);
+    applyViewerZoomTransform(viewerPanDrag.wrap);
+    e.preventDefault();
+  }
+
+  function onViewerPanPointerUp(e) {
+    if (!viewerPanDrag) return;
+    if (viewerPanDrag.pointerId != null && e.pointerId !== viewerPanDrag.pointerId) return;
+    var wrap = viewerPanDrag.wrap;
+    if (wrap && wrap.releasePointerCapture) {
+      try { wrap.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+    endViewerPanDrag();
+  }
+
+  function ensureViewerZoomDocListeners() {
+    if (viewerZoomDocListenersBound) return;
+    viewerZoomDocListenersBound = true;
+    document.addEventListener('pointermove', onViewerPanPointerMove);
+    document.addEventListener('pointerup', onViewerPanPointerUp);
+    document.addEventListener('pointercancel', onViewerPanPointerUp);
+  }
+
+  function bindViewerZoomControls() {
+    if (!modal || modal.__cdpZoomBound) return;
+    modal.__cdpZoomBound = true;
+    ensureViewerZoomDocListeners();
+
+    modal.addEventListener('click', function (e) {
+      var zoomBtn = e.target && e.target.closest
+        ? e.target.closest('[data-cdp-zoom-in], [data-cdp-zoom-out], [data-cdp-pan-toggle]')
+        : null;
+      if (!zoomBtn || !modal.contains(zoomBtn)) return;
+      var wrap = zoomBtn.closest('.cdp-modal__image-wrapper, .cdp-modal__edit-image-wrap');
+      if (!wrap) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (zoomBtn.hasAttribute('data-cdp-zoom-in')) {
+        nudgeViewerZoom(wrap, VIEWER_ZOOM_STEP);
+        return;
+      }
+      if (zoomBtn.hasAttribute('data-cdp-zoom-out')) {
+        nudgeViewerZoom(wrap, -VIEWER_ZOOM_STEP);
+        return;
+      }
+      if (zoomBtn.hasAttribute('data-cdp-pan-toggle')) {
+        var state = getViewerZoomState(wrap);
+        if (!state.panMode && state.scale <= 1.001) {
+          // Entering pan without zoom is useless — nudge in first.
+          setViewerZoom(wrap, 1 + VIEWER_ZOOM_STEP);
+        }
+        setViewerPanMode(wrap, !getViewerZoomState(wrap).panMode);
+      }
+    });
+
+    modal.addEventListener('pointerdown', function (e) {
+      var wrap = e.target && e.target.closest
+        ? e.target.closest('.cdp-modal__image-wrapper, .cdp-modal__edit-image-wrap')
+        : null;
+      if (!wrap || !modal.contains(wrap)) return;
+      if (!isViewerPanMode(wrap)) return;
+      if (e.target.closest && (
+        e.target.closest('.cdp-modal__zoom-chrome') ||
+        e.target.closest('.cdp-modal__edit-viewer-chrome') ||
+        e.target.closest('.cdp-modal__viewer-bg-btn') ||
+        e.target.closest('.cdp-modal__edit-history-btn') ||
+        e.target.closest('[data-cdp-viewer-bg-open]')
+      )) return;
+      var state = getViewerZoomState(wrap);
+      if (state.scale <= 1.001) return;
+      viewerPanDrag = {
+        wrap: wrap,
+        pointerId: e.pointerId,
+        originX: e.clientX,
+        originY: e.clientY,
+        startX: state.x,
+        startY: state.y,
+      };
+      wrap.classList.add('is-panning');
+      try { wrap.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
   }
 
   function cropRectsEqual(a, b) {
@@ -1239,6 +1490,8 @@
 
   function onManualCropPointerDown(e) {
     if (!manualCropActive || !manualCropRect) return;
+    var wrap = e.target.closest('.cdp-modal__image-wrapper, .cdp-modal__edit-image-wrap');
+    if (wrap && isViewerPanMode(wrap)) return;
     var layer = e.target.closest('.cdp-manual-crop-layer');
     if (!layer || !layer.classList.contains('cdp-manual-crop-layer--active')) return;
     var frame = layer.closest('.cdp-modal__image-frame');
@@ -1505,6 +1758,7 @@
     }
 
     bindSidebarControls();
+    bindViewerZoomControls();
     bindEditDesignControls();
     setActiveTab('overview');
   }
@@ -1526,8 +1780,8 @@
   }
 
   // Open Modal
-  function openModal(design) {
-    console.log('CreatorDesignPreviewModal.openModal called', { design, modal: !!modal, isInitialized });
+  function openModal(design, options) {
+    console.log('CreatorDesignPreviewModal.openModal called', { design, modal: !!modal, isInitialized, options });
     
     // Ensure initialization
     if (!isInitialized || !modal) {
@@ -1545,8 +1799,14 @@
     }
 
     currentDesign = design;
+    var opts = options && typeof options === 'object' ? options : {};
+    var initialTab = String(opts.screen || opts.tab || 'overview').toLowerCase();
+    if (initialTab !== 'overview' && initialTab !== 'edit' && initialTab !== 'metadata' && initialTab !== 'products') {
+      initialTab = 'overview';
+    }
 
     exitManualCropMode();
+    unmountProductsPanel();
 
     // Initialize visibility state - will be set properly in updateDesignInfo, but set defaults here
     originalVisibility = null;
@@ -1571,8 +1831,9 @@
     closeDesignColorsModal();
     closeViewerBgModal();
     clearColorPreview();
+    resetAllViewerZooms();
     resetDeleteButtonState();
-    setActiveTab('overview');
+    setActiveTab(initialTab);
     setDrawerOpen(false);
     renderEditColorChips();
     clearEditMask(true);
@@ -2415,8 +2676,8 @@
 
   function updateEditToolModeUi() {
     if (!editImageWrap) return;
-    editImageWrap.classList.toggle('is-eyedropper', editToolMode === 'eyedropper');
-    editImageWrap.classList.toggle('is-brushing', editToolMode === 'brush');
+    editImageWrap.classList.toggle('is-eyedropper', editToolMode === 'eyedropper' && !isViewerPanMode(editImageWrap));
+    editImageWrap.classList.toggle('is-brushing', editToolMode === 'brush' && !isViewerPanMode(editImageWrap));
   }
 
   function setEditActiveTool(tool, opts) {
@@ -2442,6 +2703,9 @@
       });
     }
     if (manualCropActive && editActiveTool !== 'crop') exitManualCropMode();
+    if (prevTool !== editActiveTool && editPendingPreviewVersion) {
+      clearPendingEditPreview({ restoreBaseline: true, silent: true });
+    }
     // Brush mask is shared; clear when switching between tools that use it differently.
     if (prevTool !== editActiveTool && editMaskDirty) {
       if (
@@ -2486,11 +2750,13 @@
 
   function syncEditOverlayCanvas(canvas) {
     if (!canvas || !editImageEl) return false;
-    var wrap = editImageWrap || canvas.parentElement;
-    if (!wrap) return false;
-    var rect = wrap.getBoundingClientRect();
-    var w = Math.max(1, Math.round(rect.width - 16));
-    var h = Math.max(1, Math.round(rect.height - 16));
+    // Size to the zoom stage (layout box, not transformed getBoundingClientRect).
+    var stage = canvas.closest('.cdp-modal__zoom-stage');
+    var box = stage || editImageWrap || canvas.parentElement;
+    if (!box) return false;
+    var w = Math.max(1, Math.round(box.clientWidth || 0));
+    var h = Math.max(1, Math.round(box.clientHeight || 0));
+    if (w < 2 || h < 2) return false;
     if (canvas.width === w && canvas.height === h) return false;
     canvas.width = w;
     canvas.height = h;
@@ -2540,12 +2806,36 @@
         editColorReplaceMode !== 'color' || !!editReplaceTargetColor
       );
       colorBtn.textContent = canApplyColor ? applyColor : chooseColor;
+      colorBtn.disabled = !!editOpBusy;
     }
-    var objBtn = document.getElementById('cdp-edit-remove-object-apply-' + sectionId);
-    if (objBtn) {
-      var chooseObj = objBtn.getAttribute('data-label-choose') || tPreview('edit_choose_object', 'Choose Object');
-      var applyObj = objBtn.getAttribute('data-label-apply') || tPreview('edit_remove_object_apply', 'Apply');
-      objBtn.textContent = editMaskDirty ? applyObj : chooseObj;
+    var objPreviewBtn = document.getElementById('cdp-edit-remove-object-preview-' + sectionId);
+    var objApplyBtn = document.getElementById('cdp-edit-remove-object-apply-' + sectionId);
+    if (objApplyBtn) {
+      var chooseObj = objApplyBtn.getAttribute('data-label-choose') || tPreview('edit_choose_object', 'Choose Object');
+      var applyObj = objApplyBtn.getAttribute('data-label-apply') || tPreview('edit_remove_object_apply', 'Apply');
+      var hasObjPreview = !!(editPendingPreviewVersion && editPendingPreviewTool === 'remove_object');
+      if (editMaskDirty) {
+        objApplyBtn.textContent = applyObj;
+        objApplyBtn.disabled = !!editOpBusy;
+      } else if (hasObjPreview) {
+        objApplyBtn.textContent = applyObj;
+        objApplyBtn.disabled = !!editOpBusy;
+      } else {
+        objApplyBtn.textContent = chooseObj;
+        objApplyBtn.disabled = !!editOpBusy;
+      }
+    }
+    if (objPreviewBtn) {
+      objPreviewBtn.hidden = !editMaskDirty;
+      objPreviewBtn.disabled = !!editOpBusy || !editMaskDirty;
+    }
+    var bgPreviewBtn = document.getElementById('cdp-edit-remove-bg-preview-' + sectionId);
+    var bgApplyBtn = document.getElementById('cdp-edit-remove-bg-apply-' + sectionId);
+    if (bgPreviewBtn) {
+      bgPreviewBtn.disabled = !!editOpBusy;
+    }
+    if (bgApplyBtn) {
+      bgApplyBtn.disabled = !!editOpBusy;
     }
     var clearMask = document.getElementById('cdp-edit-clear-mask-' + sectionId);
     if (clearMask) {
@@ -2574,6 +2864,10 @@
     ctx.arc(x, y, Math.max(4, size / 2), 0, Math.PI * 2);
     ctx.fill();
     editMaskDirty = true;
+    // New brush strokes invalidate a previous server Preview result.
+    if (editPendingPreviewVersion && editPendingPreviewTool === editActiveTool) {
+      clearPendingEditPreview({ restoreBaseline: false, silent: true });
+    }
     updateEditActionButtons();
     // Live preview + palette refresh run on stroke end (not every pointermove).
   }
@@ -3215,6 +3509,43 @@
     }
   }
 
+  function clearPendingEditPreview(opts) {
+    opts = opts || {};
+    var had = !!editPendingPreviewVersion;
+    editPendingPreviewVersion = null;
+    editPendingPreviewTool = null;
+    if (opts.restoreBaseline && editPendingPreviewBaselineUrl && editImageEl) {
+      try { editImageEl.crossOrigin = 'anonymous'; } catch (_) {}
+      editImageEl.src = cacheBustSrc(normalizePersistedFileUrl(editPendingPreviewBaselineUrl));
+    }
+    editPendingPreviewBaselineUrl = null;
+    if (had && !opts.silent) updateEditActionButtons();
+  }
+
+  function showPendingEditPreview(version, tool) {
+    if (!version) return;
+    if (!editPendingPreviewBaselineUrl && currentDesign) {
+      editPendingPreviewBaselineUrl =
+        primaryDesignImageUrl(currentDesign) || getCropSourceImageUrl(currentDesign) || '';
+    }
+    editPendingPreviewVersion = version;
+    editPendingPreviewTool = tool || editActiveTool;
+    var url = normalizePersistedFileUrl(
+      version.preview_url || version.original_url || version.image_url || ''
+    );
+    if (url && editImageEl) {
+      try { editImageEl.crossOrigin = 'anonymous'; } catch (_) {}
+      editImageEl.onload = function () {
+        editSourceImageData = null;
+        editSourceImageKey = '';
+        syncEditMaskCanvasSize();
+        syncEditColorCanvasSize();
+      };
+      editImageEl.src = cacheBustSrc(url);
+    }
+    updateEditActionButtons();
+  }
+
   async function dispatchEditOp(op, options) {
     options = options || {};
     var ownerId = resolveOwnerIdForPreview();
@@ -3232,50 +3563,119 @@
     url.searchParams.set('path_prefix', '/apps/creator-dispatch');
     url.searchParams.set('logged_in_customer_id', String(ownerId));
 
-    var fetchOpts = {
-      method: options.method || 'POST',
-      mode: 'cors',
-      credentials: 'include'
+    var method = options.method || 'POST';
+    var isGet = method === 'GET';
+    var heavyOps = {
+      'design-edit-remove-object': 1,
+      'design-edit-remove-background': 1,
+      'design-edit-remove-color': 1
     };
+    var timeoutMs = options.timeoutMs || (heavyOps[op] ? 75000 : (isGet ? 25000 : 45000));
+    var maxAttempts = options.maxAttempts != null
+      ? options.maxAttempts
+      : (isGet ? 3 : (heavyOps[op] ? 1 : 2));
+
+    var bodyPayload = null;
+    var formDataPayload = null;
     if (options.formData) {
       options.formData.set('design_id', String(currentDesign.id));
       options.formData.set('owner_id', String(ownerId));
       options.formData.set('logged_in_customer_id', String(ownerId));
-      fetchOpts.body = options.formData;
+      formDataPayload = options.formData;
     } else if (options.body) {
-      fetchOpts.headers = { 'Content-Type': 'application/json' };
-      var body = Object.assign({}, options.body, {
+      bodyPayload = Object.assign({}, options.body, {
         design_id: currentDesign.id,
         owner_id: String(ownerId),
         logged_in_customer_id: String(ownerId)
       });
-      fetchOpts.body = JSON.stringify(body);
-    } else if ((options.method || 'POST') === 'GET') {
+    } else if (isGet) {
       url.searchParams.set('design_id', String(currentDesign.id));
       url.searchParams.set('owner_id', String(ownerId));
     } else {
-      fetchOpts.headers = { 'Content-Type': 'application/json' };
-      fetchOpts.body = JSON.stringify({
+      bodyPayload = {
         design_id: currentDesign.id,
         owner_id: String(ownerId),
         logged_in_customer_id: String(ownerId)
-      });
+      };
     }
 
-    var response = await fetch(url.toString(), fetchOpts);
-    var ct = (response.headers.get('content-type') || '').toLowerCase();
-    var raw = await response.text();
-    var data = null;
-    if (ct.indexOf('application/json') !== -1) {
-      try { data = JSON.parse(raw); } catch (_) {}
+    var lastErr = null;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt > 1) {
+        await new Promise(function (r) { setTimeout(r, 220 * attempt * attempt); });
+      }
+      var ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var toid = null;
+      if (ac) {
+        toid = setTimeout(function () {
+          try { ac.abort(); } catch (_) {}
+        }, timeoutMs);
+      }
+      var fetchOpts = {
+        method: method,
+        mode: 'cors',
+        credentials: 'include',
+        signal: ac ? ac.signal : undefined
+      };
+      if (formDataPayload) {
+        fetchOpts.body = formDataPayload;
+      } else if (bodyPayload) {
+        fetchOpts.headers = { 'Content-Type': 'application/json' };
+        fetchOpts.body = JSON.stringify(bodyPayload);
+      }
+
+      var response;
+      try {
+        response = await fetch(url.toString(), fetchOpts);
+      } catch (fe) {
+        if (toid) clearTimeout(toid);
+        if (fe && fe.name === 'AbortError') {
+          lastErr = new Error(
+            tPreview('edit_request_timeout', 'Edit request timed out. Please try again.')
+          );
+          console.warn('[CDP] edit op timeout', { op: op, attempt: attempt, ms: timeoutMs });
+          if (attempt < maxAttempts) continue;
+          throw lastErr;
+        }
+        lastErr = fe;
+        if (attempt < maxAttempts) continue;
+        throw fe;
+      }
+      if (toid) clearTimeout(toid);
+
+      var ct = (response.headers.get('content-type') || '').toLowerCase();
+      var raw = await response.text();
+      var data = null;
+      if (ct.indexOf('application/json') !== -1) {
+        try { data = JSON.parse(raw); } catch (_) {}
+      }
+
+      var retryableStatus =
+        attempt < maxAttempts &&
+        (response.status === 502 || response.status === 503 || response.status === 504);
+      if (!data) {
+        lastErr = new Error(
+          'HTTP ' + response.status + (raw ? ' — ' + raw.replace(/\s+/g, ' ').trim().slice(0, 160) : '')
+        );
+        if (retryableStatus) continue;
+        throw lastErr;
+      }
+      if (!data.ok) {
+        var errCode = data.error || op + '_failed';
+        var retryableErr =
+          attempt < maxAttempts &&
+          (errCode === 'db_overloaded' ||
+            errCode === 'upstream_unavailable' ||
+            response.status === 502 ||
+            response.status === 503 ||
+            response.status === 504);
+        lastErr = new Error(data.message || errCode);
+        if (retryableErr) continue;
+        throw lastErr;
+      }
+      return data;
     }
-    if (!data) {
-      throw new Error('HTTP ' + response.status + (raw ? ' — ' + raw.replace(/\s+/g, ' ').trim().slice(0, 160) : ''));
-    }
-    if (!data.ok) {
-      throw new Error(data.message || data.error || op + '_failed');
-    }
-    return data;
+    throw lastErr || new Error(op + '_failed');
   }
 
   function buildSyntheticOriginalVersion() {
@@ -3513,12 +3913,27 @@
     }
   }
 
-  async function applyRemoveBackground() {
-    setEditBusy(true);
+  async function runRemoveBackground(previewOnly) {
+    setEditBusy(
+      true,
+      previewOnly
+        ? tPreview('edit_generating_preview', 'Generating preview…')
+        : tPreview('edit_processing', 'Processing edit…')
+    );
     try {
       var data = await dispatchEditOp('design-edit-remove-background', {
-        body: { mode: editBgMode === 'outside' ? 'outside' : 'complete' }
+        body: {
+          mode: editBgMode === 'outside' ? 'outside' : 'complete',
+          preview_only: !!previewOnly
+        }
       });
+      if (previewOnly) {
+        if (data && data.version) showPendingEditPreview(data.version, 'remove_bg');
+        showCropSuccessToast(tPreview('edit_preview_ready', 'Preview ready. Click Apply to save.'));
+        await loadEditVersions();
+        return;
+      }
+      clearPendingEditPreview({ silent: true });
       if (data && data.design) applyDesignFromEditResponse(data.design);
       clearEditMask(true);
       showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
@@ -3533,7 +3948,55 @@
       alert((err && err.message) || 'Remove background failed');
     } finally {
       setEditBusy(false);
+      updateEditActionButtons();
     }
+  }
+
+  async function previewRemoveBackground() {
+    return runRemoveBackground(true);
+  }
+
+  async function applyRemoveBackground() {
+    if (
+      editPendingPreviewVersion &&
+      editPendingPreviewTool === 'remove_bg' &&
+      editPendingPreviewVersion.id != null
+    ) {
+      setEditBusy(true);
+      try {
+        var applied = await dispatchEditOp('apply-design-edit-version', {
+          body: { version_id: editPendingPreviewVersion.id }
+        });
+        clearPendingEditPreview({ silent: true });
+        if (applied && applied.design) applyDesignFromEditResponse(applied.design);
+        else if (applied && applied.version) {
+          applyDesignFromEditResponse({
+            preview_url: applied.version.preview_url,
+            original_url: applied.version.original_url,
+            image_url: applied.version.preview_url || applied.version.original_url,
+            width: applied.version.width,
+            height: applied.version.height,
+            r2_key_original: applied.version.r2_key_original,
+            r2_key_preview: applied.version.r2_key_preview
+          });
+        }
+        showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
+        await loadEditVersions();
+        try {
+          if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+            window.CreationsScreen.loadDesigns(true, { silent: true });
+          }
+        } catch (_) {}
+      } catch (err) {
+        console.error('[CDP] remove-bg apply preview failed', err);
+        alert((err && err.message) || 'Remove background failed');
+      } finally {
+        setEditBusy(false);
+        updateEditActionButtons();
+      }
+      return;
+    }
+    return runRemoveBackground(false);
   }
 
   async function applyRemoveColor() {
@@ -3573,6 +4036,7 @@
         }
       }
       var data = await dispatchEditOp('design-edit-remove-color', { body: body });
+      clearPendingEditPreview({ silent: true });
       if (data && data.design) applyDesignFromEditResponse(data.design);
       editPickedColors = [];
       renderEditColorChips();
@@ -3594,7 +4058,7 @@
     }
   }
 
-  async function applyRemoveObject() {
+  async function runRemoveObject(previewOnly) {
     if (!editMaskDirty) {
       setEditActiveTool('remove_object');
       enableBrushMode();
@@ -3606,11 +4070,29 @@
       alert(tPreview('edit_paint_mask_first', 'Paint a mask over the object first.'));
       return;
     }
-    setEditBusy(true);
+    setEditBusy(
+      true,
+      previewOnly
+        ? tPreview('edit_generating_preview', 'Generating preview…')
+        : tPreview('edit_processing', 'Processing edit…')
+    );
     try {
       var data = await dispatchEditOp('design-edit-remove-object', {
-        body: { mask: maskDataUrl, mask_data_url: maskDataUrl }
+        body: {
+          mask: maskDataUrl,
+          mask_data_url: maskDataUrl,
+          preview_only: !!previewOnly
+        },
+        timeoutMs: 75000
       });
+      if (previewOnly) {
+        if (data && data.version) showPendingEditPreview(data.version, 'remove_object');
+        clearEditMask(true);
+        showCropSuccessToast(tPreview('edit_preview_ready', 'Preview ready. Click Apply to save.'));
+        await loadEditVersions();
+        return;
+      }
+      clearPendingEditPreview({ silent: true });
       if (data && data.design) applyDesignFromEditResponse(data.design);
       clearEditMask(true);
       showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
@@ -3627,6 +4109,59 @@
       setEditBusy(false);
       updateEditActionButtons();
     }
+  }
+
+  async function previewRemoveObject() {
+    return runRemoveObject(true);
+  }
+
+  async function applyRemoveObject() {
+    if (
+      !editMaskDirty &&
+      editPendingPreviewVersion &&
+      editPendingPreviewTool === 'remove_object' &&
+      editPendingPreviewVersion.id != null
+    ) {
+      setEditBusy(true);
+      try {
+        var applied = await dispatchEditOp('apply-design-edit-version', {
+          body: { version_id: editPendingPreviewVersion.id }
+        });
+        clearPendingEditPreview({ silent: true });
+        if (applied && applied.design) applyDesignFromEditResponse(applied.design);
+        else if (applied && applied.version) {
+          applyDesignFromEditResponse({
+            preview_url: applied.version.preview_url,
+            original_url: applied.version.original_url,
+            image_url: applied.version.preview_url || applied.version.original_url,
+            width: applied.version.width,
+            height: applied.version.height,
+            r2_key_original: applied.version.r2_key_original,
+            r2_key_preview: applied.version.r2_key_preview
+          });
+        }
+        showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
+        await loadEditVersions();
+        try {
+          if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+            window.CreationsScreen.loadDesigns(true, { silent: true });
+          }
+        } catch (_) {}
+      } catch (err) {
+        console.error('[CDP] remove-object apply preview failed', err);
+        alert((err && err.message) || 'Remove object failed');
+      } finally {
+        setEditBusy(false);
+        updateEditActionButtons();
+      }
+      return;
+    }
+    if (!editMaskDirty) {
+      setEditActiveTool('remove_object');
+      enableBrushMode();
+      return;
+    }
+    return runRemoveObject(false);
   }
 
   function bindEditDesignControls() {
@@ -3655,15 +4190,22 @@
 
     modal.querySelectorAll('[data-cdp-bg-mode]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        editBgMode = btn.getAttribute('data-cdp-bg-mode') === 'outside' ? 'outside' : 'complete';
+        var nextMode = btn.getAttribute('data-cdp-bg-mode') === 'outside' ? 'outside' : 'complete';
+        if (nextMode !== editBgMode && editPendingPreviewTool === 'remove_bg') {
+          clearPendingEditPreview({ restoreBaseline: true, silent: true });
+        }
+        editBgMode = nextMode;
         modal.querySelectorAll('[data-cdp-bg-mode]').forEach(function (b) {
           b.classList.toggle('is-active', b.getAttribute('data-cdp-bg-mode') === editBgMode);
         });
+        updateEditActionButtons();
       });
     });
 
     var bgApply = document.getElementById('cdp-edit-remove-bg-apply-' + sectionId);
     if (bgApply) bgApply.addEventListener('click', function () { applyRemoveBackground(); });
+    var bgPreview = document.getElementById('cdp-edit-remove-bg-preview-' + sectionId);
+    if (bgPreview) bgPreview.addEventListener('click', function () { previewRemoveBackground(); });
 
     modal.querySelectorAll('[data-cdp-color-replace-mode]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -3757,6 +4299,8 @@
     }
     var objApply = document.getElementById('cdp-edit-remove-object-apply-' + sectionId);
     if (objApply) objApply.addEventListener('click', function () { applyRemoveObject(); });
+    var objPreview = document.getElementById('cdp-edit-remove-object-preview-' + sectionId);
+    if (objPreview) objPreview.addEventListener('click', function () { previewRemoveObject(); });
 
     var histOpen = document.getElementById('cdp-edit-history-open-' + sectionId);
     if (histOpen) {
@@ -3809,8 +4353,10 @@
     if (editImageWrap) {
       editImageWrap.addEventListener('click', function (e) {
         if (editOpBusy || manualCropActive || editHistoryOpen || editDesignColorsOpen || viewerBgModalOpen) return;
+        if (isViewerPanMode(editImageWrap)) return;
         if (e.target && e.target.closest && e.target.closest('.cdp-modal__edit-history-btn')) return;
         if (e.target && e.target.closest && e.target.closest('[data-cdp-viewer-bg-open]')) return;
+        if (e.target && e.target.closest && e.target.closest('.cdp-modal__zoom-chrome')) return;
         if (editActiveTool !== 'remove_color' && editToolMode !== 'eyedropper') return;
         // While brushing a color area, clicks on the wrap (outside mask canvas) still pick colors.
         if (editToolMode === 'brush' && !editPickReplaceTarget) return;
@@ -3822,6 +4368,7 @@
     if (editMaskCanvas) {
       editMaskCanvas.addEventListener('pointerdown', function (e) {
         if (editOpBusy || manualCropActive) return;
+        if (editImageWrap && isViewerPanMode(editImageWrap)) return;
         if (editActiveTool !== 'remove_object' && editActiveTool !== 'remove_color') return;
         // In remove_color: Alt/Option or active brush mode paints; replace eyedropper picks instead.
         if (editActiveTool === 'remove_color') {
@@ -5514,6 +6061,7 @@
     }
 
     exitManualCropMode();
+    unmountProductsPanel();
     closeEditHistoryModal();
     closeDesignColorsModal();
     closeViewerBgModal();
@@ -5692,8 +6240,8 @@
   }
 
   // Set up the exported functions directly - robust implementation
-  window.CreatorDesignPreviewModal.open = function(design) {
-    console.log('CreatorDesignPreviewModal.open called', { design, isInitialized, modal: !!modal });
+  window.CreatorDesignPreviewModal.open = function(design, options) {
+    console.log('CreatorDesignPreviewModal.open called', { design, options, isInitialized, modal: !!modal });
     
     // Try to initialize if not already done or modal element is missing
     if (!isInitialized || !modal) {
@@ -5704,7 +6252,7 @@
         setTimeout(() => {
           if (init()) {
             console.log('Modal initialized on retry, opening...');
-            openModal(design);
+            openModal(design, options);
           } else {
             console.error('Creator Design Preview Modal: Element still not found after retry');
           }
@@ -5712,7 +6260,7 @@
         return;
       }
     }
-    openModal(design);
+    openModal(design, options);
   };
 
   // Handle transfer button click

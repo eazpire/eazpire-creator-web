@@ -13,7 +13,52 @@
 
   var app = document.getElementById('creatorDesktopApp');
   if (!app) return;
-  if (!embedDashboard && !window.matchMedia('(min-width: 992px)').matches) return;
+
+  var desktopViewportMq = null;
+  try {
+    desktopViewportMq = window.matchMedia('(min-width: 992px)');
+  } catch (_mqErr) {
+    desktopViewportMq = null;
+  }
+
+  function isDesktopCreatorViewport() {
+    try {
+      return !!(desktopViewportMq ? desktopViewportMq.matches : window.matchMedia('(min-width: 992px)').matches);
+    } catch (_e) {
+      return true;
+    }
+  }
+
+  // Non-embed mobile boot: wait until viewport crosses 992px, then reload so desktop shell can init.
+  // Portal/embed always continues (hosts must remount on resize without a full reload).
+  if (!embedDashboard && !isDesktopCreatorViewport()) {
+    function bootDesktopShellWhenWide(ev) {
+      var matches = ev && typeof ev.matches === 'boolean' ? ev.matches : isDesktopCreatorViewport();
+      if (!matches) return;
+      try {
+        if (desktopViewportMq) {
+          if (typeof desktopViewportMq.removeEventListener === 'function') {
+            desktopViewportMq.removeEventListener('change', bootDesktopShellWhenWide);
+          } else if (typeof desktopViewportMq.removeListener === 'function') {
+            desktopViewportMq.removeListener(bootDesktopShellWhenWide);
+          }
+        }
+      } catch (_rm) {}
+      try {
+        window.location.reload();
+      } catch (_reload) {}
+    }
+    try {
+      if (desktopViewportMq) {
+        if (typeof desktopViewportMq.addEventListener === 'function') {
+          desktopViewportMq.addEventListener('change', bootDesktopShellWhenWide);
+        } else if (typeof desktopViewportMq.addListener === 'function') {
+          desktopViewportMq.addListener(bootDesktopShellWhenWide);
+        }
+      }
+    } catch (_add) {}
+    return;
+  }
 
   var API_BASE = 'https://creator-engine.eazpire.workers.dev';
   var ownerId = window.__EAZ_OWNER_ID;
@@ -505,44 +550,108 @@
     };
   }
 
-  function mountDesktopGeneratorScreen() {
-    var host = document.getElementById('creatorDesktopGeneratorHost');
-    if (!host) return;
-    if (host.dataset.mounted === 'true') return;
-    var source = document.querySelector('#creatorMobileApp .creator-screen[data-screen="1"] #creatorGenerator');
-    if (!source) {
-      var retries = Number(host.dataset.mountRetries || 0);
-      if (retries < 6) {
-        host.dataset.mountRetries = String(retries + 1);
-        setTimeout(mountDesktopGeneratorScreen, 120);
-      }
-      return;
+  var DESKTOP_SCREEN_MOUNT = {
+    generator: {
+      hostId: 'creatorDesktopGeneratorHost',
+      screen: '1',
+      sourceId: 'creatorGenerator',
+      desktopClass: 'creator-generator--desktop'
+    },
+    creations: {
+      hostId: 'creatorDesktopCreationsHost',
+      screen: '2',
+      sourceId: 'creatorCreations',
+      desktopClass: 'creator-creations--desktop'
+    },
+    marketing: {
+      hostId: 'creatorDesktopMarketingHost',
+      screen: '3',
+      sourceId: 'creatorMarketing',
+      desktopClass: 'creator-marketing--desktop'
+    },
+    automations: {
+      hostId: 'creatorDesktopAutomationsHost',
+      screen: '4',
+      sourceId: 'creatorAutomations',
+      desktopClass: 'creator-automations--desktop'
     }
+  };
+
+  function getMobileScreenSection(screenIndex) {
+    return document.querySelector('#creatorMobileApp .creator-screen[data-screen="' + screenIndex + '"]');
+  }
+
+  function mountDesktopScreenByKey(key, opts) {
+    opts = opts || {};
+    var cfg = DESKTOP_SCREEN_MOUNT[key];
+    if (!cfg) return false;
+    var host = document.getElementById(cfg.hostId);
+    if (!host) return false;
+    if (host.dataset.mounted === 'true' && host.querySelector('#' + cfg.sourceId)) return true;
+
+    var source =
+      document.getElementById(cfg.sourceId) ||
+      document.querySelector('#creatorMobileApp .creator-screen[data-screen="' + cfg.screen + '"] #' + cfg.sourceId);
+    if (!source) {
+      if (!opts.skipRetry) {
+        var retries = Number(host.dataset.mountRetries || 0);
+        if (retries < 6) {
+          host.dataset.mountRetries = String(retries + 1);
+          setTimeout(function () {
+            mountDesktopScreenByKey(key, opts);
+          }, 120);
+        }
+      }
+      return false;
+    }
+
     host.appendChild(source);
-    source.classList.add('creator-generator--desktop');
+    source.classList.add(cfg.desktopClass);
     host.dataset.mounted = 'true';
+    host.dataset.mountRetries = '0';
+
+    if (key === 'creations') {
+      configureDesktopCreationsViewModes();
+    }
+    if (key === 'automations' && window.AutomationsScreen && typeof window.AutomationsScreen.switchMainTab === 'function') {
+      window.AutomationsScreen.switchMainTab('design-generator');
+    }
     try {
       if (typeof window.relocateCreatorEazyCluster === 'function') window.relocateCreatorEazyCluster();
     } catch (e) {}
+    return true;
+  }
+
+  function unmountDesktopScreenByKey(key) {
+    var cfg = DESKTOP_SCREEN_MOUNT[key];
+    if (!cfg) return false;
+    var host = document.getElementById(cfg.hostId);
+    if (!host) return false;
+    var source = host.querySelector('#' + cfg.sourceId) || document.getElementById(cfg.sourceId);
+    if (!source) {
+      host.dataset.mounted = 'false';
+      return false;
+    }
+    var section = getMobileScreenSection(cfg.screen);
+    if (!section) return false;
+    if (source.parentElement === section) {
+      host.dataset.mounted = 'false';
+      source.classList.remove(cfg.desktopClass);
+      return true;
+    }
+    section.appendChild(source);
+    source.classList.remove(cfg.desktopClass);
+    host.dataset.mounted = 'false';
+    host.dataset.mountRetries = '0';
+    return true;
+  }
+
+  function mountDesktopGeneratorScreen() {
+    mountDesktopScreenByKey('generator');
   }
 
   function mountDesktopCreationsScreen() {
-    var host = document.getElementById('creatorDesktopCreationsHost');
-    if (!host) return;
-    if (host.dataset.mounted === 'true') return;
-    var source = document.querySelector('#creatorMobileApp .creator-screen[data-screen="2"] #creatorCreations');
-    if (!source) {
-      var retries = Number(host.dataset.mountRetries || 0);
-      if (retries < 6) {
-        host.dataset.mountRetries = String(retries + 1);
-        setTimeout(mountDesktopCreationsScreen, 120);
-      }
-      return;
-    }
-    host.appendChild(source);
-    source.classList.add('creator-creations--desktop');
-    configureDesktopCreationsViewModes();
-    host.dataset.mounted = 'true';
+    mountDesktopScreenByKey('creations');
   }
 
   /** Creations grid bootstrap must not depend on #creatorViewModeOverlay (mount runs before shell modals may move markup). */
@@ -566,48 +675,118 @@
   }
 
   function mountDesktopMarketingScreen() {
-    var host = document.getElementById('creatorDesktopMarketingHost');
-    if (!host) return;
-    if (host.dataset.mounted === 'true') return;
-    var source = document.querySelector('#creatorMobileApp .creator-screen[data-screen="3"] #creatorMarketing');
-    if (!source) {
-      var retries = Number(host.dataset.mountRetries || 0);
-      if (retries < 6) {
-        host.dataset.mountRetries = String(retries + 1);
-        setTimeout(mountDesktopMarketingScreen, 120);
-      }
-      return;
-    }
-    host.appendChild(source);
-    source.classList.add('creator-marketing--desktop');
-    host.dataset.mounted = 'true';
-    try {
-      if (typeof window.relocateCreatorEazyCluster === 'function') window.relocateCreatorEazyCluster();
-    } catch (e) {}
-    /* Marketing APIs (hero-list, shop products, …) load via switchScreen('marketing') — not on dashboard mount. */
+    mountDesktopScreenByKey('marketing');
   }
 
   function mountDesktopAutomationsScreen() {
-    var host = document.getElementById('creatorDesktopAutomationsHost');
-    if (!host) return;
-    if (host.dataset.mounted === 'true') return;
-    var source = document.querySelector('#creatorMobileApp .creator-screen[data-screen="4"] #creatorAutomations');
-    if (!source) {
-      var retries = Number(host.dataset.mountRetries || 0);
-      if (retries < 6) {
-        host.dataset.mountRetries = String(retries + 1);
-        setTimeout(mountDesktopAutomationsScreen, 120);
+    mountDesktopScreenByKey('automations');
+  }
+
+  function mountAllDesktopSharedScreens() {
+    mountDesktopGeneratorScreen();
+    mountDesktopCreationsScreen();
+    mountDesktopMarketingScreen();
+    mountDesktopAutomationsScreen();
+  }
+
+  function unmountAllDesktopSharedScreens() {
+    unmountDesktopScreenByKey('generator');
+    unmountDesktopScreenByKey('creations');
+    unmountDesktopScreenByKey('marketing');
+    unmountDesktopScreenByKey('automations');
+  }
+
+  function syncActiveScreenAfterShellLayout(isDesktop) {
+    var screen = 'dashboard';
+    try {
+      if (
+        window.CreatorDesktopShell &&
+        typeof window.CreatorDesktopShell.getActiveScreen === 'function'
+      ) {
+        screen = window.CreatorDesktopShell.getActiveScreen() || 'dashboard';
+      }
+    } catch (_e) {}
+
+    var slideMap = { dashboard: 0, generator: 1, creations: 2, marketing: 3, automations: 4 };
+    if (!isDesktop) {
+      var slide = slideMap[screen];
+      if (typeof slide === 'number' && typeof window.__creatorGoTo === 'function') {
+        try {
+          window.__creatorGoTo(slide);
+        } catch (_go) {}
+      }
+      if (screen === 'creations' && window.CreationsScreen) {
+        try {
+          if (typeof window.CreationsScreen.setViewMode === 'function') {
+            window.CreationsScreen.setViewMode('grid2');
+          }
+          if (typeof window.CreationsScreen.switchTab === 'function') {
+            var tab =
+              typeof window.CreationsScreen.getCurrentTab === 'function'
+                ? window.CreationsScreen.getCurrentTab()
+                : 'designs';
+            window.CreationsScreen.switchTab(tab || 'designs');
+          } else if (typeof window.CreationsScreen.redrawDesignsGridOnly === 'function') {
+            window.CreationsScreen.redrawDesignsGridOnly();
+          }
+        } catch (_cr) {}
       }
       return;
     }
-    host.appendChild(source);
-    source.classList.add('creator-automations--desktop');
-    host.dataset.mounted = 'true';
+
+    if (
+      window.CreatorDesktopShell &&
+      typeof window.CreatorDesktopShell.switchScreen === 'function'
+    ) {
+      try {
+        window.CreatorDesktopShell.switchScreen(screen);
+      } catch (_sw) {}
+    }
+    if (screen === 'creations') {
+      bootstrapDesktopCreationsDataLoad();
+    }
+  }
+
+  var lastDesktopShellLayout = null;
+  function syncCreatorShellLayoutForViewport() {
+    var isDesktop = isDesktopCreatorViewport();
+    if (lastDesktopShellLayout === isDesktop) return;
+    lastDesktopShellLayout = isDesktop;
+    if (isDesktop) {
+      mountAllDesktopSharedScreens();
+      mountDesktopShellModals();
+      syncActiveScreenAfterShellLayout(true);
+    } else {
+      unmountAllDesktopSharedScreens();
+      restoreMobileCreationsViewModes();
+      syncActiveScreenAfterShellLayout(false);
+    }
     try {
       if (typeof window.relocateCreatorEazyCluster === 'function') window.relocateCreatorEazyCluster();
-    } catch (e) {}
-    if (window.AutomationsScreen && typeof window.AutomationsScreen.switchMainTab === 'function') {
-      window.AutomationsScreen.switchMainTab('design-generator');
+    } catch (_e) {}
+    try {
+      document.dispatchEvent(
+        new CustomEvent('creator:shell-layout-change', { detail: { desktop: isDesktop } })
+      );
+    } catch (_ev) {}
+  }
+
+  function bindCreatorShellViewportSync() {
+    function onChange() {
+      syncCreatorShellLayoutForViewport();
+    }
+    try {
+      if (desktopViewportMq) {
+        if (typeof desktopViewportMq.addEventListener === 'function') {
+          desktopViewportMq.addEventListener('change', onChange);
+        } else if (typeof desktopViewportMq.addListener === 'function') {
+          desktopViewportMq.addListener(onChange);
+        }
+      } else {
+        window.addEventListener('resize', onChange);
+      }
+    } catch (_bind) {
+      window.addEventListener('resize', onChange);
     }
   }
 
@@ -641,6 +820,44 @@
       third.dataset.view = 'list';
       third.style.display = '';
       third.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function restoreMobileCreationsViewModes() {
+    var overlay = document.getElementById('creatorViewModeOverlay');
+    if (!overlay) return;
+    var options = overlay.querySelectorAll('.creator-view-mode-opt');
+    if (!options || options.length < 2) return;
+
+    var first = options[0];
+    var second = options[1];
+    var third = options[2];
+    var M = window.CreatorMobileI18n || {};
+
+    first.dataset.view = 'grid2';
+    var firstLabel = first.querySelector('span:last-child');
+    var firstIcon = first.querySelector('.creator-view-mode-opt-icon');
+    if (firstLabel) firstLabel.textContent = M.viewGrid2 || '2 columns';
+    if (firstIcon) {
+      firstIcon.innerHTML =
+        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="8" height="8" rx="1"/><rect x="13" y="8" width="8" height="8" rx="1"/></svg>';
+    }
+
+    second.dataset.view = 'grid3';
+    var secondLabel = second.querySelector('span:last-child');
+    var secondIcon = second.querySelector('.creator-view-mode-opt-icon');
+    if (secondLabel) secondLabel.textContent = M.viewGrid3 || '3 columns';
+    if (secondIcon) {
+      secondIcon.innerHTML =
+        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16.5" y="9.5" width="5" height="5" rx="1"/></svg>';
+    }
+
+    if (third) {
+      third.dataset.view = 'list';
+      third.style.display = '';
+      third.setAttribute('aria-hidden', 'false');
+      var thirdLabel = third.querySelector('span:last-child');
+      if (thirdLabel) thirdLabel.textContent = M.viewList || 'List view';
     }
   }
 
@@ -3219,12 +3436,19 @@
   window.CreatorDesktopResetDashboardScroll = resetDesktopDashboardScroll;
 
   initDesktopShellSwitch();
-  mountDesktopGeneratorScreen();
-  mountDesktopCreationsScreen();
-  mountDesktopMarketingScreen();
-  mountDesktopAutomationsScreen();
+  // Move shared screens into desktop hosts when wide; restore into mobile swipe when narrow
+  // (DevTools dock / resize). Dashboard stays in both shells — only Generator/Creations/…
+  // were relocated and previously stayed trapped in display:none desktop hosts.
+  if (isDesktopCreatorViewport()) {
+    mountAllDesktopSharedScreens();
+  } else {
+    unmountAllDesktopSharedScreens();
+    restoreMobileCreationsViewModes();
+  }
+  bindCreatorShellViewportSync();
   mountDesktopShellModals();
   window.mountCreatorDesktopShellModals = mountDesktopShellModals;
+  window.syncCreatorShellLayoutForViewport = syncCreatorShellLayoutForViewport;
   renderTimeBasedWelcome();
   initHeroParticles();
   // Design reveal animation paused per current desktop request.
@@ -3248,6 +3472,14 @@
   } else {
     loadStats();
   }
+  // After first paint / late shell load: ensure Creations (etc.) sit in the visible shell.
+  // Force a layout pass even if the initial mount already matched the viewport.
+  setTimeout(function () {
+    try {
+      lastDesktopShellLayout = null;
+      syncCreatorShellLayoutForViewport();
+    } catch (_sync) {}
+  }, 0);
   document.addEventListener('eaz:creator-redeemed', function () {
     if (window.CreatorDashboardData && typeof window.CreatorDashboardData.refreshDashboardShellData === 'function') {
       window.CreatorDashboardData.refreshDashboardShellData();
