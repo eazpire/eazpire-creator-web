@@ -618,12 +618,15 @@
         card.addEventListener('click', function (ev) {
           if (ev.target && ev.target.closest && ev.target.closest('input[type="checkbox"]')) return;
           if (ev.target && ev.target.closest && ev.target.closest('.creator-design-products-modal__card-nav')) return;
+          ev.preventDefault();
+          ev.stopPropagation();
           openStudioForProduct(productKey, productMeta);
         });
         card.addEventListener('keydown', function (ev) {
           if (ev.key === 'Enter' || ev.key === ' ') {
             if (ev.target && ev.target.matches && ev.target.matches('input[type="checkbox"]')) return;
             ev.preventDefault();
+            ev.stopPropagation();
             openStudioForProduct(productKey, productMeta);
           }
         });

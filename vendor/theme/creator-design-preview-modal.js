@@ -6396,6 +6396,9 @@
 
     exitManualCropMode();
     unmountProductsPanel();
+    if (window.CreatorDesignStudioModal && typeof window.CreatorDesignStudioModal.close === 'function') {
+      window.CreatorDesignStudioModal.close(true);
+    }
     closeEditHistoryModal();
     closeDesignColorsModal();
     closeViewerBgModal();

@@ -21,6 +21,7 @@
   var activeTab = 'print_area';
   var isOpen = false;
   var isSaving = false;
+  var isLoading = false;
 
   var TABS = ['print_area', 'variants', 'publication', 'mockups', 'prices'];
   var MAX_OWN_ADDITIONAL = 5;
@@ -63,6 +64,7 @@
   }
 
   function isDirty() {
+    if (isLoading || draft == null) return false;
     return draftJson() !== savedDraftJson;
   }
 
@@ -551,6 +553,7 @@
 
   function doClose() {
     isOpen = false;
+    isLoading = false;
     if (root) {
       root.hidden = true;
       root.setAttribute('aria-hidden', 'true');
@@ -562,6 +565,7 @@
     ctxProductKey = null;
     ctxData = null;
     draft = null;
+    savedDraftJson = '';
     setStatus('');
   }
 
@@ -621,16 +625,27 @@
     }
     bindOnce();
 
-    if (isOpen && isDirty()) {
-      showUnsavedDialog(function () {
-        doClose();
-        open(design, productKey, productMeta);
-      });
+    var nextProductKey = String(productKey || '').trim();
+    if (!nextProductKey) return;
+
+    if (isLoading && ctxProductKey === nextProductKey) return;
+    if (isOpen && ctxProductKey === nextProductKey && !isLoading) return;
+
+    if (isOpen && ctxProductKey !== nextProductKey) {
+      if (isDirty()) {
+        showUnsavedDialog(function () {
+          doClose();
+          open(design, productKey, productMeta);
+        });
+        return;
+      }
+      doClose();
+    } else if (isOpen && isDirty()) {
       return;
     }
 
     ctxDesign = design;
-    ctxProductKey = String(productKey || '').trim();
+    ctxProductKey = nextProductKey;
     ctxProductMeta = productMeta || null;
 
     if (subtitleEl) {
@@ -641,21 +656,25 @@
     root.hidden = false;
     root.setAttribute('aria-hidden', 'false');
     isOpen = true;
+    isLoading = true;
     if (window.CreatorModalPhysics && typeof window.CreatorModalPhysics.lockBodyScroll === 'function') {
       window.CreatorModalPhysics.lockBodyScroll();
     }
 
     try {
       ctxData = await loadContext(design, ctxProductKey);
+      if (!isOpen || ctxProductKey !== nextProductKey) return;
       draft = ctxData.draft || { product_key: ctxProductKey };
-      savedDraftJson = draftJson();
       switchTab('print_area');
       renderAllPanels();
+      savedDraftJson = draftJson();
       setStatus('');
       markDirtyUi();
     } catch (e) {
       console.warn('[creator-design-studio]', e);
       setStatus(t('designStudioLoadError', 'Could not load studio.'));
+    } finally {
+      isLoading = false;
     }
   }
 
