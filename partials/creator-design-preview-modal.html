@@ -938,25 +938,39 @@
   }
 
   /* —— Edit Design panel —— */
-  .cdp-modal__edit-layout {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    max-width: 520px;
-    margin: 0 auto;
+  .cdp-modal__panel--edit.is-active {
+    overflow: hidden;
   }
 
   .cdp-modal__panel--edit .cdp-modal__panel-inner {
     display: flex;
     flex-direction: column;
-    padding-bottom: 12px;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .cdp-modal__edit-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
   }
 
   .cdp-modal__edit-preview {
     position: relative;
-    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
   }
 
   .cdp-modal__edit-image-wrap {
@@ -970,9 +984,10 @@
     justify-content: center;
     overflow: hidden;
     width: 100%;
-    min-height: 260px;
-    max-height: min(52vh, 440px);
-    aspect-ratio: 1;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: auto;
     box-sizing: border-box;
     margin: 0 auto;
   }
@@ -997,10 +1012,10 @@
   }
 
   .cdp-modal__edit-image-wrap.cdp-modal__image-wrapper {
-    height: auto;
-    min-height: 260px;
-    max-height: min(52vh, 440px);
-    aspect-ratio: 1;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: auto;
   }
 
   .cdp-modal__edit-image-wrap .cdp-modal__image-frame {
@@ -1060,8 +1075,21 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: 42%;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding-top: 4px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .cdp-modal__edit-footer::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
   }
 
   .cdp-modal__edit-tool-tabs {
@@ -1070,6 +1098,7 @@
     padding: 3px;
     border-radius: 12px;
     background: rgba(0, 0, 0, 0.28);
+    flex-shrink: 0;
   }
 
   .cdp-modal__edit-tool-tab {
@@ -1249,6 +1278,59 @@
 
   .cdp-modal__edit-clear-mask[hidden] {
     display: none !important;
+  }
+
+  @media (min-width: 901px) {
+    .cdp-modal__edit-layout {
+      flex-direction: row;
+      align-items: stretch;
+      gap: 16px;
+    }
+
+    .cdp-modal__edit-preview {
+      flex: 1 1 auto;
+    }
+
+    .cdp-modal__edit-footer {
+      flex: 0 0 280px;
+      width: 280px;
+      max-height: none;
+      height: 100%;
+      border-top: 0;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 0;
+      padding-left: 12px;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .cdp-modal__panel--edit .cdp-modal__panel-inner {
+      padding: 12px;
+    }
+
+    .cdp-modal__edit-preview {
+      flex: 0 0 auto;
+      height: min(48vh, 360px);
+      max-height: min(48vh, 360px);
+    }
+
+    .cdp-modal__edit-image-wrap,
+    .cdp-modal__edit-image-wrap.cdp-modal__image-wrapper {
+      height: 100%;
+      max-height: none;
+      min-height: 0;
+    }
+
+    .cdp-modal__edit-footer {
+      flex: 1 1 auto;
+      max-height: none;
+      min-height: 0;
+    }
+
+    .cdp-modal__edit-tool-tab {
+      font-size: 11px;
+      padding: 8px 4px;
+    }
   }
 
   /* Edit History overlay */
@@ -2455,7 +2537,14 @@
                 </div>
 
                 <div class="cdp-modal__edit-tool-panel is-active" data-cdp-edit-panel="crop" id="cdp-edit-panel-crop-design-preview">
-                  <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-edit-crop-trigger-design-preview" data-t="creator.preview_modal.edit_crop">Crop</button>
+                  <button
+                    type="button"
+                    class="cdp-modal__edit-btn cdp-modal__edit-btn--primary"
+                    id="cdp-edit-crop-trigger-design-preview"
+                    data-t="creator.preview_modal.edit_crop"
+                    data-label-crop="Crop"
+                    data-label-apply="Apply"
+                  >Crop</button>
                 </div>
 
                 <div class="cdp-modal__edit-tool-panel" data-cdp-edit-panel="remove_bg" id="cdp-edit-panel-bg-design-preview" hidden>

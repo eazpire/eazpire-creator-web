@@ -236,6 +236,8 @@
   /** Manual crop overlay (pixel rect in natural coordinates of the crop-session image). */
   let manualCropActive = false;
   let manualCropRect = null;
+  let manualCropInitialRect = null;
+  let manualCropDirty = false;
   /** naturalWidth/Height of the image the user adjusted (crop-session URL). */
   let manualCropUiNaturalW = 0;
   let manualCropUiNaturalH = 0;
@@ -615,6 +617,33 @@
       btn.setAttribute('aria-label', saveMode ? t.saveTitle : t.enterTitle);
       btn.setAttribute('title', saveMode ? t.saveTitle : t.enterTitle);
     });
+    updateEditCropTriggerLabel();
+  }
+
+  function cropRectsEqual(a, b) {
+    if (!a || !b) return false;
+    return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+  }
+
+  function markManualCropDirtyFromRect() {
+    if (!manualCropActive || !manualCropRect || !manualCropInitialRect) {
+      manualCropDirty = false;
+    } else {
+      manualCropDirty = !cropRectsEqual(manualCropRect, manualCropInitialRect);
+    }
+    updateEditCropTriggerLabel();
+  }
+
+  function updateEditCropTriggerLabel() {
+    var btn = document.getElementById('cdp-edit-crop-trigger-' + sectionId);
+    if (!btn) return;
+    var cropLabel = btn.getAttribute('data-label-crop') || tPreview('edit_crop', 'Crop');
+    var applyLabel = btn.getAttribute('data-label-apply') || tPreview('edit_crop_apply', 'Apply');
+    if (manualCropActive && manualCropDirty) {
+      btn.textContent = applyLabel;
+    } else {
+      btn.textContent = cropLabel;
+    }
   }
 
   function clampNaturalRect(r, iw, ih) {
@@ -817,6 +846,7 @@
         return;
     }
     manualCropRect = clampNaturalRect({ x: x, y: y, w: w, h: h }, iw, ih);
+    markManualCropDirtyFromRect();
   }
 
   function displayRectForNatural(img, r) {
@@ -969,6 +999,8 @@
     manualCropActive = false;
     manualCropDrag = null;
     manualCropRect = null;
+    manualCropInitialRect = null;
+    manualCropDirty = false;
     manualCropUiNaturalW = 0;
     manualCropUiNaturalH = 0;
     if (modalCarousel) modalCarousel.classList.remove('cdp-modal__carousel--manual-crop');
@@ -980,6 +1012,7 @@
       });
     }
     setCropButtonsSaveMode(false);
+    updateEditCropTriggerLabel();
     revertModalImagesToPrimaryPreview();
     if (manualCropResizeObserver) {
       manualCropResizeObserver.disconnect();
@@ -1015,10 +1048,13 @@
         }
       }
       manualCropRect = { x: 0, y: 0, w: iw, h: ih };
+      manualCropInitialRect = { x: 0, y: 0, w: iw, h: ih };
+      manualCropDirty = false;
       manualCropUiNaturalW = iw;
       manualCropUiNaturalH = ih;
       manualCropActive = true;
       setCropButtonsSaveMode(true);
+      updateEditCropTriggerLabel();
       syncManualCropLayout();
       bindManualCropResizeObserver();
       if (modalCarousel) modalCarousel.classList.add('cdp-modal__carousel--manual-crop');
@@ -1124,6 +1160,7 @@
     } else if (manualCropDrag.kind === 'resize') {
       applyManualCropResize(nat.px, nat.py, manualCropDrag);
     }
+    markManualCropDirtyFromRect();
     syncManualCropLayout();
   }
 
@@ -1137,6 +1174,7 @@
       } catch (_) {}
     }
     manualCropDrag = null;
+    markManualCropDirtyFromRect();
   }
 
   function ensureManualCropDocListeners() {
@@ -2306,6 +2344,7 @@
   }
 
   function updateEditActionButtons() {
+    updateEditCropTriggerLabel();
     var colorBtn = document.getElementById('cdp-edit-remove-color-apply-' + sectionId);
     if (colorBtn) {
       var chooseColor = colorBtn.getAttribute('data-label-choose') || tPreview('edit_choose_color', 'Choose Color');
@@ -4447,6 +4486,10 @@
     }
 
     if (manualCropActive) {
+      if (!manualCropDirty) {
+        // Crop mode active but no change yet — keep waiting for adjustments
+        return;
+      }
       await performCrop();
       return;
     }
