@@ -1029,9 +1029,19 @@
     z-index: 2;
   }
 
+  /* Live remove/replace result covers the source image (opacity 1). */
   .cdp-modal__edit-color-canvas {
     z-index: 1;
-    opacity: 0.72;
+    opacity: 1;
+  }
+
+  .cdp-modal__edit-image-wrap.is-color-live-preview .cdp-modal__edit-image {
+    opacity: 0;
+  }
+
+  /* Keep brush area visible while painting; fade it so live result stays readable. */
+  .cdp-modal__edit-image-wrap.is-color-live-preview:not(.is-brushing) .cdp-modal__edit-mask-canvas {
+    opacity: 0.22;
   }
 
   .cdp-modal__edit-image-wrap.is-brushing .cdp-modal__edit-mask-canvas {

@@ -311,6 +311,10 @@
   const VIEWER_BG_STORAGE_KEY = 'eaz_cdp_viewer_bg';
   let viewerBgValue = VIEWER_BG_DEFAULT;
   let editColorPreviewTimer = null;
+  let editColorPreviewRaf = null;
+  let editColorPreviewWorking = null; // reused sample canvas
+  let editColorPreviewFull = null; // reused natural-size canvas for downscale
+  let editColorLivePreviewActive = false;
   let editSourceImageData = null;
   let editSourceImageKey = '';
   let editSourceNaturalW = 0;
@@ -2571,10 +2575,7 @@
     ctx.fill();
     editMaskDirty = true;
     updateEditActionButtons();
-    if (editActiveTool === 'remove_color') {
-      refreshColorAreaPalette();
-      scheduleColorPreview();
-    }
+    // Live preview + palette refresh run on stroke end (not every pointermove).
   }
 
   function rgbToHex(color) {
@@ -2885,38 +2886,78 @@
     });
   }
 
+  function setColorLivePreviewActive(active) {
+    editColorLivePreviewActive = !!active;
+    if (editImageWrap) {
+      editImageWrap.classList.toggle('is-color-live-preview', editColorLivePreviewActive);
+    }
+  }
+
   function clearColorPreview() {
     if (editColorPreviewTimer) {
       clearTimeout(editColorPreviewTimer);
       editColorPreviewTimer = null;
     }
-    if (!editColorCanvas) return;
+    if (editColorPreviewRaf) {
+      cancelAnimationFrame(editColorPreviewRaf);
+      editColorPreviewRaf = null;
+    }
+    if (!editColorCanvas) {
+      setColorLivePreviewActive(false);
+      return;
+    }
     var ctx = editColorCanvas.getContext('2d');
     if (ctx) ctx.clearRect(0, 0, editColorCanvas.width, editColorCanvas.height);
+    setColorLivePreviewActive(false);
   }
 
   function scheduleColorPreview() {
     if (editColorPreviewTimer) clearTimeout(editColorPreviewTimer);
+    // Slightly longer debounce while brushing; snappy for color/slider changes.
+    var delay = editBrushPainting ? 120 : 50;
     editColorPreviewTimer = setTimeout(function () {
       editColorPreviewTimer = null;
-      renderColorSelectionOverlay();
-    }, 60);
+      if (editColorPreviewRaf) cancelAnimationFrame(editColorPreviewRaf);
+      editColorPreviewRaf = requestAnimationFrame(function () {
+        editColorPreviewRaf = null;
+        renderLiveRemoveColorPreview();
+      });
+    }, delay);
   }
 
-  function renderColorSelectionOverlay() {
+  /**
+   * Client-side live preview of remove/replace color (matches server threshold).
+   * Covers the edit image so Transparent holes show the viewer background.
+   */
+  function renderLiveRemoveColorPreview() {
     if (!editColorCanvas || !editImageEl) return;
     syncEditColorCanvasSize();
     var ctx = editColorCanvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, editColorCanvas.width, editColorCanvas.height);
-    if (!editPickedColors.length || editActiveTool !== 'remove_color') return;
+
+    var canPreview =
+      editActiveTool === 'remove_color' &&
+      editPickedColors.length > 0 &&
+      (editColorReplaceMode !== 'color' || !!editReplaceTargetColor);
+
+    if (!canPreview) {
+      setColorLivePreviewActive(false);
+      return;
+    }
+
     var src = ensureEditSourcePixels();
-    if (!src) return;
-    var maskBits = editMaskDirty ? buildNaturalBrushMaskBits() : null;
+    if (!src) {
+      setColorLivePreviewActive(false);
+      return;
+    }
 
     var imgRect = editImageEl.getBoundingClientRect();
     var canvasRect = editColorCanvas.getBoundingClientRect();
-    if (imgRect.width < 1 || canvasRect.width < 1) return;
+    if (imgRect.width < 1 || canvasRect.width < 1) {
+      setColorLivePreviewActive(false);
+      return;
+    }
 
     var scaleX = editColorCanvas.width / canvasRect.width;
     var scaleY = editColorCanvas.height / canvasRect.height;
@@ -2925,63 +2966,98 @@
     var dw = imgRect.width * scaleX;
     var dh = imgRect.height * scaleY;
 
-    var sampleW = Math.max(1, Math.round(Math.min(src.width, 360)));
+    // Cap sample size for main-thread cost; still sharp enough for preview.
+    var maxEdge = 640;
+    var sampleW = Math.max(1, Math.round(Math.min(src.width, maxEdge)));
     var sampleH = Math.max(1, Math.round(sampleW * (src.height / src.width)));
-    var tmp = document.createElement('canvas');
-    tmp.width = sampleW;
-    tmp.height = sampleH;
-    var tctx = tmp.getContext('2d');
-    if (!tctx) return;
-    var full = document.createElement('canvas');
-    full.width = src.width;
-    full.height = src.height;
-    var fctx = full.getContext('2d');
-    if (!fctx) return;
-    fctx.putImageData(src, 0, 0);
-    tctx.drawImage(full, 0, 0, sampleW, sampleH);
+    if (sampleH > maxEdge) {
+      sampleH = maxEdge;
+      sampleW = Math.max(1, Math.round(sampleH * (src.width / src.height)));
+    }
+
+    if (!editColorPreviewWorking) {
+      editColorPreviewWorking = document.createElement('canvas');
+    }
+    var tmp = editColorPreviewWorking;
+    if (tmp.width !== sampleW) tmp.width = sampleW;
+    if (tmp.height !== sampleH) tmp.height = sampleH;
+    var tctx = tmp.getContext('2d', { willReadFrequently: true });
+    if (!tctx) {
+      setColorLivePreviewActive(false);
+      return;
+    }
+
+    // Draw source → sample (reuse canvases to avoid alloc churn)
+    if (sampleW === src.width && sampleH === src.height) {
+      tctx.putImageData(src, 0, 0);
+    } else {
+      if (!editColorPreviewFull) editColorPreviewFull = document.createElement('canvas');
+      var full = editColorPreviewFull;
+      if (full.width !== src.width) full.width = src.width;
+      if (full.height !== src.height) full.height = src.height;
+      var fctx = full.getContext('2d');
+      if (!fctx) {
+        setColorLivePreviewActive(false);
+        return;
+      }
+      fctx.putImageData(src, 0, 0);
+      tctx.clearRect(0, 0, sampleW, sampleH);
+      tctx.drawImage(full, 0, 0, sampleW, sampleH);
+    }
+
     var sampled = tctx.getImageData(0, 0, sampleW, sampleH);
     var data = sampled.data;
+    var maskBits = editMaskDirty ? buildNaturalBrushMaskBits() : null;
+    // Match server: threshold = (tolerance/100) * √(3*255²)
     var tol = Math.max(0, Math.min(100, Number(editColorTolerance) || 0));
-    var maxDist = 8 + (tol / 100) * 140;
-    var showReplace =
+    var maxDist = (tol / 100) * Math.sqrt(3 * 255 * 255);
+    var doReplace =
       editColorReplaceMode === 'color' &&
       editReplaceTargetColor &&
       Number.isFinite(editReplaceTargetColor.r);
+    var rr = doReplace ? editReplaceTargetColor.r : 0;
+    var rg = doReplace ? editReplaceTargetColor.g : 0;
+    var rb = doReplace ? editReplaceTargetColor.b : 0;
+    var scaleToNatX = src.width / sampleW;
+    var scaleToNatY = src.height / sampleH;
+    var colors = editPickedColors;
+    var colorCount = colors.length;
+
     for (var i = 0; i < data.length; i += 4) {
-      if (data[i + 3] < 20) {
-        data[i + 3] = 0;
-        continue;
-      }
+      if (data[i + 3] < 8) continue;
       if (maskBits) {
-        var sx = ((i / 4) % sampleW) * (src.width / sampleW);
-        var sy = Math.floor(i / 4 / sampleW) * (src.height / sampleH);
-        if (!isNaturalPixelInBrushMask(maskBits, sx, sy)) {
-          data[i + 3] = 0;
-          continue;
+        var sx = ((i / 4) % sampleW) * scaleToNatX;
+        var sy = Math.floor(i / 4 / sampleW) * scaleToNatY;
+        if (!isNaturalPixelInBrushMask(maskBits, sx, sy)) continue;
+      }
+      var pr = data[i];
+      var pg = data[i + 1];
+      var pb = data[i + 2];
+      var matched = false;
+      for (var ci = 0; ci < colorCount; ci++) {
+        var c = colors[ci];
+        var dr = pr - c.r;
+        var dg = pg - c.g;
+        var db = pb - c.b;
+        if (Math.sqrt(dr * dr + dg * dg + db * db) <= maxDist) {
+          matched = true;
+          break;
         }
       }
-      var pixel = { r: data[i], g: data[i + 1], b: data[i + 2] };
-      var match = editPickedColors.some(function (c) {
-        return colorDistance(pixel, c) <= maxDist;
-      });
-      if (match) {
-        if (showReplace) {
-          data[i] = editReplaceTargetColor.r;
-          data[i + 1] = editReplaceTargetColor.g;
-          data[i + 2] = editReplaceTargetColor.b;
-          data[i + 3] = 200;
-        } else {
-          data[i] = 245;
-          data[i + 1] = 158;
-          data[i + 2] = 11;
-          data[i + 3] = 150;
-        }
+      if (!matched) continue;
+      if (doReplace) {
+        data[i] = rr;
+        data[i + 1] = rg;
+        data[i + 2] = rb;
+        // keep alpha (same as server)
       } else {
         data[i + 3] = 0;
       }
     }
+
     tctx.putImageData(sampled, 0, 0);
     ctx.drawImage(tmp, 0, 0, sampleW, sampleH, dx, dy, dw, dh);
+    setColorLivePreviewActive(true);
   }
 
   function renderEditColorChips() {
