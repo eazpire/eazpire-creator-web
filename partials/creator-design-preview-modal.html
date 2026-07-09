@@ -1141,6 +1141,98 @@
     line-height: 1.35;
   }
 
+  .cdp-modal__edit-tool-hint--compact {
+    font-size: 11px;
+    margin-top: -2px;
+  }
+
+  .cdp-modal__edit-replace-target {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cdp-modal__edit-replace-target[hidden] {
+    display: none !important;
+  }
+
+  .cdp-modal__edit-replace-target-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .cdp-modal__edit-replace-target-label {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  .cdp-modal__edit-replace-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: #f59e0b;
+  }
+
+  .cdp-modal__edit-replace-swatch.is-empty {
+    background:
+      linear-gradient(45deg, #374151 25%, transparent 25%),
+      linear-gradient(-45deg, #374151 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #374151 75%),
+      linear-gradient(-45deg, transparent 75%, #374151 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    background-color: #1f2937;
+  }
+
+  .cdp-modal__edit-replace-picker {
+    width: 36px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .cdp-modal__edit-replace-eyedrop {
+    width: auto !important;
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .cdp-modal__edit-replace-eyedrop.is-active {
+    border-color: rgba(245, 158, 11, 0.55);
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.16);
+  }
+
+  .cdp-modal__edit-replace-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .cdp-modal__edit-replace-palette:empty {
+    display: none;
+  }
+
+  .cdp-modal__edit-replace-palette-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .cdp-modal__edit-replace-palette-swatch.is-selected {
+    outline: 2px solid #f59e0b;
+    outline-offset: 1px;
+  }
+
   .cdp-modal__edit-seg {
     display: flex;
     gap: 4px;
@@ -1506,6 +1598,11 @@
     background: rgba(34, 197, 94, 0.2);
     color: #4ade80;
     border: 1px solid rgba(34, 197, 94, 0.35);
+  }
+
+  /* display:inline-block above would otherwise override the HTML hidden attribute */
+  .cdp-modal__edit-history-badge[hidden] {
+    display: none !important;
   }
 
   .cdp-modal__edit-history-dots {
@@ -2556,13 +2653,32 @@
                 </div>
 
                 <div class="cdp-modal__edit-tool-panel" data-cdp-edit-panel="remove_color" id="cdp-edit-panel-color-design-preview" hidden>
-                  <p class="cdp-modal__edit-tool-hint" data-t="creator.preview_modal.edit_remove_color_pick">Click the design to pick colors</p>
+                  <p class="cdp-modal__edit-tool-hint" id="cdp-edit-color-hint-design-preview" data-t="creator.preview_modal.edit_remove_color_pick">Pick colors on the design, or brush an area first to limit which colors appear</p>
+                  <div class="cdp-modal__edit-seg" role="group" aria-label="Replace Color">
+                    <button type="button" class="cdp-modal__edit-seg-btn is-active" data-cdp-color-replace-mode="transparent" id="cdp-edit-color-mode-transparent-design-preview" data-t="creator.preview_modal.edit_replace_mode_transparent">Transparent</button>
+                    <button type="button" class="cdp-modal__edit-seg-btn" data-cdp-color-replace-mode="color" id="cdp-edit-color-mode-color-design-preview" data-t="creator.preview_modal.edit_replace_mode_color">Color</button>
+                  </div>
+                  <div class="cdp-modal__edit-replace-target" id="cdp-edit-replace-target-design-preview" hidden>
+                    <div class="cdp-modal__edit-replace-target-row">
+                      <span class="cdp-modal__edit-replace-target-label" data-t="creator.preview_modal.edit_replace_target_label">Replacement color</span>
+                      <span class="cdp-modal__edit-color-swatch cdp-modal__edit-replace-swatch" id="cdp-edit-replace-swatch-design-preview" aria-hidden="true"></span>
+                      <input type="color" id="cdp-edit-replace-picker-design-preview" class="cdp-modal__edit-replace-picker" value="#f59e0b" aria-label="Replacement color" />
+                      <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--ghost cdp-modal__edit-replace-eyedrop" id="cdp-edit-replace-eyedrop-design-preview" data-t="creator.preview_modal.edit_replace_target_eyedropper">Eyedropper</button>
+                    </div>
+                    <div class="cdp-modal__edit-replace-palette" id="cdp-edit-replace-palette-design-preview"></div>
+                  </div>
                   <div class="cdp-modal__edit-color-chips" id="cdp-edit-color-chips-design-preview"></div>
                   <div class="cdp-modal__edit-slider-row">
                     <label for="cdp-edit-color-tolerance-design-preview" data-t="creator.preview_modal.edit_remove_color_tolerance">Similar colors intensity</label>
                     <input type="range" id="cdp-edit-color-tolerance-design-preview" min="0" max="100" value="30" />
                   </div>
+                  <div class="cdp-modal__edit-slider-row">
+                    <label for="cdp-edit-color-brush-size-design-preview" data-t="creator.preview_modal.edit_color_area_brush">Area brush</label>
+                    <input type="range" id="cdp-edit-color-brush-size-design-preview" min="8" max="80" value="28" />
+                  </div>
+                  <p class="cdp-modal__edit-tool-hint cdp-modal__edit-tool-hint--compact" data-t="creator.preview_modal.edit_color_area_brush_hint">Optional: paint areas so only colors inside them are listed and removed</p>
                   <div class="cdp-modal__edit-btn-row">
+                    <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--ghost cdp-modal__edit-clear-mask" id="cdp-edit-clear-color-mask-design-preview" hidden data-t="creator.preview_modal.edit_clear_mask">Clear mask</button>
                     <button type="button" class="cdp-modal__edit-btn" id="cdp-edit-design-colors-open-design-preview" data-t="creator.preview_modal.edit_design_colors">Design Colors</button>
                     <button
                       type="button"

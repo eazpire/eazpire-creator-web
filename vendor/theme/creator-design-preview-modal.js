@@ -297,6 +297,10 @@
   let editPaletteColors = [];
   let editColorTolerance = 30;
   let editBrushSize = 28;
+  let editColorBrushSize = 28;
+  let editColorReplaceMode = 'transparent'; // 'transparent' | 'color'
+  let editReplaceTargetColor = null; // {r,g,b} | null
+  let editPickReplaceTarget = false;
   let editToolMode = null; // 'eyedropper' | 'brush' | null
   let editActiveTool = 'crop'; // 'crop' | 'remove_bg' | 'remove_color' | 'remove_object'
   let editBrushPainting = false;
@@ -2257,6 +2261,7 @@
     opts = opts || {};
     var next = String(tool || 'crop');
     if (['crop', 'remove_bg', 'remove_color', 'remove_object'].indexOf(next) < 0) next = 'crop';
+    var prevTool = editActiveTool;
     if (!opts.force && editActiveTool === next) {
       // still refresh modes for current tool
     } else {
@@ -2275,13 +2280,28 @@
       });
     }
     if (manualCropActive && editActiveTool !== 'crop') exitManualCropMode();
+    // Brush mask is shared; clear when switching between tools that use it differently.
+    if (prevTool !== editActiveTool && editMaskDirty) {
+      if (
+        (prevTool === 'remove_object' || prevTool === 'remove_color') &&
+        (editActiveTool === 'remove_object' || editActiveTool === 'remove_color' ||
+          editActiveTool === 'crop' || editActiveTool === 'remove_bg')
+      ) {
+        clearEditMask(true);
+      }
+    }
     if (editActiveTool === 'remove_color') {
+      editPickReplaceTarget = false;
+      updateColorReplaceModeUi();
       enableEyedropperMode();
       scheduleColorPreview();
+      refreshColorAreaPalette();
     } else if (editActiveTool === 'remove_object') {
+      editPickReplaceTarget = false;
       enableBrushMode();
       clearColorPreview();
     } else {
+      editPickReplaceTarget = false;
       editToolMode = null;
       updateEditToolModeUi();
       clearColorPreview();
@@ -2341,6 +2361,11 @@
     editMaskDirty = false;
     updateEditActionButtons();
     if (!silent && editActiveTool === 'remove_object') enableBrushMode();
+    if (!silent && editActiveTool === 'remove_color') {
+      enableEyedropperMode();
+      refreshColorAreaPalette();
+      scheduleColorPreview();
+    }
   }
 
   function updateEditActionButtons() {
@@ -2349,7 +2374,10 @@
     if (colorBtn) {
       var chooseColor = colorBtn.getAttribute('data-label-choose') || tPreview('edit_choose_color', 'Choose Color');
       var applyColor = colorBtn.getAttribute('data-label-apply') || tPreview('edit_remove_color_apply', 'Apply');
-      colorBtn.textContent = editPickedColors.length ? applyColor : chooseColor;
+      var canApplyColor = editPickedColors.length && (
+        editColorReplaceMode !== 'color' || !!editReplaceTargetColor
+      );
+      colorBtn.textContent = canApplyColor ? applyColor : chooseColor;
     }
     var objBtn = document.getElementById('cdp-edit-remove-object-apply-' + sectionId);
     if (objBtn) {
@@ -2359,9 +2387,15 @@
     }
     var clearMask = document.getElementById('cdp-edit-clear-mask-' + sectionId);
     if (clearMask) {
-      if (editMaskDirty) clearMask.removeAttribute('hidden');
+      if (editMaskDirty && editActiveTool === 'remove_object') clearMask.removeAttribute('hidden');
       else clearMask.setAttribute('hidden', '');
     }
+    var clearColorMask = document.getElementById('cdp-edit-clear-color-mask-' + sectionId);
+    if (clearColorMask) {
+      if (editMaskDirty && editActiveTool === 'remove_color') clearColorMask.removeAttribute('hidden');
+      else clearColorMask.setAttribute('hidden', '');
+    }
+    updateReplaceTargetUi();
   }
 
   function paintEditBrush(clientX, clientY) {
@@ -2372,12 +2406,165 @@
     var y = ((clientY - rect.top) / rect.height) * editMaskCanvas.height;
     var ctx = editMaskCanvas.getContext('2d');
     if (!ctx) return;
+    var size = editActiveTool === 'remove_color' ? editColorBrushSize : editBrushSize;
     ctx.fillStyle = 'rgba(245, 158, 11, 0.55)';
     ctx.beginPath();
-    ctx.arc(x, y, Math.max(4, editBrushSize / 2), 0, Math.PI * 2);
+    ctx.arc(x, y, Math.max(4, size / 2), 0, Math.PI * 2);
     ctx.fill();
     editMaskDirty = true;
     updateEditActionButtons();
+    if (editActiveTool === 'remove_color') {
+      refreshColorAreaPalette();
+      scheduleColorPreview();
+    }
+  }
+
+  function rgbToHex(color) {
+    if (!color) return '#f59e0b';
+    function h(n) {
+      var s = Math.max(0, Math.min(255, Math.round(Number(n) || 0))).toString(16);
+      return s.length === 1 ? '0' + s : s;
+    }
+    return '#' + h(color.r) + h(color.g) + h(color.b);
+  }
+
+  function hexToRgb(hex) {
+    var m = String(hex || '').trim().match(/^#?([0-9a-f]{6})$/i);
+    if (!m) return null;
+    var n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  function setReplaceTargetColor(color, opts) {
+    opts = opts || {};
+    if (!color) {
+      editReplaceTargetColor = null;
+    } else {
+      editReplaceTargetColor = {
+        r: Math.max(0, Math.min(255, Math.round(Number(color.r) || 0))),
+        g: Math.max(0, Math.min(255, Math.round(Number(color.g) || 0))),
+        b: Math.max(0, Math.min(255, Math.round(Number(color.b) || 0)))
+      };
+    }
+    if (!opts.keepEyedropper) editPickReplaceTarget = false;
+    updateReplaceTargetUi();
+    updateEditActionButtons();
+    scheduleColorPreview();
+  }
+
+  function updateReplaceTargetUi() {
+    var host = document.getElementById('cdp-edit-replace-target-' + sectionId);
+    if (host) {
+      if (editColorReplaceMode === 'color') host.removeAttribute('hidden');
+      else host.setAttribute('hidden', '');
+    }
+    var swatch = document.getElementById('cdp-edit-replace-swatch-' + sectionId);
+    if (swatch) {
+      if (editReplaceTargetColor) {
+        swatch.classList.remove('is-empty');
+        swatch.style.background = 'rgb(' + editReplaceTargetColor.r + ',' + editReplaceTargetColor.g + ',' + editReplaceTargetColor.b + ')';
+      } else {
+        swatch.classList.add('is-empty');
+        swatch.style.background = '';
+      }
+    }
+    var picker = document.getElementById('cdp-edit-replace-picker-' + sectionId);
+    if (picker && editReplaceTargetColor) {
+      picker.value = rgbToHex(editReplaceTargetColor);
+    }
+    var eyeBtn = document.getElementById('cdp-edit-replace-eyedrop-' + sectionId);
+    if (eyeBtn) {
+      eyeBtn.classList.toggle('is-active', !!editPickReplaceTarget);
+    }
+    renderReplacePaletteSwatches();
+  }
+
+  function updateColorReplaceModeUi() {
+    if (!modal) getDOMElements();
+    if (modal) {
+      modal.querySelectorAll('[data-cdp-color-replace-mode]').forEach(function (btn) {
+        btn.classList.toggle(
+          'is-active',
+          btn.getAttribute('data-cdp-color-replace-mode') === editColorReplaceMode
+        );
+      });
+    }
+    updateReplaceTargetUi();
+  }
+
+  function setColorReplaceMode(mode) {
+    editColorReplaceMode = mode === 'color' ? 'color' : 'transparent';
+    if (editColorReplaceMode !== 'color') editPickReplaceTarget = false;
+    updateColorReplaceModeUi();
+    updateEditActionButtons();
+    scheduleColorPreview();
+  }
+
+  /**
+   * Build a natural-size boolean mask from the brush overlay (same mapping as server mask).
+   * Returns { width, height, data: Uint8Array } where data[i]=1 means inside brush.
+   */
+  function buildNaturalBrushMaskBits() {
+    if (!editMaskCanvas || !editImageEl || !editImageEl.naturalWidth || !editMaskDirty) return null;
+    var nw = editImageEl.naturalWidth;
+    var nh = editImageEl.naturalHeight;
+    var out = document.createElement('canvas');
+    out.width = nw;
+    out.height = nh;
+    var octx = out.getContext('2d');
+    if (!octx) return null;
+    octx.fillStyle = '#000000';
+    octx.fillRect(0, 0, nw, nh);
+
+    var src = editMaskCanvas;
+    var tmp = document.createElement('canvas');
+    tmp.width = src.width;
+    tmp.height = src.height;
+    var tctx = tmp.getContext('2d');
+    if (!tctx) return null;
+    tctx.drawImage(src, 0, 0);
+    var imgData = tctx.getImageData(0, 0, tmp.width, tmp.height);
+    var data = imgData.data;
+    for (var i = 0; i < data.length; i += 4) {
+      var a = data[i + 3];
+      if (a > 20) {
+        data[i] = 255;
+        data[i + 1] = 255;
+        data[i + 2] = 255;
+        data[i + 3] = 255;
+      } else {
+        data[i] = 0;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
+        data[i + 3] = 255;
+      }
+    }
+    tctx.putImageData(imgData, 0, 0);
+
+    var imgRect = editImageEl.getBoundingClientRect();
+    var canvasRect = editMaskCanvas.getBoundingClientRect();
+    var scaleX = src.width / canvasRect.width;
+    var scaleY = src.height / canvasRect.height;
+    var dx = (imgRect.left - canvasRect.left) * scaleX;
+    var dy = (imgRect.top - canvasRect.top) * scaleY;
+    var dw = imgRect.width * scaleX;
+    var dh = imgRect.height * scaleY;
+    octx.drawImage(tmp, dx, dy, dw, dh, 0, 0, nw, nh);
+
+    var mapped = octx.getImageData(0, 0, nw, nh);
+    var bits = new Uint8Array(nw * nh);
+    var md = mapped.data;
+    for (var p = 0, bi = 0; p < md.length; p += 4, bi++) {
+      bits[bi] = md[p] > 20 ? 1 : 0;
+    }
+    return { width: nw, height: nh, data: bits };
+  }
+
+  function isNaturalPixelInBrushMask(maskBits, x, y) {
+    if (!maskBits) return true;
+    var xi = Math.max(0, Math.min(maskBits.width - 1, Math.round(x)));
+    var yi = Math.max(0, Math.min(maskBits.height - 1, Math.round(y)));
+    return !!maskBits.data[yi * maskBits.width + xi];
   }
 
   function buildMaskDataUrlForServer() {
@@ -2464,16 +2651,26 @@
     }
   }
 
-  function extractDesignPalette(maxColors) {
+  function extractDesignPalette(maxColors, opts) {
     maxColors = maxColors || 36;
+    opts = opts || {};
     var src = ensureEditSourcePixels();
     if (!src) return [];
+    var maskBits = opts.maskBits;
+    if (opts.useBrushMask && maskBits == null) {
+      maskBits = buildNaturalBrushMaskBits();
+    }
     var data = src.data;
     var step = Math.max(1, Math.floor((src.width * src.height) / 12000));
     var buckets = {};
     for (var i = 0; i < data.length; i += 4 * step) {
       var a = data[i + 3];
       if (a < 40) continue;
+      if (maskBits) {
+        var px = (i / 4) % src.width;
+        var py = Math.floor(i / 4 / src.width);
+        if (!isNaturalPixelInBrushMask(maskBits, px, py)) continue;
+      }
       var r = data[i];
       var g = data[i + 1];
       var b = data[i + 2];
@@ -2493,6 +2690,41 @@
       if (!tooClose) out.push({ r: c.r, g: c.g, b: c.b, count: c.count });
     });
     return out.slice(0, maxColors);
+  }
+
+  function refreshColorAreaPalette() {
+    editPaletteColors = extractDesignPalette(36, { useBrushMask: !!editMaskDirty });
+    if (editDesignColorsOpen) renderDesignColorsGrid();
+    if (editColorReplaceMode === 'color') renderReplacePaletteSwatches();
+  }
+
+  function renderReplacePaletteSwatches() {
+    var host = document.getElementById('cdp-edit-replace-palette-' + sectionId);
+    if (!host) return;
+    host.innerHTML = '';
+    if (editColorReplaceMode !== 'color') return;
+    var colors = editPaletteColors.length
+      ? editPaletteColors
+      : extractDesignPalette(18, { useBrushMask: !!editMaskDirty });
+    colors.slice(0, 18).forEach(function (c) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cdp-modal__edit-replace-palette-swatch';
+      btn.style.background = 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')';
+      btn.title = c.r + ', ' + c.g + ', ' + c.b;
+      if (
+        editReplaceTargetColor &&
+        editReplaceTargetColor.r === c.r &&
+        editReplaceTargetColor.g === c.g &&
+        editReplaceTargetColor.b === c.b
+      ) {
+        btn.classList.add('is-selected');
+      }
+      btn.addEventListener('click', function () {
+        setReplaceTargetColor(c);
+      });
+      host.appendChild(btn);
+    });
   }
 
   function clearColorPreview() {
@@ -2522,6 +2754,7 @@
     if (!editPickedColors.length || editActiveTool !== 'remove_color') return;
     var src = ensureEditSourcePixels();
     if (!src) return;
+    var maskBits = editMaskDirty ? buildNaturalBrushMaskBits() : null;
 
     var imgRect = editImageEl.getBoundingClientRect();
     var canvasRect = editColorCanvas.getBoundingClientRect();
@@ -2552,20 +2785,39 @@
     var data = sampled.data;
     var tol = Math.max(0, Math.min(100, Number(editColorTolerance) || 0));
     var maxDist = 8 + (tol / 100) * 140;
+    var showReplace =
+      editColorReplaceMode === 'color' &&
+      editReplaceTargetColor &&
+      Number.isFinite(editReplaceTargetColor.r);
     for (var i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 20) {
         data[i + 3] = 0;
         continue;
+      }
+      if (maskBits) {
+        var sx = ((i / 4) % sampleW) * (src.width / sampleW);
+        var sy = Math.floor(i / 4 / sampleW) * (src.height / sampleH);
+        if (!isNaturalPixelInBrushMask(maskBits, sx, sy)) {
+          data[i + 3] = 0;
+          continue;
+        }
       }
       var pixel = { r: data[i], g: data[i + 1], b: data[i + 2] };
       var match = editPickedColors.some(function (c) {
         return colorDistance(pixel, c) <= maxDist;
       });
       if (match) {
-        data[i] = 245;
-        data[i + 1] = 158;
-        data[i + 2] = 11;
-        data[i + 3] = 150;
+        if (showReplace) {
+          data[i] = editReplaceTargetColor.r;
+          data[i + 1] = editReplaceTargetColor.g;
+          data[i + 2] = editReplaceTargetColor.b;
+          data[i + 3] = 200;
+        } else {
+          data[i] = 245;
+          data[i + 1] = 158;
+          data[i + 2] = 11;
+          data[i + 3] = 150;
+        }
       } else {
         data[i + 3] = 0;
       }
@@ -2634,8 +2886,19 @@
     }
     var x = Math.max(0, Math.min(src.width - 1, Math.round(nat.px)));
     var y = Math.max(0, Math.min(src.height - 1, Math.round(nat.py)));
+    if (editMaskDirty) {
+      var maskBits = buildNaturalBrushMaskBits();
+      if (maskBits && !isNaturalPixelInBrushMask(maskBits, x, y)) {
+        // Outside brushed area: ignore pick for source colors (still allow replace eyedropper).
+        if (!editPickReplaceTarget) return;
+      }
+    }
     var i = (y * src.width + x) * 4;
     var color = { r: src.data[i], g: src.data[i + 1], b: src.data[i + 2] };
+    if (editPickReplaceTarget) {
+      setReplaceTargetColor(color);
+      return;
+    }
     if (!isColorSelected(color)) {
       editPickedColors.push(color);
       renderEditColorChips();
@@ -2649,7 +2912,7 @@
     el.classList.add('is-open');
     el.removeAttribute('hidden');
     el.setAttribute('aria-hidden', 'false');
-    editPaletteColors = extractDesignPalette(36);
+    refreshColorAreaPalette();
     renderDesignColorsGrid();
   }
 
@@ -2668,7 +2931,12 @@
     if (!grid) return;
     grid.innerHTML = '';
     if (!editPaletteColors.length) {
-      if (emptyEl) emptyEl.hidden = false;
+      if (emptyEl) {
+        emptyEl.hidden = false;
+        emptyEl.textContent = editMaskDirty
+          ? tPreview('edit_design_colors_empty_selection', 'No colors found in the brushed area')
+          : tPreview('edit_design_colors_empty', 'No colors found in this design');
+      }
       return;
     }
     if (emptyEl) emptyEl.hidden = true;
@@ -2696,6 +2964,7 @@
       remove_bg: tPreview('edit_version_remove_bg', 'Remove background'),
       remove_bg_outside: tPreview('edit_version_remove_bg_outside', 'Remove background (outside)'),
       remove_color: tPreview('edit_version_remove_color', 'Remove color'),
+      replace_color: tPreview('edit_version_replace_color', 'Replace color'),
       remove_object: tPreview('edit_version_remove_object', 'Remove object')
     };
     return map[t] || t || 'Version';
@@ -2775,6 +3044,30 @@
     return data;
   }
 
+  function buildSyntheticOriginalVersion() {
+    if (!currentDesign) return null;
+    var preview = primaryDesignImageUrl(currentDesign) || '';
+    var original = getCropSourceImageUrl(currentDesign) || preview;
+    if (!preview && !original) return null;
+    return {
+      id: null,
+      design_id: currentDesign.id,
+      version_type: 'original',
+      label: tPreview('edit_version_original', 'Original'),
+      preview_url: preview || original,
+      original_url: original || preview,
+      is_applied: 1,
+      created_at: currentDesign.created_at || null,
+      meta: { source: 'client_fallback_live' }
+    };
+  }
+
+  function ensureEditVersionsHaveBaseline() {
+    if (editVersions && editVersions.length) return;
+    var baseline = buildSyntheticOriginalVersion();
+    editVersions = baseline ? [baseline] : [];
+  }
+
   async function loadEditVersions() {
     if (!currentDesign || !currentDesign.id) {
       editVersions = [];
@@ -2783,10 +3076,13 @@
     try {
       var data = await dispatchEditOp('list-design-edit-versions', { method: 'GET' });
       editVersions = (data && data.items) || [];
+      ensureEditVersionsHaveBaseline();
       if (editHistoryOpen) renderEditHistoryCarousel();
     } catch (err) {
       console.warn('[CDP] loadEditVersions failed', err);
       editVersions = [];
+      ensureEditVersionsHaveBaseline();
+      if (editHistoryOpen) renderEditHistoryCarousel();
     }
   }
 
@@ -2797,6 +3093,8 @@
     el.classList.add('is-open');
     el.removeAttribute('hidden');
     el.setAttribute('aria-hidden', 'false');
+    // Show live design immediately so History never flashes empty while the API loads.
+    ensureEditVersionsHaveBaseline();
     editHistoryIndex = 0;
     for (var i = 0; i < editVersions.length; i++) {
       if (Number(editVersions[i].is_applied) === 1) {
@@ -2806,6 +3104,12 @@
     }
     renderEditHistoryCarousel();
     loadEditVersions().then(function () {
+      for (var j = 0; j < editVersions.length; j++) {
+        if (Number(editVersions[j].is_applied) === 1) {
+          editHistoryIndex = j;
+          break;
+        }
+      }
       renderEditHistoryCarousel();
     });
   }
@@ -2839,7 +3143,10 @@
       if (dots) dots.innerHTML = '';
       if (labelEl) labelEl.textContent = '';
       if (dateEl) dateEl.textContent = '';
-      if (badge) badge.hidden = true;
+      if (badge) {
+        badge.hidden = true;
+        badge.setAttribute('hidden', '');
+      }
       if (applyBtn) applyBtn.disabled = true;
       if (deleteBtn) deleteBtn.disabled = true;
       if (saveBtn) saveBtn.disabled = true;
@@ -2856,10 +3163,19 @@
     if (labelEl) labelEl.textContent = versionTypeLabel(v);
     if (dateEl) dateEl.textContent = formatVersionDate(v.created_at);
     var applied = Number(v.is_applied) === 1;
-    if (badge) badge.hidden = !applied;
-    if (applyBtn) applyBtn.disabled = applied || editOpBusy;
-    if (deleteBtn) deleteBtn.disabled = applied || editOpBusy;
-    if (saveBtn) saveBtn.disabled = applied || editOpBusy;
+    if (badge) {
+      if (applied) {
+        badge.hidden = false;
+        badge.removeAttribute('hidden');
+      } else {
+        badge.hidden = true;
+        badge.setAttribute('hidden', '');
+      }
+    }
+    var isPersistedVersion = v && v.id != null && v.id !== '';
+    if (applyBtn) applyBtn.disabled = applied || editOpBusy || !isPersistedVersion;
+    if (deleteBtn) deleteBtn.disabled = applied || editOpBusy || !isPersistedVersion;
+    if (saveBtn) saveBtn.disabled = applied || editOpBusy || !isPersistedVersion;
     if (prevBtn) prevBtn.disabled = editHistoryIndex <= 0;
     if (nextBtn) nextBtn.disabled = editHistoryIndex >= editVersions.length - 1;
 
@@ -2887,7 +3203,7 @@
 
   async function applySelectedEditVersion() {
     var v = editVersions[editHistoryIndex];
-    if (!v || Number(v.is_applied) === 1) return;
+    if (!v || v.id == null || v.id === '' || Number(v.is_applied) === 1) return;
     setEditBusy(true);
     try {
       var data = await dispatchEditOp('apply-design-edit-version', {
@@ -2913,7 +3229,7 @@
 
   async function deleteSelectedEditVersion() {
     var v = editVersions[editHistoryIndex];
-    if (!v) return;
+    if (!v || v.id == null || v.id === '') return;
     if (Number(v.is_applied) === 1) {
       alert(tPreview('edit_cannot_delete_applied', 'Apply another version before deleting the currently applied one.'));
       return;
@@ -2938,7 +3254,7 @@
 
   async function saveSelectedEditVersionAsNew() {
     var v = editVersions[editHistoryIndex];
-    if (!v) return;
+    if (!v || v.id == null || v.id === '') return;
     if (Number(v.is_applied) === 1) {
       alert(tPreview('edit_cannot_save_applied', 'The currently applied version cannot be saved as a new design.'));
       return;
@@ -2989,20 +3305,44 @@
   async function applyRemoveColor() {
     if (!editPickedColors.length) {
       setEditActiveTool('remove_color');
+      // Prefer Design Colors when a brush region exists; otherwise eyedropper on the design.
+      if (editMaskDirty) openDesignColorsModal();
+      else enableEyedropperMode();
+      return;
+    }
+    if (editColorReplaceMode === 'color' && !editReplaceTargetColor) {
+      alert(tPreview('edit_replace_pick_target_first', 'Pick a replacement color first.'));
+      editPickReplaceTarget = true;
       enableEyedropperMode();
+      updateReplaceTargetUi();
       return;
     }
     setEditBusy(true);
     try {
-      var data = await dispatchEditOp('design-edit-remove-color', {
-        body: {
-          colors: editPickedColors.slice(),
-          tolerance: Number(editColorTolerance) || 0
+      var body = {
+        colors: editPickedColors.slice(),
+        tolerance: Number(editColorTolerance) || 0,
+        replace_mode: editColorReplaceMode === 'color' ? 'color' : 'transparent'
+      };
+      if (editColorReplaceMode === 'color' && editReplaceTargetColor) {
+        body.replace_with = {
+          r: editReplaceTargetColor.r,
+          g: editReplaceTargetColor.g,
+          b: editReplaceTargetColor.b
+        };
+      }
+      if (editMaskDirty) {
+        var maskDataUrl = buildMaskDataUrlForServer();
+        if (maskDataUrl) {
+          body.mask = maskDataUrl;
+          body.mask_data_url = maskDataUrl;
         }
-      });
+      }
+      var data = await dispatchEditOp('design-edit-remove-color', { body: body });
       if (data && data.design) applyDesignFromEditResponse(data.design);
       editPickedColors = [];
       renderEditColorChips();
+      clearEditMask(true);
       clearColorPreview();
       showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
       await loadEditVersions();
@@ -3091,6 +3431,14 @@
     var bgApply = document.getElementById('cdp-edit-remove-bg-apply-' + sectionId);
     if (bgApply) bgApply.addEventListener('click', function () { applyRemoveBackground(); });
 
+    modal.querySelectorAll('[data-cdp-color-replace-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setEditActiveTool('remove_color');
+        setColorReplaceMode(btn.getAttribute('data-cdp-color-replace-mode'));
+      });
+    });
+    updateColorReplaceModeUi();
+
     var colorApply = document.getElementById('cdp-edit-remove-color-apply-' + sectionId);
     if (colorApply) {
       colorApply.addEventListener('click', function () { applyRemoveColor(); });
@@ -3122,6 +3470,28 @@
       editColorTolerance = Number(tol.value) || 30;
     }
 
+    var replacePicker = document.getElementById('cdp-edit-replace-picker-' + sectionId);
+    if (replacePicker) {
+      replacePicker.addEventListener('input', function () {
+        var rgb = hexToRgb(replacePicker.value);
+        if (rgb) setReplaceTargetColor(rgb);
+      });
+      replacePicker.addEventListener('change', function () {
+        var rgb = hexToRgb(replacePicker.value);
+        if (rgb) setReplaceTargetColor(rgb);
+      });
+    }
+    var replaceEye = document.getElementById('cdp-edit-replace-eyedrop-' + sectionId);
+    if (replaceEye) {
+      replaceEye.addEventListener('click', function () {
+        setEditActiveTool('remove_color');
+        setColorReplaceMode('color');
+        editPickReplaceTarget = !editPickReplaceTarget;
+        if (editPickReplaceTarget) enableEyedropperMode();
+        updateReplaceTargetUi();
+      });
+    }
+
     var brush = document.getElementById('cdp-edit-brush-size-' + sectionId);
     if (brush) {
       brush.addEventListener('input', function () {
@@ -3129,8 +3499,28 @@
       });
       editBrushSize = Number(brush.value) || 28;
     }
+    var colorBrush = document.getElementById('cdp-edit-color-brush-size-' + sectionId);
+    if (colorBrush) {
+      colorBrush.addEventListener('input', function () {
+        editColorBrushSize = Number(colorBrush.value) || 28;
+        setEditActiveTool('remove_color');
+        enableBrushMode();
+      });
+      colorBrush.addEventListener('pointerdown', function () {
+        setEditActiveTool('remove_color');
+        enableBrushMode();
+      });
+      editColorBrushSize = Number(colorBrush.value) || 28;
+    }
     var clearMask = document.getElementById('cdp-edit-clear-mask-' + sectionId);
     if (clearMask) clearMask.addEventListener('click', function () { clearEditMask(); });
+    var clearColorMask = document.getElementById('cdp-edit-clear-color-mask-' + sectionId);
+    if (clearColorMask) {
+      clearColorMask.addEventListener('click', function () {
+        setEditActiveTool('remove_color');
+        clearEditMask();
+      });
+    }
     var objApply = document.getElementById('cdp-edit-remove-object-apply-' + sectionId);
     if (objApply) objApply.addEventListener('click', function () { applyRemoveObject(); });
 
@@ -3182,16 +3572,27 @@
       editImageWrap.addEventListener('click', function (e) {
         if (editOpBusy || manualCropActive || editHistoryOpen || editDesignColorsOpen) return;
         if (e.target && e.target.closest && e.target.closest('.cdp-modal__edit-history-btn')) return;
-        if (editActiveTool === 'remove_color' || editToolMode === 'eyedropper') {
-          if (editToolMode !== 'eyedropper') enableEyedropperMode();
-          pickColorFromEditImage(e.clientX, e.clientY);
-        }
+        if (editActiveTool !== 'remove_color' && editToolMode !== 'eyedropper') return;
+        // While brushing a color area, clicks on the wrap (outside mask canvas) still pick colors.
+        if (editToolMode === 'brush' && !editPickReplaceTarget) return;
+        if (editToolMode !== 'eyedropper') enableEyedropperMode();
+        pickColorFromEditImage(e.clientX, e.clientY);
       });
     }
 
     if (editMaskCanvas) {
       editMaskCanvas.addEventListener('pointerdown', function (e) {
-        if (editOpBusy || manualCropActive || editActiveTool !== 'remove_object') return;
+        if (editOpBusy || manualCropActive) return;
+        if (editActiveTool !== 'remove_object' && editActiveTool !== 'remove_color') return;
+        // In remove_color: Alt/Option or active brush mode paints; replace eyedropper picks instead.
+        if (editActiveTool === 'remove_color') {
+          if (editPickReplaceTarget || editToolMode !== 'brush') {
+            enableEyedropperMode();
+            pickColorFromEditImage(e.clientX, e.clientY);
+            e.preventDefault();
+            return;
+          }
+        }
         enableBrushMode();
         editBrushPainting = true;
         try { editMaskCanvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -3206,6 +3607,10 @@
         if (!editBrushPainting) return;
         editBrushPainting = false;
         try { editMaskCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
+        if (editActiveTool === 'remove_color') {
+          refreshColorAreaPalette();
+          scheduleColorPreview();
+        }
       }
       editMaskCanvas.addEventListener('pointerup', endBrush);
       editMaskCanvas.addEventListener('pointercancel', endBrush);
