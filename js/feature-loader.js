@@ -150,6 +150,7 @@
         injectPartial("my-creations-upload-source-modal.html"),
         injectPartial("creator-design-merge-modal.html"),
         injectPartial("creator-design-preview-modal.html"),
+        injectPartial("creator-design-studio-modal.html"),
       ]);
 
       global.__CREATOR_LAZY_MODAL_URLS = global.__CREATOR_LAZY_MODAL_URLS || {};

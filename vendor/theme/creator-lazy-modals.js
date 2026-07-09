@@ -90,6 +90,24 @@
     return designPreviewPromise;
   }
 
+  function ensureStudioModal() {
+    if (window.CreatorDesignStudioModal && typeof window.CreatorDesignStudioModal.open === 'function') {
+      return Promise.resolve();
+    }
+    var url = window.__CREATOR_STUDIO_MODAL_JS;
+    if (!url) {
+      var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE || [];
+      for (var i = 0; i < bundle.length; i++) {
+        if (String(bundle[i] || '').indexOf('creator-design-studio-modal.js') !== -1) {
+          url = bundle[i];
+          break;
+        }
+      }
+    }
+    if (!url) return Promise.resolve();
+    return loadScript(url);
+  }
+
   function ensureCreationsBundle() {
     var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE;
     if (!bundle || !bundle.length) return Promise.resolve();
@@ -162,6 +180,7 @@
   window.__CreatorLazyModals = {
     loadScript: loadScript,
     ensureDesignPreviewModal: ensureDesignPreviewModal,
+    ensureStudioModal: ensureStudioModal,
     ensureCreationsBundle: ensureCreationsBundle,
     installDesignPreviewStub: installDesignPreviewStub
   };

@@ -70,8 +70,18 @@
     if (statusEl) statusEl.textContent = msg || '';
   }
 
+  function findStudioRoot() {
+    var nodes = document.querySelectorAll('#creatorDesignStudioModal');
+    if (!nodes || !nodes.length) return null;
+    for (var i = nodes.length - 1; i >= 0; i--) {
+      var node = nodes[i];
+      if (node && node.isConnected) return node;
+    }
+    return nodes[nodes.length - 1];
+  }
+
   function cacheDom() {
-    root = document.getElementById('creatorDesignStudioModal');
+    root = findStudioRoot();
     if (!root) return false;
     subtitleEl = root.querySelector('#cds-modal-subtitle');
     statusEl = root.querySelector('#cds-status');

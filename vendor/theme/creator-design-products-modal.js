@@ -532,14 +532,59 @@
     refreshSelectedCount();
   }
 
+  function studioScriptUrl() {
+    if (window.__CREATOR_STUDIO_MODAL_JS) return window.__CREATOR_STUDIO_MODAL_JS;
+    var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE || [];
+    for (var i = 0; i < bundle.length; i++) {
+      if (String(bundle[i] || '').indexOf('creator-design-studio-modal.js') !== -1) return bundle[i];
+    }
+    return null;
+  }
+
+  var studioLoadPromise = null;
+
+  function loadStudioScript() {
+    if (window.CreatorDesignStudioModal && typeof window.CreatorDesignStudioModal.open === 'function') {
+      return Promise.resolve();
+    }
+    var url = studioScriptUrl();
+    if (!url) return Promise.reject(new Error('studio_script_url_missing'));
+    if (studioLoadPromise) return studioLoadPromise;
+    if (window.__CreatorLazyModals && typeof window.__CreatorLazyModals.loadScript === 'function') {
+      studioLoadPromise = window.__CreatorLazyModals.loadScript(url);
+      return studioLoadPromise;
+    }
+    studioLoadPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error('studio_script_load_failed')); };
+      document.head.appendChild(s);
+    });
+    return studioLoadPromise;
+  }
+
   function openStudioForProduct(productKey, productMeta) {
     if (!ctxDesign || !productKey) return;
-    var api = window.CreatorDesignStudioModal;
-    if (api && typeof api.open === 'function') {
-      api.open(ctxDesign, productKey, productMeta || null);
-      return;
+    function tryOpen() {
+      var api = window.CreatorDesignStudioModal;
+      if (api && typeof api.open === 'function') {
+        api.open(ctxDesign, productKey, productMeta || null);
+        return true;
+      }
+      return false;
     }
-    console.warn('[creator-design-products-modal] CreatorDesignStudioModal.open unavailable');
+    if (tryOpen()) return;
+    loadStudioScript()
+      .then(function () {
+        if (!tryOpen()) {
+          console.warn('[creator-design-products-modal] CreatorDesignStudioModal.open unavailable after load');
+        }
+      })
+      .catch(function (err) {
+        console.warn('[creator-design-products-modal] studio script load failed', err);
+      });
   }
 
   function renderGrid(products) {
@@ -569,18 +614,20 @@
         refreshCardBadges(ev.target.closest('.creator-design-products-modal__card'), key);
         refreshDirty();
       });
-      card.addEventListener('click', function (ev) {
-        if (ev.target && ev.target.closest && ev.target.closest('input[type="checkbox"]')) return;
-        if (ev.target && ev.target.closest && ev.target.closest('.creator-design-products-modal__card-nav')) return;
-        openStudioForProduct(pk, p);
-      });
-      card.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-          if (ev.target && ev.target.matches && ev.target.matches('input[type="checkbox"]')) return;
-          ev.preventDefault();
-          openStudioForProduct(pk, p);
-        }
-      });
+      (function (productKey, productMeta) {
+        card.addEventListener('click', function (ev) {
+          if (ev.target && ev.target.closest && ev.target.closest('input[type="checkbox"]')) return;
+          if (ev.target && ev.target.closest && ev.target.closest('.creator-design-products-modal__card-nav')) return;
+          openStudioForProduct(productKey, productMeta);
+        });
+        card.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            if (ev.target && ev.target.matches && ev.target.matches('input[type="checkbox"]')) return;
+            ev.preventDefault();
+            openStudioForProduct(productKey, productMeta);
+          }
+        });
+      })(pk, p);
       var media = document.createElement('div');
       media.className = 'creator-design-products-modal__card-media';
       mountCardMediaCarousel(media, pk, normalizeMockUrls(p));
