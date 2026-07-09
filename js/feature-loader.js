@@ -97,6 +97,7 @@
       "/vendor/theme/creator-mobile-gen-color-modal.css",
       "/vendor/theme/creator-canvas-sketch-modal.css",
       "/vendor/theme/creator-inspiration-modal.css",
+      "/vendor/theme/creator-design-studio-modal.css",
     ].forEach(loadCss);
   }
 
@@ -166,6 +167,8 @@
         asset("creator-design-preview-modal.js"),
         asset("creator-creations-screen.js"),
       ];
+      global.__CREATOR_STUDIO_MODAL_CSS = asset("creator-design-studio-modal.css");
+      loadCss(global.__CREATOR_STUDIO_MODAL_CSS);
 
       await loadScript(asset("creator-lazy-modals.js"));
       await loadScriptsSequential([

@@ -618,11 +618,25 @@
     }
   }
 
+  function ensureStudioStyles() {
+    if (document.querySelector('link[href*="creator-design-studio-modal.css"]')) return;
+    var url = window.__CREATOR_STUDIO_MODAL_CSS;
+    if (!url && window.CreatorPortalThemeBridge && typeof window.CreatorPortalThemeBridge.assetUrl === 'function') {
+      url = window.CreatorPortalThemeBridge.assetUrl('creator-design-studio-modal.css');
+    }
+    if (!url) url = '/vendor/theme/creator-design-studio-modal.css';
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = String(url).split('?')[0] + '?v=' + Date.now();
+    document.head.appendChild(link);
+  }
+
   async function open(design, productKey, productMeta) {
     if (!cacheDom()) {
       console.warn('[creator-design-studio] modal root missing');
       return;
     }
+    ensureStudioStyles();
     bindOnce();
 
     var nextProductKey = String(productKey || '').trim();
@@ -640,8 +654,6 @@
         return;
       }
       doClose();
-    } else if (isOpen && isDirty()) {
-      return;
     }
 
     ctxDesign = design;
