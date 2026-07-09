@@ -281,6 +281,23 @@
   let metaSaving = false;
   let metaHistoryOpen = false;
 
+  // Edit Design tab state
+  let editImageEl = null;
+  let editImageWrap = null;
+  let editMaskCanvas = null;
+  let editVersions = [];
+  let editHistoryIndex = 0;
+  let editHistoryOpen = false;
+  let editBgMode = 'complete';
+  let editPickedColors = [];
+  let editColorTolerance = 30;
+  let editBrushSize = 28;
+  let editToolMode = null; // 'eyedropper' | 'brush' | null
+  let editBrushPainting = false;
+  let editMaskDirty = false;
+  let editOpBusy = false;
+  let editHistoryTouchX = null;
+
   // Get modal element
   function getModal() {
     if (!modal) {
@@ -334,7 +351,7 @@
   function setActiveTab(tabName) {
     getDOMElements();
     var next = String(tabName || 'overview').toLowerCase();
-    if (next !== 'overview' && next !== 'reference' && next !== 'metadata') next = 'overview';
+    if (next !== 'overview' && next !== 'edit' && next !== 'metadata') next = 'overview';
     activeTab = next;
     if (!modal) return;
     modal.querySelectorAll('[data-cdp-tab]').forEach(function (btn) {
@@ -349,7 +366,11 @@
       else panel.setAttribute('hidden', '');
     });
     setDrawerOpen(false);
-    if (next === 'reference') renderReferencePanel(currentDesign);
+    if (next === 'edit') {
+      refreshEditPreviewImage();
+      resetEditToolModes();
+      loadEditVersions();
+    }
     if (next === 'metadata') renderMetadataPanel(currentDesign);
   }
 
@@ -401,6 +422,10 @@
     cropToast = document.getElementById('cdp-crop-toast-' + sectionId);
     cropToastTextEl = cropToast ? cropToast.querySelector('.cdp-modal__crop-toast-text') : null;
 
+    editImageEl = document.getElementById('cdp-edit-image-' + sectionId);
+    editImageWrap = document.getElementById('cdp-edit-image-wrap-' + sectionId);
+    editMaskCanvas = document.getElementById('cdp-edit-mask-canvas-' + sectionId);
+
     modalShell = modal ? modal.querySelector('.cdp-modal') : null;
     drawerToggle = document.getElementById('cdp-drawer-toggle-' + sectionId);
     drawerBackdrop = document.getElementById('cdp-drawer-backdrop-' + sectionId);
@@ -446,6 +471,7 @@
     if (modalImage) modalImage.src = url;
     if (modalImageMobile) modalImageMobile.src = url;
     if (modalImageMobileUploaded) modalImageMobileUploaded.src = url;
+    if (editImageEl) editImageEl.src = url;
   }
 
   function setCropBusyVisible(show) {
@@ -516,6 +542,7 @@
     if (modalImage) modalImage.src = url;
     if (modalImageMobile) modalImageMobile.src = url;
     if (modalImageMobileUploaded) modalImageMobileUploaded.src = url;
+    if (editImageEl) editImageEl.src = url;
   }
 
   function pushImagesForManualCropSession() {
@@ -525,6 +552,7 @@
     if (modalImage) modalImage.src = busted;
     if (modalImageMobile) modalImageMobile.src = busted;
     if (modalImageMobileUploaded) modalImageMobileUploaded.src = busted;
+    if (editImageEl) editImageEl.src = busted;
     return true;
   }
 
@@ -891,6 +919,14 @@
     return null;
   }
 
+  function getCropCandidateImages() {
+    var list = [modalImage, modalImageMobile, modalImageMobileUploaded, editImageEl].filter(Boolean);
+    if (activeTab === 'edit' && editImageEl) {
+      return [editImageEl].concat(list.filter(function (img) { return img !== editImageEl; }));
+    }
+    return list;
+  }
+
   function syncManualCropLayout() {
     if (!manualCropActive || !manualCropRect || !modal) return;
     var frames = modal.querySelectorAll('.cdp-modal__image-frame');
@@ -947,7 +983,8 @@
       alert('Kein Bild zum Croppen verfügbar');
       return;
     }
-    var imgs = [modalImage, modalImageMobile, modalImageMobileUploaded].filter(Boolean);
+    resetEditToolModes({ keepCrop: true });
+    var imgs = getCropCandidateImages();
 
     function tryInit() {
       if (manualCropActive) return;
@@ -1175,6 +1212,10 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && modal && modal.getAttribute('aria-hidden') === 'false') {
         e.preventDefault();
+        if (editHistoryOpen) {
+          closeEditHistoryModal();
+          return;
+        }
         if (manualCropActive) {
           exitManualCropMode();
           return;
@@ -1248,6 +1289,7 @@
     }
 
     bindSidebarControls();
+    bindEditDesignControls();
     setActiveTab('overview');
   }
 
@@ -1299,9 +1341,18 @@
     metaDirty = false;
     metaSaving = false;
     metaHistoryOpen = false;
+    editVersions = [];
+    editHistoryIndex = 0;
+    editPickedColors = [];
+    editBgMode = 'complete';
+    editToolMode = null;
+    editMaskDirty = false;
+    closeEditHistoryModal();
     resetDeleteButtonState();
     setActiveTab('overview');
     setDrawerOpen(false);
+    renderEditColorChips();
+    clearEditMask(true);
 
     // Optional: Close other modals that might be open (like the design modal)
     // This ensures the preview modal is on top
@@ -2028,7 +2079,10 @@
     
     // Update button states based on design type and available data
     updateButtonStates(design);
-    renderReferencePanel(design);
+    refreshEditPreviewImage();
+    if (activeTab === 'edit') {
+      loadEditVersions();
+    }
     if (!draftMeta || activeTab === 'metadata') {
       renderMetadataPanel(design, { forceReset: activeTab !== 'metadata' || !metaDirty });
     }
@@ -2052,78 +2106,759 @@
     return out;
   }
 
-  function renderReferencePanel(design) {
-    if (!modal) getDOMElements();
-    if (!modal) return;
-    var metadata = parseDesignMetadata(design);
-    var imagesEl = document.getElementById('cdp-ref-images-' + sectionId);
-    var emptyEl = document.getElementById('cdp-ref-images-empty-' + sectionId);
-    var genEl = document.getElementById('cdp-ref-generation-prompt-' + sectionId);
-    var designPromptEl = document.getElementById('cdp-ref-design-prompt-' + sectionId);
-    var userPromptEl = document.getElementById('cdp-ref-user-prompt-' + sectionId);
-    var parentWrap = document.getElementById('cdp-ref-parent-wrap-' + sectionId);
-    var parentEl = document.getElementById('cdp-ref-parent-' + sectionId);
-    var moreEl = document.getElementById('cdp-ref-more-' + sectionId);
+  function refreshEditPreviewImage() {
+    if (!editImageEl) {
+      editImageEl = document.getElementById('cdp-edit-image-' + sectionId);
+    }
+    if (!editImageEl || !currentDesign) return;
+    var raw = primaryDesignImageUrl(currentDesign);
+    var url = cacheBustSrc(normalizePersistedFileUrl(raw));
+    if (url) {
+      try { editImageEl.crossOrigin = 'anonymous'; } catch (_) {}
+      editImageEl.src = url;
+    }
+    syncEditMaskCanvasSize();
+  }
 
-    var urls = uniqueUrls([
-      design && design.preview_url,
-      design && design.original_url,
-      metadata.user_image_url,
-      metadata.image_url,
-      metadata.baseImageUrl,
-      design && design.image_url
-    ]);
+  function applyDesignFromEditResponse(designOut) {
+    if (!designOut || !currentDesign) return;
+    currentDesign.original_url = normalizePersistedFileUrl(designOut.original_url || currentDesign.original_url);
+    currentDesign.preview_url = normalizePersistedFileUrl(designOut.preview_url || currentDesign.preview_url);
+    currentDesign.image_url = normalizePersistedFileUrl(
+      designOut.image_url || designOut.preview_url || designOut.original_url || currentDesign.image_url
+    );
+    if (designOut.width) currentDesign.width = designOut.width;
+    if (designOut.height) currentDesign.height = designOut.height;
+    if (designOut.r2_key_original) currentDesign.r2_key_original = designOut.r2_key_original;
+    if (designOut.r2_key_preview) currentDesign.r2_key_preview = designOut.r2_key_preview;
+    refreshModalDesignImagesAfterCrop();
+    refreshEditPreviewImage();
+  }
 
-    if (imagesEl) {
-      imagesEl.innerHTML = '';
-      urls.forEach(function (url) {
-        var img = document.createElement('img');
-        img.className = 'cdp-modal__ref-image';
-        img.src = url;
-        img.alt = '';
-        img.loading = 'lazy';
-        imagesEl.appendChild(img);
+  function setEditBusy(busy, message) {
+    editOpBusy = !!busy;
+    setCropBusyVisible(!!busy);
+    if (busy && cropBusyOverlay) {
+      var textEl = cropBusyOverlay.querySelector('.cdp-modal__crop-busy-text');
+      if (textEl) {
+        textEl.textContent = message || tPreview('edit_processing', 'Processing edit…');
+      }
+    }
+    if (!busy && cropBusyOverlay) {
+      var resetEl = cropBusyOverlay.querySelector('.cdp-modal__crop-busy-text');
+      if (resetEl) {
+        resetEl.textContent = tPreview('crop_processing', 'Cropping design…');
+      }
+    }
+    var tools = document.getElementById('cdp-edit-tools-' + sectionId);
+    if (tools) {
+      tools.querySelectorAll('button, input').forEach(function (el) {
+        if (busy) {
+          el.dataset.cdpPrevDisabled = el.disabled ? '1' : '0';
+          el.disabled = true;
+        } else if (el.dataset.cdpPrevDisabled != null) {
+          el.disabled = el.dataset.cdpPrevDisabled === '1';
+          delete el.dataset.cdpPrevDisabled;
+        }
       });
     }
-    if (emptyEl) emptyEl.hidden = urls.length > 0;
+  }
 
-    setRefText(genEl, design && design.prompt ? design.prompt : metadata.prompt);
-    setRefText(designPromptEl, metadata.design_prompt || metadata.final_prompt);
-    setRefText(userPromptEl, metadata.user_prompt);
+  function resetEditToolModes(opts) {
+    opts = opts || {};
+    editToolMode = null;
+    editBrushPainting = false;
+    if (editImageWrap) {
+      editImageWrap.classList.remove('is-eyedropper', 'is-brushing');
+    }
+    if (!opts.keepMask) {
+      // mask cleared only when explicitly requested
+    }
+    syncEditMaskCanvasSize();
+    updateEditToolModeUi();
+  }
 
-    var parentId = design && (design.parent_design_id || metadata.parent_design_id);
-    if (parentWrap && parentEl) {
-      if (parentId) {
-        parentWrap.hidden = false;
-        parentEl.textContent = String(parentId);
+  function updateEditToolModeUi() {
+    if (!editImageWrap) return;
+    editImageWrap.classList.toggle('is-eyedropper', editToolMode === 'eyedropper');
+    editImageWrap.classList.toggle('is-brushing', editToolMode === 'brush');
+  }
+
+  function enableEyedropperMode() {
+    if (manualCropActive) exitManualCropMode();
+    editToolMode = 'eyedropper';
+    updateEditToolModeUi();
+  }
+
+  function enableBrushMode() {
+    if (manualCropActive) exitManualCropMode();
+    editToolMode = 'brush';
+    syncEditMaskCanvasSize();
+    updateEditToolModeUi();
+  }
+
+  function syncEditMaskCanvasSize() {
+    if (!editMaskCanvas || !editImageEl) return;
+    var wrap = editImageWrap || editMaskCanvas.parentElement;
+    if (!wrap) return;
+    var rect = wrap.getBoundingClientRect();
+    var w = Math.max(1, Math.round(rect.width - 16));
+    var h = Math.max(1, Math.round(rect.height - 16));
+    if (editMaskCanvas.width !== w || editMaskCanvas.height !== h) {
+      var prev = null;
+      try {
+        if (editMaskDirty) prev = editMaskCanvas.toDataURL('image/png');
+      } catch (_) {}
+      editMaskCanvas.width = w;
+      editMaskCanvas.height = h;
+      if (prev) {
+        var img = new Image();
+        img.onload = function () {
+          var ctx = editMaskCanvas.getContext('2d');
+          if (ctx) ctx.drawImage(img, 0, 0, w, h);
+        };
+        img.src = prev;
       } else {
-        parentWrap.hidden = true;
-        parentEl.textContent = '–';
+        clearEditMask(true);
       }
+    }
+  }
+
+  function clearEditMask(silent) {
+    if (!editMaskCanvas) return;
+    var ctx = editMaskCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, editMaskCanvas.width, editMaskCanvas.height);
+    editMaskDirty = false;
+    if (!silent) enableBrushMode();
+  }
+
+  function paintEditBrush(clientX, clientY) {
+    if (!editMaskCanvas || editToolMode !== 'brush') return;
+    var rect = editMaskCanvas.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    var x = ((clientX - rect.left) / rect.width) * editMaskCanvas.width;
+    var y = ((clientY - rect.top) / rect.height) * editMaskCanvas.height;
+    var ctx = editMaskCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.55)';
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(4, editBrushSize / 2), 0, Math.PI * 2);
+    ctx.fill();
+    editMaskDirty = true;
+  }
+
+  function buildMaskDataUrlForServer() {
+    if (!editMaskCanvas || !editImageEl || !editImageEl.naturalWidth) return null;
+    if (!editMaskDirty) return null;
+    var nw = editImageEl.naturalWidth;
+    var nh = editImageEl.naturalHeight;
+    var fit = getImageFitLayout(editImageEl);
+    if (!fit) return null;
+
+    var out = document.createElement('canvas');
+    out.width = nw;
+    out.height = nh;
+    var octx = out.getContext('2d');
+    if (!octx) return null;
+    octx.fillStyle = '#000000';
+    octx.fillRect(0, 0, nw, nh);
+
+    var src = editMaskCanvas;
+    var tmp = document.createElement('canvas');
+    tmp.width = src.width;
+    tmp.height = src.height;
+    var tctx = tmp.getContext('2d');
+    if (!tctx) return null;
+    tctx.drawImage(src, 0, 0);
+    var imgData = tctx.getImageData(0, 0, tmp.width, tmp.height);
+    var data = imgData.data;
+    for (var i = 0; i < data.length; i += 4) {
+      var a = data[i + 3];
+      if (a > 20) {
+        data[i] = 255;
+        data[i + 1] = 255;
+        data[i + 2] = 255;
+        data[i + 3] = 255;
+      } else {
+        data[i] = 0;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
+        data[i + 3] = 255;
+      }
+    }
+    tctx.putImageData(imgData, 0, 0);
+
+    // Map canvas overlay (full wrap inset) onto the object-fit:contain image area inside the wrap.
+    var imgRect = editImageEl.getBoundingClientRect();
+    var canvasRect = editMaskCanvas.getBoundingClientRect();
+    var scaleX = src.width / canvasRect.width;
+    var scaleY = src.height / canvasRect.height;
+    var dx = (imgRect.left - canvasRect.left) * scaleX;
+    var dy = (imgRect.top - canvasRect.top) * scaleY;
+    var dw = imgRect.width * scaleX;
+    var dh = imgRect.height * scaleY;
+
+    octx.drawImage(tmp, dx, dy, dw, dh, 0, 0, nw, nh);
+    return out.toDataURL('image/png');
+  }
+
+  function renderEditColorChips() {
+    var host = document.getElementById('cdp-edit-color-chips-' + sectionId);
+    if (!host) return;
+    host.innerHTML = '';
+    editPickedColors.forEach(function (c, index) {
+      var chip = document.createElement('span');
+      chip.className = 'cdp-modal__edit-color-chip';
+      var swatch = document.createElement('span');
+      swatch.className = 'cdp-modal__edit-color-swatch';
+      swatch.style.background = 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')';
+      var label = document.createElement('span');
+      label.textContent = c.r + ',' + c.g + ',' + c.b;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Remove');
+      btn.textContent = '×';
+      btn.addEventListener('click', function () {
+        editPickedColors.splice(index, 1);
+        renderEditColorChips();
+      });
+      chip.appendChild(swatch);
+      chip.appendChild(label);
+      chip.appendChild(btn);
+      host.appendChild(chip);
+    });
+  }
+
+  function pickColorFromEditImage(clientX, clientY) {
+    if (!editImageEl || !editImageEl.naturalWidth) return;
+    var nat = pointerToNatural(editImageEl, clientX, clientY);
+    if (!nat) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = editImageEl.naturalWidth;
+    canvas.height = editImageEl.naturalHeight;
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    try {
+      ctx.drawImage(editImageEl, 0, 0);
+      var px = ctx.getImageData(Math.max(0, Math.min(canvas.width - 1, Math.round(nat.px))), Math.max(0, Math.min(canvas.height - 1, Math.round(nat.py))), 1, 1).data;
+      var color = { r: px[0], g: px[1], b: px[2] };
+      var exists = editPickedColors.some(function (c) {
+        return c.r === color.r && c.g === color.g && c.b === color.b;
+      });
+      if (!exists) {
+        editPickedColors.push(color);
+        renderEditColorChips();
+      }
+    } catch (err) {
+      console.warn('[CDP] eyedropper failed (CORS?)', err);
+      alert(tPreview('edit_pick_color_first', 'Pick at least one color first.'));
+    }
+  }
+
+  function versionTypeLabel(version) {
+    if (!version) return '';
+    if (version.label) return String(version.label);
+    var t = String(version.version_type || '');
+    var map = {
+      original: tPreview('edit_version_original', 'Original'),
+      crop: tPreview('edit_version_crop', 'Crop'),
+      remove_bg: tPreview('edit_version_remove_bg', 'Remove background'),
+      remove_bg_outside: tPreview('edit_version_remove_bg_outside', 'Remove background (outside)'),
+      remove_color: tPreview('edit_version_remove_color', 'Remove color'),
+      remove_object: tPreview('edit_version_remove_object', 'Remove object')
+    };
+    return map[t] || t || 'Version';
+  }
+
+  function formatVersionDate(ts) {
+    var n = Number(ts);
+    if (!isFinite(n) || n <= 0) return '';
+    if (n < 1e12) n = n * 1000;
+    try {
+      return new Date(n).toLocaleString();
+    } catch (_) {
+      return String(ts);
+    }
+  }
+
+  async function dispatchEditOp(op, options) {
+    options = options || {};
+    var ownerId = resolveOwnerIdForPreview();
+    if (!ownerId) {
+      alert(window.CreatorI18n?.noUserId || 'Error: No user ID found. Please sign in.');
+      return null;
+    }
+    if (!currentDesign || !currentDesign.id) {
+      alert(window.CreatorI18n?.noDesignId || 'Error: No design selected.');
+      return null;
+    }
+    var apiBaseUrl = resolveCreatorDispatchBase();
+    var url = new URL(apiBaseUrl);
+    url.searchParams.set('op', op);
+    url.searchParams.set('path_prefix', '/apps/creator-dispatch');
+    url.searchParams.set('logged_in_customer_id', String(ownerId));
+
+    var fetchOpts = {
+      method: options.method || 'POST',
+      mode: 'cors',
+      credentials: 'include'
+    };
+    if (options.formData) {
+      options.formData.set('design_id', String(currentDesign.id));
+      options.formData.set('owner_id', String(ownerId));
+      options.formData.set('logged_in_customer_id', String(ownerId));
+      fetchOpts.body = options.formData;
+    } else if (options.body) {
+      fetchOpts.headers = { 'Content-Type': 'application/json' };
+      var body = Object.assign({}, options.body, {
+        design_id: currentDesign.id,
+        owner_id: String(ownerId),
+        logged_in_customer_id: String(ownerId)
+      });
+      fetchOpts.body = JSON.stringify(body);
+    } else if ((options.method || 'POST') === 'GET') {
+      url.searchParams.set('design_id', String(currentDesign.id));
+      url.searchParams.set('owner_id', String(ownerId));
+    } else {
+      fetchOpts.headers = { 'Content-Type': 'application/json' };
+      fetchOpts.body = JSON.stringify({
+        design_id: currentDesign.id,
+        owner_id: String(ownerId),
+        logged_in_customer_id: String(ownerId)
+      });
     }
 
-    if (moreEl) {
-      moreEl.innerHTML = '';
-      ['design_source', 'ratio', 'design_art'].forEach(function (key) {
-        var val = metadata[key];
-        if (val == null || String(val).trim() === '') return;
-        var row = document.createElement('div');
-        row.className = 'cdp-modal__list-row';
-        row.innerHTML =
-          '<strong style="min-width:110px;color:#9ca3af;font-size:12px;text-transform:capitalize;">' +
-          key.replace(/_/g, ' ') +
-          '</strong><span style="color:#e5e7eb;font-size:13px;">' +
-          String(val) +
-          '</span>';
-        moreEl.appendChild(row);
-      });
-      if (!moreEl.children.length) {
-        var empty = document.createElement('p');
-        empty.className = 'cdp-modal__ref-empty';
-        empty.textContent = '–';
-        moreEl.appendChild(empty);
+    var response = await fetch(url.toString(), fetchOpts);
+    var ct = (response.headers.get('content-type') || '').toLowerCase();
+    var raw = await response.text();
+    var data = null;
+    if (ct.indexOf('application/json') !== -1) {
+      try { data = JSON.parse(raw); } catch (_) {}
+    }
+    if (!data) {
+      throw new Error('HTTP ' + response.status + (raw ? ' — ' + raw.replace(/\s+/g, ' ').trim().slice(0, 160) : ''));
+    }
+    if (!data.ok) {
+      throw new Error(data.message || data.error || op + '_failed');
+    }
+    return data;
+  }
+
+  async function loadEditVersions() {
+    if (!currentDesign || !currentDesign.id) {
+      editVersions = [];
+      return;
+    }
+    try {
+      var data = await dispatchEditOp('list-design-edit-versions', { method: 'GET' });
+      editVersions = (data && data.items) || [];
+      if (editHistoryOpen) renderEditHistoryCarousel();
+    } catch (err) {
+      console.warn('[CDP] loadEditVersions failed', err);
+      editVersions = [];
+    }
+  }
+
+  function openEditHistoryModal() {
+    var el = document.getElementById('cdp-edit-history-modal-' + sectionId);
+    if (!el) return;
+    editHistoryOpen = true;
+    el.classList.add('is-open');
+    el.removeAttribute('hidden');
+    el.setAttribute('aria-hidden', 'false');
+    editHistoryIndex = 0;
+    for (var i = 0; i < editVersions.length; i++) {
+      if (Number(editVersions[i].is_applied) === 1) {
+        editHistoryIndex = i;
+        break;
       }
     }
+    renderEditHistoryCarousel();
+    loadEditVersions().then(function () {
+      renderEditHistoryCarousel();
+    });
+  }
+
+  function closeEditHistoryModal() {
+    var el = document.getElementById('cdp-edit-history-modal-' + sectionId);
+    if (!el) return;
+    editHistoryOpen = false;
+    el.classList.remove('is-open');
+    el.setAttribute('hidden', '');
+    el.setAttribute('aria-hidden', 'true');
+  }
+
+  function renderEditHistoryCarousel() {
+    var emptyEl = document.getElementById('cdp-edit-history-empty-' + sectionId);
+    var carousel = document.getElementById('cdp-edit-history-carousel-' + sectionId);
+    var img = document.getElementById('cdp-edit-history-image-' + sectionId);
+    var labelEl = document.getElementById('cdp-edit-history-label-' + sectionId);
+    var dateEl = document.getElementById('cdp-edit-history-date-' + sectionId);
+    var badge = document.getElementById('cdp-edit-history-applied-badge-' + sectionId);
+    var dots = document.getElementById('cdp-edit-history-dots-' + sectionId);
+    var applyBtn = document.getElementById('cdp-edit-history-apply-' + sectionId);
+    var deleteBtn = document.getElementById('cdp-edit-history-delete-' + sectionId);
+    var saveBtn = document.getElementById('cdp-edit-history-save-new-' + sectionId);
+    var prevBtn = document.getElementById('cdp-edit-history-prev-' + sectionId);
+    var nextBtn = document.getElementById('cdp-edit-history-next-' + sectionId);
+
+    if (!editVersions.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      if (carousel) carousel.style.display = 'none';
+      if (dots) dots.innerHTML = '';
+      if (labelEl) labelEl.textContent = '';
+      if (dateEl) dateEl.textContent = '';
+      if (badge) badge.hidden = true;
+      if (applyBtn) applyBtn.disabled = true;
+      if (deleteBtn) deleteBtn.disabled = true;
+      if (saveBtn) saveBtn.disabled = true;
+      return;
+    }
+
+    if (emptyEl) emptyEl.hidden = true;
+    if (carousel) carousel.style.display = '';
+    if (editHistoryIndex < 0) editHistoryIndex = 0;
+    if (editHistoryIndex >= editVersions.length) editHistoryIndex = editVersions.length - 1;
+    var v = editVersions[editHistoryIndex];
+    var url = normalizePersistedFileUrl(v.preview_url || v.original_url || '');
+    if (img) img.src = cacheBustSrc(url);
+    if (labelEl) labelEl.textContent = versionTypeLabel(v);
+    if (dateEl) dateEl.textContent = formatVersionDate(v.created_at);
+    var applied = Number(v.is_applied) === 1;
+    if (badge) badge.hidden = !applied;
+    if (applyBtn) applyBtn.disabled = applied || editOpBusy;
+    if (deleteBtn) deleteBtn.disabled = applied || editOpBusy;
+    if (saveBtn) saveBtn.disabled = applied || editOpBusy;
+    if (prevBtn) prevBtn.disabled = editHistoryIndex <= 0;
+    if (nextBtn) nextBtn.disabled = editHistoryIndex >= editVersions.length - 1;
+
+    if (dots) {
+      dots.innerHTML = '';
+      editVersions.forEach(function (_, i) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'cdp-modal__edit-history-dot' + (i === editHistoryIndex ? ' is-active' : '');
+        dot.setAttribute('aria-label', String(i + 1));
+        dot.addEventListener('click', function () {
+          editHistoryIndex = i;
+          renderEditHistoryCarousel();
+        });
+        dots.appendChild(dot);
+      });
+    }
+  }
+
+  function shiftEditHistory(delta) {
+    if (!editVersions.length) return;
+    editHistoryIndex = Math.max(0, Math.min(editVersions.length - 1, editHistoryIndex + delta));
+    renderEditHistoryCarousel();
+  }
+
+  async function applySelectedEditVersion() {
+    var v = editVersions[editHistoryIndex];
+    if (!v || Number(v.is_applied) === 1) return;
+    setEditBusy(true);
+    try {
+      var data = await dispatchEditOp('apply-design-edit-version', {
+        body: { version_id: v.id }
+      });
+      if (data && data.design) applyDesignFromEditResponse(data.design);
+      showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
+      await loadEditVersions();
+      renderEditHistoryCarousel();
+      try {
+        if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+          window.CreationsScreen.loadDesigns(true, { silent: true });
+        }
+      } catch (_) {}
+    } catch (err) {
+      console.error('[CDP] apply version failed', err);
+      alert((err && err.message) || 'Apply failed');
+    } finally {
+      setEditBusy(false);
+      renderEditHistoryCarousel();
+    }
+  }
+
+  async function deleteSelectedEditVersion() {
+    var v = editVersions[editHistoryIndex];
+    if (!v) return;
+    if (Number(v.is_applied) === 1) {
+      alert(tPreview('edit_cannot_delete_applied', 'Apply another version before deleting the currently applied one.'));
+      return;
+    }
+    setEditBusy(true);
+    try {
+      await dispatchEditOp('delete-design-edit-version', {
+        method: 'POST',
+        body: { version_id: v.id }
+      });
+      await loadEditVersions();
+      if (editHistoryIndex >= editVersions.length) editHistoryIndex = Math.max(0, editVersions.length - 1);
+      renderEditHistoryCarousel();
+    } catch (err) {
+      console.error('[CDP] delete version failed', err);
+      alert((err && err.message) || 'Delete failed');
+    } finally {
+      setEditBusy(false);
+      renderEditHistoryCarousel();
+    }
+  }
+
+  async function saveSelectedEditVersionAsNew() {
+    var v = editVersions[editHistoryIndex];
+    if (!v) return;
+    if (Number(v.is_applied) === 1) {
+      alert(tPreview('edit_cannot_save_applied', 'The currently applied version cannot be saved as a new design.'));
+      return;
+    }
+    setEditBusy(true);
+    try {
+      await dispatchEditOp('save-design-edit-version-as-new', {
+        body: { version_id: v.id }
+      });
+      showCropSuccessToast(tPreview('edit_saved_as_new', 'Saved as a new design.'));
+      try {
+        if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+          window.CreationsScreen.loadDesigns(true, { silent: true });
+        }
+      } catch (_) {}
+    } catch (err) {
+      console.error('[CDP] save-as-new failed', err);
+      alert((err && err.message) || 'Save failed');
+    } finally {
+      setEditBusy(false);
+      renderEditHistoryCarousel();
+    }
+  }
+
+  async function applyRemoveBackground() {
+    setEditBusy(true);
+    try {
+      var data = await dispatchEditOp('design-edit-remove-background', {
+        body: { mode: editBgMode === 'outside' ? 'outside' : 'complete' }
+      });
+      if (data && data.design) applyDesignFromEditResponse(data.design);
+      clearEditMask(true);
+      showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
+      await loadEditVersions();
+      try {
+        if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+          window.CreationsScreen.loadDesigns(true, { silent: true });
+        }
+      } catch (_) {}
+    } catch (err) {
+      console.error('[CDP] remove-bg failed', err);
+      alert((err && err.message) || 'Remove background failed');
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
+  async function applyRemoveColor() {
+    if (!editPickedColors.length) {
+      enableEyedropperMode();
+      alert(tPreview('edit_pick_color_first', 'Pick at least one color first.'));
+      return;
+    }
+    setEditBusy(true);
+    try {
+      var data = await dispatchEditOp('design-edit-remove-color', {
+        body: {
+          colors: editPickedColors.slice(),
+          tolerance: Number(editColorTolerance) || 0
+        }
+      });
+      if (data && data.design) applyDesignFromEditResponse(data.design);
+      editPickedColors = [];
+      renderEditColorChips();
+      showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
+      await loadEditVersions();
+      try {
+        if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+          window.CreationsScreen.loadDesigns(true, { silent: true });
+        }
+      } catch (_) {}
+    } catch (err) {
+      console.error('[CDP] remove-color failed', err);
+      alert((err && err.message) || 'Remove color failed');
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
+  async function applyRemoveObject() {
+    var maskDataUrl = buildMaskDataUrlForServer();
+    if (!maskDataUrl) {
+      enableBrushMode();
+      alert(tPreview('edit_paint_mask_first', 'Paint a mask over the object first.'));
+      return;
+    }
+    setEditBusy(true);
+    try {
+      var data = await dispatchEditOp('design-edit-remove-object', {
+        body: { mask: maskDataUrl, mask_data_url: maskDataUrl }
+      });
+      if (data && data.design) applyDesignFromEditResponse(data.design);
+      clearEditMask(true);
+      showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
+      await loadEditVersions();
+      try {
+        if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+          window.CreationsScreen.loadDesigns(true, { silent: true });
+        }
+      } catch (_) {}
+    } catch (err) {
+      console.error('[CDP] remove-object failed', err);
+      alert((err && err.message) || 'Remove object failed');
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
+  function bindEditDesignControls() {
+    if (!modal || modal.__cdpEditBound) return;
+    modal.__cdpEditBound = true;
+
+    editImageEl = document.getElementById('cdp-edit-image-' + sectionId);
+    editImageWrap = document.getElementById('cdp-edit-image-wrap-' + sectionId);
+    editMaskCanvas = document.getElementById('cdp-edit-mask-canvas-' + sectionId);
+
+    var cropTrigger = document.getElementById('cdp-edit-crop-trigger-' + sectionId);
+    if (cropTrigger) {
+      cropTrigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        handleCrop(e);
+      });
+    }
+
+    modal.querySelectorAll('[data-cdp-bg-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        editBgMode = btn.getAttribute('data-cdp-bg-mode') === 'outside' ? 'outside' : 'complete';
+        modal.querySelectorAll('[data-cdp-bg-mode]').forEach(function (b) {
+          b.classList.toggle('is-active', b.getAttribute('data-cdp-bg-mode') === editBgMode);
+        });
+      });
+    });
+
+    var bgApply = document.getElementById('cdp-edit-remove-bg-apply-' + sectionId);
+    if (bgApply) bgApply.addEventListener('click', function () { applyRemoveBackground(); });
+
+    var colorApply = document.getElementById('cdp-edit-remove-color-apply-' + sectionId);
+    if (colorApply) {
+      colorApply.addEventListener('click', function () { applyRemoveColor(); });
+    }
+    var tol = document.getElementById('cdp-edit-color-tolerance-' + sectionId);
+    if (tol) {
+      tol.addEventListener('input', function () {
+        editColorTolerance = Number(tol.value) || 0;
+      });
+      editColorTolerance = Number(tol.value) || 30;
+    }
+
+    var brush = document.getElementById('cdp-edit-brush-size-' + sectionId);
+    if (brush) {
+      brush.addEventListener('input', function () {
+        editBrushSize = Number(brush.value) || 28;
+      });
+      editBrushSize = Number(brush.value) || 28;
+    }
+    var clearMask = document.getElementById('cdp-edit-clear-mask-' + sectionId);
+    if (clearMask) clearMask.addEventListener('click', function () { clearEditMask(); });
+    var objApply = document.getElementById('cdp-edit-remove-object-apply-' + sectionId);
+    if (objApply) objApply.addEventListener('click', function () { applyRemoveObject(); });
+
+    var histOpen = document.getElementById('cdp-edit-history-open-' + sectionId);
+    if (histOpen) histOpen.addEventListener('click', function () { openEditHistoryModal(); });
+    var histClose = document.getElementById('cdp-edit-history-close-' + sectionId);
+    if (histClose) histClose.addEventListener('click', function () { closeEditHistoryModal(); });
+    var histModal = document.getElementById('cdp-edit-history-modal-' + sectionId);
+    if (histModal) {
+      histModal.addEventListener('click', function (e) {
+        if (e.target === histModal) closeEditHistoryModal();
+      });
+    }
+    var prev = document.getElementById('cdp-edit-history-prev-' + sectionId);
+    var next = document.getElementById('cdp-edit-history-next-' + sectionId);
+    if (prev) prev.addEventListener('click', function () { shiftEditHistory(-1); });
+    if (next) next.addEventListener('click', function () { shiftEditHistory(1); });
+    var applyV = document.getElementById('cdp-edit-history-apply-' + sectionId);
+    var delV = document.getElementById('cdp-edit-history-delete-' + sectionId);
+    var saveV = document.getElementById('cdp-edit-history-save-new-' + sectionId);
+    if (applyV) applyV.addEventListener('click', function () { applySelectedEditVersion(); });
+    if (delV) delV.addEventListener('click', function () { deleteSelectedEditVersion(); });
+    if (saveV) saveV.addEventListener('click', function () { saveSelectedEditVersionAsNew(); });
+
+    // Swipe on history carousel
+    var slideWrap = histModal && histModal.querySelector('.cdp-modal__edit-history-slide-wrap');
+    if (slideWrap) {
+      slideWrap.addEventListener('touchstart', function (e) {
+        editHistoryTouchX = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : null;
+      }, { passive: true });
+      slideWrap.addEventListener('touchend', function (e) {
+        if (editHistoryTouchX == null) return;
+        var x = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : editHistoryTouchX;
+        var dx = x - editHistoryTouchX;
+        editHistoryTouchX = null;
+        if (Math.abs(dx) < 40) return;
+        shiftEditHistory(dx < 0 ? 1 : -1);
+      }, { passive: true });
+    }
+
+    // Eyedropper / brush on edit preview
+    if (editImageWrap) {
+      editImageWrap.addEventListener('click', function (e) {
+        if (editOpBusy || manualCropActive) return;
+        if (editToolMode === 'eyedropper') {
+          pickColorFromEditImage(e.clientX, e.clientY);
+          return;
+        }
+        // Clicking image while color tool is idle enables eyedropper
+        if (e.target === editImageEl || e.target === editImageWrap) {
+          if (editToolMode !== 'brush') enableEyedropperMode();
+        }
+      });
+    }
+
+    if (editMaskCanvas) {
+      editMaskCanvas.addEventListener('pointerdown', function (e) {
+        if (editOpBusy || manualCropActive) return;
+        enableBrushMode();
+        editBrushPainting = true;
+        try { editMaskCanvas.setPointerCapture(e.pointerId); } catch (_) {}
+        paintEditBrush(e.clientX, e.clientY);
+        e.preventDefault();
+      });
+      editMaskCanvas.addEventListener('pointermove', function (e) {
+        if (!editBrushPainting) return;
+        paintEditBrush(e.clientX, e.clientY);
+      });
+      function endBrush(e) {
+        if (!editBrushPainting) return;
+        editBrushPainting = false;
+        try { editMaskCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+      editMaskCanvas.addEventListener('pointerup', endBrush);
+      editMaskCanvas.addEventListener('pointercancel', endBrush);
+    }
+
+    // Auto-enable brush when interacting with brush size / clear
+    if (brush) {
+      brush.addEventListener('pointerdown', function () { enableBrushMode(); });
+    }
+    if (clearMask) {
+      clearMask.addEventListener('pointerdown', function () { enableBrushMode(); });
+    }
+    // Auto-enable eyedropper when focusing color tool
+    if (colorApply) {
+      colorApply.addEventListener('pointerdown', function () {
+        if (!editPickedColors.length) enableEyedropperMode();
+      });
+    }
+    window.addEventListener('resize', function () {
+      if (activeTab === 'edit') syncEditMaskCanvasSize();
+    });
   }
 
   function ensureDraftMeta(design, forceReset) {
@@ -3431,9 +4166,7 @@
         : '';
 
       var candidates = buildCropDispatchCandidates();
-      var refImg = pickCropReferenceImage(
-        [modalImage, modalImageMobile, modalImageMobileUploaded].filter(Boolean)
-      );
+      var refImg = pickCropReferenceImage(getCropCandidateImages());
       var uiW = manualCropUiNaturalW || (refImg && refImg.naturalWidth) || 0;
       var uiH = manualCropUiNaturalH || (refImg && refImg.naturalHeight) || 0;
       var serverDim = resolveServerCropDimensions(currentDesign);
@@ -3700,6 +4433,12 @@
 
       showCropSuccessToast(previewModalCropStrings().savedMsg);
 
+      try {
+        if (activeTab === 'edit' || editHistoryOpen) {
+          loadEditVersions();
+        }
+      } catch (_) {}
+
     } catch (error) {
       eazCropDebugPush({
         ev: 'crop_ui_error',
@@ -3754,6 +4493,9 @@
     }
 
     exitManualCropMode();
+    closeEditHistoryModal();
+    resetEditToolModes();
+    clearEditMask(true);
     setDrawerOpen(false);
     setActiveTab('overview');
     draftMeta = null;
