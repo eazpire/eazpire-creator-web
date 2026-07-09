@@ -444,6 +444,56 @@
     return arr;
   }
 
+  function sleepMs(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  /** Fetch JSON with retries on network / 5xx / 429. Throws on hard API failure (ok:false). */
+  async function fetchDispatchJson(url, label) {
+    var attempts = 3;
+    var lastErr = null;
+    for (var i = 0; i < attempts; i++) {
+      try {
+        var res = await fetch(url, { credentials: 'include' });
+        var data = await res.json().catch(function () {
+          return null;
+        });
+        if (res.status >= 500 || res.status === 429) {
+          lastErr = new Error((label || 'api') + '_http_' + res.status);
+          lastErr.status = res.status;
+          if (i < attempts - 1) {
+            await sleepMs(250 * (i + 1));
+            continue;
+          }
+          throw lastErr;
+        }
+        if (!data) {
+          lastErr = new Error((label || 'api') + '_invalid_json');
+          lastErr.status = res.status;
+          throw lastErr;
+        }
+        if (data.ok === false) {
+          var apiErr = new Error(data.error || (label || 'api') + '_failed');
+          apiErr.code = data.error || 'api_failed';
+          apiErr.status = res.status;
+          throw apiErr;
+        }
+        return data;
+      } catch (e) {
+        lastErr = e;
+        if (e && e.status && e.status < 500 && e.status !== 429) throw e;
+        if (i < attempts - 1) {
+          await sleepMs(250 * (i + 1));
+          continue;
+        }
+        throw lastErr;
+      }
+    }
+    throw lastErr || new Error((label || 'api') + '_failed');
+  }
+
   async function fetchAllSavedDesignPages(owner) {
     var saved = [];
     var cursor = null;
@@ -452,9 +502,8 @@
       pages++;
       var listUrl = API_BASE + '?op=list&owner_id=' + encodeURIComponent(owner) + '&limit=50';
       if (cursor) listUrl += '&cursor=' + encodeURIComponent(cursor);
-      var resList = await fetch(listUrl, { credentials: 'include' });
-      var dataList = await resList.json().catch(function () { return { ok: false, items: [] }; });
-      if (!dataList.ok || !dataList.items || !dataList.items.length) break;
+      var dataList = await fetchDispatchJson(listUrl, 'list');
+      if (!dataList.items || !dataList.items.length) break;
       for (var i = 0; i < dataList.items.length; i++) saved.push(dataList.items[i]);
       cursor = dataList.next_cursor || null;
       if (!cursor) break;
@@ -536,101 +585,95 @@
     }
 
     var savedJobIds = new Set();
-    try {
-      var genUrl =
-        API_BASE +
-        '?op=list-generated&path_prefix=/apps/creator-dispatch&owner_id=' +
-        encodeURIComponent(owner) +
-        '&limit=500';
+    var genUrl =
+      API_BASE +
+      '?op=list-generated&path_prefix=/apps/creator-dispatch&owner_id=' +
+      encodeURIComponent(owner) +
+      '&limit=500';
 
-      var savedPromise = fetchAllSavedDesignPages(owner);
-      var generatedPromise = fetch(genUrl, { credentials: 'include' })
-        .then(function (resGen) {
-          return resGen.json().catch(function () { return { ok: false, items: [] }; });
-        })
-        .then(function (dataGen) {
-          return {
-            ok: !!dataGen.ok,
-            items: dataGen.ok && dataGen.items ? dataGen.items : [],
-          };
-        })
-        .catch(function () {
-          return { ok: false, items: [] };
-        });
-      var listJobsBundlePromise = fetchListJobsDesignMergeBundle(owner).catch(function () {
-        return { kvDone: [], savingJobIds: new Set(), savingJobs: [] };
+    var savedPromise = fetchAllSavedDesignPages(owner);
+    // Generated is best-effort: if it fails after retries, still show saved (Active) designs.
+    var generatedPromise = fetchDispatchJson(genUrl, 'list-generated')
+      .then(function (dataGen) {
+        return {
+          ok: true,
+          items: dataGen.items ? dataGen.items : [],
+        };
+      })
+      .catch(function (genErr) {
+        console.warn('[CreationsScreen] list-generated failed (continuing with saved only):', genErr);
+        return { ok: false, items: [] };
       });
+    var listJobsBundlePromise = fetchListJobsDesignMergeBundle(owner).catch(function () {
+      return { kvDone: [], savingJobIds: new Set(), savingJobs: [] };
+    });
 
-      var results = await Promise.all([savedPromise, generatedPromise, listJobsBundlePromise]);
-      var saved = results[0];
-      var generatedBundle = results[1];
-      var generated = generatedBundle.items || [];
-      var listJobsBundle = results[2];
-      var kvDone = listJobsBundle.kvDone;
-      var savingJobIds = listJobsBundle.savingJobIds;
-      var savingJobs = listJobsBundle.savingJobs || [];
+    var results = await Promise.all([savedPromise, generatedPromise, listJobsBundlePromise]);
+    var saved = results[0];
+    var generatedBundle = results[1];
+    var generated = generatedBundle.items || [];
+    var listJobsBundle = results[2];
+    var kvDone = listJobsBundle.kvDone;
+    var savingJobIds = listJobsBundle.savingJobIds;
+    var savingJobs = listJobsBundle.savingJobs || [];
 
-      saved.forEach(function (s) {
-        if (s.job_id != null && String(s.job_id).trim() !== '') {
-          savedJobIds.add(String(s.job_id));
-        }
-      });
+    saved.forEach(function (s) {
+      if (s.job_id != null && String(s.job_id).trim() !== '') {
+        savedJobIds.add(String(s.job_id));
+      }
+    });
 
-      var merged = saved.map(normalizeSaved);
-      var mergedJobIds = new Set();
-      var d1JobIds = new Set();
-      merged.forEach(function (d) {
-        var mj = d && d.job_id != null ? String(d.job_id).trim() : '';
-        if (mj) mergedJobIds.add(mj);
-      });
-      generated.forEach(function (g) {
-        var gj = g.job_id != null ? String(g.job_id) : '';
-        if (gj) d1JobIds.add(gj);
-        if (gj && suppressedGeneratedJobIds.has(gj)) return;
-        if (gj && !savedJobIds.has(gj)) {
-          var genNorm = normalizeGenerated(g);
-          if (gj && savingJobIds.has(gj)) genNorm.saving_to_library = true;
-          merged.push(genNorm);
-          if (gj) mergedJobIds.add(gj);
-        }
-      });
+    var merged = saved.map(normalizeSaved);
+    var mergedJobIds = new Set();
+    var d1JobIds = new Set();
+    merged.forEach(function (d) {
+      var mj = d && d.job_id != null ? String(d.job_id).trim() : '';
+      if (mj) mergedJobIds.add(mj);
+    });
+    generated.forEach(function (g) {
+      var gj = g.job_id != null ? String(g.job_id) : '';
+      if (gj) d1JobIds.add(gj);
+      if (gj && suppressedGeneratedJobIds.has(gj)) return;
+      if (gj && !savedJobIds.has(gj)) {
+        var genNorm = normalizeGenerated(g);
+        if (gj && savingJobIds.has(gj)) genNorm.saving_to_library = true;
+        merged.push(genNorm);
+        if (gj) mergedJobIds.add(gj);
+      }
+    });
 
-      kvDone.forEach(function (j) {
-        var jid = j.job_id != null ? String(j.job_id) : '';
-        if (!jid || savedJobIds.has(jid) || d1JobIds.has(jid)) return;
-        if (suppressedGeneratedJobIds.has(jid)) return;
-        if (isHeroGenerateListJob(j)) return;
-        merged.push(normalizeGeneratedFromListJobs(j));
-        mergedJobIds.add(jid);
-      });
+    kvDone.forEach(function (j) {
+      var jid = j.job_id != null ? String(j.job_id) : '';
+      if (!jid || savedJobIds.has(jid) || d1JobIds.has(jid)) return;
+      if (suppressedGeneratedJobIds.has(jid)) return;
+      if (isHeroGenerateListJob(j)) return;
+      merged.push(normalizeGeneratedFromListJobs(j));
+      mergedJobIds.add(jid);
+    });
 
-      savingJobs.forEach(function (j) {
-        var jid = j.job_id != null ? String(j.job_id) : '';
-        if (!jid || savedJobIds.has(jid) || d1JobIds.has(jid)) return;
-        if (suppressedGeneratedJobIds.has(jid)) return;
-        if (isHeroGenerateListJob(j)) return;
-        if (mergedJobIds.has(jid)) return;
-        var savingNorm = normalizeGeneratedFromListJobs(j);
-        savingNorm.saving_to_library = true;
-        merged.push(savingNorm);
-        mergedJobIds.add(jid);
-      });
+    savingJobs.forEach(function (j) {
+      var jid = j.job_id != null ? String(j.job_id) : '';
+      if (!jid || savedJobIds.has(jid) || d1JobIds.has(jid)) return;
+      if (suppressedGeneratedJobIds.has(jid)) return;
+      if (isHeroGenerateListJob(j)) return;
+      if (mergedJobIds.has(jid)) return;
+      var savingNorm = normalizeGeneratedFromListJobs(j);
+      savingNorm.saving_to_library = true;
+      merged.push(savingNorm);
+      mergedJobIds.add(jid);
+    });
 
-      sortDesignsNewestFirst(merged);
-      console.info('[CreationsScreen] fetchDesigns debug', {
-        owner_id: owner,
-        list_saved_total: saved.length,
-        list_generated_ok: !!generatedBundle.ok,
-        generated_count: generated.length,
-        kv_done_count: kvDone.length,
-        saving_to_library_count: savingJobIds.size,
-        merged_count: merged.length
-      });
-      return merged;
-    } catch (e) {
-      console.error('[CreationsScreen] Designs fetch error:', e);
-      return [];
-    }
+    sortDesignsNewestFirst(merged);
+    console.info('[CreationsScreen] fetchDesigns debug', {
+      owner_id: owner,
+      list_saved_total: saved.length,
+      list_generated_ok: !!generatedBundle.ok,
+      generated_count: generated.length,
+      kv_done_count: kvDone.length,
+      saving_to_library_count: savingJobIds.size,
+      merged_count: merged.length
+    });
+    return merged;
   }
 
   async function fetchPublishedSummary() {
@@ -891,47 +934,36 @@
     var owner = getOwnerId();
     if (!owner) return [];
 
-    try {
-      var shop = window.Shopify?.shop || 'allyoucanpink.myshopify.com';
-      var productsUrl = API_BASE + '?op=get-published-products&owner_id=' + encodeURIComponent(owner) +
-        '&shop=' + encodeURIComponent(shop);
+    var shop = window.Shopify?.shop || 'allyoucanpink.myshopify.com';
+    var productsUrl = API_BASE + '?op=get-published-products&owner_id=' + encodeURIComponent(owner) +
+      '&shop=' + encodeURIComponent(shop);
 
-      console.log('[CreationsScreen] fetchProducts: requesting', productsUrl);
-      var controller = new AbortController();
-      var timeoutId = setTimeout(function () { controller.abort(); }, 30000);
-      var resProducts = await fetch(productsUrl, { credentials: 'include', signal: controller.signal });
-      clearTimeout(timeoutId);
-      console.log('[CreationsScreen] fetchProducts: response status', resProducts.status);
-      var dataProducts = await resProducts.json().catch(function () { return { ok: false, products: [] }; });
-
-      var raw = (dataProducts.ok && dataProducts.products) ? dataProducts.products : [];
-      var items = [];
-      raw.forEach(function (p) {
-        var productImage = resolveProductImageUrl(p);
-        items.push({
-          id: p.shopify_product_id || p.product_key + '-product',
-          title: p.product_name || p.product_key || 'Product',
-          url: p.storefront_url || null,
-          image_url: productImage,
-          printify_images: Array.isArray(p.printify_images) ? p.printify_images : null,
-          product_key: p.product_key,
-          product_name: p.product_name,
-          shopify_handle: p.shopify_handle || null,
-          published_at: p.last_published_at || null,
-          review_status: p.review_status || null,
-          shopify_completion_status: p.shopify_completion_status || null
-        });
+    console.log('[CreationsScreen] fetchProducts: requesting', productsUrl);
+    var dataProducts = await fetchDispatchJson(productsUrl, 'get-published-products');
+    var raw = dataProducts.products ? dataProducts.products : [];
+    var items = [];
+    raw.forEach(function (p) {
+      var productImage = resolveProductImageUrl(p);
+      items.push({
+        id: p.shopify_product_id || p.product_key + '-product',
+        title: p.product_name || p.product_key || 'Product',
+        url: p.storefront_url || null,
+        image_url: productImage,
+        printify_images: Array.isArray(p.printify_images) ? p.printify_images : null,
+        product_key: p.product_key,
+        product_name: p.product_name,
+        shopify_handle: p.shopify_handle || null,
+        published_at: p.last_published_at || null,
+        review_status: p.review_status || null,
+        shopify_completion_status: p.shopify_completion_status || null
       });
-      items.sort(function (a, b) {
-        var ta = a.published_at ? (typeof a.published_at === 'string' ? new Date(a.published_at).getTime() : (a.published_at < 1e12 ? a.published_at * 1000 : a.published_at)) : 0;
-        var tb = b.published_at ? (typeof b.published_at === 'string' ? new Date(b.published_at).getTime() : (b.published_at < 1e12 ? b.published_at * 1000 : b.published_at)) : 0;
-        return tb - ta;
-      });
-      return items;
-    } catch (e) {
-      console.error('[CreationsScreen] Products fetch error:', e);
-      return [];
-    }
+    });
+    items.sort(function (a, b) {
+      var ta = a.published_at ? (typeof a.published_at === 'string' ? new Date(a.published_at).getTime() : (a.published_at < 1e12 ? a.published_at * 1000 : a.published_at)) : 0;
+      var tb = b.published_at ? (typeof b.published_at === 'string' ? new Date(b.published_at).getTime() : (b.published_at < 1e12 ? b.published_at * 1000 : b.published_at)) : 0;
+      return tb - ta;
+    });
+    return items;
   }
 
   function isDesignSaved(d) {

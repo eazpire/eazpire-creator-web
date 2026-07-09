@@ -114,15 +114,37 @@
       }
       var fetchOpts = { credentials: 'include', cache: 'no-store' };
       if (options) Object.assign(fetchOpts, options);
-      try {
-        var res = await fetch(url.toString(), fetchOpts);
-        var data = await res.json().catch(function () { return {}; });
-        if (!res.ok) { var err = new Error('HTTP ' + res.status); err.status = res.status; err.body = data; throw err; }
-        return data;
-      } catch (e) {
-        if (e.body) console.warn('[creatorApiFetch]', operation, 'Error:', e.status, e.body);
-        throw e;
+      var method = String((fetchOpts.method || 'GET')).toUpperCase();
+      var idempotent = method === 'GET' || method === 'HEAD';
+      var attempts = idempotent ? 3 : 1;
+      var lastErr = null;
+      for (var attempt = 1; attempt <= attempts; attempt++) {
+        try {
+          var res = await fetch(url.toString(), fetchOpts);
+          var data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            var err = new Error('HTTP ' + res.status);
+            err.status = res.status;
+            err.body = data;
+            if (idempotent && (res.status >= 500 || res.status === 429) && attempt < attempts) {
+              lastErr = err;
+              await new Promise(function (r) { setTimeout(r, 200 * attempt); });
+              continue;
+            }
+            throw err;
+          }
+          return data;
+        } catch (e) {
+          lastErr = e;
+          if (e.body) console.warn('[creatorApiFetch]', operation, 'Error:', e.status, e.body);
+          if (idempotent && attempt < attempts && (!e.status || e.status >= 500 || e.status === 429)) {
+            await new Promise(function (r) { setTimeout(r, 200 * attempt); });
+            continue;
+          }
+          throw e;
+        }
       }
+      throw lastErr || new Error('HTTP failed');
     };
   }
 
