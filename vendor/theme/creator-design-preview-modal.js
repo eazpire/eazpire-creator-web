@@ -225,7 +225,6 @@
   let btnDownload = null;
   let btnSave = null;
   let btnDelete = null;
-  let btnCrop = null;
   let currentDesign = null;
   let originalVisibility = null; // Original visibility when modal opens
   let currentVisibility = null; // Current visibility (may differ from original if changed)
@@ -307,6 +306,10 @@
   let editMaskDirty = false;
   let editOpBusy = false;
   let editHistoryTouchX = null;
+  let viewerBgModalOpen = false;
+  const VIEWER_BG_DEFAULT = '#37375A';
+  const VIEWER_BG_STORAGE_KEY = 'eaz_cdp_viewer_bg';
+  let viewerBgValue = VIEWER_BG_DEFAULT;
   let editColorPreviewTimer = null;
   let editSourceImageData = null;
   let editSourceImageKey = '';
@@ -418,7 +421,6 @@
     btnDownload = document.getElementById('cdp-btn-download-' + sectionId);
     btnSave = document.getElementById('cdp-btn-save-' + sectionId);
     btnDelete = document.getElementById('cdp-btn-delete-' + sectionId);
-    btnCrop = document.getElementById('cdp-btn-crop-' + sectionId);
     modalVisibilitySwitch = document.getElementById('cdp-visibility-switch-' + sectionId);
     modalVisibilitySwitchLeft = document.getElementById('cdp-visibility-switch-left-' + sectionId);
     modalVisibilitySwitchMobile = document.getElementById('cdp-visibility-switch-mobile-slide1-' + sectionId);
@@ -614,14 +616,166 @@
   }
 
   function setCropButtonsSaveMode(saveMode) {
-    if (!modal) return;
-    var t = previewModalCropStrings();
-    modal.querySelectorAll('.cdp-modal__crop-btn').forEach(function (btn) {
-      btn.classList.toggle('cdp-modal__crop-btn--save-mode', !!saveMode);
-      btn.setAttribute('aria-label', saveMode ? t.saveTitle : t.enterTitle);
-      btn.setAttribute('title', saveMode ? t.saveTitle : t.enterTitle);
-    });
+    // Overview crop chrome removed; Edit Design crop trigger still updates via label helper.
     updateEditCropTriggerLabel();
+  }
+
+  function normalizeViewerBgValue(value) {
+    var raw = String(value || '').trim();
+    if (!raw) return VIEWER_BG_DEFAULT;
+    if (raw.toLowerCase() === 'checker' || raw.toLowerCase() === 'checkerboard') return 'checker';
+    var hex = raw.toLowerCase();
+    if (/^#[0-9a-f]{6}$/.test(hex)) return hex;
+    if (/^#[0-9a-f]{3}$/.test(hex)) {
+      return '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+    }
+    return VIEWER_BG_DEFAULT;
+  }
+
+  function loadViewerBgFromStorage() {
+    try {
+      var stored = window.localStorage && window.localStorage.getItem(VIEWER_BG_STORAGE_KEY);
+      if (stored) viewerBgValue = normalizeViewerBgValue(stored);
+    } catch (_) {}
+  }
+
+  function persistViewerBg(value) {
+    try {
+      if (window.localStorage) window.localStorage.setItem(VIEWER_BG_STORAGE_KEY, value);
+    } catch (_) {}
+  }
+
+  function applyViewerBgToTargets() {
+    if (!modal) return;
+    var isChecker = viewerBgValue === 'checker';
+    var color = isChecker ? VIEWER_BG_DEFAULT : viewerBgValue;
+    var targets = modal.querySelectorAll(
+      '.cdp-modal__panel--overview .cdp-modal__image-wrapper, .cdp-modal__edit-history-slide-wrap'
+    );
+    targets.forEach(function (el) {
+      if (isChecker) {
+        el.classList.add('is-checker-bg');
+        el.style.background = '';
+        el.style.backgroundColor = '';
+      } else {
+        el.classList.remove('is-checker-bg');
+        el.style.backgroundImage = 'none';
+        el.style.backgroundColor = color;
+      }
+    });
+    modal.querySelectorAll('.cdp-modal__viewer-bg-swatch').forEach(function (swatch) {
+      if (isChecker) {
+        swatch.classList.add('is-checker');
+        swatch.style.background = '';
+        swatch.style.backgroundColor = '';
+      } else {
+        swatch.classList.remove('is-checker');
+        swatch.style.backgroundImage = 'none';
+        swatch.style.backgroundColor = color;
+      }
+    });
+    var currentSwatch = document.getElementById('cdp-viewer-bg-current-swatch-' + sectionId);
+    var hexEl = document.getElementById('cdp-viewer-bg-hex-' + sectionId);
+    var picker = document.getElementById('cdp-viewer-bg-picker-' + sectionId);
+    if (currentSwatch) {
+      if (isChecker) {
+        currentSwatch.classList.add('is-checker');
+        currentSwatch.style.background = '';
+        currentSwatch.style.backgroundColor = '';
+      } else {
+        currentSwatch.classList.remove('is-checker');
+        currentSwatch.style.backgroundImage = 'none';
+        currentSwatch.style.backgroundColor = color;
+      }
+    }
+    if (hexEl) {
+      hexEl.textContent = isChecker
+        ? tPreview('viewer_bg_preset_checker', 'Checkerboard')
+        : color.toUpperCase();
+    }
+    if (picker && !isChecker) picker.value = color;
+    var presets = document.getElementById('cdp-viewer-bg-presets-' + sectionId);
+    if (presets) {
+      presets.querySelectorAll('[data-cdp-viewer-bg]').forEach(function (btn) {
+        var v = normalizeViewerBgValue(btn.getAttribute('data-cdp-viewer-bg'));
+        btn.classList.toggle('is-selected', v === viewerBgValue);
+      });
+    }
+  }
+
+  function setViewerBg(value, opts) {
+    var next = normalizeViewerBgValue(value);
+    viewerBgValue = next;
+    if (!opts || opts.persist !== false) persistViewerBg(next);
+    applyViewerBgToTargets();
+  }
+
+  function openViewerBgModal() {
+    var el = document.getElementById('cdp-viewer-bg-modal-' + sectionId);
+    if (!el) return;
+    viewerBgModalOpen = true;
+    el.removeAttribute('hidden');
+    el.setAttribute('aria-hidden', 'false');
+    el.classList.add('is-open');
+    applyViewerBgToTargets();
+  }
+
+  function closeViewerBgModal() {
+    var el = document.getElementById('cdp-viewer-bg-modal-' + sectionId);
+    if (!el) return;
+    viewerBgModalOpen = false;
+    el.setAttribute('hidden', '');
+    el.setAttribute('aria-hidden', 'true');
+    el.classList.remove('is-open');
+  }
+
+  function bindViewerBgControls() {
+    if (!modal || modal.__cdpViewerBgBound) return;
+    modal.__cdpViewerBgBound = true;
+    loadViewerBgFromStorage();
+    applyViewerBgToTargets();
+
+    modal.querySelectorAll('[data-cdp-viewer-bg-open]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openViewerBgModal();
+      });
+    });
+
+    var closeBtn = document.getElementById('cdp-viewer-bg-close-' + sectionId);
+    if (closeBtn) closeBtn.addEventListener('click', closeViewerBgModal);
+    var doneBtn = document.getElementById('cdp-viewer-bg-done-' + sectionId);
+    if (doneBtn) doneBtn.addEventListener('click', closeViewerBgModal);
+    var resetBtn = document.getElementById('cdp-viewer-bg-reset-' + sectionId);
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        setViewerBg(VIEWER_BG_DEFAULT);
+      });
+    }
+    var picker = document.getElementById('cdp-viewer-bg-picker-' + sectionId);
+    if (picker) {
+      picker.addEventListener('input', function () {
+        setViewerBg(picker.value);
+      });
+      picker.addEventListener('change', function () {
+        setViewerBg(picker.value);
+      });
+    }
+    var presets = document.getElementById('cdp-viewer-bg-presets-' + sectionId);
+    if (presets) {
+      presets.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('[data-cdp-viewer-bg]') : null;
+        if (!btn) return;
+        setViewerBg(btn.getAttribute('data-cdp-viewer-bg'));
+      });
+    }
+    var bgModal = document.getElementById('cdp-viewer-bg-modal-' + sectionId);
+    if (bgModal) {
+      bgModal.addEventListener('click', function (e) {
+        if (e.target === bgModal) closeViewerBgModal();
+      });
+    }
   }
 
   function cropRectsEqual(a, b) {
@@ -1260,10 +1414,14 @@
       });
     }
 
-    // Escape key — beim manuellen Crop nur Crop-Modus beenden
+    // Escape key — nested overlays first, then crop mode, then main modal
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && modal && modal.getAttribute('aria-hidden') === 'false') {
         e.preventDefault();
+        if (viewerBgModalOpen) {
+          closeViewerBgModal();
+          return;
+        }
         if (editHistoryOpen) {
           closeEditHistoryModal();
           return;
@@ -1306,9 +1464,7 @@
       btnDownload.addEventListener('click', handleDownload);
     }
 
-    modal.querySelectorAll('.cdp-modal__crop-btn').forEach(function (b) {
-      b.addEventListener('click', handleCrop);
-    });
+    bindViewerBgControls();
 
     if (btnSave) {
       btnSave.addEventListener('click', handleSave);
@@ -1409,6 +1565,7 @@
     editSourceImageKey = '';
     closeEditHistoryModal();
     closeDesignColorsModal();
+    closeViewerBgModal();
     clearColorPreview();
     resetDeleteButtonState();
     setActiveTab('overview');
@@ -1443,6 +1600,7 @@
 
     // Update design info from design object (sets layout based on design type)
     updateDesignInfo(design);
+    applyViewerBgToTargets();
     
     // Reset carousel to first slide when opening
     setCarouselSlide(0);
@@ -3555,6 +3713,10 @@
     var slideWrap = histModal && histModal.querySelector('.cdp-modal__edit-history-slide-wrap');
     if (slideWrap) {
       slideWrap.addEventListener('touchstart', function (e) {
+        if (e.target && e.target.closest && e.target.closest('[data-cdp-viewer-bg-open]')) {
+          editHistoryTouchX = null;
+          return;
+        }
         editHistoryTouchX = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : null;
       }, { passive: true });
       slideWrap.addEventListener('touchend', function (e) {
@@ -3570,8 +3732,9 @@
     // Eyedropper / brush on edit preview
     if (editImageWrap) {
       editImageWrap.addEventListener('click', function (e) {
-        if (editOpBusy || manualCropActive || editHistoryOpen || editDesignColorsOpen) return;
+        if (editOpBusy || manualCropActive || editHistoryOpen || editDesignColorsOpen || viewerBgModalOpen) return;
         if (e.target && e.target.closest && e.target.closest('.cdp-modal__edit-history-btn')) return;
+        if (e.target && e.target.closest && e.target.closest('[data-cdp-viewer-bg-open]')) return;
         if (editActiveTool !== 'remove_color' && editToolMode !== 'eyedropper') return;
         // While brushing a color area, clicks on the wrap (outside mask canvas) still pick colors.
         if (editToolMode === 'brush' && !editPickReplaceTarget) return;
@@ -4932,11 +5095,11 @@
       return;
     }
 
-    var cropBtns = modal ? modal.querySelectorAll('.cdp-modal__crop-btn') : [];
-    cropBtns.forEach(function (b) {
-      b.classList.add('cdp-modal__crop-btn--loading');
-      b.disabled = true;
-    });
+    var editCropTrigger = document.getElementById('cdp-edit-crop-trigger-' + sectionId);
+    if (editCropTrigger) {
+      editCropTrigger.classList.add('is-loading');
+      editCropTrigger.disabled = true;
+    }
     setCropBusyVisible(true);
 
     try {
@@ -5230,10 +5393,11 @@
       alert((window.CreatorI18n?.cropFailed || 'Fehler beim Croppen') + ': ' + (error.message || window.CreatorI18n?.errorUnknown || 'Unbekannter Fehler'));
     } finally {
       setCropBusyVisible(false);
-      cropBtns.forEach(function (b) {
-        b.classList.remove('cdp-modal__crop-btn--loading');
-        b.disabled = false;
-      });
+      var editCropTriggerDone = document.getElementById('cdp-edit-crop-trigger-' + sectionId);
+      if (editCropTriggerDone) {
+        editCropTriggerDone.classList.remove('is-loading');
+        editCropTriggerDone.disabled = false;
+      }
     }
   }
 
@@ -5276,6 +5440,7 @@
     exitManualCropMode();
     closeEditHistoryModal();
     closeDesignColorsModal();
+    closeViewerBgModal();
     clearColorPreview();
     resetEditToolModes();
     clearEditMask(true);

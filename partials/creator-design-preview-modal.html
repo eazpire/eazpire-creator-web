@@ -184,8 +184,8 @@
     box-sizing: border-box;
     /* ✅ Gleicher Stil wie fertiges Design - klar und scharf, kein dim-Effekt */
     isolation: isolate;
-    transition: filter 0.15s ease;
-    position: relative; /* Für Crop-Icon Positionierung */
+    transition: filter 0.15s ease, background-color 0.15s ease;
+    position: relative; /* Viewer chrome (background picker) */
   }
 
   .cdp-modal__image {
@@ -208,66 +208,62 @@
     filter: brightness(1.05);
   }
 
-  /* Crop Icon Button - Rechts unten im Bild-Container */
-  .cdp-modal__crop-btn {
+  /* Viewer background color picker — bottom-right of design preview panels */
+  .cdp-modal__viewer-bg-btn {
     position: absolute;
     bottom: 12px;
     right: 12px;
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    background: rgba(245, 158, 11, 0.9);
+    background: rgba(15, 23, 42, 0.88);
     border: 2px solid #F59E0B;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 5px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     z-index: 10;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
-  .cdp-modal__crop-btn:hover {
-    background: rgba(245, 158, 11, 1);
+  .cdp-modal__viewer-bg-btn:hover {
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border-color: #fbbf24;
   }
 
-  .cdp-modal__crop-btn:active {
+  .cdp-modal__viewer-bg-btn:active {
     transform: scale(0.95);
   }
 
-  .cdp-modal__crop-btn--loading {
-    opacity: 0.6;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-
-  .cdp-modal__crop-icon {
-    width: 20px;
-    height: 20px;
-    fill: #020617;
-    stroke: #020617;
-    stroke-width: 1.5;
-  }
-
-  .cdp-modal__crop-btn .cdp-modal__crop-icon--apply {
-    display: none;
-    width: 20px;
-    height: 20px;
-    stroke: #020617;
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .cdp-modal__crop-btn--save-mode .cdp-modal__crop-icon--adjust {
-    display: none;
-  }
-
-  .cdp-modal__crop-btn--save-mode .cdp-modal__crop-icon--apply {
+  .cdp-modal__viewer-bg-swatch {
     display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: #37375A;
+    box-sizing: border-box;
+  }
+
+  .cdp-modal__viewer-bg-swatch.is-checker,
+  .cdp-modal__image-wrapper.is-checker-bg,
+  .cdp-modal__edit-history-slide-wrap.is-checker-bg {
+    background-color: #1f2937;
+    background-image:
+      linear-gradient(45deg, #374151 25%, transparent 25%),
+      linear-gradient(-45deg, #374151 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #374151 75%),
+      linear-gradient(-45deg, transparent 75%, #374151 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+
+  .cdp-modal__viewer-bg-swatch.is-checker {
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
   }
 
   .cdp-modal__image-frame {
@@ -1536,6 +1532,188 @@
     justify-content: center;
     overflow: hidden;
     width: 100%;
+    transition: background-color 0.15s ease;
+  }
+
+  .cdp-modal__edit-history-slide-wrap .cdp-modal__viewer-bg-btn {
+    bottom: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Viewer background color picker modal */
+  .cdp-modal__viewer-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.72);
+    box-sizing: border-box;
+  }
+
+  .cdp-modal__viewer-bg.is-open {
+    display: flex;
+  }
+
+  .cdp-modal__viewer-bg-card {
+    width: min(360px, 100%);
+    border-radius: 14px;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    background: #0f172a;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+
+  .cdp-modal__viewer-bg-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .cdp-modal__viewer-bg-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #f8fafc;
+  }
+
+  .cdp-modal__viewer-bg-close {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .cdp-modal__viewer-bg-close:hover {
+    color: #f8fafc;
+  }
+
+  .cdp-modal__viewer-bg-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .cdp-modal__viewer-bg-hint {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #94a3b8;
+  }
+
+  .cdp-modal__viewer-bg-current {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cdp-modal__viewer-bg-current-swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: #37375A;
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__viewer-bg-current-swatch.is-checker {
+    background-color: #1f2937;
+    background-image:
+      linear-gradient(45deg, #374151 25%, transparent 25%),
+      linear-gradient(-45deg, #374151 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #374151 75%),
+      linear-gradient(-45deg, transparent 75%, #374151 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  }
+
+  .cdp-modal__viewer-bg-hex {
+    font-size: 13px;
+    color: #e2e8f0;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  .cdp-modal__viewer-bg-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cdp-modal__viewer-bg-native {
+    width: 48px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .cdp-modal__viewer-bg-native::-webkit-color-swatch-wrapper {
+    padding: 2px;
+  }
+
+  .cdp-modal__viewer-bg-native::-webkit-color-swatch {
+    border: none;
+    border-radius: 5px;
+  }
+
+  .cdp-modal__viewer-bg-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cdp-modal__viewer-bg-preset {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+    padding: 0;
+    background: #37375A;
+    transition: transform 0.12s ease, border-color 0.12s ease;
+  }
+
+  .cdp-modal__viewer-bg-preset:hover {
+    transform: scale(1.06);
+    border-color: rgba(245, 158, 11, 0.7);
+  }
+
+  .cdp-modal__viewer-bg-preset.is-selected {
+    border-color: #F59E0B;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+  }
+
+  .cdp-modal__viewer-bg-preset.is-checker {
+    background-color: #1f2937;
+    background-image:
+      linear-gradient(45deg, #374151 25%, transparent 25%),
+      linear-gradient(-45deg, #374151 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #374151 75%),
+      linear-gradient(-45deg, transparent 75%, #374151 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  }
+
+  .cdp-modal__viewer-bg-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .cdp-modal__edit-history-slide-wrap img {
@@ -2368,20 +2546,13 @@
             </div>
             <button
               type="button"
-              id="cdp-btn-crop-design-preview"
-              class="cdp-modal__crop-btn"
-              aria-label="Adjust crop area"
-              title="Adjust crop area"
+              id="cdp-viewer-bg-btn-design-preview"
+              class="cdp-modal__viewer-bg-btn"
+              aria-label="Preview background"
+              title="Preview background"
+              data-cdp-viewer-bg-open
             >
-              <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--adjust" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M7 17V9.8c0-1.12.9-2 2-2h7.2M17 7v7.2c0 1.12-.9 2-2 2H9.8" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M20 4H4v16h16V4z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--apply" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <path d="M17 21v-8H7v8"/>
-                <path d="M7 3v5h8"/>
-              </svg>
+              <span class="cdp-modal__viewer-bg-swatch" id="cdp-viewer-bg-swatch-design-preview" aria-hidden="true"></span>
             </button>
           </div>
 
@@ -2470,19 +2641,12 @@
               </div>
               <button
                 type="button"
-                class="cdp-modal__crop-btn"
-                aria-label="Adjust crop area"
-                title="Adjust crop area"
+                class="cdp-modal__viewer-bg-btn"
+                aria-label="Preview background"
+                title="Preview background"
+                data-cdp-viewer-bg-open
               >
-                <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--adjust" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M7 17V9.8c0-1.12.9-2 2-2h7.2M17 7v7.2c0 1.12-.9 2-2 2H9.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M20 4H4v16h16V4z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--apply" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                  <path d="M17 21v-8H7v8"/>
-                  <path d="M7 3v5h8"/>
-                </svg>
+                <span class="cdp-modal__viewer-bg-swatch" aria-hidden="true"></span>
               </button>
             </div>
 
@@ -2559,19 +2723,12 @@
           </div>
           <button
             type="button"
-            class="cdp-modal__crop-btn"
-            aria-label="Adjust crop area"
-            title="Adjust crop area"
+            class="cdp-modal__viewer-bg-btn"
+            aria-label="Preview background"
+            title="Preview background"
+            data-cdp-viewer-bg-open
           >
-            <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--adjust" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M7 17V9.8c0-1.12.9-2 2-2h7.2M17 7v7.2c0 1.12-.9 2-2 2H9.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M20 4H4v16h16V4z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg class="cdp-modal__crop-icon cdp-modal__crop-icon--apply" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <path d="M17 21v-8H7v8"/>
-              <path d="M7 3v5h8"/>
-            </svg>
+            <span class="cdp-modal__viewer-bg-swatch" aria-hidden="true"></span>
           </button>
         </div>
       </div>
@@ -2848,8 +3005,18 @@
           <p id="cdp-edit-history-empty-design-preview" class="cdp-modal__edit-history-empty" hidden data-t="creator.preview_modal.edit_history_empty">No edit versions yet</p>
           <div class="cdp-modal__edit-history-carousel" id="cdp-edit-history-carousel-design-preview">
             <button type="button" class="cdp-modal__edit-history-nav cdp-modal__edit-history-nav--prev" id="cdp-edit-history-prev-design-preview" aria-label="Previous version">‹</button>
-            <div class="cdp-modal__edit-history-slide-wrap">
+            <div class="cdp-modal__edit-history-slide-wrap" id="cdp-edit-history-slide-wrap-design-preview">
               <img id="cdp-edit-history-image-design-preview" src="" alt="" />
+              <button
+                type="button"
+                id="cdp-edit-history-bg-btn-design-preview"
+                class="cdp-modal__viewer-bg-btn"
+                aria-label="Preview background"
+                title="Preview background"
+                data-cdp-viewer-bg-open
+              >
+                <span class="cdp-modal__viewer-bg-swatch" aria-hidden="true"></span>
+              </button>
             </div>
             <button type="button" class="cdp-modal__edit-history-nav cdp-modal__edit-history-nav--next" id="cdp-edit-history-next-design-preview" aria-label="Next version">›</button>
           </div>
@@ -2888,6 +3055,50 @@
         </div>
         <div class="cdp-modal__design-colors-footer">
           <button type="button" class="cdp-modal__edit-btn" id="cdp-design-colors-done-design-preview" data-t="creator.preview_modal.edit_design_colors_done">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="cdp-viewer-bg-modal-design-preview"
+      class="cdp-modal__viewer-bg"
+      hidden
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cdp-viewer-bg-title-design-preview"
+    >
+      <div class="cdp-modal__viewer-bg-card">
+        <div class="cdp-modal__viewer-bg-header">
+          <h4 id="cdp-viewer-bg-title-design-preview" data-t="creator.preview_modal.viewer_bg_title">Preview background</h4>
+          <button type="button" class="cdp-modal__viewer-bg-close" id="cdp-viewer-bg-close-design-preview" aria-label="Close">✕</button>
+        </div>
+        <div class="cdp-modal__viewer-bg-body">
+          <p class="cdp-modal__viewer-bg-hint" data-t="creator.preview_modal.viewer_bg_hint">Choose a background color to preview how the design looks.</p>
+          <div class="cdp-modal__viewer-bg-current">
+            <span class="cdp-modal__viewer-bg-current-swatch" id="cdp-viewer-bg-current-swatch-design-preview" aria-hidden="true"></span>
+            <span class="cdp-modal__viewer-bg-hex" id="cdp-viewer-bg-hex-design-preview">#37375A</span>
+          </div>
+          <div class="cdp-modal__viewer-bg-picker-row">
+            <input
+              type="color"
+              id="cdp-viewer-bg-picker-design-preview"
+              class="cdp-modal__viewer-bg-native"
+              value="#37375A"
+              aria-label="Preview background"
+            />
+            <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--ghost" id="cdp-viewer-bg-reset-design-preview" data-t="creator.preview_modal.viewer_bg_reset">Reset</button>
+          </div>
+          <div class="cdp-modal__viewer-bg-presets" id="cdp-viewer-bg-presets-design-preview" role="listbox" aria-label="Preview background">
+            <button type="button" class="cdp-modal__viewer-bg-preset is-selected" data-cdp-viewer-bg="#37375A" title="Default" aria-label="Default" style="background:#37375A"></button>
+            <button type="button" class="cdp-modal__viewer-bg-preset" data-cdp-viewer-bg="#ffffff" title="White" aria-label="White" style="background:#ffffff"></button>
+            <button type="button" class="cdp-modal__viewer-bg-preset" data-cdp-viewer-bg="#000000" title="Black" aria-label="Black" style="background:#000000"></button>
+            <button type="button" class="cdp-modal__viewer-bg-preset" data-cdp-viewer-bg="#9ca3af" title="Gray" aria-label="Gray" style="background:#9ca3af"></button>
+            <button type="button" class="cdp-modal__viewer-bg-preset is-checker" data-cdp-viewer-bg="checker" title="Checkerboard" aria-label="Checkerboard"></button>
+          </div>
+        </div>
+        <div class="cdp-modal__viewer-bg-footer">
+          <button type="button" class="cdp-modal__edit-btn cdp-modal__edit-btn--primary" id="cdp-viewer-bg-done-design-preview" data-t="creator.preview_modal.viewer_bg_done">Done</button>
         </div>
       </div>
     </div>
