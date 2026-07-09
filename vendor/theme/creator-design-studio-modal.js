@@ -1,5 +1,5 @@
 /**
- * Creator Design Studio overlay modal (IDEA-026).
+ * Creator Design Studio — fullscreen overlay (IDEA-026).
  */
 (function () {
   'use strict';
@@ -9,8 +9,22 @@
   var statusEl = null;
   var btnSave = null;
   var btnClose = null;
-  var sidebarEl = null;
-  var drawerToggle = null;
+  var btnReset = null;
+  var viewerEl = null;
+  var mockImgEl = null;
+  var viewerEmptyEl = null;
+  var designWrapEl = null;
+  var designImgEl = null;
+  var designChromeEl = null;
+  var posBarEl = null;
+  var panelDesignEl = null;
+  var panelVariantsEl = null;
+  var addMenuEl = null;
+  var pickerEl = null;
+  var pickerGridEl = null;
+  var pickerTitleEl = null;
+  var pickerEmptyEl = null;
+  var uploadInputEl = null;
 
   var ctxDesign = null;
   var ctxProductKey = null;
@@ -18,15 +32,16 @@
   var ctxData = null;
   var draft = null;
   var savedDraftJson = '';
-  var activeTab = 'print_area';
+  var activeSettingsTab = 'design';
+  var activeAssetKey = 'primary';
   var isOpen = false;
   var isSaving = false;
   var isLoading = false;
+  var pickerMode = 'mine';
+  var transformDrag = null;
 
-  var TABS = ['print_area', 'variants', 'publication', 'mockups', 'prices'];
   var MAX_OWN_ADDITIONAL = 5;
   var MAX_PUBLIC_ADDITIONAL = 1;
-  var MAX_CUSTOM_MOCKS = 2;
 
   function Mi() {
     return window.CreatorMobileI18n || {};
@@ -72,6 +87,20 @@
     if (statusEl) statusEl.textContent = msg || '';
   }
 
+  function ensurePrintArea() {
+    draft.print_area = draft.print_area || {};
+    draft.print_area.primary = draft.print_area.primary || { x: 0.5, y: 0.5, scale: 1, rotate: 0 };
+    draft.print_area.additional = draft.print_area.additional || [];
+    draft.print_area.pattern = draft.print_area.pattern || {
+      enabled: false,
+      spacing_x: 1,
+      spacing_y: 1,
+      pattern_angle: 0,
+    };
+    draft.print_area.alignment = draft.print_area.alignment || { h: 'center', v: 'center' };
+    return draft.print_area;
+  }
+
   function findStudioRoot() {
     var nodes = document.querySelectorAll('#creatorDesignStudioModal');
     if (!nodes || !nodes.length) return null;
@@ -89,251 +118,407 @@
     statusEl = root.querySelector('#cds-status');
     btnSave = root.querySelector('#cds-btn-save');
     btnClose = root.querySelector('#cds-btn-close');
-    sidebarEl = root.querySelector('#cds-sidebar');
-    drawerToggle = root.querySelector('#cds-drawer-toggle');
+    btnReset = root.querySelector('#cds-btn-reset');
+    viewerEl = root.querySelector('#cds-viewer');
+    mockImgEl = root.querySelector('#cds-mock-img');
+    viewerEmptyEl = root.querySelector('#cds-viewer-empty');
+    designWrapEl = root.querySelector('#cds-design-wrap');
+    designImgEl = root.querySelector('#cds-primary-design');
+    designChromeEl = root.querySelector('#cds-design-chrome');
+    posBarEl = root.querySelector('#cds-pos-bar');
+    panelDesignEl = root.querySelector('#cds-panel-design');
+    panelVariantsEl = root.querySelector('#cds-panel-variants');
+    addMenuEl = root.querySelector('#cds-add-menu');
+    pickerEl = root.querySelector('#cds-design-picker');
+    pickerGridEl = root.querySelector('#cds-picker-grid');
+    pickerTitleEl = root.querySelector('#cds-picker-title');
+    pickerEmptyEl = root.querySelector('#cds-picker-empty');
+    uploadInputEl = root.querySelector('#cds-upload-input');
     return true;
   }
 
-  function bindOnce() {
-    if (!root || root.__cdsBound) return;
-    root.__cdsBound = true;
+  function markDirtyUi() {
+    if (btnSave) btnSave.disabled = isSaving || !isDirty();
+  }
 
-    if (btnClose) btnClose.addEventListener('click', function () { close(false); });
-    if (btnSave) btnSave.addEventListener('click', onSave);
-    root.querySelectorAll('[data-cds-close]').forEach(function (el) {
-      el.addEventListener('click', function () { close(false); });
-    });
+  function studioConfig() {
+    return (ctxData && ctxData.studio_config) || {};
+  }
 
-    root.querySelectorAll('[data-cds-tab]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        switchTab(btn.getAttribute('data-cds-tab'));
-        if (sidebarEl) sidebarEl.classList.remove('is-open');
-        if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false');
-      });
-    });
-
-    if (drawerToggle && sidebarEl) {
-      drawerToggle.addEventListener('click', function () {
-        var open = sidebarEl.classList.toggle('is-open');
-        drawerToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
+  function resolveColorKey() {
+    var cfg = studioConfig();
+    var pa = ensurePrintArea();
+    var ck = String(pa.color_key || cfg.color_key_resolved || 'default').trim();
+    var mocks = cfg.mocks_by_color || {};
+    if (mocks[ck] && mocks[ck].length) return ck;
+    if (cfg.color_key_resolved && mocks[cfg.color_key_resolved] && mocks[cfg.color_key_resolved].length) {
+      return cfg.color_key_resolved;
     }
-
-    document.addEventListener('keydown', function (ev) {
-      if (!isOpen) return;
-      if (ev.key === 'Escape') {
-        ev.preventDefault();
-        close(false);
-      }
-    });
+    var keys = Object.keys(mocks);
+    for (var i = 0; i < keys.length; i++) {
+      if (mocks[keys[i]] && mocks[keys[i]].length) return keys[i];
+    }
+    return ck || 'default';
   }
 
-  function switchTab(tab) {
-    if (!tab || TABS.indexOf(tab) === -1) return;
-    activeTab = tab;
-    root.querySelectorAll('[data-cds-tab]').forEach(function (btn) {
-      var on = btn.getAttribute('data-cds-tab') === tab;
-      btn.classList.toggle('is-active', on);
-      btn.setAttribute('aria-current', on ? 'page' : 'false');
-    });
-    root.querySelectorAll('[data-cds-panel]').forEach(function (panel) {
-      var on = panel.getAttribute('data-cds-panel') === tab;
-      panel.classList.toggle('is-active', on);
-      panel.hidden = !on;
-    });
+  function currentPosition() {
+    var cfg = studioConfig();
+    var positions = cfg.enabled_positions || ['front', 'back'];
+    var pos = (draft && draft.print_area && draft.print_area.position) || positions[0] || 'front';
+    return pos;
   }
 
-  function currentMockEntry() {
-    var cfg = ctxData && ctxData.studio_config;
-    if (!cfg || !cfg.mocks_by_color) return null;
-    var ck = (draft && draft.print_area && draft.print_area.color_key) || cfg.color_key_resolved || 'default';
-    var list = cfg.mocks_by_color[ck] || cfg.mocks_by_color.default || [];
-    var pos = (draft && draft.print_area && draft.print_area.position) || (cfg.enabled_positions && cfg.enabled_positions[0]) || 'front';
+  function mockEntryForPosition(pos) {
+    var cfg = studioConfig();
+    var ck = resolveColorKey();
+    var list = (cfg.mocks_by_color && cfg.mocks_by_color[ck]) || [];
     for (var i = 0; i < list.length; i++) {
       if (list[i].position === pos && list[i].mock_url) return list[i];
     }
     for (var j = 0; j < list.length; j++) {
       if (list[j].mock_url) return list[j];
     }
+    var allKeys = Object.keys(cfg.mocks_by_color || {});
+    for (var k = 0; k < allKeys.length; k++) {
+      var alt = cfg.mocks_by_color[allKeys[k]] || [];
+      for (var m = 0; m < alt.length; m++) {
+        if (alt[m].position === pos && alt[m].mock_url) return alt[m];
+      }
+    }
     return null;
   }
 
-  function applyPrimaryTransform(img) {
-    if (!img || !draft || !draft.print_area || !draft.print_area.primary) return;
-    var p = draft.print_area.primary;
-    var x = Number(p.x);
-    var y = Number(p.y);
-    var scale = Number(p.scale);
-    var rot = Number(p.rotate);
+  function activeTransform() {
+    ensurePrintArea();
+    if (activeAssetKey === 'primary') return draft.print_area.primary;
+    if (activeAssetKey === 'public' && draft.print_area.public_additional) {
+      draft.print_area.public_additional.transform = draft.print_area.public_additional.transform || { x: 0.5, y: 0.5, scale: 0.4, rotate: 0 };
+      return draft.print_area.public_additional.transform;
+    }
+    var m = String(activeAssetKey || '').match(/^own-(\d+)$/);
+    if (m) {
+      var idx = Number(m[1]);
+      var slot = draft.print_area.additional[idx];
+      if (slot) {
+        slot.transform = slot.transform || { x: 0.5, y: 0.5, scale: 0.5, rotate: 0 };
+        return slot.transform;
+      }
+    }
+    return draft.print_area.primary;
+  }
+
+  function designUrlForAsset(key) {
+    if (key === 'primary') {
+      return (ctxData && ctxData.design_preview_url) || (ctxDesign && ctxDesign.preview_url) || '';
+    }
+    if (key === 'public' && draft.print_area.public_additional && draft.print_area.public_additional.preview_url) {
+      return draft.print_area.public_additional.preview_url;
+    }
+    var m = String(key || '').match(/^own-(\d+)$/);
+    if (m) {
+      var slot = draft.print_area.additional[Number(m[1])];
+      if (slot && slot.preview_url) return slot.preview_url;
+    }
+    return '';
+  }
+
+  function applyTransformToDesignImg() {
+    if (!designImgEl) return;
+    var tr = activeTransform();
+    var x = Number(tr.x);
+    var y = Number(tr.y);
+    var scale = Number(tr.scale);
+    var rot = Number(tr.rotate);
     if (!Number.isFinite(x)) x = 0.5;
     if (!Number.isFinite(y)) y = 0.5;
     if (!Number.isFinite(scale) || scale <= 0) scale = 1;
     if (!Number.isFinite(rot)) rot = 0;
-    img.style.left = (x * 100) + '%';
-    img.style.top = (y * 100) + '%';
-    img.style.transform = 'translate(-50%, -50%) scale(' + scale + ') rotate(' + rot + 'deg)';
+    designImgEl.style.left = (x * 100) + '%';
+    designImgEl.style.top = (y * 100) + '%';
+    designImgEl.style.transform = 'translate(-50%, -50%) scale(' + scale + ') rotate(' + rot + 'deg)';
+    syncDesignChrome();
   }
 
-  function renderPrintAreaPanel() {
-    var panel = root.querySelector('#cds-panel-print-area');
-    if (!panel) return;
-    var cfg = ctxData && ctxData.studio_config;
-    var mock = currentMockEntry();
-    var positions = (cfg && cfg.enabled_positions) || ['front'];
-    var colors = cfg && cfg.mocks_by_color ? Object.keys(cfg.mocks_by_color) : ['default'];
-    var pa = draft.print_area || {};
+  function syncDesignChrome() {
+    if (!designChromeEl || !designImgEl || !viewerEl) return;
+    if (!designImgEl.offsetParent && designImgEl.hidden) {
+      designChromeEl.hidden = true;
+      designChromeEl.classList.remove('is-visible');
+      return;
+    }
+    var vr = viewerEl.getBoundingClientRect();
+    var dr = designImgEl.getBoundingClientRect();
+    if (!vr.width || !dr.width) return;
+    designChromeEl.hidden = false;
+    designChromeEl.classList.add('is-visible');
+    designChromeEl.style.left = (dr.left - vr.left) + 'px';
+    designChromeEl.style.top = (dr.top - vr.top) + 'px';
+    designChromeEl.style.width = dr.width + 'px';
+    designChromeEl.style.height = dr.height + 'px';
+  }
 
-    panel.innerHTML =
-      '<h3 class="cds-section-title">' + t('designStudioTabPrintArea', 'Print Area') + '</h3>' +
-      '<p class="cds-muted">' + t('designStudioPrimaryHint', 'Primary design can be repositioned only.') + '</p>' +
-      '<div class="cds-viewer" id="cds-print-viewer">' +
-      (mock && mock.mock_url
-        ? '<img class="cds-viewer__mock" src="' + mock.mock_url + '" alt="">' +
-          '<img class="cds-viewer__design" id="cds-primary-design" src="" alt="">'
-        : '<p class="cds-muted" style="padding:20px;text-align:center">' + t('designStudioNoMock', 'No mock available for this view.') + '</p>') +
-      '</div>' +
-      '<div class="cds-row">' +
-      fieldSelect('cds-pos', t('designStudioPosition', 'Position'), positions, pa.position || positions[0]) +
-      fieldSelect('cds-color', t('designStudioColor', 'Color'), colors, pa.color_key || colors[0]) +
-      fieldNumber('cds-scale', t('designStudioScale', 'Scale'), pa.primary && pa.primary.scale != null ? pa.primary.scale : 1, 0.2, 3, 0.05) +
-      fieldNumber('cds-rotate', t('designStudioRotate', 'Rotate °'), pa.primary && pa.primary.rotate != null ? pa.primary.rotate : 0, -180, 180, 1) +
-      '</div>' +
-      '<div class="cds-row">' +
-      '<button type="button" class="cds-btn-secondary" id="cds-reset-defaults">' + t('designStudioResetDefaults', 'Reset to admin defaults') + '</button>' +
-      '</div>' +
-      '<h3 class="cds-section-title">' + t('designStudioAdditional', 'Additional designs') + '</h3>' +
-      '<p class="cds-muted">' + t('designStudioAdditionalHint', 'Up to 5 own + 1 public design.') + '</p>' +
-      '<div class="cds-list" id="cds-additional-list"></div>' +
-      '<div class="cds-row">' +
-      '<button type="button" class="cds-btn-secondary" id="cds-add-own">' + t('designStudioAddOwn', 'Add from library') + '</button>' +
-      '<button type="button" class="cds-btn-secondary" id="cds-add-public">' + t('designStudioAddPublic', 'Browse public') + '</button>' +
-      '</div>';
+  function renderPositionBar() {
+    if (!posBarEl) return;
+    var cfg = studioConfig();
+    var positions = cfg.enabled_positions || ['front', 'back'];
+    var current = currentPosition();
+    posBarEl.innerHTML = '';
+    for (var i = 0; i < positions.length; i++) {
+      var pos = positions[i];
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cds-pos-tab' + (pos === current ? ' is-active' : '');
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', pos === current ? 'true' : 'false');
+      btn.textContent = pos;
+      btn.addEventListener('click', function (p) {
+        return function () {
+          ensurePrintArea().position = p;
+          renderViewer();
+          markDirtyUi();
+        };
+      }(pos));
+      posBarEl.appendChild(btn);
+    }
+  }
 
-    var designImg = panel.querySelector('#cds-primary-design');
-    if (designImg) {
-      designImg.src = (ctxData && ctxData.design_preview_url) || (ctxDesign && ctxDesign.preview_url) || '';
-      applyPrimaryTransform(designImg);
+  function renderViewer() {
+    if (!viewerEl) return;
+    ensurePrintArea();
+    if (!draft.print_area.color_key) draft.print_area.color_key = resolveColorKey();
+
+    renderPositionBar();
+    var pos = currentPosition();
+    var mock = mockEntryForPosition(pos);
+    var mockUrl = mock && (mock.editor_mock_url || mock.clean_mock_url || mock.mock_url);
+
+    if (mockImgEl && mockUrl) {
+      mockImgEl.hidden = false;
+      mockImgEl.src = mockUrl;
+      if (viewerEmptyEl) viewerEmptyEl.hidden = true;
+    } else {
+      if (mockImgEl) mockImgEl.hidden = true;
+      if (viewerEmptyEl) viewerEmptyEl.hidden = false;
     }
 
-    bindPrintAreaControls(panel, positions, colors);
-    renderAdditionalList(panel);
-  }
-
-  function fieldSelect(id, label, options, value) {
-    var html = '<div class="cds-field"><label for="' + id + '">' + label + '</label><select id="' + id + '">';
-    for (var i = 0; i < options.length; i++) {
-      var opt = options[i];
-      html += '<option value="' + opt + '"' + (opt === value ? ' selected' : '') + '>' + opt + '</option>';
+    var url = designUrlForAsset(activeAssetKey);
+    if (designWrapEl && designImgEl && url) {
+      designWrapEl.hidden = false;
+      designImgEl.hidden = false;
+      designImgEl.src = url;
+      designImgEl.onload = function () {
+        applyTransformToDesignImg();
+      };
+      applyTransformToDesignImg();
+    } else if (designWrapEl) {
+      designWrapEl.hidden = true;
     }
-    html += '</select></div>';
-    return html;
   }
 
-  function fieldNumber(id, label, value, min, max, step) {
+  function collapseHtml(id, title, bodyHtml, open) {
     return (
-      '<div class="cds-field"><label for="' + id + '">' + label + '</label>' +
-      '<input type="number" id="' + id + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + value + '"></div>'
+      '<div class="cds-collapse' + (open ? ' is-open' : '') + '" data-cds-collapse="' + id + '">' +
+      '<button type="button" class="cds-collapse__head">' + title + '</button>' +
+      '<div class="cds-collapse__body">' + bodyHtml + '</div></div>'
     );
   }
 
-  function bindPrintAreaControls(panel, positions, colors) {
-    var posSel = panel.querySelector('#cds-pos');
-    var colorSel = panel.querySelector('#cds-color');
-    var scaleInp = panel.querySelector('#cds-scale');
-    var rotInp = panel.querySelector('#cds-rotate');
-    var resetBtn = panel.querySelector('#cds-reset-defaults');
-    var addOwn = panel.querySelector('#cds-add-own');
-    var addPublic = panel.querySelector('#cds-add-public');
+  function renderDesignSettingsPanel() {
+    if (!panelDesignEl) return;
+    ensurePrintArea();
+    var pa = draft.print_area;
+    var tr = activeTransform();
 
-    function syncDraftFromInputs() {
-      draft.print_area = draft.print_area || {};
-      draft.print_area.primary = draft.print_area.primary || { x: 0.5, y: 0.5, scale: 1, rotate: 0 };
-      if (posSel) draft.print_area.position = posSel.value;
-      if (colorSel) draft.print_area.color_key = colorSel.value;
-      if (scaleInp) draft.print_area.primary.scale = Number(scaleInp.value) || 1;
-      if (rotInp) draft.print_area.primary.rotate = Number(rotInp.value) || 0;
-      markDirtyUi();
-      var img = panel.querySelector('#cds-primary-design');
-      applyPrimaryTransform(img);
+    var assetsHtml = '<div class="cds-asset-grid" id="cds-asset-grid">';
+    assetsHtml +=
+      '<button type="button" class="cds-asset-tile' + (activeAssetKey === 'primary' ? ' is-active' : '') + '" data-cds-asset="primary">' +
+      '<img src="' + (designUrlForAsset('primary') || '') + '" alt=""></button>';
+    var own = pa.additional || [];
+    for (var i = 0; i < own.length; i++) {
+      var key = 'own-' + i;
+      assetsHtml +=
+        '<button type="button" class="cds-asset-tile' + (activeAssetKey === key ? ' is-active' : '') + '" data-cds-asset="' + key + '">' +
+        (own[i].preview_url ? '<img src="' + own[i].preview_url + '" alt="">' : '<span>#' + (i + 1) + '</span>') +
+        '</button>';
     }
+    if (pa.public_additional) {
+      assetsHtml +=
+        '<button type="button" class="cds-asset-tile' + (activeAssetKey === 'public' ? ' is-active' : '') + '" data-cds-asset="public">' +
+        (pa.public_additional.preview_url ? '<img src="' + pa.public_additional.preview_url + '" alt="">' : '<span>P</span>') +
+        '</button>';
+    }
+    if (own.length < MAX_OWN_ADDITIONAL || !pa.public_additional) {
+      assetsHtml +=
+        '<button type="button" class="cds-asset-tile cds-asset-tile--add" data-cds-open-add>' +
+        '<span>+</span><span>' + t('designStudioAddDesigns', 'Add Designs') + '</span></button>';
+    }
+    assetsHtml += '</div>';
 
-    [posSel, colorSel, scaleInp, rotInp].forEach(function (el) {
-      if (!el) return;
-      el.addEventListener('change', function () {
-        if (posSel || colorSel) renderPrintAreaPanel();
-        else syncDraftFromInputs();
+    var scaleBody =
+      '<div class="cds-field-row"><label for="cds-scale-range">' + t('designStudioScale', 'Scale') + '</label>' +
+      '<input type="range" id="cds-scale-range" min="0.15" max="3" step="0.01" value="' + (tr.scale != null ? tr.scale : 1) + '">' +
+      '<input type="number" id="cds-scale-num" min="0.15" max="3" step="0.01" value="' + (tr.scale != null ? tr.scale : 1) + '"></div>';
+
+    var rotateBody =
+      '<div class="cds-field-row"><label for="cds-rotate-range">' + t('designStudioRotate', 'Rotate') + '</label>' +
+      '<input type="range" id="cds-rotate-range" min="-180" max="180" step="1" value="' + (tr.rotate != null ? tr.rotate : 0) + '">' +
+      '<input type="number" id="cds-rotate-num" min="-180" max="180" step="1" value="' + (tr.rotate != null ? tr.rotate : 0) + '"></div>';
+
+    var cropBody =
+      '<p class="cds-muted">' + t('designStudioCropHint', 'Crop adjusts the visible area of the selected design.') + '</p>' +
+      '<button type="button" class="cds-btn-secondary" id="cds-crop-toggle">' + t('designStudioCrop', 'Crop') + '</button>';
+
+    var align = pa.alignment || { h: 'center', v: 'center' };
+    var alignBtns = [];
+    ['left', 'center', 'right'].forEach(function (h) {
+      ['top', 'middle', 'bottom'].forEach(function (v) {
+        var on = align.h === h && align.v === v;
+        alignBtns.push(
+          '<button type="button" class="cds-align-btn' + (on ? ' is-active' : '') + '" data-align-h="' + h + '" data-align-v="' + v + '">' + h + '/' + v + '</button>'
+        );
       });
-      el.addEventListener('input', syncDraftFromInputs);
+    });
+    var alignBody = '<div class="cds-align-grid" id="cds-align-grid">' + alignBtns.join('') + '</div>';
+
+    var pat = pa.pattern || {};
+    var patternBody =
+      '<label class="cds-size-chip"><input type="checkbox" id="cds-pattern-enabled"' + (pat.enabled ? ' checked' : '') + '> ' +
+      t('designStudioPatternEnable', 'Enable pattern') + '</label>' +
+      '<div class="cds-field-row"><label>' + t('designStudioPatternSpacingX', 'Spacing X') + '</label>' +
+      '<input type="range" id="cds-pattern-sx" min="0.5" max="3" step="0.05" value="' + (pat.spacing_x || 1) + '"></div>' +
+      '<div class="cds-field-row"><label>' + t('designStudioPatternSpacingY', 'Spacing Y') + '</label>' +
+      '<input type="range" id="cds-pattern-sy" min="0.5" max="3" step="0.05" value="' + (pat.spacing_y || 1) + '"></div>';
+
+    panelDesignEl.innerHTML =
+      assetsHtml +
+      collapseHtml('transform', t('designStudioSectionTransform', 'Scale, Rotate, Crop'), scaleBody + rotateBody + cropBody, true) +
+      collapseHtml('alignment', t('designStudioSectionAlignment', 'Alignment'), alignBody, false) +
+      collapseHtml('pattern', t('designStudioSectionPattern', 'Pattern'), patternBody, false);
+
+    bindDesignSettingsPanel();
+  }
+
+  function bindCollapsibles(scope) {
+    if (!scope) return;
+    scope.querySelectorAll('[data-cds-collapse]').forEach(function (el) {
+      var head = el.querySelector('.cds-collapse__head');
+      if (!head || head.__cdsBound) return;
+      head.__cdsBound = true;
+      head.addEventListener('click', function () {
+        el.classList.toggle('is-open');
+      });
+    });
+  }
+
+  function syncTransformInputs() {
+    if (!panelDesignEl) return;
+    var tr = activeTransform();
+    var scaleR = panelDesignEl.querySelector('#cds-scale-range');
+    var scaleN = panelDesignEl.querySelector('#cds-scale-num');
+    var rotR = panelDesignEl.querySelector('#cds-rotate-range');
+    var rotN = panelDesignEl.querySelector('#cds-rotate-num');
+    if (scaleR) scaleR.value = String(tr.scale != null ? tr.scale : 1);
+    if (scaleN) scaleN.value = String(tr.scale != null ? tr.scale : 1);
+    if (rotR) rotR.value = String(tr.rotate != null ? tr.rotate : 0);
+    if (rotN) rotN.value = String(tr.rotate != null ? tr.rotate : 0);
+  }
+
+  function bindDesignSettingsPanel() {
+    bindCollapsibles(panelDesignEl);
+
+    panelDesignEl.querySelectorAll('[data-cds-asset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activeAssetKey = btn.getAttribute('data-cds-asset') || 'primary';
+        renderDesignSettingsPanel();
+        renderViewer();
+      });
     });
 
-    if (resetBtn) {
-      resetBtn.addEventListener('click', function () {
-        draft.print_area = {
-          position: positions[0] || 'front',
-          color_key: colors[0] || 'default',
-          primary: { x: 0.5, y: 0.5, scale: 1, rotate: 0 },
-          additional: draft.print_area.additional || [],
-          public_additional: draft.print_area.public_additional || null,
-        };
-        renderPrintAreaPanel();
+    var addBtn = panelDesignEl.querySelector('[data-cds-open-add]');
+    if (addBtn) addBtn.addEventListener('click', openAddMenu);
+
+    function bindRangePair(rangeId, numId, key, min, max) {
+      var range = panelDesignEl.querySelector(rangeId);
+      var num = panelDesignEl.querySelector(numId);
+      function apply(val) {
+        var tr = activeTransform();
+        var n = Number(val);
+        if (!Number.isFinite(n)) return;
+        n = Math.max(min, Math.min(max, n));
+        tr[key] = n;
         markDirtyUi();
-      });
+        applyTransformToDesignImg();
+        syncTransformInputs();
+      }
+      if (range) {
+        range.addEventListener('input', function () { apply(range.value); });
+      }
+      if (num) {
+        num.addEventListener('input', function () { apply(num.value); });
+      }
     }
 
-    if (addOwn) {
-      addOwn.addEventListener('click', function () {
-        var list = draft.print_area.additional || [];
-        if (list.length >= MAX_OWN_ADDITIONAL) return;
-        list.push({ design_id: null, label: t('designStudioOwnPlaceholder', 'Own design slot'), transform: { x: 0.5, y: 0.5, scale: 0.5, rotate: 0 } });
-        draft.print_area.additional = list;
-        renderAdditionalList(panel);
-        markDirtyUi();
-      });
-    }
+    bindRangePair('#cds-scale-range', '#cds-scale-num', 'scale', 0.15, 3);
+    bindRangePair('#cds-rotate-range', '#cds-rotate-num', 'rotate', -180, 180);
 
-    if (addPublic) {
-      addPublic.addEventListener('click', function () {
-        if (draft.print_area.public_additional) return;
-        draft.print_area.public_additional = {
-          design_id: null,
-          owner_id: null,
-          label: t('designStudioPublicPlaceholder', 'Public design'),
-          transform: { x: 0.5, y: 0.5, scale: 0.4, rotate: 0 },
-        };
-        renderAdditionalList(panel);
+    panelDesignEl.querySelectorAll('[data-align-h]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pa = ensurePrintArea();
+        pa.alignment = pa.alignment || { h: 'center', v: 'center' };
+        pa.alignment.h = btn.getAttribute('data-align-h');
+        pa.alignment.v = btn.getAttribute('data-align-v');
+        var tr = activeTransform();
+        if (pa.alignment.h === 'left') tr.x = 0.25;
+        else if (pa.alignment.h === 'right') tr.x = 0.75;
+        else tr.x = 0.5;
+        if (pa.alignment.v === 'top') tr.y = 0.25;
+        else if (pa.alignment.v === 'bottom') tr.y = 0.75;
+        else tr.y = 0.5;
+        renderDesignSettingsPanel();
+        applyTransformToDesignImg();
+        markDirtyUi();
+      });
+    });
+
+    var patEn = panelDesignEl.querySelector('#cds-pattern-enabled');
+    if (patEn) {
+      patEn.addEventListener('change', function () {
+        ensurePrintArea().pattern.enabled = patEn.checked;
         markDirtyUi();
       });
     }
+    ['#cds-pattern-sx', '#cds-pattern-sy'].forEach(function (sel, idx) {
+      var el = panelDesignEl.querySelector(sel);
+      if (!el) return;
+      el.addEventListener('input', function () {
+        var pa = ensurePrintArea();
+        if (idx === 0) pa.pattern.spacing_x = Number(el.value) || 1;
+        else pa.pattern.spacing_y = Number(el.value) || 1;
+        markDirtyUi();
+      });
+    });
   }
 
-  function renderAdditionalList(panel) {
-    var wrap = panel.querySelector('#cds-additional-list');
-    if (!wrap) return;
-    wrap.innerHTML = '';
-    var own = draft.print_area.additional || [];
-    for (var i = 0; i < own.length; i++) {
-      var row = document.createElement('div');
-      row.className = 'cds-channel-row';
-      row.textContent = (own[i].label || 'Own') + ' #' + (i + 1);
-      wrap.appendChild(row);
+  function colorDotStyle(name) {
+    var n = String(name || '').toLowerCase();
+    var map = {
+      black: '#111', white: '#f5f5f5', red: '#dc2626', blue: '#2563eb', navy: '#1e3a5f',
+      green: '#16a34a', grey: '#6b7280', gray: '#6b7280', pink: '#ec4899', orange: '#f97316',
+    };
+    for (var k in map) {
+      if (n.indexOf(k) !== -1) return 'background:' + map[k];
     }
-    if (draft.print_area.public_additional) {
-      var pub = document.createElement('div');
-      pub.className = 'cds-channel-row';
-      pub.textContent = draft.print_area.public_additional.label || t('designStudioPublicPlaceholder', 'Public design');
-      wrap.appendChild(pub);
-    }
+    return 'background:#888';
   }
 
-  function renderVariantsPanel() {
-    var panel = root.querySelector('#cds-panel-variants');
-    if (!panel || !ctxData) return;
+  function renderVariantSettingsPanel() {
+    if (!panelVariantsEl || !ctxData) return;
+    draft.variants = draft.variants || { selected_ids: [] };
+    var selected = new Set((draft.variants.selected_ids || []).map(Number));
     var groups = ctxData.variant_groups || {};
     var keys = Object.keys(groups).sort();
-    var selected = new Set((draft.variants && draft.variants.selected_ids) || []);
 
-    var html = '<h3 class="cds-section-title">' + t('designStudioTabVariants', 'Variants') + '</h3>' +
-      '<p class="cds-muted">' + t('designStudioVariantsHint', 'Locked variants stay visible but cannot be selected.') + '</p>';
+    var html = '<p class="cds-skill-hint">' + t('designStudioVariantsSkillHint', 'Some variants must be unlocked in the skill tree before you can select them.') + '</p>';
 
     if (!keys.length) {
       html += '<p class="cds-muted">' + t('designStudioNoVariants', 'No variants in admin pool.') + '</p>';
@@ -342,184 +527,358 @@
     for (var g = 0; g < keys.length; g++) {
       var color = keys[g];
       var items = groups[color] || [];
-      html += '<div class="cds-variant-group"><h4 class="cds-variant-group__title">' + color + '</h4>';
+      var unlockedItems = items.filter(function (v) { return v.unlocked && v.in_admin_pool; });
+      var selectedInColor = unlockedItems.filter(function (v) { return selected.has(Number(v.id)); });
+      var allChecked = unlockedItems.length > 0 && selectedInColor.length === unlockedItems.length;
+      var someChecked = selectedInColor.length > 0;
+
+      html += '<div class="cds-color-group" data-color-group="' + color + '">';
+      html += '<div class="cds-color-head">';
+      html += '<input type="checkbox" data-color-all="' + color + '"' + (allChecked ? ' checked' : '') + (someChecked && !allChecked ? ' data-indeterminate="1"' : '') + '>';
+      html += '<span class="cds-color-dot" style="' + colorDotStyle(color) + '"></span>';
+      html += '<span class="cds-color-name">' + color + ' (' + selectedInColor.length + ')</span>';
+      html += '<button type="button" class="cds-color-toggle" aria-label="Toggle sizes">▾</button>';
+      html += '</div><div class="cds-color-body">';
+
       for (var i = 0; i < items.length; i++) {
         var v = items[i];
-        var id = Number(v.id);
         var locked = !v.unlocked || !v.in_admin_pool;
+        var id = Number(v.id);
         var checked = selected.has(id);
         html +=
-          '<label class="cds-variant-chip' + (locked ? ' is-locked' : '') + '">' +
+          '<label class="cds-size-chip' + (locked ? ' is-locked' : '') + '">' +
           '<input type="checkbox" data-variant-id="' + id + '"' + (checked ? ' checked' : '') + (locked ? ' disabled' : '') + '> ' +
-          v.size +
-          (locked ? ' (' + t('designStudioLocked', 'Locked') + ')' : '') +
+          v.size + (locked ? ' (' + t('designStudioLocked', 'Locked') + ')' : '') +
           '</label>';
       }
-      html += '</div>';
+      html += '</div></div>';
     }
 
-    panel.innerHTML = html;
-    panel.querySelectorAll('input[data-variant-id]').forEach(function (inp) {
+    panelVariantsEl.innerHTML = html;
+
+    panelVariantsEl.querySelectorAll('[data-indeterminate]').forEach(function (cb) {
+      cb.indeterminate = true;
+    });
+
+    panelVariantsEl.querySelectorAll('.cds-color-head').forEach(function (head) {
+      head.addEventListener('click', function (e) {
+        if (e.target.matches('input[type="checkbox"]')) return;
+        head.parentElement.classList.toggle('is-open');
+      });
+    });
+
+    panelVariantsEl.querySelectorAll('[data-color-all]').forEach(function (cb) {
+      cb.addEventListener('change', function () {
+        var color = cb.getAttribute('data-color-all');
+        var items = groups[color] || [];
+        var ids = new Set((draft.variants.selected_ids || []).map(Number));
+        for (var j = 0; j < items.length; j++) {
+          var v = items[j];
+          if (!v.unlocked || !v.in_admin_pool) continue;
+          if (cb.checked) ids.add(Number(v.id));
+          else ids.delete(Number(v.id));
+        }
+        draft.variants.selected_ids = Array.from(ids);
+        renderVariantSettingsPanel();
+        markDirtyUi();
+      });
+    });
+
+    panelVariantsEl.querySelectorAll('[data-variant-id]').forEach(function (inp) {
       inp.addEventListener('change', function () {
-        var ids = [];
-        panel.querySelectorAll('input[data-variant-id]:checked').forEach(function (cb) {
-          ids.push(Number(cb.getAttribute('data-variant-id')));
+        var id = Number(inp.getAttribute('data-variant-id'));
+        var ids = new Set((draft.variants.selected_ids || []).map(Number));
+        if (inp.checked) ids.add(id);
+        else ids.delete(id);
+        draft.variants.selected_ids = Array.from(ids);
+        renderVariantSettingsPanel();
+        markDirtyUi();
+      });
+    });
+  }
+
+  function switchSettingsTab(tab) {
+    activeSettingsTab = tab === 'variants' ? 'variants' : 'design';
+    root.querySelectorAll('[data-cds-settings-tab]').forEach(function (btn) {
+      var on = btn.getAttribute('data-cds-settings-tab') === activeSettingsTab;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    root.querySelectorAll('[data-cds-settings-panel]').forEach(function (panel) {
+      var on = panel.getAttribute('data-cds-settings-panel') === activeSettingsTab;
+      panel.classList.toggle('is-active', on);
+      panel.hidden = !on;
+    });
+    if (activeSettingsTab === 'variants') renderVariantSettingsPanel();
+  }
+
+  function renderStudioUi() {
+    renderViewer();
+    renderDesignSettingsPanel();
+    renderVariantSettingsPanel();
+  }
+
+  function bindViewerTransform() {
+    if (!designImgEl || designImgEl.__cdsTransformBound) return;
+    designImgEl.__cdsTransformBound = true;
+
+    designImgEl.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      transformDrag = {
+        mode: 'move',
+        startX: e.clientX,
+        startY: e.clientY,
+        startTr: Object.assign({}, activeTransform()),
+        viewerRect: viewerEl.getBoundingClientRect(),
+      };
+      designImgEl.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    designImgEl.addEventListener('pointermove', function (e) {
+      if (!transformDrag || transformDrag.mode !== 'move') return;
+      var vr = transformDrag.viewerRect;
+      var dx = (e.clientX - transformDrag.startX) / vr.width;
+      var dy = (e.clientY - transformDrag.startY) / vr.height;
+      var tr = activeTransform();
+      tr.x = Math.max(0.05, Math.min(0.95, transformDrag.startTr.x + dx));
+      tr.y = Math.max(0.05, Math.min(0.95, transformDrag.startTr.y + dy));
+      applyTransformToDesignImg();
+      syncTransformInputs();
+      markDirtyUi();
+    });
+
+    designImgEl.addEventListener('pointerup', function () {
+      transformDrag = null;
+    });
+    designImgEl.addEventListener('pointercancel', function () {
+      transformDrag = null;
+    });
+
+    if (designChromeEl && !designChromeEl.__cdsChromeBound) {
+      designChromeEl.__cdsChromeBound = true;
+      designChromeEl.querySelectorAll('[data-cds-rz]').forEach(function (handle) {
+        handle.addEventListener('pointerdown', function (e) {
+          e.stopPropagation();
+          if (e.button !== 0) return;
+          var mode = handle.getAttribute('data-cds-rz');
+          transformDrag = {
+            mode: mode === 'rotate' ? 'rotate' : 'scale',
+            rz: mode,
+            startX: e.clientX,
+            startY: e.clientY,
+            startTr: Object.assign({}, activeTransform()),
+            center: designImgEl.getBoundingClientRect(),
+          };
+          handle.setPointerCapture(e.pointerId);
+          e.preventDefault();
         });
-        draft.variants = draft.variants || {};
-        draft.variants.selected_ids = ids;
-        markDirtyUi();
+        handle.addEventListener('pointermove', function (e) {
+          if (!transformDrag) return;
+          var tr = activeTransform();
+          if (transformDrag.mode === 'rotate') {
+            var c = transformDrag.center;
+            var ang = Math.atan2(e.clientY - (c.top + c.height / 2), e.clientX - (c.left + c.width / 2));
+            var ang0 = Math.atan2(transformDrag.startY - (c.top + c.height / 2), transformDrag.startX - (c.left + c.width / 2));
+            tr.rotate = transformDrag.startTr.rotate + ((ang - ang0) * 180) / Math.PI;
+          } else {
+            var dist = Math.hypot(e.clientX - transformDrag.startX, e.clientY - transformDrag.startY);
+            tr.scale = Math.max(0.15, Math.min(3, transformDrag.startTr.scale + dist / 400));
+          }
+          applyTransformToDesignImg();
+          syncTransformInputs();
+          markDirtyUi();
+        });
+        handle.addEventListener('pointerup', function () { transformDrag = null; });
       });
-    });
+    }
+
+    window.addEventListener('resize', syncDesignChrome);
   }
 
-  function renderPublicationPanel() {
-    var panel = root.querySelector('#cds-panel-publication');
-    if (!panel || !ctxData) return;
-    var pub = ctxData.publication || {};
-    var markets = pub.markets || [];
-    var channels = pub.channels || [];
-    draft.publication = draft.publication || { markets: [], channels: { shopify: true } };
-    var selMarkets = new Set(draft.publication.markets || []);
-    if (!selMarkets.size && markets.length) markets.forEach(function (m) { selMarkets.add(m); });
-
-    var html = '<h3 class="cds-section-title">' + t('designStudioTabPublication', 'Publication') + '</h3>' +
-      '<p class="cds-muted">' + t('designStudioPublicationHint', 'Settings only — publish runs via queue.') + '</p>' +
-      '<h4 class="cds-variant-group__title">' + t('designStudioMarkets', 'Markets') + '</h4>';
-
-    for (var i = 0; i < markets.length; i++) {
-      var m = markets[i];
-      html += '<label class="cds-market-row"><input type="checkbox" data-market="' + m + '"' + (selMarkets.has(m) ? ' checked' : '') + '> ' + m + '</label>';
-    }
-
-    html += '<h4 class="cds-variant-group__title">' + t('designStudioChannels', 'Channels') + '</h4>';
-    for (var c = 0; c < channels.length; c++) {
-      var ch = channels[c];
-      var on = ch.always_on || !!(draft.publication.channels && draft.publication.channels[ch.id]);
-      html += '<label class="cds-channel-row' + (ch.locked ? ' is-locked' : '') + '">' +
-        '<input type="checkbox" data-channel="' + ch.id + '"' + (on ? ' checked' : '') + (ch.always_on || ch.locked ? ' disabled' : '') + '> ' +
-        ch.label + (ch.locked ? ' (' + t('designStudioLocked', 'Locked') + ')' : '') +
-        '</label>';
-    }
-
-    panel.innerHTML = html;
-
-    panel.querySelectorAll('[data-market]').forEach(function (cb) {
-      cb.addEventListener('change', function () {
-        var arr = [];
-        panel.querySelectorAll('[data-market]:checked').forEach(function (x) { arr.push(x.getAttribute('data-market')); });
-        draft.publication.markets = arr;
-        markDirtyUi();
-      });
-    });
-
-    panel.querySelectorAll('[data-channel]').forEach(function (cb) {
-      cb.addEventListener('change', function () {
-        draft.publication.channels = draft.publication.channels || { shopify: true };
-        draft.publication.channels[cb.getAttribute('data-channel')] = cb.checked;
-        draft.publication.channels.shopify = true;
-        markDirtyUi();
-      });
-    });
+  function openAddMenu() {
+    if (!addMenuEl) return;
+    addMenuEl.hidden = false;
+    addMenuEl.setAttribute('aria-hidden', 'false');
   }
 
-  function renderMockupsPanel() {
-    var panel = root.querySelector('#cds-panel-mockups');
-    if (!panel || !ctxData) return;
-    draft.mockups = draft.mockups || { custom_by_variant_id: {}, channel_preview: {} };
-    var cfg = ctxData.studio_config || {};
-    var mocks = cfg.mocks_by_color || {};
-    var html = '<h3 class="cds-section-title">' + t('designStudioTabMockups', 'Mockups') + '</h3>' +
-      '<p class="cds-muted">' + t('designStudioMockupsHint', 'Printify mocks + up to 2 custom uploads per variant.') + '</p>' +
-      '<div class="cds-mock-grid" id="cds-mock-grid"></div>' +
-      '<div class="cds-row"><button type="button" class="cds-btn-secondary" id="cds-add-custom-mock">' + t('designStudioAddCustomMock', 'Add custom mock') + '</button></div>';
-
-    panel.innerHTML = html;
-    var grid = panel.querySelector('#cds-mock-grid');
-    var count = 0;
-    Object.keys(mocks).forEach(function (ck) {
-      (mocks[ck] || []).forEach(function (m) {
-        if (!m.mock_url) return;
-        count += 1;
-        var card = document.createElement('div');
-        card.className = 'cds-mock-card';
-        card.innerHTML = '<img src="' + m.mock_url + '" alt=""><div class="cds-mock-card__label">' + (m.position || ck) + '</div>';
-        grid.appendChild(card);
-      });
-    });
-    if (!count) {
-      grid.innerHTML = '<p class="cds-muted">' + t('designStudioNoMock', 'No mock available for this view.') + '</p>';
+  function closeSubmodals() {
+    if (addMenuEl) {
+      addMenuEl.hidden = true;
+      addMenuEl.setAttribute('aria-hidden', 'true');
     }
-
-    var addBtn = panel.querySelector('#cds-add-custom-mock');
-    if (addBtn) {
-      addBtn.addEventListener('click', function () {
-        var vid = (draft.variants.selected_ids && draft.variants.selected_ids[0]) || 'default';
-        var bucket = draft.mockups.custom_by_variant_id[vid] || [];
-        if (bucket.length >= MAX_CUSTOM_MOCKS) return;
-        bucket.push({ url: '', label: t('designStudioCustomMock', 'Custom mock') + ' ' + (bucket.length + 1) });
-        draft.mockups.custom_by_variant_id[vid] = bucket;
-        markDirtyUi();
-        setStatus(t('designStudioCustomMockAdded', 'Custom mock slot added (upload in a later step).'));
-      });
+    if (pickerEl) {
+      pickerEl.hidden = true;
+      pickerEl.setAttribute('aria-hidden', 'true');
     }
   }
 
-  function centsToUsd(cents) {
-    return (Number(cents) / 100).toFixed(2);
+  function openDesignPicker(mode) {
+    closeSubmodals();
+    pickerMode = mode === 'public' ? 'public' : 'mine';
+    if (!pickerEl) return;
+    pickerEl.hidden = false;
+    pickerEl.setAttribute('aria-hidden', 'false');
+    if (pickerTitleEl) {
+      pickerTitleEl.textContent =
+        pickerMode === 'public'
+          ? t('designStudioPublicDesigns', 'Public Designs')
+          : t('designStudioMyDesigns', 'My Designs');
+    }
+    loadDesignPickerGrid();
   }
 
-  function renderPricesPanel() {
-    var panel = root.querySelector('#cds-panel-prices');
-    if (!panel || !ctxData) return;
-    draft.prices = draft.prices || { by_variant_id: {} };
-    var variants = ctxData.variants || [];
-    var royalty = ctxData.royalty || { percent: 0 };
-    var html = '<h3 class="cds-section-title">' + t('designStudioTabPrices', 'Prices') + '</h3>' +
-      '<p class="cds-muted">' + t('designStudioPricesHint', 'Prices below production cost are blocked. Royalty based on current tier.') + '</p>';
+  async function loadDesignPickerGrid() {
+    if (!pickerGridEl) return;
+    pickerGridEl.innerHTML = '';
+    if (pickerEmptyEl) pickerEmptyEl.hidden = true;
+    var owner = getOwnerId();
+    if (!owner) return;
 
-    for (var i = 0; i < variants.length; i++) {
-      var v = variants[i];
-      if (!v.unlocked) continue;
-      var vid = String(v.id);
-      var stored = draft.prices.by_variant_id[vid];
-      var price = stored != null ? stored : v.default_sell_cents;
-      html += '<div class="cds-price-row" data-variant-price="' + vid + '">' +
-        '<span>' + v.title + '</span>' +
-        '<input type="number" min="' + Math.ceil((v.cost_cents || 0) / 100) + '" step="0.01" value="' + centsToUsd(price) + '" data-price-variant="' + vid + '" data-cost-cents="' + (v.cost_cents || 0) + '">' +
-        '<span class="cds-muted">' + t('designStudioMinCost', 'Min') + ': $' + centsToUsd(v.cost_cents || 0) + '</span></div>';
+    var url = apiBase() + '?op=' + (pickerMode === 'public' ? 'list-public' : 'list') +
+      '&owner_id=' + encodeURIComponent(owner) + '&limit=60';
+    try {
+      var res = await fetch(url, { credentials: 'include' });
+      var data = await res.json().catch(function () { return {}; });
+      var items = data.items || data.designs || data.results || [];
+      if (!Array.isArray(items)) items = [];
+      items = items.filter(function (d) {
+        if (!d || d.id == null) return false;
+        if (pickerMode === 'mine') return d.library_status === 'active';
+        return d.visibility === 'public' || d.library_status === 'active';
+      });
+      if (!items.length) {
+        if (pickerEmptyEl) {
+          pickerEmptyEl.hidden = false;
+          pickerEmptyEl.textContent = t('designStudioPickerEmpty', 'No designs found.');
+        }
+        return;
+      }
+      for (var i = 0; i < items.length; i++) {
+        (function (design) {
+          var card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'cds-picker-card';
+          var img = document.createElement('img');
+          img.src = design.preview_url || design.thumb_url || '';
+          img.alt = '';
+          card.appendChild(img);
+          card.addEventListener('click', function () {
+            applyPickedDesign(design);
+          });
+          pickerGridEl.appendChild(card);
+        })(items[i]);
+      }
+    } catch (e) {
+      console.warn('[creator-design-studio] picker', e);
+      if (pickerEmptyEl) {
+        pickerEmptyEl.hidden = false;
+        pickerEmptyEl.textContent = t('designStudioLoadError', 'Could not load studio.');
+      }
     }
+  }
 
-    var pct = Number(royalty.percent) || 0;
-    html += '<div class="cds-royalty-box">' +
-      t('designStudioRoyaltyPrimary', 'Primary royalty') + ': ' + pct + '% · ' +
-      t('designStudioRoyaltyAdditional', 'Additional split') + ': 87.5% / 12.5%' +
-      '</div>';
+  function applyPickedDesign(design) {
+    if (!design || design.id == null) return;
+    ensurePrintArea();
+    var pa = draft.print_area;
+    var slot = {
+      design_id: design.id,
+      preview_url: design.preview_url || design.thumb_url || '',
+      label: design.title || ('Design ' + design.id),
+      transform: { x: 0.5, y: 0.5, scale: 0.5, rotate: 0 },
+    };
+    if (pickerMode === 'public') {
+      if (pa.public_additional) return;
+      pa.public_additional = Object.assign({}, slot, { owner_id: design.owner_id || null });
+      activeAssetKey = 'public';
+    } else {
+      if ((pa.additional || []).length >= MAX_OWN_ADDITIONAL) return;
+      pa.additional.push(slot);
+      activeAssetKey = 'own-' + (pa.additional.length - 1);
+    }
+    closeSubmodals();
+    renderStudioUi();
+    markDirtyUi();
+  }
 
-    panel.innerHTML = html;
+  function bindOnce() {
+    if (!root || root.__cdsBound) return;
+    root.__cdsBound = true;
 
-    panel.querySelectorAll('[data-price-variant]').forEach(function (inp) {
-      inp.addEventListener('input', function () {
-        var vid = inp.getAttribute('data-price-variant');
-        var cost = Number(inp.getAttribute('data-cost-cents')) || 0;
-        var usd = Number(inp.value);
-        var cents = Math.round(usd * 100);
-        inp.classList.toggle('invalid', cents < cost);
-        draft.prices.by_variant_id[vid] = cents;
-        markDirtyUi();
+    if (btnClose) btnClose.addEventListener('click', function () { close(false); });
+    if (btnSave) btnSave.addEventListener('click', onSave);
+    if (btnReset) btnReset.addEventListener('click', resetToDefaults);
+
+    root.querySelectorAll('[data-cds-settings-tab]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        switchSettingsTab(btn.getAttribute('data-cds-settings-tab'));
       });
     });
+
+    root.querySelectorAll('[data-cds-sub-close]').forEach(function (el) {
+      el.addEventListener('click', closeSubmodals);
+    });
+
+    if (addMenuEl) {
+      var myBtn = addMenuEl.querySelector('[data-cds-add-my-designs]');
+      var pubBtn = addMenuEl.querySelector('[data-cds-add-public-designs]');
+      var devBtn = addMenuEl.querySelector('[data-cds-add-upload="device"]');
+      var phoneBtn = addMenuEl.querySelector('[data-cds-add-upload="phone"]');
+      if (myBtn) myBtn.addEventListener('click', function () { openDesignPicker('mine'); });
+      if (pubBtn) pubBtn.addEventListener('click', function () { openDesignPicker('public'); });
+      if (devBtn) devBtn.addEventListener('click', function () {
+        closeSubmodals();
+        if (uploadInputEl) uploadInputEl.click();
+      });
+      if (phoneBtn) phoneBtn.addEventListener('click', function () {
+        closeSubmodals();
+        if (window.openCreatorPhoneUploadModal) window.openCreatorPhoneUploadModal();
+        else if (uploadInputEl) uploadInputEl.click();
+      });
+    }
+
+    if (uploadInputEl) {
+      uploadInputEl.addEventListener('change', function () {
+        var file = uploadInputEl.files && uploadInputEl.files[0];
+        uploadInputEl.value = '';
+        if (!file) return;
+        setStatus(t('designStudioUploadSoon', 'Upload will be wired in a follow-up step.'));
+      });
+    }
+
+    document.addEventListener('keydown', function (ev) {
+      if (!isOpen) return;
+      if (ev.key === 'Escape') {
+        if ((addMenuEl && !addMenuEl.hidden) || (pickerEl && !pickerEl.hidden)) {
+          closeSubmodals();
+          ev.preventDefault();
+          return;
+        }
+        ev.preventDefault();
+        close(false);
+      }
+    });
+
+    bindViewerTransform();
   }
 
-  function renderAllPanels() {
-    renderPrintAreaPanel();
-    renderVariantsPanel();
-    renderPublicationPanel();
-    renderMockupsPanel();
-    renderPricesPanel();
-  }
-
-  function markDirtyUi() {
-    if (btnSave) btnSave.disabled = isSaving || !isDirty();
+  function resetToDefaults() {
+    var cfg = studioConfig();
+    var positions = cfg.enabled_positions || ['front'];
+    var colors = cfg.mocks_by_color ? Object.keys(cfg.mocks_by_color) : ['default'];
+    draft.print_area = {
+      position: positions[0] || 'front',
+      color_key: resolveColorKey() || colors[0] || 'default',
+      primary: { x: 0.5, y: 0.5, scale: 1, rotate: 0 },
+      additional: [],
+      public_additional: null,
+      alignment: { h: 'center', v: 'center' },
+      pattern: { enabled: false, spacing_x: 1, spacing_y: 1, pattern_angle: 0 },
+    };
+    activeAssetKey = 'primary';
+    renderStudioUi();
+    markDirtyUi();
   }
 
   async function loadContext(design, productKey) {
@@ -554,6 +913,7 @@
   function doClose() {
     isOpen = false;
     isLoading = false;
+    closeSubmodals();
     if (root) {
       root.hidden = true;
       root.setAttribute('aria-hidden', 'true');
@@ -566,6 +926,7 @@
     ctxData = null;
     draft = null;
     savedDraftJson = '';
+    activeAssetKey = 'primary';
     setStatus('');
   }
 
@@ -659,6 +1020,8 @@
     ctxDesign = design;
     ctxProductKey = nextProductKey;
     ctxProductMeta = productMeta || null;
+    activeAssetKey = 'primary';
+    activeSettingsTab = 'design';
 
     if (subtitleEl) {
       subtitleEl.textContent = (productMeta && productMeta.title) || ctxProductKey;
@@ -677,8 +1040,10 @@
       ctxData = await loadContext(design, ctxProductKey);
       if (!isOpen || ctxProductKey !== nextProductKey) return;
       draft = ctxData.draft || { product_key: ctxProductKey };
-      switchTab('print_area');
-      renderAllPanels();
+      ensurePrintArea();
+      if (!draft.print_area.color_key) draft.print_area.color_key = resolveColorKey();
+      switchSettingsTab('design');
+      renderStudioUi();
       savedDraftJson = draftJson();
       setStatus('');
       markDirtyUi();
