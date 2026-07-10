@@ -112,8 +112,9 @@
   var ctxPubRowByKey = {};
   var ctxDesign = null;
   var ctxAllProducts = [];
-  /** 'all' | 'queue' | 'active' — queue/active only for active library designs */
-  var ctxFilter = 'all';
+  /** 'unlocked' | 'locked' | 'all' — unlocked shows Active/Queue groups */
+  var ctxFilter = 'unlocked';
+  var unlockedGroupOpen = { active: true, queue: true };
 
   var ROTATION_MS = 1500;
   /** @type {Map<string, number>} product_key -> interval id */
@@ -355,7 +356,7 @@
     if (pubRow) {
       var on = document.createElement('span');
       on.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--online';
-      on.textContent = M.designProductsBadgeOnline || 'Online';
+      on.textContent = M.designProductsBadgeOnline || M.designProductsBadgeActive || 'Active';
       badges.appendChild(on);
     } else if (isChecked) {
       var qu = document.createElement('span');
@@ -377,9 +378,42 @@
     }
   }
 
+  function isProductUnlocked(p) {
+    if (!p) return false;
+    if (typeof p.unlocked === 'boolean') return p.unlocked;
+    // Fallback when API has no unlock flags: treat as unlocked.
+    return true;
+  }
+
+  function partitionProducts() {
+    var unlocked = [];
+    var locked = [];
+    for (var i = 0; i < ctxAllProducts.length; i++) {
+      var p = ctxAllProducts[i];
+      if (isProductUnlocked(p)) unlocked.push(p);
+      else locked.push(p);
+    }
+    var active = [];
+    var queue = [];
+    for (var j = 0; j < unlocked.length; j++) {
+      var u = unlocked[j];
+      var pk = String(u.product_key || '').trim();
+      if (pk && ctxPubRowByKey[pk]) active.push(u);
+      else queue.push(u);
+    }
+    return { unlocked: unlocked, locked: locked, active: active, queue: queue };
+  }
+
   function visibleKeys() {
-    var products = filteredProducts();
-    return products
+    // Select all / deselect only apply to unlocked products in the current view.
+    var parts = partitionProducts();
+    var list =
+      ctxFilter === 'locked'
+        ? []
+        : ctxFilter === 'all'
+          ? parts.unlocked
+          : parts.unlocked;
+    return list
       .map(function (p) {
         return String(p.product_key || '').trim();
       })
@@ -387,15 +421,10 @@
   }
 
   function filteredProducts() {
-    if (ctxFilter === 'all') return ctxAllProducts.slice();
-    return ctxAllProducts.filter(function (p) {
-      var pk = String(p.product_key || '').trim();
-      if (!pk) return false;
-      var isOnline = !!ctxPubRowByKey[pk];
-      if (ctxFilter === 'active') return isOnline;
-      if (ctxFilter === 'queue') return !isOnline;
-      return true;
-    });
+    var parts = partitionProducts();
+    if (ctxFilter === 'locked') return parts.locked;
+    if (ctxFilter === 'unlocked') return parts.unlocked;
+    return ctxAllProducts.slice();
   }
 
   function syncFilterTabsUi() {
@@ -403,7 +432,7 @@
     var showTabs = resolveLibraryStatus(ctxDesign) === 'active';
     if (showTabs) {
       filterTabsEl.removeAttribute('hidden');
-      if (ctxFilter === 'all') ctxFilter = 'queue';
+      if (ctxFilter !== 'unlocked' && ctxFilter !== 'locked') ctxFilter = 'unlocked';
     } else {
       filterTabsEl.setAttribute('hidden', '');
       ctxFilter = 'all';
@@ -463,11 +492,11 @@
         var tab = e.target && e.target.closest ? e.target.closest('[data-cdp-products-filter]') : null;
         if (!tab) return;
         var next = String(tab.getAttribute('data-cdp-products-filter') || '');
-        if (next !== 'queue' && next !== 'active') return;
+        if (next !== 'unlocked' && next !== 'locked') return;
         if (ctxFilter === next) return;
         ctxFilter = next;
         syncFilterTabsUi();
-        renderGrid(filteredProducts());
+        renderProductsView();
         refreshDirty();
       });
     }
@@ -480,10 +509,10 @@
     if (btnUpdate) btnUpdate.textContent = M.designProductsUpdate || 'Update';
     if (gridEl) gridEl.setAttribute('aria-label', M.designProductsGridAria || '');
     if (filterTabsEl) {
-      var q = filterTabsEl.querySelector('[data-cdp-products-filter="queue"]');
-      var a = filterTabsEl.querySelector('[data-cdp-products-filter="active"]');
-      if (q) q.textContent = M.designProductsTabQueue || 'Queue';
-      if (a) a.textContent = M.designProductsTabActive || 'Active';
+      var u = filterTabsEl.querySelector('[data-cdp-products-filter="unlocked"]');
+      var l = filterTabsEl.querySelector('[data-cdp-products-filter="locked"]');
+      if (u) u.textContent = M.designProductsTabUnlocked || 'Unlocked';
+      if (l) l.textContent = M.designProductsTabLocked || 'Locked';
     }
   }
 
@@ -498,7 +527,8 @@
     ctxPublishedRows = [];
     ctxPubRowByKey = {};
     ctxAllProducts = [];
-    ctxFilter = 'all';
+    ctxFilter = 'unlocked';
+    unlockedGroupOpen = { active: true, queue: true };
     if (gridEl) gridEl.innerHTML = '';
     if (statusEl) statusEl.textContent = '';
     if (filterTabsEl) filterTabsEl.setAttribute('hidden', '');
@@ -587,33 +617,36 @@
       });
   }
 
-  function renderGrid(products) {
-    if (!gridEl) return;
-    clearAllRotations();
-    gridEl.innerHTML = '';
-    for (var i = 0; i < products.length; i++) {
-      var p = products[i];
-      var pk = String(p.product_key || '').trim();
-      if (!pk) continue;
-      var card = document.createElement('div');
-      card.className = 'creator-design-products-modal__card';
-      card.setAttribute('role', 'group');
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('data-product-key', pk);
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.setAttribute('data-product-key', pk);
-      cb.checked = !!ctxChecked[pk];
-      cb.addEventListener('click', function (ev) {
-        ev.stopPropagation();
-      });
-      cb.addEventListener('change', function (ev) {
-        ev.stopPropagation();
-        var key = ev.target.getAttribute('data-product-key');
-        ctxChecked[key] = !!ev.target.checked;
-        refreshCardBadges(ev.target.closest('.creator-design-products-modal__card'), key);
-        refreshDirty();
-      });
+  function buildProductCard(p, opts) {
+    opts = opts || {};
+    var locked = !!opts.locked;
+    var pk = String(p.product_key || '').trim();
+    if (!pk) return null;
+    var card = document.createElement('div');
+    card.className = 'creator-design-products-modal__card' + (locked ? ' is-locked' : '');
+    card.setAttribute('role', 'group');
+    card.setAttribute('tabindex', locked ? '-1' : '0');
+    card.setAttribute('data-product-key', pk);
+    if (locked) card.setAttribute('aria-disabled', 'true');
+
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.setAttribute('data-product-key', pk);
+    cb.checked = !locked && !!ctxChecked[pk];
+    cb.disabled = locked;
+    cb.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+    });
+    cb.addEventListener('change', function (ev) {
+      ev.stopPropagation();
+      if (locked) return;
+      var key = ev.target.getAttribute('data-product-key');
+      ctxChecked[key] = !!ev.target.checked;
+      refreshCardBadges(ev.target.closest('.creator-design-products-modal__card'), key);
+      refreshDirty();
+    });
+
+    if (!locked) {
       (function (productKey, productMeta) {
         card.addEventListener('click', function (ev) {
           if (ev.target && ev.target.closest && ev.target.closest('input[type="checkbox"]')) return;
@@ -631,17 +664,125 @@
           }
         });
       })(pk, p);
-      var media = document.createElement('div');
-      media.className = 'creator-design-products-modal__card-media';
-      mountCardMediaCarousel(media, pk, normalizeMockUrls(p));
-      var ttl = document.createElement('div');
-      ttl.className = 'creator-design-products-modal__card-title';
-      ttl.textContent = p.title || pk;
-      card.appendChild(cb);
-      card.appendChild(media);
-      card.appendChild(ttl);
-      refreshCardBadges(card, pk);
-      gridEl.appendChild(card);
+    }
+
+    var media = document.createElement('div');
+    media.className = 'creator-design-products-modal__card-media';
+    mountCardMediaCarousel(media, pk, normalizeMockUrls(p));
+    var ttl = document.createElement('div');
+    ttl.className = 'creator-design-products-modal__card-title';
+    ttl.textContent = p.title || pk;
+    card.appendChild(cb);
+    card.appendChild(media);
+    card.appendChild(ttl);
+    refreshCardBadges(card, pk);
+    return card;
+  }
+
+  function appendCardsTo(container, products, locked) {
+    var grid = document.createElement('div');
+    grid.className = 'creator-design-products-modal__grid cdp-modal__products-grid';
+    for (var i = 0; i < products.length; i++) {
+      var card = buildProductCard(products[i], { locked: !!locked });
+      if (card) grid.appendChild(card);
+    }
+    container.appendChild(grid);
+  }
+
+  function makeGroup(id, title, products, locked) {
+    var M = Mi();
+    var group = document.createElement('div');
+    group.className =
+      'cdp-modal__products-group' + (unlockedGroupOpen[id] !== false ? ' is-open' : '');
+    group.setAttribute('data-cdp-products-group', id);
+
+    var head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'cdp-modal__products-group-head';
+    head.innerHTML =
+      '<span>' +
+      String(title).replace(/</g, '&lt;') +
+      ' <span class="cdp-modal__products-group-count">(' +
+      products.length +
+      ')</span></span>' +
+      '<span class="cdp-modal__products-group-chevron" aria-hidden="true">▾</span>';
+    head.addEventListener('click', function () {
+      unlockedGroupOpen[id] = !group.classList.contains('is-open');
+      group.classList.toggle('is-open');
+    });
+
+    var body = document.createElement('div');
+    body.className = 'cdp-modal__products-group-body';
+    if (!products.length) {
+      var empty = document.createElement('p');
+      empty.className = 'cdp-modal__products-status';
+      empty.style.padding = '4px 4px 8px';
+      empty.textContent =
+        id === 'active'
+          ? M.designProductsEmptyActive || 'No active products.'
+          : M.designProductsEmptyQueue || 'No queued products.';
+      body.appendChild(empty);
+    } else {
+      appendCardsTo(body, products, locked);
+    }
+
+    group.appendChild(head);
+    group.appendChild(body);
+    return group;
+  }
+
+  function renderProductsView() {
+    if (!gridEl) return;
+    clearAllRotations();
+    gridEl.innerHTML = '';
+    gridEl.classList.remove('creator-design-products-modal__grid');
+    var M = Mi();
+    var parts = partitionProducts();
+
+    if (ctxFilter === 'locked') {
+      var hint = document.createElement('p');
+      hint.className = 'cdp-modal__products-locked-hint';
+      hint.textContent =
+        M.designProductsLockedHint ||
+        'These products must be unlocked in the Skill Tree before you can select them.';
+      gridEl.appendChild(hint);
+      if (!parts.locked.length) {
+        var emptyL = document.createElement('p');
+        emptyL.className = 'cdp-modal__products-status';
+        emptyL.style.padding = '8px 16px';
+        emptyL.textContent = M.designProductsEmptyLocked || 'No locked products.';
+        gridEl.appendChild(emptyL);
+      } else {
+        appendCardsTo(gridEl, parts.locked, true);
+      }
+      return;
+    }
+
+    // Unlocked (or all): Active + Queue collapsible groups
+    var wrap = document.createElement('div');
+    wrap.className = 'cdp-modal__products-groups';
+    wrap.appendChild(
+      makeGroup('active', M.designProductsGroupActive || M.designProductsTabActive || 'Active', parts.active, false)
+    );
+    wrap.appendChild(
+      makeGroup('queue', M.designProductsGroupQueue || M.designProductsTabQueue || 'Queue', parts.queue, false)
+    );
+    gridEl.appendChild(wrap);
+  }
+
+  function renderGrid(products) {
+    // Back-compat: flat list when called with an array (library helpers).
+    if (!gridEl) return;
+    if (!Array.isArray(products)) {
+      renderProductsView();
+      return;
+    }
+    clearAllRotations();
+    gridEl.innerHTML = '';
+    gridEl.classList.add('creator-design-products-modal__grid');
+    for (var i = 0; i < products.length; i++) {
+      var card = buildProductCard(products[i], { locked: !isProductUnlocked(products[i]) });
+      if (card) gridEl.appendChild(card);
     }
   }
 
@@ -664,7 +805,9 @@
       '?op=get-catalog-products&region=' +
       encodeURIComponent(region) +
       '&design_id=' +
-      encodeURIComponent(designId);
+      encodeURIComponent(designId) +
+      '&owner_id=' +
+      encodeURIComponent(owner);
     if (shop) catUrl += '&shop=' + encodeURIComponent(shop);
 
     var pubUrl =
@@ -690,7 +833,11 @@
       var products = (catData.ok && Array.isArray(catData.products) ? catData.products : []).slice();
       ctxAllProducts = products;
 
+      // Eligible for publish selection = unlocked products only.
       ctxEligibleKeys = products
+        .filter(function (x) {
+          return isProductUnlocked(x);
+        })
         .map(function (x) {
           return String(x.product_key || '').trim();
         })
@@ -700,8 +847,14 @@
       ctxMetaExcludedSnapshot = metaExcluded.slice();
 
       ctxChecked = {};
-      for (var i = 0; i < ctxEligibleKeys.length; i++) {
-        var pk = ctxEligibleKeys[i];
+      for (var i = 0; i < products.length; i++) {
+        var p = products[i];
+        var pk = String(p.product_key || '').trim();
+        if (!pk) continue;
+        if (!isProductUnlocked(p)) {
+          ctxChecked[pk] = false;
+          continue;
+        }
         ctxChecked[pk] = metaExcluded.indexOf(pk) === -1;
       }
 
@@ -711,21 +864,18 @@
 
       syncFilterTabsUi();
 
-      var visible = filteredProducts();
+      var parts = partitionProducts();
       if (!products.length) {
         if (statusEl) statusEl.textContent = M.designProductsEmpty || 'No products.';
-      } else if (!visible.length) {
-        if (statusEl) {
-          statusEl.textContent =
-            ctxFilter === 'active'
-              ? M.designProductsEmptyActive || 'No active products.'
-              : M.designProductsEmptyQueue || 'No queued products.';
-        }
+      } else if (ctxFilter === 'locked' && !parts.locked.length) {
+        if (statusEl) statusEl.textContent = M.designProductsEmptyLocked || 'No locked products.';
+      } else if (ctxFilter === 'unlocked' && !parts.unlocked.length) {
+        if (statusEl) statusEl.textContent = M.designProductsEmptyUnlocked || 'No unlocked products.';
       } else if (statusEl) {
         statusEl.textContent = '';
       }
 
-      renderGrid(visible);
+      renderProductsView();
       refreshDirty();
     } catch (e) {
       console.warn('[creator-design-products-modal]', e);
@@ -816,7 +966,7 @@
         return row && !excludedSet.has(String(row.product_key || '').trim());
       });
       syncFilterTabsUi();
-      renderGrid(filteredProducts());
+      renderProductsView();
       refreshDirty();
       if (typeof window.refreshCreationsDesignProductState === 'function') {
         window.refreshCreationsDesignProductState();

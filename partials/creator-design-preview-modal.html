@@ -2200,6 +2200,84 @@
     border-color: transparent;
   }
 
+  .cdp-modal__products-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px 12px 12px;
+  }
+
+  .cdp-modal__products-group {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+  }
+
+  .cdp-modal__products-group-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .cdp-modal__products-group-head:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .cdp-modal__products-group-count {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.78rem;
+  }
+
+  .cdp-modal__products-group-chevron {
+    transition: transform 0.15s ease;
+    opacity: 0.7;
+  }
+
+  .cdp-modal__products-group.is-open .cdp-modal__products-group-chevron {
+    transform: rotate(180deg);
+  }
+
+  .cdp-modal__products-group-body {
+    display: none;
+    padding: 0 8px 10px;
+  }
+
+  .cdp-modal__products-group.is-open .cdp-modal__products-group-body {
+    display: block;
+  }
+
+  .cdp-modal__products-locked-hint {
+    margin: 0 16px 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(249, 115, 22, 0.1);
+    border: 1px solid rgba(249, 115, 22, 0.28);
+    color: rgba(253, 186, 116, 0.95);
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .creator-design-products-modal__card.is-locked {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .creator-design-products-modal__card.is-locked input[type="checkbox"] {
+    cursor: not-allowed;
+  }
+
   .cdp-modal__products-toolbar {
     display: flex;
     gap: 10px;
@@ -3461,17 +3539,17 @@
               <button
                 type="button"
                 class="cdp-modal__products-filter-tab is-active"
-                data-cdp-products-filter="queue"
+                data-cdp-products-filter="unlocked"
                 role="tab"
                 aria-selected="true"
-              >Queue</button>
+              >Unlocked</button>
               <button
                 type="button"
                 class="cdp-modal__products-filter-tab"
-                data-cdp-products-filter="active"
+                data-cdp-products-filter="locked"
                 role="tab"
                 aria-selected="false"
-              >Active</button>
+              >Locked</button>
             </div>
             <div class="cdp-modal__products-status" id="cdp-products-status-design-preview" role="status"></div>
             <div

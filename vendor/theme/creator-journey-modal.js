@@ -216,6 +216,49 @@
     eaz_economy: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10h4.5a2 2 0 0 1 0 4H9"/></svg>',
   };
 
+  /**
+   * Lucide-style inline SVGs (ISC) — one distinct motif per royalty tier.
+   * Paths match the stroke icon style already used in CATEGORY_ICON_SVG / overview stats.
+   */
+  var ROYALTY_TIER_ICON_SVG = {
+    1: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
+    2: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>',
+    3: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>',
+    4: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/></svg>',
+    5: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>',
+    6: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m15 9-6 6"/><path d="M9 9h.01"/><path d="M15 15h.01"/></svg>',
+    7: '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',
+    8: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>',
+    9: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg>',
+    10: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
+  };
+
+  var ROYALTY_INFO_ICON_SVG =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+
+  function royaltyTierFromNode(node) {
+    if (!node) return 0;
+    if (node.metadata && node.metadata.royalty_tier != null) {
+      return Math.floor(Number(node.metadata.royalty_tier)) || 0;
+    }
+    var key = String(node.node_key || '');
+    if (key.indexOf('royalty:') === 0) {
+      return Math.floor(Number(key.slice('royalty:'.length))) || 0;
+    }
+    return 0;
+  }
+
+  function royaltyPercentFromNode(node) {
+    if (node && node.metadata && node.metadata.royalty_percent != null) {
+      return Number(node.metadata.royalty_percent) || 0;
+    }
+    return 0;
+  }
+
+  function royaltyTierIconSvg(tier) {
+    return ROYALTY_TIER_ICON_SVG[tier] || ROYALTY_TIER_ICON_SVG[1] || CATEGORY_ICON_SVG.royalty;
+  }
+
   var EAZ_AXIS_LABELS = { cost: 'Cost', daily: 'Daily', cap: 'Cap', kickstarter: 'Kickstarter' };
   var EAZ_CATEGORY_ORDER = ['cost', 'daily', 'cap', 'kickstarter'];
 
@@ -842,6 +885,9 @@
     } else if (opts.sizeLabel) {
       mediaHtml = '<div class="cj-tree-card__size-label">' + escapeHtml(opts.sizeLabel) + '</div>';
       mediaExtraCls = ' cj-tree-card__media--size';
+    } else if (opts.iconSvg) {
+      mediaHtml = '<div class="cj-tree-card__icon" aria-hidden="true">' + opts.iconSvg + '</div>';
+      mediaExtraCls = ' cj-tree-card__media--icon';
     } else {
       mediaHtml = renderTreeCardMedia(imgUrl);
     }
@@ -1601,10 +1647,45 @@
     return html;
   }
 
+  function renderRoyaltyCard(node) {
+    var lock = resolveCardLockOpts(node);
+    var act = cardActionState(node, lock.levelLocked);
+    var tier = royaltyTierFromNode(node);
+    var pct = royaltyPercentFromNode(node);
+    var infoLabel = tpl('creator.journey.royalty_info_aria', 'About {{ pct }}% royalty', {
+      pct: String(pct || '')
+    });
+
+    var cls = 'cj-tree-card cj-tree-card--royalty';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
+    if (node.unlocked) cls += ' is-unlocked';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
+    if (act.freePick) cls += ' is-free-pick';
+
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      ' data-cj-royalty-info="' + escapeHtml(node.node_key) + '"' +
+      ' role="button" tabindex="0"' +
+      ' aria-label="' + escapeHtml(infoLabel) + '"' +
+      lock.titleAttr + '>' +
+      '<div class="cj-tree-card__stack">' +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason,
+        iconSvg: royaltyTierIconSvg(tier)
+      }) +
+      '<button type="button" class="cj-tree-card__info-btn" data-cj-royalty-info-btn="' +
+      escapeHtml(node.node_key) + '" aria-label="' + escapeHtml(infoLabel) + '">' +
+      ROYALTY_INFO_ICON_SVG + '</button>' +
+      act.actionHtml + '</div></article>';
+  }
+
   function renderTreeCard(node) {
     if (node.category === 'market') return renderMarketCard(node);
     if (node.category === 'channel') return renderChannelCard(node);
     if (node.category === 'design_slot') return renderDesignSlotCard(node);
+    if (node.category === 'royalty') return renderRoyaltyCard(node);
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
 
@@ -2289,6 +2370,28 @@
         openCommitModal(btn.getAttribute('data-cj-commit'), btn.getAttribute('data-cj-commit-title'));
       });
     });
+
+    list.querySelectorAll('[data-cj-royalty-info]').forEach(function (card) {
+      function openInfo(e) {
+        if (e.target.closest('[data-cj-tree-action]')) return;
+        var key = card.getAttribute('data-cj-royalty-info');
+        if (key) openRoyaltyInfoModal(key);
+      }
+      card.addEventListener('click', openInfo);
+      card.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('[data-cj-tree-action]')) return;
+        e.preventDefault();
+        openInfo(e);
+      });
+    });
+    list.querySelectorAll('[data-cj-royalty-info-btn]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var key = btn.getAttribute('data-cj-royalty-info-btn');
+        if (key) openRoyaltyInfoModal(key);
+      });
+    });
   }
 
   /**
@@ -2804,6 +2907,79 @@
 
   function closeCommitConfirm() {
     var overlayEl = document.getElementById('cjCommitConfirmOverlay');
+    if (!overlayEl) return;
+    overlayEl.classList.remove('is-open');
+    overlayEl.setAttribute('aria-hidden', 'true');
+    overlayEl.hidden = true;
+  }
+
+  function royaltyInfoBenefitText(tier, pct) {
+    var key = 'creator.journey.royalty_info_tier_' + tier;
+    var fallbacks = {
+      1: 'Starter royalty: you earn {{ pct }}% of each sale’s net profit. This tier unlocks automatically at Level 1 so you start earning right away.',
+      2: 'Raise your creator share to {{ pct }}% of net profit on every qualifying sale — double the starter rate.',
+      3: 'Earn {{ pct }}% of net profit per sale. A steady step up that puts more of each order’s margin in your pocket.',
+      4: 'Earn {{ pct }}% of net profit per sale. Higher royalty means stronger earnings as your catalog grows.',
+      5: 'Earn {{ pct }}% of net profit per sale. Mid-tier rate for creators building consistent sales volume.',
+      6: 'Earn {{ pct }}% of net profit per sale. A clear jump in take-home on every order you sell.',
+      7: 'Earn {{ pct }}% of net profit per sale. Advanced royalty for creators scaling toward top earnings.',
+      8: 'Earn {{ pct }}% of net profit per sale. Near-top share — most of the creator-side margin goes to you.',
+      9: 'Earn {{ pct }}% of net profit per sale. Elite royalty reserved for high-level creators with strong sales.',
+      10: 'Top royalty: you earn {{ pct }}% of net profit — the highest creator share available in the Unlock Tree.'
+    };
+    return tpl(key, fallbacks[tier] || fallbacks[1], { pct: String(pct) });
+  }
+
+  function openRoyaltyInfoModal(nodeKey) {
+    var overlayEl = document.getElementById('cjRoyaltyInfoOverlay');
+    if (!overlayEl) return;
+    var node = findJourneyNode(nodeKey);
+    if (!node || node.category !== 'royalty') return;
+
+    var tier = royaltyTierFromNode(node);
+    var pct = royaltyPercentFromNode(node);
+    var title = nodeTitle(node);
+    var iconEl = document.getElementById('cjRoyaltyInfoIcon');
+    var titleEl = document.getElementById('cjRoyaltyInfoTitle');
+    var bodyEl = document.getElementById('cjRoyaltyInfoBody');
+    var metaEl = document.getElementById('cjRoyaltyInfoMeta');
+    var noteEl = document.getElementById('cjRoyaltyInfoNote');
+
+    if (iconEl) iconEl.innerHTML = royaltyTierIconSvg(tier);
+    if (titleEl) titleEl.textContent = title;
+    if (bodyEl) bodyEl.textContent = royaltyInfoBenefitText(tier, pct);
+
+    var metaParts = [];
+    var salesRef = node.metadata && node.metadata.sales_ref != null
+      ? Number(node.metadata.sales_ref)
+      : null;
+    if (salesRef != null && salesRef > 0) {
+      metaParts.push(tpl('creator.journey.royalty_sales_ref', '~{{ n }} sales at €10 net', {
+        n: String(salesRef)
+      }));
+    }
+    var minLv = Number(node.min_level) || tier || 1;
+    metaParts.push(tpl('creator.journey.level_badge', 'Level {{ n }}', { n: String(minLv) }));
+    if (metaEl) {
+      metaEl.textContent = metaParts.join(' · ');
+      metaEl.hidden = !metaParts.length;
+    }
+    if (noteEl) {
+      noteEl.textContent = t(
+        'creator.journey.royalty_min_payout_note',
+        'Payouts use at least €2 net profit equivalent. Actual earnings vary with margin and promotions.'
+      );
+    }
+
+    overlayEl.hidden = false;
+    overlayEl.classList.add('is-open');
+    overlayEl.setAttribute('aria-hidden', 'false');
+    var closeBtn = document.getElementById('cjRoyaltyInfoClose');
+    if (closeBtn) closeBtn.focus();
+  }
+
+  function closeRoyaltyInfoModal() {
+    var overlayEl = document.getElementById('cjRoyaltyInfoOverlay');
     if (!overlayEl) return;
     overlayEl.classList.remove('is-open');
     overlayEl.setAttribute('aria-hidden', 'true');
@@ -3676,10 +3852,13 @@
     var commitConfirmCancel = document.getElementById('cjCommitConfirmCancel');
     var commitConfirmOk = document.getElementById('cjCommitConfirmOk');
     var commitConfirmOverlay = document.getElementById('cjCommitConfirmOverlay');
+    var royaltyInfoClose = document.getElementById('cjRoyaltyInfoClose');
+    var royaltyInfoOverlay = document.getElementById('cjRoyaltyInfoOverlay');
     if (commitCancel) commitCancel.addEventListener('click', closeCommitModal);
     if (commitConfirm) commitConfirm.addEventListener('click', confirmCommitModal);
     if (commitConfirmCancel) commitConfirmCancel.addEventListener('click', closeCommitConfirm);
     if (commitConfirmOk) commitConfirmOk.addEventListener('click', executePendingCommit);
+    if (royaltyInfoClose) royaltyInfoClose.addEventListener('click', closeRoyaltyInfoModal);
     if (commitOverlay) {
       commitOverlay.addEventListener('click', function (e) {
         if (e.target === commitOverlay) closeCommitModal();
@@ -3690,9 +3869,19 @@
         if (e.target === commitConfirmOverlay) closeCommitConfirm();
       });
     }
+    if (royaltyInfoOverlay) {
+      royaltyInfoOverlay.addEventListener('click', function (e) {
+        if (e.target === royaltyInfoOverlay) closeRoyaltyInfoModal();
+      });
+    }
 
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
+      var royaltyOpen = document.getElementById('cjRoyaltyInfoOverlay');
+      if (royaltyOpen && royaltyOpen.classList.contains('is-open')) {
+        closeRoyaltyInfoModal();
+        return;
+      }
       var confirmOpen = document.getElementById('cjCommitConfirmOverlay');
       if (confirmOpen && confirmOpen.classList.contains('is-open')) {
         closeCommitConfirm();

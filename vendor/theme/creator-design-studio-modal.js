@@ -161,6 +161,22 @@
     if (M[key]) return M[key];
     var I = window.CreatorI18n || {};
     if (I[key]) return I[key];
+    // camelCase designStudioFooBar → creator.design_studio.foo_bar
+    if (key.indexOf('designStudio') === 0 && key.length > 12) {
+      var camelBody = key.slice('designStudio'.length);
+      var snake =
+        camelBody
+          .replace(/([A-Z])/g, '_$1')
+          .replace(/^_/, '')
+          .toLowerCase();
+      var dottedCamel = 'creator.design_studio.' + snake;
+      if (I[dottedCamel]) return I[dottedCamel];
+      if (M[dottedCamel]) return M[dottedCamel];
+      var nestCamel = I.creator && I.creator.design_studio;
+      if (nestCamel && nestCamel[snake]) return nestCamel[snake];
+      nestCamel = M.creator && M.creator.design_studio;
+      if (nestCamel && nestCamel[snake]) return nestCamel[snake];
+    }
     if (key.indexOf('design_studio_') === 0) {
       var suffix = key.replace(/^design_studio_/, '');
       var dotted = 'creator.design_studio.' + suffix;
@@ -1195,10 +1211,48 @@
     var entries = listPreviewColorEntries(currentPosition());
     var active = resolveColorKey();
     var activeNorm = normColorKey(active);
+    var designUrl = currentPrimaryDesignUrl() || designUrlForAsset('primary') || '';
+    var tr = activeTransform();
+    var x = Number(tr.x);
+    var y = Number(tr.y);
+    var scale = Number(tr.scale);
+    var rot = Number(tr.rotate);
+    if (!Number.isFinite(x)) x = 0.5;
+    if (!Number.isFinite(y)) y = 0.5;
+    if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
+    if (!Number.isFinite(rot)) rot = 0;
+    var flipSx = tr.flipX ? -1 : 1;
+    var flipSy = tr.flipY ? -1 : 1;
+    var designStyle =
+      'width:' +
+      Math.max(8, scale * 100) +
+      '%;height:auto;left:' +
+      x * 100 +
+      '%;top:' +
+      y * 100 +
+      '%;transform:translate(-50%,-50%) rotate(' +
+      rot +
+      'deg) scale(' +
+      flipSx +
+      ',' +
+      flipSy +
+      ');';
+
     var html = '';
     for (var i = 0; i < entries.length; i++) {
       var e = entries[i];
       var isActive = normColorKey(e.color_key) === activeNorm;
+      var z = parseZoneFrac(e.mock && e.mock.print_area_frac);
+      var zoneStyle =
+        'left:' +
+        z.l * 100 +
+        '%;top:' +
+        z.t * 100 +
+        '%;width:' +
+        z.w * 100 +
+        '%;height:' +
+        z.h * 100 +
+        '%;';
       html +=
         '<button type="button" class="cds-color-grid__tile' +
         (isActive ? ' is-active' : '') +
@@ -1208,9 +1262,22 @@
         String(e.label).replace(/"/g, '&quot;') +
         '">' +
         '<span class="cds-color-grid__frame">' +
+        '<span class="cds-color-grid__stage">' +
         '<img class="cds-color-grid__mock" src="' +
         String(e.url).replace(/"/g, '&quot;') +
         '" alt="" decoding="async" draggable="false">' +
+        (designUrl
+          ? '<span class="cds-color-grid__zone" style="' +
+            zoneStyle +
+            '">' +
+            '<img class="cds-color-grid__design" src="' +
+            String(designUrl).replace(/"/g, '&quot;') +
+            '" alt="" decoding="async" draggable="false" style="' +
+            designStyle +
+            '">' +
+            '</span>'
+          : '') +
+        '</span>' +
         '</span>' +
         '<span class="cds-color-grid__label">' +
         String(e.label).replace(/</g, '&lt;') +
@@ -1219,6 +1286,15 @@
     }
     colorGridEl.innerHTML = html;
     colorGridEl.hidden = false;
+    colorGridEl.querySelectorAll('.cds-color-grid__mock').forEach(function (img) {
+      function syncStageAr() {
+        var stage = img.closest('.cds-color-grid__stage');
+        if (!stage || !img.naturalWidth || !img.naturalHeight) return;
+        stage.style.aspectRatio = img.naturalWidth + ' / ' + img.naturalHeight;
+      }
+      if (img.complete && img.naturalWidth) syncStageAr();
+      else img.addEventListener('load', syncStageAr, { once: true });
+    });
     colorGridEl.querySelectorAll('[data-cds-grid-color]').forEach(function (tile) {
       tile.addEventListener('click', function () {
         var ck = decodeURIComponent(tile.getAttribute('data-cds-grid-color') || '');
@@ -2210,11 +2286,13 @@
         activeNorm &&
         (normColorKey(color) === activeNorm || normColorKey(mockKeyForColor) === activeNorm);
       var openByDefault = isActiveColor || openColors[color] || (g === 0 && !activeNorm);
+      var colorLocked = unlockedItems.length === 0;
 
       html +=
         '<div class="cds-color-group' +
         (openByDefault ? ' is-open' : '') +
         (isActiveColor ? ' is-preview-color' : '') +
+        (colorLocked ? ' is-locked' : '') +
         '" data-color-group="' +
         encodeURIComponent(color) +
         '">';
@@ -2244,10 +2322,24 @@
         selectedInColor.length +
         '/' +
         unlockedItems.length +
-        ')</span></button>';
+        ')</span>' +
+        (colorLocked
+          ? ' <span class="cds-color-locked-tag">' + t('designStudioLocked', 'Locked') + '</span>'
+          : '') +
+        '</button>';
       html +=
         '<button type="button" class="cds-color-toggle" data-cds-color-toggle aria-label="Toggle sizes">▾</button>';
-      html += '</div><div class="cds-color-body"><div class="cds-size-list">';
+      html += '</div><div class="cds-color-body">';
+      if (colorLocked) {
+        html +=
+          '<p class="cds-size-skill-hint">' +
+          t(
+            'designStudioVariantUnlockHint',
+            'Unlock this color in the Skill Tree to select sizes.'
+          ) +
+          '</p>';
+      }
+      html += '<div class="cds-size-list">';
 
       for (var i = 0; i < items.length; i++) {
         var v = items[i];
@@ -2257,6 +2349,13 @@
         html +=
           '<label class="cds-size-row' +
           (locked ? ' is-locked' : '') +
+          '" title="' +
+          (locked
+            ? t(
+                'designStudioVariantUnlockHint',
+                'Unlock this color in the Skill Tree to select sizes.'
+              ).replace(/"/g, '&quot;')
+            : '') +
           '">' +
           '<input type="checkbox" data-variant-id="' +
           id +
@@ -3142,6 +3241,15 @@
       return t(
         'designStudioPreviewCredentials',
         'Printify credentials are missing. Preview is unavailable.'
+      );
+    }
+    if (code === 'printify_stale_images' || code === 'printify_image_upload_failed') {
+      return (
+        (data && data.detail && String(data.detail)) ||
+        t(
+          'designStudioPreviewStaleImages',
+          'Printify could not use the uploaded design yet. Close Preview and try again in a few seconds.'
+        )
       );
     }
     if (data && data.detail) return String(data.detail);
