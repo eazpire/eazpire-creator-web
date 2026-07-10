@@ -736,6 +736,9 @@
     clearAllRotations();
     gridEl.innerHTML = '';
     gridEl.classList.remove('creator-design-products-modal__grid');
+    // Stacked layout: outer scroll area is a column, not a card auto-fill grid
+    // (otherwise Active/Queue groups shrink to one ~132px column).
+    gridEl.classList.add('cdp-modal__products-grid--stacked');
     var M = Mi();
     var parts = partitionProducts();
 
@@ -779,6 +782,7 @@
     }
     clearAllRotations();
     gridEl.innerHTML = '';
+    gridEl.classList.remove('cdp-modal__products-grid--stacked');
     gridEl.classList.add('creator-design-products-modal__grid');
     for (var i = 0; i < products.length; i++) {
       var card = buildProductCard(products[i], { locked: !isProductUnlocked(products[i]) });
