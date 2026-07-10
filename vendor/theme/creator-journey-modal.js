@@ -678,7 +678,6 @@
     var committed = Number(node.eaz_committed) || 0;
     var freePick = !!node.free_pick_eligible;
     var cost = nodeEffectiveCost(node);
-    var badge = formatEazBadge(committed, cost, !!node.unlocked, freePick);
     var hasAction = !!opts.hasAction;
     var frameCls = 'cj-tree-card__frame' + (hasAction ? ' cj-tree-card__frame--attached' : '');
     if (freePick) frameCls += ' is-free-pick';
@@ -697,11 +696,23 @@
     } else {
       mediaHtml = renderTreeCardMedia(imgUrl);
     }
+    // Size cards: size only in viewer (no title). Free pick: FREE ribbon only (no duplicate badge above Unlock).
+    var titleHtml = opts.hideTitle
+      ? ''
+      : '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>';
+    var badgeHtml = '';
+    if (node.unlocked) {
+      badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
+        escapeHtml(formatEazBadge(committed, cost, true, freePick)) + '</span>';
+    } else if (!freePick) {
+      badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
+        escapeHtml(formatEazBadge(committed, cost, false, false)) + '</span>';
+    }
     return '<div class="' + frameCls + '">' +
       renderFreePickRibbon(freePick) +
-      '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>' +
+      titleHtml +
       '<div class="cj-tree-card__media' + mediaExtraCls + '">' + mediaHtml + '</div>' +
-      '<span class="cj-tree-card__eaz-badge">' + escapeHtml(badge) + '</span>' +
+      badgeHtml +
       statusHtml + '</div>';
   }
 
@@ -810,7 +821,7 @@
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction, sizeLabel: sizeLabel }) +
+      renderTreeCardFrame(node, { hasAction: act.hasAction, sizeLabel: sizeLabel, hideTitle: true }) +
       act.actionHtml + '</div></article>';
   }
 
@@ -854,13 +865,14 @@
           escapeHtml(t('creator.journey.free_pick_size_hint', 'One free size pick for this color — extra sizes cost EAZV.')) +
           '</p>'
         : '';
-      sizeHtml += '<div class="cj-variant-size-panel" data-cj-size-panel="' + escapeHtml(colorNode.node_key) + '">' +
+      sizeHtml += '<div class="cj-variant-size-branch" data-cj-size-panel="' + escapeHtml(colorNode.node_key) + '">' +
         '<div class="cj-variant-connector cj-variant-connector--size" aria-hidden="true"></div>' +
+        '<div class="cj-variant-size-panel">' +
         '<h5 class="cj-variant-size-panel__title">' + escapeHtml(t('creator.journey.size_variants', 'Sizes')) +
         ' · ' + escapeHtml(nodeTitle(colorNode)) + '</h5>' +
         freeSizeHint +
         renderCarouselShell(sizes.map(renderVariantSizeCard).join('')) +
-        '</div>';
+        '</div></div>';
     });
 
     return '<div class="cj-variant-branch" data-cj-variant-branch="' + escapeHtml(productNode.product_key) + '">' +
@@ -1608,37 +1620,69 @@
     list.querySelectorAll('[data-cj-variant-branch]').forEach(function (branch) {
       var pk = branch.getAttribute('data-cj-variant-branch');
       var connector = branch.querySelector(':scope > .cj-variant-connector');
+      var panel = branch.querySelector(':scope > .cj-variant-panel');
       if (!connector || !pk) return;
       var section = branch.closest('.cj-product-section') || list;
       var card = section.querySelector('.cj-tree-card--product.is-expanded[data-cj-expand-product="' + pk + '"]');
       if (!card) {
         connector.style.removeProperty('--cj-connector-x');
         connector.classList.remove('is-anchored');
+        if (panel) panel.style.removeProperty('--cj-connector-x');
         return;
       }
       var branchRect = branch.getBoundingClientRect();
       var cardRect = card.getBoundingClientRect();
-      var x = cardRect.left + cardRect.width / 2 - branchRect.left;
-      connector.style.setProperty('--cj-connector-x', Math.round(x) + 'px');
+      var x = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
+      connector.style.setProperty('--cj-connector-x', x + 'px');
       connector.classList.add('is-anchored');
+      if (panel) panel.style.setProperty('--cj-connector-x', x + 'px');
     });
 
-    list.querySelectorAll('[data-cj-size-panel]').forEach(function (panel) {
-      var colorKey = panel.getAttribute('data-cj-size-panel');
-      var connector = panel.querySelector(':scope > .cj-variant-connector');
+    list.querySelectorAll('[data-cj-size-panel]').forEach(function (branch) {
+      var colorKey = branch.getAttribute('data-cj-size-panel');
+      var connector = branch.querySelector(':scope > .cj-variant-connector');
+      var panel = branch.querySelector(':scope > .cj-variant-size-panel');
       if (!connector || !colorKey) return;
-      var variantPanel = panel.closest('[data-cj-variant-panel]') || list;
-      var card = variantPanel.querySelector('.cj-tree-card--variant-color.is-expanded[data-cj-expand-color="' + colorKey + '"]');
+      var variantPanel = branch.closest('[data-cj-variant-panel]') || list;
+      var card = null;
+      variantPanel.querySelectorAll('.cj-tree-card--variant-color.is-expanded[data-cj-expand-color]').forEach(function (el) {
+        if (el.getAttribute('data-cj-expand-color') === colorKey) card = el;
+      });
       if (!card) {
         connector.style.removeProperty('--cj-connector-x');
         connector.classList.remove('is-anchored');
+        if (panel) panel.style.removeProperty('--cj-connector-x');
         return;
       }
-      var panelRect = panel.getBoundingClientRect();
+      var branchRect = branch.getBoundingClientRect();
       var cardRect = card.getBoundingClientRect();
-      var x = cardRect.left + cardRect.width / 2 - panelRect.left;
-      connector.style.setProperty('--cj-connector-x', Math.round(x) + 'px');
+      var x = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
+      connector.style.setProperty('--cj-connector-x', x + 'px');
       connector.classList.add('is-anchored');
+      if (panel) panel.style.setProperty('--cj-connector-x', x + 'px');
+    });
+
+    list.querySelectorAll('[data-cj-market-branch]').forEach(function (branch) {
+      var code = branch.getAttribute('data-cj-market-branch');
+      var connector = branch.querySelector(':scope > .cj-variant-connector');
+      var panel = branch.querySelector(':scope > .cj-variant-panel');
+      if (!connector || !code) return;
+      var card = null;
+      list.querySelectorAll('.cj-tree-card--market-continent.is-expanded[data-cj-expand-continent]').forEach(function (el) {
+        if (el.getAttribute('data-cj-expand-continent') === code) card = el;
+      });
+      if (!card) {
+        connector.style.removeProperty('--cj-connector-x');
+        connector.classList.remove('is-anchored');
+        if (panel) panel.style.removeProperty('--cj-connector-x');
+        return;
+      }
+      var branchRect = branch.getBoundingClientRect();
+      var cardRect = card.getBoundingClientRect();
+      var x = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
+      connector.style.setProperty('--cj-connector-x', x + 'px');
+      connector.classList.add('is-anchored');
+      if (panel) panel.style.setProperty('--cj-connector-x', x + 'px');
     });
   }
 

@@ -1091,16 +1091,37 @@
   position: absolute;
   top: 8px;
   left: 8px;
-  z-index: 2;
-  padding: 2px 7px;
+  z-index: 3;
+  padding: 3px 10px;
   border-radius: 999px;
   font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  text-align: center;
   color: #0b1a10;
   background: linear-gradient(180deg, #b8f0c4, #6fd88a);
   box-shadow: 0 0 12px rgba(110, 220, 140, 0.45);
+  pointer-events: none;
+}
+
+/* Size cards: FREE centered; size only in media (no title header) */
+.cj-tree-card--variant-size .cj-tree-card__free-ribbon {
+  left: 50%;
+  transform: translateX(-50%);
+  top: 6px;
+}
+
+.cj-tree-card--variant-size .cj-tree-card__title-in {
+  display: none;
+}
+
+.cj-tree-card--variant-size .cj-tree-card__media--size {
+  padding-top: 4px;
+}
+
+.cj-tree-card--variant-size .cj-tree-card__frame.is-free-pick .cj-tree-card__media--size {
+  padding-top: 22px;
 }
 
 .cj-tree-card--variant-size {
@@ -1111,22 +1132,30 @@
   width: 120px;
 }
 
-.cj-variant-branch {
+.cj-variant-branch,
+.cj-variant-size-branch {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  margin-top: 2px;
+  margin-top: 0;
   position: relative;
 }
 
+.cj-variant-size-branch {
+  margin-top: 4px;
+}
+
+/* Snake stem: from parent frame center into child container border */
 .cj-variant-connector {
-  width: 2px;
-  height: 28px;
-  margin: 0 auto;
-  background: linear-gradient(180deg, rgba(255, 200, 60, 0.85), rgba(255, 157, 0, 0.18));
-  box-shadow: 0 0 10px rgba(255, 157, 0, 0.35);
+  width: 3px;
+  height: 22px;
+  margin: 0 auto -2px;
+  background: linear-gradient(180deg, rgba(255, 200, 60, 0.95), rgba(255, 157, 0, 0.75));
+  box-shadow: 0 0 10px rgba(255, 157, 0, 0.45);
   flex-shrink: 0;
-  border-radius: 2px;
+  border-radius: 2px 2px 0 0;
+  position: relative;
+  z-index: 2;
 }
 
 .cj-variant-connector.is-anchored {
@@ -1136,18 +1165,39 @@
 }
 
 .cj-variant-connector--size {
-  height: 20px;
-  margin-bottom: 6px;
-  background: linear-gradient(180deg, rgba(255, 157, 0, 0.55), rgba(255, 157, 0, 0.12));
+  height: 18px;
+  margin-bottom: -2px;
 }
 
-.cj-variant-panel {
+.cj-variant-panel,
+.cj-variant-size-panel {
   margin-top: 0;
   padding: 14px 12px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 157, 0, 0.28);
-  background: rgba(0, 0, 0, 0.28);
-  box-shadow: inset 0 0 0 1px rgba(255, 157, 0, 0.08);
+  border: 2px solid rgba(255, 157, 0, 0.42);
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow:
+    0 0 0 1px rgba(255, 157, 0, 0.08),
+    inset 0 0 24px rgba(255, 157, 0, 0.04);
+  position: relative;
+}
+
+/* Seamless join: stem meets top border of child frame */
+.cj-variant-panel::before,
+.cj-variant-size-panel::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: var(--cj-connector-x, 50%);
+  transform: translateX(-50%);
+  width: 14px;
+  height: 4px;
+  background: rgba(12, 16, 24, 0.98);
+  border-left: 2px solid rgba(255, 157, 0, 0.42);
+  border-right: 2px solid rgba(255, 157, 0, 0.42);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .cj-variant-panel__title,
@@ -1173,15 +1223,6 @@
   flex-direction: column;
   gap: 10px;
   max-width: 100%;
-}
-
-.cj-variant-size-panel {
-  position: relative;
-  margin-top: 12px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
 }
 
 .cj-variant-size-panel__grid {
