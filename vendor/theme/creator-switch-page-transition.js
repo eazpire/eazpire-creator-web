@@ -97,6 +97,52 @@
     });
   }
 
+  /**
+   * cloneNode(true) of custom elements has no shadow root. Appending them re-runs
+   * connectedCallback and can throw (e.g. overflow-list in critical.js). Replace
+   * hyphenated tags with inert divs before the clone enters the live document.
+   */
+  function neutralizeCloneForOverlay(root) {
+    if (!root || !root.querySelectorAll) return;
+    root.querySelectorAll('script, iframe, object, embed, link[rel="stylesheet"]').forEach(function (node) {
+      try { node.remove(); } catch (_e) {}
+    });
+    root.querySelectorAll('video, audio').forEach(function (node) {
+      try { node.pause(); } catch (_e) {}
+      try { node.removeAttribute('autoplay'); } catch (_e2) {}
+    });
+
+    var customs = Array.prototype.slice.call(root.querySelectorAll('*')).filter(function (el) {
+      return el.tagName && el.tagName.indexOf('-') !== -1;
+    });
+    // Deepest first so nested custom elements are replaced before parents
+    customs.sort(function (a, b) {
+      var da = 0;
+      var db = 0;
+      var n = a;
+      while (n && n !== root) { da++; n = n.parentNode; }
+      n = b;
+      while (n && n !== root) { db++; n = n.parentNode; }
+      return db - da;
+    });
+    customs.forEach(function (el) {
+      if (!el.parentNode) return;
+      var inert = document.createElement('div');
+      inert.className = el.className || '';
+      var style = el.getAttribute('style');
+      if (style) inert.setAttribute('style', style);
+      inert.setAttribute('data-creator-switch-inert', (el.tagName || '').toLowerCase());
+      while (el.firstChild) {
+        inert.appendChild(el.firstChild);
+      }
+      try {
+        el.parentNode.replaceChild(inert, el);
+      } catch (_e) {
+        try { el.remove(); } catch (_e2) {}
+      }
+    });
+  }
+
   function ensureDomOverlay() {
     var existing = document.getElementById(DOM_OVERLAY_ID);
     if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
@@ -121,8 +167,7 @@
     clone.style.pointerEvents = 'none';
     clone.style.animation = 'none';
     clone.style.transition = 'none';
-    clone.querySelectorAll('script').forEach(function (node) { node.remove(); });
-    clone.querySelectorAll('video, audio').forEach(function (node) { try { node.pause(); } catch (_e) {} });
+    neutralizeCloneForOverlay(clone);
     overlay.appendChild(clone);
     document.documentElement.appendChild(overlay);
     return overlay;
@@ -273,7 +318,13 @@
   }
 
   function runDomOverlayTransition(onComplete, direction, durationMs) {
-    var domOverlay = ensureDomOverlay();
+    var domOverlay;
+    try {
+      domOverlay = ensureDomOverlay();
+    } catch (err) {
+      if (typeof onComplete === 'function') onComplete();
+      return;
+    }
     var overlay = ensureParticlesCanvas();
     var vw = window.innerWidth;
     var vh = window.innerHeight;
@@ -378,27 +429,39 @@
       ((navigator.maxTouchPoints || 0) > 0 && (window.innerWidth || 0) < 1200);
     var durationMs = isLikelyMobile ? DURATION_MOBILE_MS : DURATION_DESKTOP_MS;
     var finishNavigate = navigateWhenReady(targetUrl, NAV_FALLBACK_MS);
+    var navigated = false;
 
     function goToTarget() {
+      if (navigated) return;
+      navigated = true;
       finishNavigate();
     }
 
-    if (isLikelyMobile) {
-      runDomOverlayTransition(goToTarget, direction, durationMs);
-      return true;
-    }
-    var captureTimeout = 2000;
-    withTimeout(captureSnapshotCanvas(), captureTimeout).then(function (snapshotCanvas) {
-      runSnapshotOverlayTransition(snapshotCanvas, goToTarget, direction, durationMs);
-    }).catch(function () {
-      runDomOverlayTransition(goToTarget, direction, 1300);
-    });
-
+    // Always arm a hard navigation fallback (mobile path previously had none).
     setTimeout(function () {
       if (window[ACTIVE_KEY]) {
         goToTarget();
       }
     }, NAV_FALLBACK_MS);
+
+    try {
+      if (isLikelyMobile) {
+        runDomOverlayTransition(goToTarget, direction, durationMs);
+        return true;
+      }
+      var captureTimeout = 2000;
+      withTimeout(captureSnapshotCanvas(), captureTimeout).then(function (snapshotCanvas) {
+        runSnapshotOverlayTransition(snapshotCanvas, goToTarget, direction, durationMs);
+      }).catch(function () {
+        try {
+          runDomOverlayTransition(goToTarget, direction, 1300);
+        } catch (_e) {
+          goToTarget();
+        }
+      });
+    } catch (_err) {
+      goToTarget();
+    }
 
     return true;
   }

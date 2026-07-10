@@ -117,6 +117,33 @@
     };
   }
 
+  /** Round scale for UI only (2 decimals). Stored value stays exact. */
+  function formatScaleDisplay(n) {
+    var v = Number(n);
+    if (!Number.isFinite(v) || v <= 0) v = 0.95;
+    return (Math.round(v * 100) / 100).toFixed(2);
+  }
+
+  function adminDefaultTransform(pos) {
+    var cfg = studioConfig();
+    var map = cfg.placement_defaults_by_position || {};
+    var key = normPos(pos || 'front');
+    var hit = map[key] || map.front || null;
+    if (!hit || typeof hit !== 'object') return cloneTransform(DEFAULT_TRANSFORM);
+    return cloneTransform({
+      x: hit.x,
+      y: hit.y,
+      scale: hit.scale,
+      rotate: hit.rotate != null ? hit.rotate : hit.angle,
+    });
+  }
+
+  /** Keep primary design visible in the viewer (open / reset / Front↔Back). */
+  function ensurePrimaryVisible() {
+    activeAssetKey = 'primary';
+    setAssetSelected(true);
+  }
+
   function draftJson() {
     return JSON.stringify(draft || {});
   }
@@ -211,7 +238,7 @@
     pa.by_position = pa.by_position || {};
     if (!pa.by_position[key]) {
       pa.by_position[key] = {
-        primary: cloneTransform(DEFAULT_TRANSFORM),
+        primary: adminDefaultTransform(key),
         primary_url: null,
         primary_original_url: null,
         additional: [],
@@ -226,6 +253,41 @@
     bucket.pattern = bucket.pattern || defaultPattern();
     bucket.alignment = bucket.alignment || { h: 'center', v: 'center' };
     return bucket;
+  }
+
+  function isDefaultishTransform(tr) {
+    if (!tr) return true;
+    return (
+      Math.abs(Number(tr.x) - 0.5) < 1e-6 &&
+      Math.abs(Number(tr.y) - 0.5) < 1e-6 &&
+      Math.abs(Number(tr.scale) - 0.95) < 1e-6 &&
+      Math.abs(Number(tr.rotate) || 0) < 1e-6
+    );
+  }
+
+  /** Old bug wrote long float scales via clampScaleToContain — re-seed those from admin. */
+  function looksLikeClampedScaleArtifact(scale) {
+    var s = Number(scale);
+    if (!Number.isFinite(s) || s <= 0) return true;
+    var rounded2 = Math.round(s * 100) / 100;
+    return Math.abs(s - rounded2) > 1e-5;
+  }
+
+  /** Apply admin placement defaults (open seed / Reset). Does not invent contain-clamped scales. */
+  function applyAdminDefaultsToDraft(forceAll) {
+    ensurePrintArea();
+    var positions = enabledPositions();
+    for (var i = 0; i < positions.length; i++) {
+      var pos = positions[i];
+      var bucket = ensurePositionBucket(pos);
+      if (
+        forceAll ||
+        isDefaultishTransform(bucket.primary) ||
+        looksLikeClampedScaleArtifact(bucket.primary && bucket.primary.scale)
+      ) {
+        bucket.primary = adminDefaultTransform(pos);
+      }
+    }
   }
 
   function currentPosition() {
@@ -460,6 +522,15 @@
     return clamp(Number(raw) || 0.95, 0.08, maxContainScaleInZone());
   }
 
+  /** Visual width scale: never invent a new stored default; only cap overflow past zone. */
+  function visualScaleForTransform(tr) {
+    var scale = Number(tr && tr.scale);
+    if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
+    var maxS = maxContainScaleInZone();
+    if (Number.isFinite(maxS) && maxS > 0 && scale > maxS) return maxS;
+    return scale;
+  }
+
   function setAssetSelected(on) {
     assetSelected = !!on;
     if (!assetSelected) {
@@ -486,16 +557,17 @@
     if (!Number.isFinite(y)) y = 0.5;
     if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
     if (!Number.isFinite(rot)) rot = 0;
-    scale = clampScaleToContain(scale);
     rot = snapRotate5(rot);
-    tr.scale = scale;
+    // Keep stored admin/user scale exact; only cap visual overflow.
     tr.x = x;
     tr.y = y;
+    tr.scale = scale;
     tr.rotate = rot;
+    var visualScale = visualScaleForTransform(tr);
 
     var zoneW = printZoneEl.offsetWidth || 1;
     var zoneH = printZoneEl.offsetHeight || 1;
-    designImgEl.style.width = Math.max(24, zoneW * scale) + 'px';
+    designImgEl.style.width = Math.max(24, zoneW * visualScale) + 'px';
     designImgEl.style.height = 'auto';
     designImgEl.style.maxWidth = 'none';
     designImgEl.style.maxHeight = 'none';
@@ -510,11 +582,6 @@
     syncSelectionChrome();
     redrawZonePatternOverlay();
     if (cropping) syncCropUiFromFrac();
-  }
-
-  function normalizeActiveScaleToContain() {
-    var tr = activeTransform();
-    if (tr) tr.scale = clampScaleToContain(tr.scale);
   }
 
   function teardownZonePatternOverlay() {
@@ -567,7 +634,7 @@
     ctx.clearRect(0, 0, zw, zh);
 
     var tr = activeTransform();
-    var scaleVal = clampScaleToContain(tr.scale);
+    var scaleVal = visualScaleForTransform(tr);
     var zoneW = printZoneEl.offsetWidth || zw;
     var zoneH = printZoneEl.offsetHeight || zh;
     designImgEl.hidden = true;
@@ -603,7 +670,6 @@
     if (printZoneClipEl) {
       printZoneClipEl.style.overflow = 'hidden';
     }
-    normalizeActiveScaleToContain();
     applyTransformToDesignImg();
     syncTransformInputs();
   }
@@ -623,8 +689,7 @@
         btn.textContent = formatPlacementLabel(pos);
         btn.addEventListener('click', function () {
           ensurePrintArea().position = pos;
-          activeAssetKey = null;
-          setAssetSelected(false);
+          ensurePrimaryVisible();
           renderStudioUi();
           markDirtyUi();
         });
@@ -665,15 +730,9 @@
       teardownZonePatternOverlay();
     }
 
-    if (!activeAssetKey) {
-      if (designWrapEl) designWrapEl.hidden = true;
-      if (designChromeEl) designChromeEl.hidden = true;
-      teardownZonePatternOverlay();
-      exitCropMode(true);
-      return;
-    }
-
-    var url = designUrlForAsset(activeAssetKey);
+    // Paint selected asset, or primary when nothing is selected — never blank the print zone.
+    var paintKey = activeAssetKey || 'primary';
+    var url = designUrlForAsset(paintKey);
     if (designWrapEl && designImgEl && url) {
       designWrapEl.hidden = false;
       designImgEl.hidden = false;
@@ -749,9 +808,9 @@
     if (!Number.isFinite(scaleVal) || scaleVal <= 0) scaleVal = 0.95;
     var scaleMax = 2.5;
     if (printZoneEl && printZoneEl.offsetWidth > 1) {
-      scaleMax = Math.max(0.15, Math.min(2.5, maxContainScaleInZone()));
-      scaleVal = clampScaleToContain(scaleVal);
+      scaleMax = Math.max(0.15, Math.min(2.5, Math.max(maxContainScaleInZone(), scaleVal)));
     }
+    var scaleDisplay = formatScaleDisplay(scaleVal);
     var rotVal = snapRotate5(tr.rotate);
     var scaleBody =
       '<div class="cds-field-row"><label for="cds-scale-range">' +
@@ -760,12 +819,12 @@
       '<input type="range" id="cds-scale-range" min="0.08" max="' +
       scaleMax +
       '" step="0.01" value="' +
-      scaleVal +
+      scaleDisplay +
       '">' +
       '<input type="number" id="cds-scale-num" min="0.08" max="' +
       scaleMax +
       '" step="0.01" value="' +
-      scaleVal +
+      scaleDisplay +
       '"></div>';
 
     var rotateBody =
@@ -904,8 +963,9 @@
     var scaleN = panelDesignEl.querySelector('#cds-scale-num');
     var rotR = panelDesignEl.querySelector('#cds-rotate-range');
     var rotN = panelDesignEl.querySelector('#cds-rotate-num');
-    if (scaleR) scaleR.value = String(tr.scale != null ? tr.scale : 1);
-    if (scaleN) scaleN.value = String(tr.scale != null ? tr.scale : 1);
+    var scaleDisp = formatScaleDisplay(tr.scale != null ? tr.scale : 0.95);
+    if (scaleR) scaleR.value = scaleDisp;
+    if (scaleN) scaleN.value = scaleDisp;
     if (rotR) rotR.value = String(snapRotate5(tr.rotate));
     if (rotN) rotN.value = String(snapRotate5(tr.rotate));
   }
@@ -934,8 +994,10 @@
         var tr = activeTransform();
         var n = Number(val);
         if (!Number.isFinite(n)) return;
-        if (key === 'scale') n = clampScaleToContain(n);
-        else if (key === 'rotate') n = snapRotate5(n);
+        if (key === 'scale') {
+          n = clampScaleToContain(n);
+          n = Math.round(n * 100) / 100;
+        } else if (key === 'rotate') n = snapRotate5(n);
         tr[key] = n;
         markDirtyUi();
         applyTransformToDesignImg();
@@ -1949,7 +2011,7 @@
     var byPos = {};
     for (var i = 0; i < positions.length; i++) {
       byPos[positions[i]] = {
-        primary: cloneTransform(DEFAULT_TRANSFORM),
+        primary: adminDefaultTransform(positions[i]),
         primary_url: null,
         primary_original_url: null,
         additional: [],
@@ -1964,8 +2026,7 @@
       by_position: byPos,
       __cdsMigrated: true,
     };
-    activeAssetKey = null;
-    setAssetSelected(false);
+    ensurePrimaryVisible();
     renderStudioUi();
     markDirtyUi();
   }
@@ -2223,8 +2284,9 @@
       ensurePrintArea();
       draft.print_area.position = 'front';
       if (!draft.print_area.color_key) draft.print_area.color_key = resolveColorKey();
-      activeAssetKey = 'primary';
-      setAssetSelected(true);
+      // Seed unset positions with admin defaults (same as Reset); keep saved custom transforms.
+      applyAdminDefaultsToDraft(false);
+      ensurePrimaryVisible();
       switchSettingsTab('design');
       renderStudioUi();
       savedDraftJson = draftJson();
