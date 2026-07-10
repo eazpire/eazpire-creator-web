@@ -1034,6 +1034,32 @@
   height: 0;
 }
 
+/* Hide scrollbars on all journey horizontal skill rows (keep swipe / arrows / wheel) */
+.cj-tree-unlocked-strip,
+.cj-unlocked-skills .cj-product-carousel__track,
+.cj-product-section .cj-product-carousel__track,
+.cj-variant-panel .cj-product-carousel__track,
+.cj-variant-size-panel .cj-product-carousel__track,
+.cj-level-row__cards,
+.cj-eaz-economy__cat-row,
+.cj-market-grid {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cj-tree-unlocked-strip::-webkit-scrollbar,
+.cj-unlocked-skills .cj-product-carousel__track::-webkit-scrollbar,
+.cj-product-section .cj-product-carousel__track::-webkit-scrollbar,
+.cj-variant-panel .cj-product-carousel__track::-webkit-scrollbar,
+.cj-variant-size-panel .cj-product-carousel__track::-webkit-scrollbar,
+.cj-level-row__cards::-webkit-scrollbar,
+.cj-eaz-economy__cat-row::-webkit-scrollbar,
+.cj-market-grid::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .cj-product-carousel__track > .cj-tree-card {
   flex: 0 0 auto;
   scroll-snap-align: start;
@@ -1360,6 +1386,27 @@
 }
 
 .cj-tree-card.is-expanded.cj-tree-card--channel-group .cj-tree-card__frame {
+  border-width: 2px;
+  transform: translateY(-2px);
+}
+
+.cj-slot-level-branch {
+  margin-top: 0;
+  padding-top: 16px;
+}
+
+.cj-tree-card--design-slot-level {
+  width: 148px;
+}
+
+.cj-tree-card.is-expanded.cj-tree-card--design-slot-level {
+  position: relative;
+  z-index: 1;
+  width: 180px;
+  transition: width 0.2s ease, transform 0.15s ease;
+}
+
+.cj-tree-card.is-expanded.cj-tree-card--design-slot-level .cj-tree-card__frame {
   border-width: 2px;
   transform: translateY(-2px);
 }
