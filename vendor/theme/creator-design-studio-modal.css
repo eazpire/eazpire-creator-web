@@ -230,31 +230,41 @@
   background: rgba(0, 0, 0, 0.12);
 }
 
+/* Overlay on the mock stage (white mock area), not above it on the dark column */
 .cds-viewer-pos-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 8px;
-  width: 100%;
-  flex-shrink: 0;
-  margin-bottom: 12px;
+  width: auto;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  pointer-events: auto;
 }
 
 .cds-pos-tab {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  color: rgba(15, 23, 42, 0.72);
   border-radius: 999px;
   padding: 6px 14px;
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   text-transform: capitalize;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
 }
 
 .cds-pos-tab.is-active {
   color: #fff;
-  border-color: rgba(249, 115, 22, 0.55);
-  background: rgba(249, 115, 22, 0.2);
+  border-color: rgba(249, 115, 22, 0.65);
+  background: rgba(249, 115, 22, 0.92);
+  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.28);
 }
 
 .cds-viewer {

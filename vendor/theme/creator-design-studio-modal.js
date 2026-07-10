@@ -423,7 +423,25 @@
     var list = (cfg.enabled_positions || ['front', 'back']).map(normPos).filter(Boolean);
     if (!list.length) list = ['front'];
     if (list.indexOf('front') === -1) list.unshift('front');
-    return list;
+    // Front first, then Back, then any other placements in original order
+    var preferred = ['front', 'back'];
+    var seen = {};
+    var ordered = [];
+    for (var pi = 0; pi < preferred.length; pi++) {
+      var pref = preferred[pi];
+      if (list.indexOf(pref) !== -1 && !seen[pref]) {
+        seen[pref] = true;
+        ordered.push(pref);
+      }
+    }
+    for (var li = 0; li < list.length; li++) {
+      var pos = list[li];
+      if (!seen[pos]) {
+        seen[pos] = true;
+        ordered.push(pos);
+      }
+    }
+    return ordered;
   }
 
   function normPos(pos) {
