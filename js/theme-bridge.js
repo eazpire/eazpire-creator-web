@@ -144,6 +144,18 @@
 
     var fetchOpts = { credentials: "include", cache: "no-store" };
     if (options) Object.assign(fetchOpts, options);
+    if (
+      fetchOpts.body != null &&
+      typeof fetchOpts.body === "object" &&
+      !(typeof Blob !== "undefined" && fetchOpts.body instanceof Blob) &&
+      !(typeof FormData !== "undefined" && fetchOpts.body instanceof FormData) &&
+      !(typeof URLSearchParams !== "undefined" && fetchOpts.body instanceof URLSearchParams) &&
+      !(typeof ArrayBuffer !== "undefined" && fetchOpts.body instanceof ArrayBuffer) &&
+      !(typeof ReadableStream !== "undefined" && fetchOpts.body instanceof ReadableStream)
+    ) {
+      fetchOpts.headers = Object.assign({}, fetchOpts.headers || {}, { "Content-Type": "application/json" });
+      fetchOpts.body = JSON.stringify(fetchOpts.body);
+    }
     var method = String((fetchOpts.method || "GET")).toUpperCase();
     var idempotent = method === "GET" || method === "HEAD";
     var attempts = idempotent ? 3 : 1;

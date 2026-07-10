@@ -121,7 +121,10 @@
           <div class="cds-settings-panel" data-cds-settings-panel="variants" id="cds-panel-variants" hidden></div>
         </div>
         <footer class="cds-settings-footer">
-          <button type="button" class="cds-btn-secondary" id="cds-btn-reset" data-t="creator.design_studio.reset_defaults">Set Default</button>
+          <div class="cds-settings-footer__left">
+            <button type="button" class="cds-btn-secondary" id="cds-btn-set-version" data-t="creator.design_studio.set_version">Set Version</button>
+            <button type="button" class="cds-btn-secondary" id="cds-btn-save-version" data-t="creator.design_studio.save_version">Save Version</button>
+          </div>
           <button type="button" class="cds-modal__btn cds-modal__btn--save" id="cds-btn-save" data-t="creator.design_studio.save">Save</button>
         </footer>
       </aside>
@@ -244,6 +247,54 @@
         <button type="button" class="cds-btn-secondary cds-unsaved-discard" data-cds-unsaved="discard" data-t="creator.design_studio.unsaved_discard">Discard</button>
         <button type="button" class="cds-modal__btn cds-modal__btn--save" data-cds-unsaved="save" data-t="creator.design_studio.unsaved_save">Save</button>
       </div>
+    </div>
+  </div>
+
+  <div class="cds-submodal" id="cds-versions-modal" hidden aria-hidden="true">
+    <div class="cds-submodal__backdrop" data-cds-versions-close></div>
+    <div class="cds-submodal__sheet cds-versions-sheet" role="dialog" aria-modal="true" aria-labelledby="cds-versions-title">
+      <header class="cds-submodal__head">
+        <h3 id="cds-versions-title" class="cds-submodal__title" data-t="creator.design_studio.versions_title">Versions</h3>
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-versions-close aria-label="Close">&times;</button>
+      </header>
+      <p class="cds-versions-hint" data-t="creator.design_studio.versions_hint">Select a version to apply its studio settings. Mark one as standard for new designs of this product.</p>
+      <div class="cds-versions-list" id="cds-versions-list" role="list"></div>
+      <p class="cds-muted cds-versions-empty" id="cds-versions-empty" hidden data-t="creator.design_studio.versions_empty">No saved versions yet.</p>
+      <p class="cds-muted cds-versions-status" id="cds-versions-status" hidden></p>
+    </div>
+  </div>
+
+  <div class="cds-submodal" id="cds-version-save-modal" hidden aria-hidden="true">
+    <div class="cds-submodal__backdrop" data-cds-version-save-close></div>
+    <div class="cds-submodal__sheet cds-version-save-sheet" role="dialog" aria-modal="true" aria-labelledby="cds-version-save-title">
+      <header class="cds-submodal__head">
+        <h3 id="cds-version-save-title" class="cds-submodal__title" data-t="creator.design_studio.version_save_title">Save Version</h3>
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-version-save-close aria-label="Close">&times;</button>
+      </header>
+      <form class="cds-version-save-form" id="cds-version-save-form" autocomplete="off">
+        <div class="cds-submodal__group">
+          <label class="cds-submodal__label" for="cds-version-title" data-t="creator.design_studio.version_field_title">Title</label>
+          <input type="text" class="cds-version-input" id="cds-version-title" name="title" maxlength="120" required>
+        </div>
+        <div class="cds-submodal__group">
+          <label class="cds-submodal__label" for="cds-version-description" data-t="creator.design_studio.version_field_description">Description</label>
+          <textarea class="cds-version-input cds-version-textarea" id="cds-version-description" name="description" maxlength="500" rows="3"></textarea>
+        </div>
+        <div class="cds-submodal__group">
+          <label class="cds-submodal__label" for="cds-version-suffix" data-t="creator.design_studio.version_field_product_name">Product name</label>
+          <div class="cds-version-name-row">
+            <span class="cds-version-name-base" id="cds-version-name-base"></span>
+            <span class="cds-version-name-sep" aria-hidden="true">-</span>
+            <input type="text" class="cds-version-input cds-version-suffix" id="cds-version-suffix" name="product_name_suffix" maxlength="15" placeholder="e.g. Backprint">
+          </div>
+          <p class="cds-version-name-hint" data-t="creator.design_studio.version_suffix_hint">Base name is fixed. You can add up to 15 characters after it.</p>
+        </div>
+        <p class="cds-muted cds-version-save-status" id="cds-version-save-status" hidden></p>
+        <div class="cds-version-save-actions">
+          <button type="button" class="cds-btn-secondary" data-cds-version-save-close data-t="creator.design_studio.unsaved_cancel">Cancel</button>
+          <button type="submit" class="cds-modal__btn cds-modal__btn--save" id="cds-version-save-submit" data-t="creator.design_studio.version_save_confirm">Save Version</button>
+        </div>
+      </form>
     </div>
   </div>
 

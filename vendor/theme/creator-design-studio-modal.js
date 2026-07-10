@@ -10,7 +10,8 @@
   var statusEl = null;
   var btnSave = null;
   var btnClose = null;
-  var btnReset = null;
+  var btnSetVersion = null;
+  var btnSaveVersion = null;
   var viewerEl = null;
   var viewerStageEl = null;
   var mockImgEl = null;
@@ -49,6 +50,22 @@
   var assetPlacementListEl = null;
   var unsavedDialogEl = null;
   var pendingUnsavedDiscard = null;
+  var versionsModalEl = null;
+  var versionsListEl = null;
+  var versionsEmptyEl = null;
+  var versionsStatusEl = null;
+  var versionSaveModalEl = null;
+  var versionSaveFormEl = null;
+  var versionTitleInputEl = null;
+  var versionDescInputEl = null;
+  var versionSuffixInputEl = null;
+  var versionNameBaseEl = null;
+  var versionSaveStatusEl = null;
+  var versionSaveSubmitEl = null;
+  var versionsCache = null;
+  var preferredVersionId = null;
+  var catalogProductName = '';
+  var isVersionSaving = false;
   var viewerBusyEl = null;
   var viewerBusyTextEl = null;
   var gridSwitchEl = null;
@@ -265,7 +282,8 @@
     var cancelBtn = root && root.querySelector('#cds-crop-cancel');
     if (applyBtn) applyBtn.disabled = !!cropApplying || !!isLoading;
     if (cancelBtn) cancelBtn.disabled = !!cropApplying || !!isLoading;
-    if (btnReset) btnReset.disabled = busy;
+    if (btnSetVersion) btnSetVersion.disabled = busy;
+    if (btnSaveVersion) btnSaveVersion.disabled = busy;
     if (btnClose) btnClose.disabled = !!cropApplying;
   }
 
@@ -739,7 +757,8 @@
     statusEl = root.querySelector('#cds-status');
     btnSave = root.querySelector('#cds-btn-save');
     btnClose = root.querySelector('#cds-btn-close');
-    btnReset = root.querySelector('#cds-btn-reset');
+    btnSetVersion = root.querySelector('#cds-btn-set-version') || root.querySelector('#cds-btn-reset');
+    btnSaveVersion = root.querySelector('#cds-btn-save-version');
     viewerEl = root.querySelector('#cds-viewer');
     viewerStageEl = root.querySelector('#cds-viewer-stage');
     mockImgEl = root.querySelector('#cds-mock-img');
@@ -777,6 +796,18 @@
     assetPlacementEl = root.querySelector('#cds-asset-placement');
     assetPlacementListEl = root.querySelector('#cds-asset-placement-list');
     unsavedDialogEl = root.querySelector('#cds-unsaved-dialog');
+    versionsModalEl = root.querySelector('#cds-versions-modal');
+    versionsListEl = root.querySelector('#cds-versions-list');
+    versionsEmptyEl = root.querySelector('#cds-versions-empty');
+    versionsStatusEl = root.querySelector('#cds-versions-status');
+    versionSaveModalEl = root.querySelector('#cds-version-save-modal');
+    versionSaveFormEl = root.querySelector('#cds-version-save-form');
+    versionTitleInputEl = root.querySelector('#cds-version-title');
+    versionDescInputEl = root.querySelector('#cds-version-description');
+    versionSuffixInputEl = root.querySelector('#cds-version-suffix');
+    versionNameBaseEl = root.querySelector('#cds-version-name-base');
+    versionSaveStatusEl = root.querySelector('#cds-version-save-status');
+    versionSaveSubmitEl = root.querySelector('#cds-version-save-submit');
     viewerBusyEl = root.querySelector('#cds-viewer-busy');
     viewerBusyTextEl = root.querySelector('#cds-viewer-busy-text');
     return true;
@@ -2816,6 +2847,344 @@
       pickerEl.setAttribute('aria-hidden', 'true');
     }
     closeAssetDialogs();
+    closeVersionsModal();
+    closeVersionSaveModal();
+  }
+
+  function resolveCatalogProductName() {
+    if (catalogProductName) return catalogProductName;
+    if (ctxData && ctxData.catalog_product_name) return String(ctxData.catalog_product_name);
+    if (ctxProductMeta && ctxProductMeta.title) return String(ctxProductMeta.title);
+    return String(ctxProductKey || '');
+  }
+
+  function normalizeSuffixInput(raw) {
+    var s = String(raw || '').trim();
+    if (s.charAt(0) === '-') s = s.replace(/^-\s*/, '');
+    return s.slice(0, 15);
+  }
+
+  function setVersionsStatus(msg) {
+    if (!versionsStatusEl) return;
+    if (!msg) {
+      versionsStatusEl.hidden = true;
+      versionsStatusEl.textContent = '';
+      return;
+    }
+    versionsStatusEl.hidden = false;
+    versionsStatusEl.textContent = msg;
+  }
+
+  function setVersionSaveStatus(msg) {
+    if (!versionSaveStatusEl) return;
+    if (!msg) {
+      versionSaveStatusEl.hidden = true;
+      versionSaveStatusEl.textContent = '';
+      return;
+    }
+    versionSaveStatusEl.hidden = false;
+    versionSaveStatusEl.textContent = msg;
+  }
+
+  function closeVersionsModal() {
+    if (!versionsModalEl) return;
+    blurFocusInside(versionsModalEl);
+    versionsModalEl.hidden = true;
+    versionsModalEl.setAttribute('aria-hidden', 'true');
+    setVersionsStatus('');
+  }
+
+  function closeVersionSaveModal() {
+    if (!versionSaveModalEl) return;
+    blurFocusInside(versionSaveModalEl);
+    versionSaveModalEl.hidden = true;
+    versionSaveModalEl.setAttribute('aria-hidden', 'true');
+    setVersionSaveStatus('');
+  }
+
+  function applyVersionDraftSnapshot(versionDraft, suffix) {
+    if (!versionDraft || typeof versionDraft !== 'object') return;
+    draft = JSON.parse(JSON.stringify(versionDraft));
+    draft.product_key = ctxProductKey;
+    draft.product_name_suffix = normalizeSuffixInput(
+      suffix != null ? suffix : versionDraft.product_name_suffix
+    );
+    var base = resolveCatalogProductName();
+    draft.product_name_full = draft.product_name_suffix
+      ? base + ' - ' + draft.product_name_suffix
+      : base;
+    ensurePrintArea();
+    pendingContainClampDefaults = true;
+    ensurePrimaryVisible();
+    renderStudioUi();
+    markDirtyUi();
+  }
+
+  function resetToDefaults() {
+    if (isStudioBusy()) return;
+    var cfg = studioConfig();
+    var positions = enabledPositions();
+    var colors = cfg.mocks_by_color ? Object.keys(cfg.mocks_by_color) : ['default'];
+    var byPos = {};
+    for (var i = 0; i < positions.length; i++) {
+      byPos[positions[i]] = {
+        primary: adminDefaultTransform(positions[i]),
+        primary_url: null,
+        primary_original_url: null,
+        additional: [],
+        public_additional: null,
+        alignment: { h: 'center', v: 'center' },
+        pattern: defaultPattern(),
+      };
+    }
+    var keepSuffix = draft && draft.product_name_suffix ? String(draft.product_name_suffix) : '';
+    draft.print_area = {
+      position: 'front',
+      color_key: resolveColorKey() || colors[0] || 'default',
+      by_position: byPos,
+      __cdsMigrated: true,
+    };
+    draft.product_name_suffix = normalizeSuffixInput(keepSuffix);
+    draft.product_name_full = draft.product_name_suffix
+      ? resolveCatalogProductName() + ' - ' + draft.product_name_suffix
+      : resolveCatalogProductName();
+    pendingContainClampDefaults = true;
+    ensurePrimaryVisible();
+    renderStudioUi();
+    markDirtyUi();
+  }
+
+  function renderVersionsList(payload) {
+    if (!versionsListEl) return;
+    versionsCache = payload || null;
+    preferredVersionId =
+      payload && payload.preferred_version_id != null ? Number(payload.preferred_version_id) : null;
+    if (payload && payload.catalog_product_name) {
+      catalogProductName = String(payload.catalog_product_name);
+    }
+    versionsListEl.innerHTML = '';
+    var admin = (payload && payload.admin_default) || {
+      id: null,
+      title: t('design_studio_versions_admin_default', 'Default'),
+      description: t('design_studio_versions_admin_desc', 'Admin placement defaults for this product.'),
+      is_preferred: preferredVersionId == null,
+      is_admin_default: true,
+    };
+    var rows = [admin].concat((payload && payload.versions) || []);
+    if (versionsEmptyEl) {
+      versionsEmptyEl.hidden = !!(payload && payload.versions && payload.versions.length);
+    }
+    for (var i = 0; i < rows.length; i++) {
+      (function (row) {
+        var isAdmin = !!row.is_admin_default || row.id == null;
+        var isPref = !!row.is_preferred || (isAdmin && preferredVersionId == null);
+        var el = document.createElement('div');
+        el.className = 'cds-version-row' + (isPref ? ' is-preferred' : '');
+        el.setAttribute('role', 'listitem');
+        var top = document.createElement('div');
+        top.className = 'cds-version-row__top';
+        var meta = document.createElement('div');
+        meta.className = 'cds-version-row__meta';
+        var title = document.createElement('p');
+        title.className = 'cds-version-row__title';
+        title.textContent =
+          row.title ||
+          (isAdmin
+            ? t('design_studio_versions_admin_default', 'Default')
+            : t('design_studio_versions_admin_default', 'Default'));
+        meta.appendChild(title);
+        if (row.description) {
+          var desc = document.createElement('p');
+          desc.className = 'cds-version-row__desc';
+          desc.textContent = row.description;
+          meta.appendChild(desc);
+        }
+        if (row.product_name_full || row.product_name_suffix) {
+          var nameLine = document.createElement('p');
+          nameLine.className = 'cds-version-row__desc';
+          nameLine.textContent = row.product_name_full || row.product_name_suffix;
+          meta.appendChild(nameLine);
+        }
+        top.appendChild(meta);
+        if (isPref) {
+          var badge = document.createElement('span');
+          badge.className = 'cds-version-row__badge';
+          badge.textContent = t('design_studio_versions_standard', 'Standard');
+          top.appendChild(badge);
+        }
+        el.appendChild(top);
+        var actions = document.createElement('div');
+        actions.className = 'cds-version-row__actions';
+        var applyBtn = document.createElement('button');
+        applyBtn.type = 'button';
+        applyBtn.className = 'cds-modal__btn cds-modal__btn--save';
+        applyBtn.textContent = t('design_studio_versions_apply', 'Apply');
+        applyBtn.addEventListener('click', function () {
+          if (isAdmin) {
+            resetToDefaults();
+            if (draft) {
+              draft.product_name_suffix = '';
+              draft.product_name_full = resolveCatalogProductName();
+            }
+          } else {
+            applyVersionDraftSnapshot(row.draft, row.product_name_suffix);
+          }
+          setStatus(t('design_studio_versions_applied', 'Version applied.'));
+          closeVersionsModal();
+        });
+        actions.appendChild(applyBtn);
+        if (!isPref) {
+          var stdBtn = document.createElement('button');
+          stdBtn.type = 'button';
+          stdBtn.className = 'cds-btn-secondary';
+          stdBtn.textContent = t('design_studio_versions_set_standard', 'Set as standard');
+          stdBtn.addEventListener('click', function () {
+            setPreferredVersion(isAdmin ? null : row.id);
+          });
+          actions.appendChild(stdBtn);
+        }
+        el.appendChild(actions);
+        versionsListEl.appendChild(el);
+      })(rows[i]);
+    }
+  }
+
+  async function loadVersionsList() {
+    var owner = getOwnerId();
+    if (!owner || !ctxDesign || !ctxProductKey) return;
+    setVersionsStatus(t('design_studio_versions_loading', 'Loading versions…'));
+    if (versionsListEl) versionsListEl.innerHTML = '';
+    try {
+      var url =
+        apiBase() +
+        '?op=list-studio-versions&design_id=' +
+        encodeURIComponent(String(ctxDesign.id)) +
+        '&product_key=' +
+        encodeURIComponent(ctxProductKey) +
+        '&owner_id=' +
+        encodeURIComponent(owner);
+      var res = await fetch(url, { credentials: 'include' });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!data.ok) throw new Error(data.error || 'load_failed');
+      setVersionsStatus('');
+      renderVersionsList(data);
+    } catch (e) {
+      console.warn('[creator-design-studio] versions', e);
+      setVersionsStatus(t('design_studio_versions_load_error', 'Could not load versions.'));
+    }
+  }
+
+  function openVersionsModal() {
+    if (!versionsModalEl || isStudioBusy()) return;
+    closeVersionSaveModal();
+    versionsModalEl.hidden = false;
+    versionsModalEl.setAttribute('aria-hidden', 'false');
+    loadVersionsList();
+  }
+
+  function openVersionSaveModal() {
+    if (!versionSaveModalEl || isStudioBusy() || !draft) return;
+    closeVersionsModal();
+    if (versionNameBaseEl) versionNameBaseEl.textContent = resolveCatalogProductName();
+    if (versionTitleInputEl) versionTitleInputEl.value = '';
+    if (versionDescInputEl) versionDescInputEl.value = '';
+    if (versionSuffixInputEl) {
+      versionSuffixInputEl.value = normalizeSuffixInput(draft.product_name_suffix || '');
+    }
+    setVersionSaveStatus('');
+    versionSaveModalEl.hidden = false;
+    versionSaveModalEl.setAttribute('aria-hidden', 'false');
+    if (versionTitleInputEl && typeof versionTitleInputEl.focus === 'function') {
+      try {
+        versionTitleInputEl.focus();
+      } catch (eFocus) {}
+    }
+  }
+
+  async function setPreferredVersion(versionId) {
+    var owner = getOwnerId();
+    if (!owner || !ctxProductKey) return;
+    setVersionsStatus('');
+    try {
+      var res = await fetch(
+        apiBase() + '?op=set-studio-version-preferred&owner_id=' + encodeURIComponent(owner),
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product_key: ctxProductKey,
+            version_id: versionId,
+          }),
+        }
+      );
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!data.ok) throw new Error(data.error || 'preferred_failed');
+      preferredVersionId = data.preferred_version_id != null ? Number(data.preferred_version_id) : null;
+      if (ctxData) ctxData.preferred_version_id = preferredVersionId;
+      setVersionsStatus(t('design_studio_versions_preferred_saved', 'Standard version updated.'));
+      await loadVersionsList();
+    } catch (e) {
+      console.warn('[creator-design-studio] preferred', e);
+      setVersionsStatus(t('design_studio_versions_preferred_error', 'Could not update standard version.'));
+    }
+  }
+
+  async function submitSaveVersion(ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    if (isVersionSaving || isStudioBusy() || !draft || !ctxDesign || !ctxProductKey) return false;
+    var owner = getOwnerId();
+    if (!owner) return false;
+    var title = versionTitleInputEl ? String(versionTitleInputEl.value || '').trim() : '';
+    if (!title) {
+      setVersionSaveStatus(t('design_studio_version_title_required', 'Please enter a title.'));
+      return false;
+    }
+    var description = versionDescInputEl ? String(versionDescInputEl.value || '').trim() : '';
+    var suffix = normalizeSuffixInput(versionSuffixInputEl ? versionSuffixInputEl.value : '');
+    draft.product_name_suffix = suffix;
+    draft.product_name_full = suffix
+      ? resolveCatalogProductName() + ' - ' + suffix
+      : resolveCatalogProductName();
+
+    isVersionSaving = true;
+    if (versionSaveSubmitEl) versionSaveSubmitEl.disabled = true;
+    setVersionSaveStatus(t('designStudioSaving', 'Saving…'));
+    try {
+      var res = await fetch(apiBase() + '?op=save-studio-version&owner_id=' + encodeURIComponent(owner), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          design_id: ctxDesign.id,
+          product_key: ctxProductKey,
+          title: title,
+          description: description,
+          product_name_suffix: suffix,
+          draft: draft,
+        }),
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!data.ok) throw new Error(data.error || 'save_version_failed');
+      savedDraftJson = draftJson();
+      markDirtyUi();
+      setStatus(t('design_studio_version_save_success', 'Version saved.'));
+      closeVersionSaveModal();
+      return true;
+    } catch (e) {
+      console.warn('[creator-design-studio] save-version', e);
+      setVersionSaveStatus(t('design_studio_version_save_error', 'Could not save version.'));
+      return false;
+    } finally {
+      isVersionSaving = false;
+      if (versionSaveSubmitEl) versionSaveSubmitEl.disabled = false;
+    }
   }
 
   function backToAddMenu() {
@@ -3064,7 +3433,8 @@
 
     if (btnClose) btnClose.addEventListener('click', function () { close(false); });
     if (btnSave) btnSave.addEventListener('click', onSave);
-    if (btnReset) btnReset.addEventListener('click', resetToDefaults);
+    if (btnSetVersion) btnSetVersion.addEventListener('click', openVersionsModal);
+    if (btnSaveVersion) btnSaveVersion.addEventListener('click', openVersionSaveModal);
 
     root.querySelectorAll('[data-cds-settings-tab]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -3075,6 +3445,21 @@
     root.querySelectorAll('[data-cds-sub-close]').forEach(function (el) {
       el.addEventListener('click', closeSubmodals);
     });
+    root.querySelectorAll('[data-cds-versions-close]').forEach(function (el) {
+      el.addEventListener('click', closeVersionsModal);
+    });
+    root.querySelectorAll('[data-cds-version-save-close]').forEach(function (el) {
+      el.addEventListener('click', closeVersionSaveModal);
+    });
+    if (versionSaveFormEl) {
+      versionSaveFormEl.addEventListener('submit', submitSaveVersion);
+    }
+    if (versionSuffixInputEl) {
+      versionSuffixInputEl.addEventListener('input', function () {
+        var next = normalizeSuffixInput(versionSuffixInputEl.value);
+        if (versionSuffixInputEl.value !== next) versionSuffixInputEl.value = next;
+      });
+    }
     root.querySelectorAll('[data-cds-asset-close]').forEach(function (el) {
       el.addEventListener('click', closeAssetDialogs);
     });
@@ -3151,6 +3536,16 @@
           ev.preventDefault();
           return;
         }
+        if (versionSaveModalEl && !versionSaveModalEl.hidden) {
+          closeVersionSaveModal();
+          ev.preventDefault();
+          return;
+        }
+        if (versionsModalEl && !versionsModalEl.hidden) {
+          closeVersionsModal();
+          ev.preventDefault();
+          return;
+        }
         if (cropping) {
           if (cropApplying) {
             ev.preventDefault();
@@ -3188,35 +3583,6 @@
 
     bindViewerTransform();
     bindCropInteractions();
-  }
-
-  function resetToDefaults() {
-    if (isStudioBusy()) return;
-    var cfg = studioConfig();
-    var positions = enabledPositions();
-    var colors = cfg.mocks_by_color ? Object.keys(cfg.mocks_by_color) : ['default'];
-    var byPos = {};
-    for (var i = 0; i < positions.length; i++) {
-      byPos[positions[i]] = {
-        primary: adminDefaultTransform(positions[i]),
-        primary_url: null,
-        primary_original_url: null,
-        additional: [],
-        public_additional: null,
-        alignment: { h: 'center', v: 'center' },
-        pattern: defaultPattern(),
-      };
-    }
-    draft.print_area = {
-      position: 'front',
-      color_key: resolveColorKey() || colors[0] || 'default',
-      by_position: byPos,
-      __cdsMigrated: true,
-    };
-    pendingContainClampDefaults = true;
-    ensurePrimaryVisible();
-    renderStudioUi();
-    markDirtyUi();
   }
 
   async function loadContext(design, productKey) {
@@ -3333,11 +3699,15 @@
     }
     ctxDesign = null;
     ctxProductKey = null;
+    ctxProductMeta = null;
     ctxData = null;
     draft = null;
     savedDraftJson = '';
     activeAssetKey = null;
     assetSelected = false;
+    versionsCache = null;
+    preferredVersionId = null;
+    catalogProductName = '';
     setStatus('');
   }
 
@@ -3497,11 +3867,23 @@
         if (ctxData.design_height) ctxDesign.height = ctxData.design_height;
       }
       draft = ctxData.draft || { product_key: ctxProductKey };
+      catalogProductName = String(ctxData.catalog_product_name || (ctxProductMeta && ctxProductMeta.title) || ctxProductKey || '');
+      preferredVersionId =
+        ctxData.preferred_version_id != null ? Number(ctxData.preferred_version_id) : null;
       ensurePrintArea();
       draft.print_area.position = 'front';
       if (!draft.print_area.color_key) draft.print_area.color_key = resolveColorKey();
-      // Seed unset positions with admin defaults (same as Reset); keep saved custom transforms.
-      applyAdminDefaultsToDraft(false);
+      if (!draft.product_name_suffix) draft.product_name_suffix = '';
+      draft.product_name_full = draft.product_name_suffix
+        ? catalogProductName + ' - ' + draft.product_name_suffix
+        : catalogProductName;
+      // Seed unset positions with admin defaults (same as Admin Default); keep saved custom transforms.
+      // Skip when draft was already seeded from preferred version.
+      if (!ctxData.draft_from_preferred) {
+        applyAdminDefaultsToDraft(false);
+      } else {
+        pendingContainClampDefaults = true;
+      }
       // Contain-clamp may finish after image load — keep open clean until then.
       syncSavedAfterContainClamp = pendingContainClampDefaults;
       ensurePrimaryVisible();
