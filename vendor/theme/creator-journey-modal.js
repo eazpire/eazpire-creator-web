@@ -137,6 +137,7 @@
   var FLAG_CDN = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.2/flags/4x3/';
   var expandedProductKeys = {};
   var expandedColorKeys = {};
+  var expandedContinentKeys = {};
 
   var CATEGORY_ICON_SVG = {
     royalty: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
@@ -266,8 +267,12 @@
         pct: String(node.metadata.royalty_percent)
       });
     }
+    if (node.metadata && node.metadata.continent_name) return String(node.metadata.continent_name);
     if (node.metadata && node.metadata.country_name) return String(node.metadata.country_name);
     if (node.metadata && node.metadata.title) return String(node.metadata.title);
+    if (node.category === 'market' && isMarketContinentNode(node)) {
+      return continentTitle(node.region_code || marketContinentCode(node));
+    }
     if (node.category === 'market' && node.region_code) {
       return marketCountryName(node.region_code);
     }
@@ -284,15 +289,50 @@
     return node.node_key;
   }
 
+  function isMarketContinentNode(node) {
+    if (!node) return false;
+    if (node.metadata && node.metadata.market_kind === 'continent') return true;
+    return String(node.node_key || '').indexOf('market_continent:') === 0;
+  }
+
+  function isMarketCountryNode(node) {
+    if (!node || node.category !== 'market') return false;
+    if (isMarketContinentNode(node)) return false;
+    if (node.metadata && node.metadata.market_kind === 'country') return true;
+    return String(node.node_key || '').indexOf('market:') === 0 &&
+      String(node.node_key || '').indexOf('market_continent:') !== 0;
+  }
+
+  function marketContinentCode(node) {
+    if (node.metadata && node.metadata.continent_code) return String(node.metadata.continent_code).toUpperCase();
+    var key = String(node.node_key || '');
+    if (key.indexOf('market_continent:') === 0) return key.slice('market_continent:'.length).toUpperCase();
+    return String(node.region_code || '').toUpperCase();
+  }
+
+  function continentTitle(code) {
+    var c = String(code || '').toUpperCase();
+    var fromWindow = (typeof window !== 'undefined' && window.eazContinentLabels)
+      ? window.eazContinentLabels()
+      : null;
+    if (fromWindow && fromWindow[c]) return fromWindow[c];
+    var key = 'creator.topbar.continent_' + c.toLowerCase();
+    var fallbacks = {
+      AF: 'Africa', AS: 'Asia', EU: 'Europe', NA: 'North America',
+      SA: 'South America', OC: 'Oceania', AN: 'Antarctica'
+    };
+    return t(key, fallbacks[c] || c);
+  }
+
   function marketCountryName(code) {
     var c = String(code || '').toUpperCase();
-    if (c === 'GB') c = 'UK';
+    if (c === 'UK') c = 'GB';
     var names = {
-      EU: 'Europe', US: 'United States', UK: 'United Kingdom', CH: 'Switzerland',
-      CA: 'Canada', AU: 'Australia', DE: 'Germany', AT: 'Austria', FR: 'France',
-      NL: 'Netherlands', IT: 'Italy', ES: 'Spain', BE: 'Belgium', PL: 'Poland',
-      SE: 'Sweden', NO: 'Norway', DK: 'Denmark', FI: 'Finland', IE: 'Ireland',
-      PT: 'Portugal', NZ: 'New Zealand', JP: 'Japan', KR: 'South Korea',
+      EU: 'Europe', US: 'United States', GB: 'United Kingdom', UK: 'United Kingdom',
+      CH: 'Switzerland', CA: 'Canada', AU: 'Australia', DE: 'Germany', AT: 'Austria',
+      FR: 'France', NL: 'Netherlands', IT: 'Italy', ES: 'Spain', BE: 'Belgium',
+      PL: 'Poland', SE: 'Sweden', NO: 'Norway', DK: 'Denmark', FI: 'Finland',
+      IE: 'Ireland', PT: 'Portugal', NZ: 'New Zealand', JP: 'Japan', KR: 'South Korea',
       CN: 'China', MX: 'Mexico', BR: 'Brazil'
     };
     return names[c] || c;
@@ -308,6 +348,12 @@
   function marketFlagHtml(node) {
     var code = marketFlagCode(node);
     return '<img class="cj-tree-card__flag" src="' + FLAG_CDN + escapeHtml(code) + '.svg" alt="" loading="lazy" width="48" height="36">';
+  }
+
+  function continentMarkHtml(node) {
+    var code = marketContinentCode(node);
+    return '<div class="cj-tree-card__continent-mark" data-continent="' + escapeHtml(code) + '" aria-hidden="true">' +
+      '<span class="cj-tree-card__continent-code">' + escapeHtml(code) + '</span></div>';
   }
 
   function nodeImageUrl(node) {
@@ -424,15 +470,23 @@
     var hasAction = !!opts.hasAction;
     var frameCls = 'cj-tree-card__frame' + (hasAction ? ' cj-tree-card__frame--attached' : '');
     var statusHtml = node.unlocked ? '<span class="cj-tree-card__status" aria-hidden="true">✓</span>' : '';
-    var mediaHtml = opts.flagMedia
-      ? marketFlagHtml(node)
-      : (opts.sizeLabel
-        ? '<div class="cj-tree-card__size-label">' + escapeHtml(opts.sizeLabel) + '</div>'
-        : renderTreeCardMedia(imgUrl));
+    var mediaHtml;
+    var mediaExtraCls = '';
+    if (opts.continentMedia) {
+      mediaHtml = continentMarkHtml(node);
+      mediaExtraCls = ' cj-tree-card__media--continent';
+    } else if (opts.flagMedia) {
+      mediaHtml = marketFlagHtml(node);
+      mediaExtraCls = ' cj-tree-card__media--flag';
+    } else if (opts.sizeLabel) {
+      mediaHtml = '<div class="cj-tree-card__size-label">' + escapeHtml(opts.sizeLabel) + '</div>';
+      mediaExtraCls = ' cj-tree-card__media--size';
+    } else {
+      mediaHtml = renderTreeCardMedia(imgUrl);
+    }
     return '<div class="' + frameCls + '">' +
       '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>' +
-      '<div class="cj-tree-card__media' + (opts.flagMedia ? ' cj-tree-card__media--flag' : '') +
-      (opts.sizeLabel ? ' cj-tree-card__media--size' : '') + '">' + mediaHtml + '</div>' +
+      '<div class="cj-tree-card__media' + mediaExtraCls + '">' + mediaHtml + '</div>' +
       '<span class="cj-tree-card__eaz-badge">' + escapeHtml(badge) + '</span>' +
       statusHtml + '</div>';
   }
@@ -540,6 +594,16 @@
       act.actionHtml + '</div></article>';
   }
 
+  function renderCarouselShell(trackHtml) {
+    return '<div class="cj-product-carousel" data-cj-carousel>' +
+      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--prev" data-cj-carousel-prev aria-label="' +
+      escapeHtml(t('creator.journey.carousel_prev', 'Previous')) + '">‹</button>' +
+      '<div class="cj-product-carousel__track" data-cj-carousel-track>' + trackHtml + '</div>' +
+      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--next" data-cj-carousel-next aria-label="' +
+      escapeHtml(t('creator.journey.carousel_next', 'Next')) + '">›</button>' +
+      '</div>';
+  }
+
   function renderSoftstyleExpandPanel(productNode) {
     if (!productNode || !productNode.unlocked) return '';
     if (productNode.product_key !== SOFTSTYLE_PRODUCT_KEY) return '';
@@ -547,30 +611,33 @@
 
     var colors = variantColorNodes(productNode.product_key);
     if (!colors.length) {
-      return '<div class="cj-variant-panel">' +
-        '<p class="cj-muted">' + escapeHtml(t('creator.journey.variants_empty', 'No color variants available yet.')) + '</p></div>';
+      return '<div class="cj-variant-branch">' +
+        '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+        '<div class="cj-variant-panel">' +
+        '<p class="cj-muted">' + escapeHtml(t('creator.journey.variants_empty', 'No color variants available yet.')) + '</p></div></div>';
     }
 
-    var html = '<div class="cj-variant-panel" data-cj-variant-panel="' + escapeHtml(productNode.product_key) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(t('creator.journey.color_variants', 'Color variants')) + '</h4>' +
-      '<div class="cj-variant-panel__grid">';
-
+    var colorCards = colors.map(renderVariantColorCard).join('');
+    var sizeHtml = '';
     colors.forEach(function (colorNode) {
-      html += '<div class="cj-variant-color-block">';
-      html += renderVariantColorCard(colorNode);
-      if (colorNode.unlocked && expandedColorKeys[colorNode.node_key]) {
-        var sizes = variantSizeNodes(colorNode.node_key);
-        html += '<div class="cj-variant-size-panel">' +
-          '<h5 class="cj-variant-size-panel__title">' + escapeHtml(t('creator.journey.size_variants', 'Sizes')) + '</h5>' +
-          '<div class="cj-variant-size-panel__grid">' +
-          sizes.map(renderVariantSizeCard).join('') +
-          '</div></div>';
-      }
-      html += '</div>';
+      if (!(colorNode.unlocked && expandedColorKeys[colorNode.node_key])) return;
+      var sizes = variantSizeNodes(colorNode.node_key);
+      if (!sizes.length) return;
+      sizeHtml += '<div class="cj-variant-size-panel" data-cj-size-panel="' + escapeHtml(colorNode.node_key) + '">' +
+        '<div class="cj-variant-connector cj-variant-connector--size" aria-hidden="true"></div>' +
+        '<h5 class="cj-variant-size-panel__title">' + escapeHtml(t('creator.journey.size_variants', 'Sizes')) +
+        ' · ' + escapeHtml(nodeTitle(colorNode)) + '</h5>' +
+        renderCarouselShell(sizes.map(renderVariantSizeCard).join('')) +
+        '</div>';
     });
 
-    html += '</div></div>';
-    return html;
+    return '<div class="cj-variant-branch" data-cj-variant-branch="' + escapeHtml(productNode.product_key) + '">' +
+      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+      '<div class="cj-variant-panel" data-cj-variant-panel="' + escapeHtml(productNode.product_key) + '">' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(t('creator.journey.color_variants', 'Color variants')) + '</h4>' +
+      renderCarouselShell(colorCards) +
+      sizeHtml +
+      '</div></div>';
   }
 
   function renderCarouselSection(title, subtitle, nodes, sectionLocked) {
@@ -589,13 +656,8 @@
       '<div class="cj-product-section__head">' +
       '<h3 class="cj-product-section__title">' + escapeHtml(title) + '</h3>' + sub +
       '</div>' +
-      '<div class="cj-product-carousel" data-cj-carousel>' +
-      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--prev" data-cj-carousel-prev aria-label="' +
-      escapeHtml(t('creator.journey.carousel_prev', 'Previous')) + '">‹</button>' +
-      '<div class="cj-product-carousel__track" data-cj-carousel-track>' + cardsHtml + '</div>' +
-      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--next" data-cj-carousel-next aria-label="' +
-      escapeHtml(t('creator.journey.carousel_next', 'Next')) + '">›</button>' +
-      '</div>' + expandHtml + '</section>';
+      renderCarouselShell(cardsHtml) +
+      expandHtml + '</section>';
   }
 
   function renderProductTree(nodes) {
@@ -629,30 +691,122 @@
     return html;
   }
 
-  function renderMarketCard(node) {
+  function renderMarketCard(node, opts) {
+    opts = opts || {};
     var levelLocked = isLevelLocked(node);
     var act = cardActionState(node, levelLocked);
+    var isContinent = isMarketContinentNode(node);
+    var expandable = isContinent && !!node.unlocked;
+    var contCode = isContinent ? marketContinentCode(node) : '';
+    var expanded = expandable && !!expandedContinentKeys[contCode];
     var cls = 'cj-tree-card cj-tree-card--market';
+    if (isContinent) cls += ' cj-tree-card--market-continent';
+    else cls += ' cj-tree-card--market-country';
     if (levelLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
+    if (expandable) cls += ' is-expandable';
+    if (expanded) cls += ' is-expanded';
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
+    var expandAttr = expandable
+      ? ' data-cj-expand-continent="' + escapeHtml(contCode) + '"'
+      : '';
+
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction, flagMedia: true }) +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        flagMedia: !isContinent,
+        continentMedia: isContinent
+      }) +
       act.actionHtml + '</div></article>';
   }
 
-  function renderMarketTree(nodes) {
-    var html = renderUnlockedStrip(nodes);
-    if (!nodes.length) {
-      return html + '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+  function marketContinentNodes(nodes) {
+    var order = { AF: 10, AS: 20, EU: 30, NA: 40, SA: 50, OC: 60, AN: 70 };
+    return (nodes || []).filter(isMarketContinentNode).sort(function (a, b) {
+      var ca = marketContinentCode(a);
+      var cb = marketContinentCode(b);
+      return (order[ca] || 99) - (order[cb] || 99) ||
+        nodeTitle(a).localeCompare(nodeTitle(b), undefined, { sensitivity: 'base' });
+    });
+  }
+
+  function marketCountryNodesForContinent(nodes, continentNode) {
+    var parentKey = continentNode.node_key;
+    var cont = marketContinentCode(continentNode);
+    return (nodes || []).filter(function (n) {
+      if (!isMarketCountryNode(n)) return false;
+      if (n.parent_key === parentKey) return true;
+      return n.metadata && String(n.metadata.continent_code || '').toUpperCase() === cont;
+    }).sort(function (a, b) {
+      return nodeTitle(a).localeCompare(nodeTitle(b), undefined, { sensitivity: 'base' });
+    });
+  }
+
+  function renderContinentExpandPanel(continentNode, allMarketNodes) {
+    if (!continentNode || !continentNode.unlocked) return '';
+    var cont = marketContinentCode(continentNode);
+    if (!expandedContinentKeys[cont]) return '';
+
+    var countries = marketCountryNodesForContinent(allMarketNodes, continentNode);
+    if (!countries.length) {
+      return '<div class="cj-variant-branch cj-market-branch">' +
+        '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+        '<div class="cj-variant-panel">' +
+        '<p class="cj-muted">' + escapeHtml(t('creator.journey.market_countries_empty', 'No countries listed for this continent yet.')) +
+        '</p></div></div>';
     }
+
+    return '<div class="cj-variant-branch cj-market-branch" data-cj-market-branch="' + escapeHtml(cont) + '">' +
+      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+      '<div class="cj-variant-panel" data-cj-market-panel="' + escapeHtml(cont) + '">' +
+      '<h4 class="cj-variant-panel__title">' +
+      escapeHtml(t('creator.journey.market_countries_title', 'Countries')) +
+      ' · ' + escapeHtml(nodeTitle(continentNode)) + '</h4>' +
+      renderCarouselShell(countries.map(function (n) { return renderMarketCard(n); }).join('')) +
+      '</div></div>';
+  }
+
+  function renderMarketTree(nodes) {
+    var continents = marketContinentNodes(nodes);
+    var unlockedCountries = (nodes || []).filter(function (n) {
+      return isMarketCountryNode(n) && n.unlocked;
+    });
+    var html = renderUnlockedStrip(unlockedCountries.length ? unlockedCountries : continents.filter(function (n) {
+      return n.unlocked;
+    }));
+
+    if (!continents.length) {
+      // Fallback: flat list if catalog not yet migrated
+      var flat = (nodes || []).filter(isMarketCountryNode);
+      if (!flat.length) {
+        return html + '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+      }
+      html += '<p class="cj-market-hint">' +
+        escapeHtml(t('creator.journey.market_hint', 'Unlock a continent first, then expand it to unlock individual countries. Same EAZV cost for every continent and every country.')) +
+        '</p>';
+      html += renderCarouselShell(flat.map(function (n) { return renderMarketCard(n); }).join(''));
+      return html;
+    }
+
     html += '<p class="cj-market-hint">' +
-      escapeHtml(t('creator.journey.market_hint', 'Unlock countries to sell in that market. Same EAZV cost for every country.')) +
+      escapeHtml(t('creator.journey.market_hint', 'Unlock a continent first, then expand it to unlock individual countries. Same EAZV cost for every continent and every country.')) +
       '</p>';
-    html += '<div class="cj-market-grid">' + nodes.map(renderMarketCard).join('') + '</div>';
+    html += '<h3 class="cj-product-section__title">' +
+      escapeHtml(t('creator.journey.market_continents_title', 'Continents')) + '</h3>';
+
+    var cardsHtml = '';
+    var expandHtml = '';
+    continents.forEach(function (n) {
+      cardsHtml += renderMarketCard(n);
+      if (n.unlocked && expandedContinentKeys[marketContinentCode(n)]) {
+        expandHtml += renderContinentExpandPanel(n, nodes);
+      }
+    });
+    html += renderCarouselShell(cardsHtml);
+    html += expandHtml;
     return html;
   }
 
@@ -1210,6 +1364,15 @@
         var key = card.getAttribute('data-cj-expand-color');
         if (!key) return;
         expandedColorKeys[key] = !expandedColorKeys[key];
+        renderTree();
+      });
+    });
+    root.querySelectorAll('[data-cj-expand-continent]').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('[data-cj-tree-action]')) return;
+        var code = card.getAttribute('data-cj-expand-continent');
+        if (!code) return;
+        expandedContinentKeys[code] = !expandedContinentKeys[code];
         renderTree();
       });
     });
