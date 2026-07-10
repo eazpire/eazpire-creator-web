@@ -95,9 +95,13 @@
     draft.print_area.additional = draft.print_area.additional || [];
     draft.print_area.pattern = draft.print_area.pattern || {
       enabled: false,
+      mode: 'grid',
       spacing_x: 1,
       spacing_y: 1,
       pattern_angle: 0,
+      offset: 0,
+      rotation_step_horizontal: 0,
+      rotation_step_vertical: 0,
     };
     draft.print_area.alignment = draft.print_area.alignment || { h: 'center', v: 'center' };
     return draft.print_area;
@@ -243,23 +247,31 @@
   }
 
   function measureMockRect() {
-    if (!viewerStageEl || !mockImgEl || mockImgEl.hidden || !mockImgEl.naturalWidth) {
-      var sw = viewerStageEl ? viewerStageEl.clientWidth : (viewerEl ? viewerEl.clientWidth : 1);
-      var sh = viewerStageEl ? viewerStageEl.clientHeight : (viewerEl ? viewerEl.clientHeight : 1);
-      return { left: 0, top: 0, width: Math.max(1, sw), height: Math.max(1, sh) };
+    if (!viewerEl || !mockImgEl || mockImgEl.hidden || !mockImgEl.naturalWidth || !mockImgEl.naturalHeight) {
+      var fw = viewerEl ? Math.max(1, viewerEl.clientWidth) : 1;
+      var fh = viewerEl ? Math.max(1, viewerEl.clientHeight) : 1;
+      return { left: 0, top: 0, width: fw, height: fh };
     }
+    var boxW = Math.max(1, viewerEl.clientWidth);
+    var boxH = Math.max(1, viewerEl.clientHeight);
     var nw = mockImgEl.naturalWidth;
     var nh = mockImgEl.naturalHeight;
-    var cw = mockImgEl.clientWidth || mockImgEl.offsetWidth;
-    var ch = mockImgEl.clientHeight || mockImgEl.offsetHeight;
-    if (!cw || !ch) {
-      cw = viewerStageEl.clientWidth || 1;
-      ch = viewerStageEl.clientHeight || 1;
-      var scale = Math.min(cw / nw, ch / nh);
-      cw = nw * scale;
-      ch = nh * scale;
-    }
-    return { left: 0, top: 0, width: cw, height: ch };
+    var scale = Math.min(boxW / nw, boxH / nh);
+    var w = nw * scale;
+    var h = nh * scale;
+    var left = (boxW - w) / 2;
+    var top = (boxH - h) / 2;
+    return { left: left, top: top, width: w, height: h };
+  }
+
+  function fitViewerStage() {
+    if (!viewerEl || !viewerStageEl || !mockImgEl || mockImgEl.hidden) return;
+    var fr = measureMockRect();
+    viewerStageEl.style.width = fr.width + 'px';
+    viewerStageEl.style.height = fr.height + 'px';
+    mockImgEl.style.width = '100%';
+    mockImgEl.style.height = '100%';
+    mockImgEl.style.objectFit = 'contain';
   }
 
   function clamp(n, min, max) {
@@ -279,7 +291,6 @@
     if (!Number.isFinite(rot)) rot = 0;
 
     var zoneW = printZoneEl.offsetWidth || 1;
-    var zoneH = printZoneEl.offsetHeight || 1;
     var designW = Math.max(24, zoneW * scale);
     designImgEl.style.width = designW + 'px';
     designImgEl.style.height = 'auto';
@@ -289,9 +300,9 @@
     designImgEl.style.top = '';
     designImgEl.style.transform = '';
 
-    // x/y are center position inside the print zone (0..1)
+    // x/y = center inside print zone (0..1), same model as Shop Design Studio
     var dx = (x - 0.5) * zoneW;
-    var dy = (y - 0.5) * zoneH;
+    var dy = (y - 0.5) * (printZoneEl.offsetHeight || 1);
     designWrapEl.style.left = '50%';
     designWrapEl.style.top = '50%';
     designWrapEl.style.transform =
@@ -308,13 +319,15 @@
   }
 
   function layoutPrintZone() {
-    if (!printZoneEl || !viewerStageEl) return;
+    if (!printZoneEl || !viewerStageEl || !viewerEl) return;
+    fitViewerStage();
     var fr = measureMockRect();
     var z = currentZoneFrac();
-    printZoneEl.style.left = (z.l * fr.width) + 'px';
-    printZoneEl.style.top = (z.t * fr.height) + 'px';
-    printZoneEl.style.width = (z.w * fr.width) + 'px';
-    printZoneEl.style.height = (z.h * fr.height) + 'px';
+    // Zone is positioned relative to stage; stage is already fitted to mock pixels.
+    printZoneEl.style.left = (z.l * 100) + '%';
+    printZoneEl.style.top = (z.t * 100) + '%';
+    printZoneEl.style.width = (z.w * 100) + '%';
+    printZoneEl.style.height = (z.h * 100) + '%';
     printZoneEl.hidden = false;
     applyTransformToDesignImg();
   }
@@ -463,13 +476,30 @@
     var alignBody = '<div class="cds-align-grid" id="cds-align-grid">' + alignBtns.join('') + '</div>';
 
     var pat = pa.pattern || {};
+    var mode = pat.mode || 'grid';
     var patternBody =
       '<label class="cds-size-chip"><input type="checkbox" id="cds-pattern-enabled"' + (pat.enabled ? ' checked' : '') + '> ' +
       t('designStudioPatternEnable', 'Enable pattern') + '</label>' +
-      '<div class="cds-field-row"><label>' + t('designStudioPatternSpacingX', 'Spacing X') + '</label>' +
-      '<input type="range" id="cds-pattern-sx" min="0.5" max="3" step="0.05" value="' + (pat.spacing_x || 1) + '"></div>' +
-      '<div class="cds-field-row"><label>' + t('designStudioPatternSpacingY', 'Spacing Y') + '</label>' +
-      '<input type="range" id="cds-pattern-sy" min="0.5" max="3" step="0.05" value="' + (pat.spacing_y || 1) + '"></div>';
+      '<div class="cds-pattern-modes" role="radiogroup">' +
+      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="grid"' + (mode === 'grid' ? ' checked' : '') + '> ' +
+      t('designStudioPatternModeGrid', 'Grid') + '</label>' +
+      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="brick_h"' + (mode === 'brick_h' ? ' checked' : '') + '> ' +
+      t('designStudioPatternModeBrickH', 'Brick horizontal') + '</label>' +
+      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="brick_v"' + (mode === 'brick_v' ? ' checked' : '') + '> ' +
+      t('designStudioPatternModeBrickV', 'Brick vertical') + '</label>' +
+      '</div>' +
+      '<div class="cds-field-row"><label>' + t('designStudioPatternSpacingX', 'Horizontal spacing') + '</label>' +
+      '<input type="number" id="cds-pattern-sx" min="0.05" max="10" step="0.05" value="' + (pat.spacing_x != null ? pat.spacing_x : 1) + '"></div>' +
+      '<div class="cds-field-row"><label>' + t('designStudioPatternSpacingY', 'Vertical spacing') + '</label>' +
+      '<input type="number" id="cds-pattern-sy" min="0.05" max="10" step="0.05" value="' + (pat.spacing_y != null ? pat.spacing_y : 1) + '"></div>' +
+      '<div class="cds-field-row"><label>' + t('designStudioPatternAngle', 'Angle') + '</label>' +
+      '<input type="number" id="cds-pattern-angle" min="-45" max="45" step="1" value="' + (pat.pattern_angle != null ? pat.pattern_angle : 0) + '"></div>' +
+      '<div class="cds-field-row"><label>' + t('designStudioPatternOffset', 'Horizontal offset') + '</label>' +
+      '<input type="number" id="cds-pattern-offset" min="-1" max="1" step="0.05" value="' + (pat.offset != null ? pat.offset : 0) + '"></div>' +
+      '<div class="cds-field-row"><label>' + t('designStudioPatternRotH', 'Rotation each horizontal step') + '</label>' +
+      '<input type="number" id="cds-pattern-rh" min="-180" max="180" step="1" value="' + (pat.rotation_step_horizontal != null ? pat.rotation_step_horizontal : 0) + '"></div>' +
+      '<div class="cds-field-row"><label>' + t('designStudioPatternRotV', 'Rotation each vertical step') + '</label>' +
+      '<input type="number" id="cds-pattern-rv" min="-180" max="180" step="1" value="' + (pat.rotation_step_vertical != null ? pat.rotation_step_vertical : 0) + '"></div>';
 
     panelDesignEl.innerHTML =
       assetsHtml +
@@ -569,23 +599,40 @@
         markDirtyUi();
       });
     }
-    ['#cds-pattern-sx', '#cds-pattern-sy'].forEach(function (sel, idx) {
-      var el = panelDesignEl.querySelector(sel);
-      if (!el) return;
-      el.addEventListener('input', function () {
-        var pa = ensurePrintArea();
-        if (idx === 0) pa.pattern.spacing_x = Number(el.value) || 1;
-        else pa.pattern.spacing_y = Number(el.value) || 1;
+    panelDesignEl.querySelectorAll('input[name="cds-pattern-mode"]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        if (!radio.checked) return;
+        ensurePrintArea().pattern.mode = radio.value || 'grid';
         markDirtyUi();
       });
     });
+    function bindPatNum(sel, key, fallback) {
+      var el = panelDesignEl.querySelector(sel);
+      if (!el) return;
+      el.addEventListener('input', function () {
+        var n = Number(el.value);
+        ensurePrintArea().pattern[key] = Number.isFinite(n) ? n : fallback;
+        markDirtyUi();
+      });
+    }
+    bindPatNum('#cds-pattern-sx', 'spacing_x', 1);
+    bindPatNum('#cds-pattern-sy', 'spacing_y', 1);
+    bindPatNum('#cds-pattern-angle', 'pattern_angle', 0);
+    bindPatNum('#cds-pattern-offset', 'offset', 0);
+    bindPatNum('#cds-pattern-rh', 'rotation_step_horizontal', 0);
+    bindPatNum('#cds-pattern-rv', 'rotation_step_vertical', 0);
   }
 
-  function colorDotStyle(name) {
-    var n = String(name || '').toLowerCase();
+  function colorDotStyle(itemOrName) {
+    if (itemOrName && typeof itemOrName === 'object' && itemOrName.color_hex) {
+      return 'background:' + itemOrName.color_hex;
+    }
+    var n = String((itemOrName && itemOrName.color) || itemOrName || '').toLowerCase();
     var map = {
-      black: '#111', white: '#f5f5f5', red: '#dc2626', blue: '#2563eb', navy: '#1e3a5f',
+      black: '#111111', white: '#f5f5f5', red: '#dc2626', blue: '#2563eb', navy: '#1e3a5f',
       green: '#16a34a', grey: '#6b7280', gray: '#6b7280', pink: '#ec4899', orange: '#f97316',
+      yellow: '#eab308', purple: '#7c3aed', brown: '#92400e', beige: '#d6c6a8', cream: '#fffdd0',
+      charcoal: '#36454f', heather: '#9ca3af', forest: '#166534', maroon: '#7f1d1d', teal: '#0d9488',
     };
     for (var k in map) {
       if (n.indexOf(k) !== -1) return 'background:' + map[k];
@@ -598,7 +645,9 @@
     draft.variants = draft.variants || { selected_ids: [] };
     var selected = new Set((draft.variants.selected_ids || []).map(Number));
     var groups = ctxData.variant_groups || {};
-    var keys = Object.keys(groups).sort();
+    var keys = Object.keys(groups).sort(function (a, b) {
+      return String(a).localeCompare(String(b));
+    });
 
     var html = '<p class="cds-skill-hint">' + t('designStudioVariantsSkillHint', 'Some variants must be unlocked in the skill tree before you can select them.') + '</p>';
 
@@ -613,14 +662,19 @@
       var selectedInColor = unlockedItems.filter(function (v) { return selected.has(Number(v.id)); });
       var allChecked = unlockedItems.length > 0 && selectedInColor.length === unlockedItems.length;
       var someChecked = selectedInColor.length > 0;
+      var sample = items[0] || { color: color };
+      var openByDefault = g === 0;
 
-      html += '<div class="cds-color-group" data-color-group="' + color + '">';
+      html += '<div class="cds-color-group' + (openByDefault ? ' is-open' : '') + '" data-color-group="' + encodeURIComponent(color) + '">';
       html += '<div class="cds-color-head">';
-      html += '<input type="checkbox" data-color-all="' + color + '"' + (allChecked ? ' checked' : '') + (someChecked && !allChecked ? ' data-indeterminate="1"' : '') + '>';
-      html += '<span class="cds-color-dot" style="' + colorDotStyle(color) + '"></span>';
-      html += '<span class="cds-color-name">' + color + ' (' + selectedInColor.length + ')</span>';
+      html += '<input type="checkbox" data-color-all="' + encodeURIComponent(color) + '"' +
+        (allChecked ? ' checked' : '') +
+        (someChecked && !allChecked ? ' data-indeterminate="1"' : '') +
+        (unlockedItems.length ? '' : ' disabled') + '>';
+      html += '<span class="cds-color-dot" style="' + colorDotStyle(sample) + '"></span>';
+      html += '<span class="cds-color-name">' + color + ' <span class="cds-color-count">(' + selectedInColor.length + '/' + unlockedItems.length + ')</span></span>';
       html += '<button type="button" class="cds-color-toggle" aria-label="Toggle sizes">▾</button>';
-      html += '</div><div class="cds-color-body">';
+      html += '</div><div class="cds-color-body"><div class="cds-size-list">';
 
       for (var i = 0; i < items.length; i++) {
         var v = items[i];
@@ -628,12 +682,13 @@
         var id = Number(v.id);
         var checked = selected.has(id);
         html +=
-          '<label class="cds-size-chip' + (locked ? ' is-locked' : '') + '">' +
-          '<input type="checkbox" data-variant-id="' + id + '"' + (checked ? ' checked' : '') + (locked ? ' disabled' : '') + '> ' +
-          v.size + (locked ? ' (' + t('designStudioLocked', 'Locked') + ')' : '') +
+          '<label class="cds-size-row' + (locked ? ' is-locked' : '') + '">' +
+          '<input type="checkbox" data-variant-id="' + id + '"' + (checked ? ' checked' : '') + (locked ? ' disabled' : '') + '>' +
+          '<span class="cds-size-label">' + v.size + '</span>' +
+          (locked ? '<span class="cds-size-lock">' + t('designStudioLocked', 'Locked') + '</span>' : '') +
           '</label>';
       }
-      html += '</div></div>';
+      html += '</div></div></div>';
     }
 
     panelVariantsEl.innerHTML = html;
@@ -642,17 +697,18 @@
       cb.indeterminate = true;
     });
 
-    panelVariantsEl.querySelectorAll('.cds-color-head').forEach(function (head) {
-      head.addEventListener('click', function (e) {
-        if (e.target.matches('input[type="checkbox"]')) return;
-        head.parentElement.classList.toggle('is-open');
+    panelVariantsEl.querySelectorAll('.cds-color-toggle, .cds-color-name, .cds-color-dot').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        var group = el.closest('.cds-color-group');
+        if (group) group.classList.toggle('is-open');
       });
     });
 
     panelVariantsEl.querySelectorAll('[data-color-all]').forEach(function (cb) {
       cb.addEventListener('change', function () {
-        var color = cb.getAttribute('data-color-all');
-        var items = groups[color] || [];
+        var colorKey = decodeURIComponent(cb.getAttribute('data-color-all') || '');
+        var items = groups[colorKey] || [];
         var ids = new Set((draft.variants.selected_ids || []).map(Number));
         for (var j = 0; j < items.length; j++) {
           var v = items[j];
@@ -957,7 +1013,7 @@
       additional: [],
       public_additional: null,
       alignment: { h: 'center', v: 'center' },
-      pattern: { enabled: false, spacing_x: 1, spacing_y: 1, pattern_angle: 0 },
+      pattern: { enabled: false, mode: 'grid', spacing_x: 1, spacing_y: 1, pattern_angle: 0, offset: 0, rotation_step_horizontal: 0, rotation_step_vertical: 0 },
     };
     activeAssetKey = 'primary';
     renderStudioUi();
