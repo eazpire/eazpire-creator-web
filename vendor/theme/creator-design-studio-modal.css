@@ -192,6 +192,8 @@
   display: block;
   line-height: 0;
   flex-shrink: 1;
+  /* Chrome overlay is a stage sibling of the print zone — allow handles past the dashed box */
+  overflow: visible;
 }
 
 .cds-viewer__mock {
@@ -279,15 +281,22 @@
   -webkit-user-drag: none;
 }
 
+/* Sibling of print-zone on the stage (not inside zone-clip) — sized to unclipped design bounds */
 .cds-design-chrome {
   position: absolute;
   left: 0;
   top: 0;
-  width: 100%;
-  height: 100%;
+  width: 0;
+  height: 0;
   border: 2px solid #ef4444;
   box-sizing: border-box;
   pointer-events: none;
+  overflow: visible;
+  z-index: 8;
+}
+
+.cds-design-chrome[hidden] {
+  display: none !important;
 }
 
 .cds-design-chrome.is-visible {

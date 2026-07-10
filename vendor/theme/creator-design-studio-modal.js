@@ -67,6 +67,10 @@
   /** Manual scale ceiling (zone-width fraction). Overflow is clipped by the print-zone, not capped to contain. */
   var UI_SCALE_MAX = 2.5;
   var DEFAULT_TRANSFORM = { x: 0.5, y: 0.5, scale: 0.95, rotate: 0 };
+  /** After open/Set Default: shrink admin seed (often 0.95) to fit inside the print zone once the design image is measured. */
+  var pendingContainClampDefaults = false;
+  /** When true, refresh savedDraftJson after contain-clamp so open does not look dirty. */
+  var syncSavedAfterContainClamp = false;
 
   function Mi() {
     return window.CreatorMobileI18n || {};
@@ -130,6 +134,7 @@
    * product_mockup_defaults.placement_scale is often a legacy mockup bbox width (~0.35–0.55),
    * not Shop/Creator UI scale (zone-width fraction, typically ~0.95).
    * API already normalizes legacy rows to Shop-parity (x/y 0.5, scale 0.95); keep this as a client guard.
+   * Open/Set Default then contain-clamps that seed so tall designs fit inside the orange print zone.
    */
   function looksLikeLegacyPlacementScale(scale) {
     var s = Number(scale);
@@ -144,7 +149,7 @@
     var hit = map[key] || map.front || null;
     if (!hit || typeof hit !== 'object') return cloneTransform(DEFAULT_TRANSFORM);
     var scale = Number(hit.scale);
-    // Legacy mockup bbox scale → Shop open defaults (center + UI scale). Modern admin scale keeps exact x/y.
+    // Legacy mockup bbox scale → Shop open seed (center + 0.95). Contain-clamp runs after image measure.
     if (looksLikeLegacyPlacementScale(scale)) {
       return cloneTransform({
         x: DEFAULT_TRANSFORM.x,
@@ -331,10 +336,11 @@
     return dy > 0.01 && dy < 0.15;
   }
 
-  /** Apply admin placement defaults (open seed / Set Default). Does not invent contain-clamped scales. */
+  /** Apply admin placement defaults (open seed / Set Default). Contain-clamp runs after the design image is measured. */
   function applyAdminDefaultsToDraft(forceAll) {
     ensurePrintArea();
     var positions = enabledPositions();
+    var seeded = false;
     for (var i = 0; i < positions.length; i++) {
       var pos = positions[i];
       var bucket = ensurePositionBucket(pos);
@@ -346,6 +352,7 @@
         looksLikeMisMappedLegacyPlacement(bucket.primary)
       ) {
         bucket.primary = adminDefaultTransform(pos);
+        seeded = true;
       }
       // Keep non-front primary empty unless the user explicitly placed a design there.
       if (normPos(pos) !== 'front' && !bucket.primary_url && !bucket.primary_original_url) {
@@ -353,6 +360,60 @@
         bucket.primary_original_url = null;
       }
     }
+    if (seeded || forceAll) pendingContainClampDefaults = true;
+  }
+
+  /** True when transform is still the pre-clamp admin/Shop seed (center + admin scale). */
+  function shouldContainClampPrimary(tr, pos) {
+    if (!tr) return true;
+    if (isDefaultishTransform(tr)) return true;
+    var admin = adminDefaultTransform(pos);
+    var rot = Number(tr.rotate) || 0;
+    var adminRot = Number(admin.rotate) || 0;
+    if (Math.abs(rot - adminRot) > 1e-3) return false;
+    if (Math.abs(Number(tr.x) - Number(admin.x)) > 0.02) return false;
+    if (Math.abs(Number(tr.y) - Number(admin.y)) > 0.02) return false;
+    var scale = Number(tr.scale);
+    var adminScale = Number(admin.scale);
+    if (!Number.isFinite(scale) || !Number.isFinite(adminScale) || adminScale <= 0) return false;
+    // Only shrink the open seed — do not rewrite a custom smaller scale.
+    return Math.abs(scale - adminScale) < 0.02;
+  }
+
+  /**
+   * Shop parity: default open/reset uses min(adminScale, maxContainInZone).
+   * Manual scale afterward may exceed contain; overflow stays clipped to the orange zone.
+   */
+  function applyPendingContainClampDefaults() {
+    if (!pendingContainClampDefaults) return false;
+    if (!printZoneEl || printZoneEl.hidden || (printZoneEl.offsetWidth || 0) < 2) return false;
+    if (!designImgEl || !designImgEl.naturalWidth || !designImgEl.naturalHeight) return false;
+    var maxContain = maxContainScaleInZone();
+    if (!(maxContain > 0) || !Number.isFinite(maxContain)) return false;
+    ensurePrintArea();
+    var positions = enabledPositions();
+    for (var i = 0; i < positions.length; i++) {
+      var pos = positions[i];
+      var bucket = ensurePositionBucket(pos);
+      if (!shouldContainClampPrimary(bucket.primary, pos)) continue;
+      var admin = adminDefaultTransform(pos);
+      var seedScale = Number(admin.scale);
+      if (!Number.isFinite(seedScale) || seedScale <= 0) seedScale = 0.95;
+      // Round to 2 decimals so we do not re-trigger looksLikeClampedScaleArtifact on reopen.
+      bucket.primary = cloneTransform({
+        x: admin.x,
+        y: admin.y,
+        scale: Math.round(Math.min(seedScale, maxContain) * 100) / 100,
+        rotate: admin.rotate,
+      });
+    }
+    pendingContainClampDefaults = false;
+    if (syncSavedAfterContainClamp) {
+      savedDraftJson = draftJson();
+      syncSavedAfterContainClamp = false;
+      markDirtyUi();
+    }
+    return true;
   }
 
   function currentPosition() {
@@ -605,10 +666,33 @@
   }
 
   function syncSelectionChrome() {
-    if (!designChromeEl) return;
+    if (!designChromeEl || !viewerStageEl) return;
     var show = assetSelected && !cropping && !!activeAssetKey && designWrapEl && !designWrapEl.hidden;
-    designChromeEl.hidden = !show;
-    designChromeEl.classList.toggle('is-visible', show);
+    if (!show) {
+      designChromeEl.hidden = true;
+      designChromeEl.classList.remove('is-visible');
+      return;
+    }
+    // Pattern mode hides the design wrap image — chrome follows the wrap box when visible.
+    var wrap = designWrapEl;
+    if (!wrap || wrap.hidden) {
+      designChromeEl.hidden = true;
+      designChromeEl.classList.remove('is-visible');
+      return;
+    }
+    var dr = wrap.getBoundingClientRect();
+    var cr = viewerStageEl.getBoundingClientRect();
+    if (!dr.width || !dr.height) {
+      designChromeEl.hidden = true;
+      designChromeEl.classList.remove('is-visible');
+      return;
+    }
+    designChromeEl.style.left = dr.left - cr.left + 'px';
+    designChromeEl.style.top = dr.top - cr.top + 'px';
+    designChromeEl.style.width = dr.width + 'px';
+    designChromeEl.style.height = dr.height + 'px';
+    designChromeEl.hidden = false;
+    designChromeEl.classList.add('is-visible');
   }
 
   function applyTransformToDesignImg() {
@@ -734,6 +818,10 @@
     printZoneEl.hidden = false;
     if (printZoneClipEl) {
       printZoneClipEl.style.overflow = 'hidden';
+    }
+    // After mock + design are measurable: shrink open/Set Default seed to fit inside the zone.
+    if (applyPendingContainClampDefaults()) {
+      syncTransformInputs();
     }
     applyTransformToDesignImg();
     syncTransformInputs();
@@ -2102,6 +2190,7 @@
       by_position: byPos,
       __cdsMigrated: true,
     };
+    pendingContainClampDefaults = true;
     ensurePrimaryVisible();
     renderStudioUi();
     markDirtyUi();
@@ -2362,6 +2451,8 @@
       if (!draft.print_area.color_key) draft.print_area.color_key = resolveColorKey();
       // Seed unset positions with admin defaults (same as Reset); keep saved custom transforms.
       applyAdminDefaultsToDraft(false);
+      // Contain-clamp may finish after image load — keep open clean until then.
+      syncSavedAfterContainClamp = pendingContainClampDefaults;
       ensurePrimaryVisible();
       switchSettingsTab('design');
       renderStudioUi();
