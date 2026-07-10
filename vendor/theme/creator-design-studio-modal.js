@@ -3096,12 +3096,24 @@
 
   function currentPrimaryDesignUrl() {
     var bucket = currentBucket();
+    // Prefer stable original/preview URLs for Printify (not cache-busted display URLs).
     var url =
-      (bucket && bucket.primary_url) ||
-      (ctxData && ctxData.design_preview_url) ||
-      (ctxDesign && (ctxDesign.preview_url || ctxDesign.original_url)) ||
+      (ctxData && (ctxData.design_original_url || ctxData.design_preview_url)) ||
+      (ctxDesign && (ctxDesign.original_url || ctxDesign.preview_url)) ||
+      (bucket && (bucket.primary_original_url || bucket.primary_url)) ||
       '';
-    return String(url || '').trim();
+    url = normalizePersistedFileUrl(String(url || '').trim());
+    // Strip cache-bust query for Printify remote ingest.
+    try {
+      if (url) {
+        var u = new URL(url, window.location.href);
+        u.searchParams.delete('v');
+        u.searchParams.delete('_');
+        u.searchParams.delete('cb');
+        url = u.toString();
+      }
+    } catch (_) {}
+    return url;
   }
 
   function currentPlacementPayload() {
