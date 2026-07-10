@@ -751,9 +751,69 @@
     opts = opts || {};
     var n = opts.requiredLevel != null
       ? Number(opts.requiredLevel)
-      : (Number(node && node.min_level) || 2);
+      : (Number(node && (node.min_level != null ? node.min_level : node.mascot_min_level)) || 2);
     if (!Number.isFinite(n) || n < 1) n = 2;
     return tpl('creator.journey.level_required_n', 'Level {{ n }} required', { n: String(n) });
+  }
+
+  /** Shared lock badge for all unlock-tree cards (level / parent / prev tier / creator code). */
+  function lockBadgeLabel(node, opts) {
+    opts = opts || {};
+    var reason = opts.lockReason != null ? opts.lockReason : (node && node.locked_reason);
+    var levelLocked = !!opts.levelLocked || reason === 'level_required' ||
+      (!reason && node && isLevelLocked(node));
+    if (levelLocked || reason === 'level_required') {
+      return levelRequiredLabel(node, opts);
+    }
+    if (reason === 'prev_tier_required') {
+      return t('creator.journey.prev_tier_required_short', 'Previous tier required');
+    }
+    if (reason === 'prev_slot_required') {
+      return t('creator.journey.prev_slot_required', 'Previous slot required');
+    }
+    if (reason === 'parent_required') {
+      return t('creator.journey.parent_required_short', 'Parent required');
+    }
+    if (reason === 'creator_code_required') {
+      return t('creator.journey.creator_code_required', 'Creator code required');
+    }
+    return '';
+  }
+
+  function nodeVisuallyLocked(node, opts) {
+    opts = opts || {};
+    if (opts.seqBlocked) return true;
+    if (!node || node.unlocked) return false;
+    if (opts.levelLocked || isLevelLocked(node)) return true;
+    return !!node.locked_reason;
+  }
+
+  function resolveCardLockOpts(node, opts) {
+    opts = opts || {};
+    var levelLocked = !!opts.levelLocked || isLevelLocked(node);
+    var lockReason = opts.lockReason != null
+      ? opts.lockReason
+      : (opts.seqBlocked ? 'prev_slot_required' : (node && node.locked_reason) || null);
+    if (levelLocked && !lockReason) lockReason = 'level_required';
+    var visuallyLocked = nodeVisuallyLocked(node, {
+      levelLocked: levelLocked,
+      seqBlocked: !!opts.seqBlocked,
+      lockReason: lockReason
+    });
+    var label = visuallyLocked
+      ? lockBadgeLabel(node, {
+          levelLocked: levelLocked,
+          lockReason: lockReason,
+          requiredLevel: opts.requiredLevel
+        })
+      : '';
+    return {
+      levelLocked: levelLocked,
+      lockReason: lockReason,
+      visuallyLocked: visuallyLocked,
+      label: label,
+      titleAttr: label ? ' title="' + escapeHtml(label) + '"' : ''
+    };
   }
 
   function renderTreeCardFrame(node, opts) {
@@ -764,6 +824,7 @@
     var freePick = !!node.free_pick_eligible;
     var cost = nodeEffectiveCost(node);
     var levelLocked = !!opts.levelLocked;
+    var lockReason = opts.lockReason != null ? opts.lockReason : (node && node.locked_reason);
     // Unlock-ready (free pick or fully funded): Unlock button is enough — no FREE / progress badge.
     var unlockReady = freePick || (cost > 0 && committed + 1e-9 >= cost);
     var hasAction = !!opts.hasAction;
@@ -791,10 +852,17 @@
     var badgeHtml = '';
     if (node.unlocked) {
       badgeHtml = renderUnlockedBadgeHtml(node);
-    } else if (levelLocked) {
-      // Level gate: show required level instead of misleading EAZV progress (e.g. 0/200).
-      badgeHtml = '<span class="cj-tree-card__eaz-badge cj-tree-card__level-badge">' +
-        escapeHtml(levelRequiredLabel(node, opts)) + '</span>';
+    } else if (levelLocked || lockReason) {
+      // Locked: clear reason instead of misleading EAZV progress (e.g. 0/200).
+      var lockLabel = lockBadgeLabel(node, {
+        levelLocked: levelLocked,
+        lockReason: lockReason,
+        requiredLevel: opts.requiredLevel
+      });
+      if (lockLabel) {
+        badgeHtml = '<span class="cj-tree-card__eaz-badge cj-tree-card__level-badge">' +
+          escapeHtml(lockLabel) + '</span>';
+      }
     } else if (!freePick && !unlockReady) {
       // Partial commits keep the EAZV progress badge (e.g. 0/80).
       badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
@@ -832,13 +900,16 @@
   function renderProductTreeCard(node, opts) {
     opts = opts || {};
     var sectionLocked = !!opts.sectionLocked;
-    var levelLocked = sectionLocked || isLevelLocked(node);
-    var act = cardActionState(node, levelLocked);
+    var lock = resolveCardLockOpts(node, {
+      levelLocked: sectionLocked || isLevelLocked(node),
+      requiredLevel: opts.requiredLevel
+    });
+    var act = cardActionState(node, lock.levelLocked);
     var expandable = !!opts.expandable && !!node.unlocked;
     var expanded = expandable && !!expandedProductKeys[node.product_key || node.node_key];
 
     var cls = 'cj-tree-card cj-tree-card--product';
-    if (levelLocked) cls += ' is-level-locked';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
@@ -850,11 +921,12 @@
       : '';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node, { requiredLevel: opts.requiredLevel })) + '"' : '') + '>' +
+      lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
-        levelLocked: levelLocked,
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason,
         requiredLevel: opts.requiredLevel
       }) +
       act.actionHtml + '</div></article>';
@@ -880,12 +952,12 @@
   }
 
   function renderVariantColorCard(node) {
-    var levelLocked = isLevelLocked(node);
-    var act = cardActionState(node, levelLocked);
+    var lock = resolveCardLockOpts(node);
+    var act = cardActionState(node, lock.levelLocked);
     var expandable = !!node.unlocked;
     var expanded = expandable && !!expandedColorKeys[node.node_key];
     var cls = 'cj-tree-card cj-tree-card--variant-color';
-    if (levelLocked) cls += ' is-level-locked';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
@@ -899,31 +971,36 @@
       : '';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
+      lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction, levelLocked: levelLocked }) +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason
+      }) +
       act.actionHtml + '</div></article>';
   }
 
   function renderVariantSizeCard(node) {
-    var levelLocked = isLevelLocked(node);
-    var act = cardActionState(node, levelLocked);
+    var lock = resolveCardLockOpts(node);
+    var act = cardActionState(node, lock.levelLocked);
     var sizeLabel = (node.metadata && node.metadata.size) || nodeTitle(node);
     var cls = 'cj-tree-card cj-tree-card--variant-size';
-    if (levelLocked) cls += ' is-level-locked';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked is-selected';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' +
-      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
+      lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         sizeLabel: sizeLabel,
         hideTitle: true,
-        levelLocked: levelLocked
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason
       }) +
       act.actionHtml + '</div></article>';
   }
@@ -1065,8 +1142,8 @@
 
   function renderMarketCard(node, opts) {
     opts = opts || {};
-    var levelLocked = isLevelLocked(node);
-    var act = cardActionState(node, levelLocked);
+    var lock = resolveCardLockOpts(node);
+    var act = cardActionState(node, lock.levelLocked);
     var isContinent = isMarketContinentNode(node);
     var expandable = isContinent && !!node.unlocked;
     var contCode = isContinent ? marketContinentCode(node) : '';
@@ -1074,7 +1151,7 @@
     var cls = 'cj-tree-card cj-tree-card--market';
     if (isContinent) cls += ' cj-tree-card--market-continent';
     else cls += ' cj-tree-card--market-country';
-    if (levelLocked) cls += ' is-level-locked';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
@@ -1088,13 +1165,14 @@
       : '';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
+      lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         flagMedia: !isContinent,
         continentMedia: isContinent,
-        levelLocked: levelLocked
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason
       }) +
       act.actionHtml + '</div></article>';
   }
@@ -1225,9 +1303,17 @@
   }
 
   function renderGenericSkillTree(nodes) {
-    // Nested channel regions are rendered under their parent expand panel only.
-    var topLevel = (nodes || []).filter(function (n) { return !n.parent_key; });
-    var split = splitUnlockedLocked(topLevel);
+    var list = nodes || [];
+    var category = list[0] && list[0].category;
+    // Royalty tiers chain via parent_key (sequence), not a UI nest — show every tier.
+    var showSequential = category === 'royalty';
+    var visible = showSequential
+      ? list.slice().sort(function (a, b) {
+          return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0) ||
+            (Number(a.min_level) || 0) - (Number(b.min_level) || 0);
+        })
+      : list.filter(function (n) { return !n.parent_key; });
+    var split = splitUnlockedLocked(visible);
     var dispLv = displayLevel();
     var html = '';
 
@@ -1236,6 +1322,18 @@
         renderSectionHead(t('creator.journey.unlocked_skills', 'Unlocked'), '', '') +
         renderCarouselShell(split.unlocked.map(renderTreeCard).join('')) +
         '</section>';
+    }
+
+    if (showSequential) {
+      if (split.locked.length) {
+        html += '<section class="cj-product-section">' +
+          renderSectionHead(t('creator.journey.available_skills', 'Available'), '', '') +
+          renderCarouselShell(split.locked.map(renderTreeCard).join('')) +
+          '</section>';
+      } else if (!split.unlocked.length) {
+        html += '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+      }
+      return html;
     }
 
     var rows = groupNodesByLevel(split.locked);
@@ -1273,15 +1371,15 @@
 
   function renderChannelCard(node, opts) {
     opts = opts || {};
-    var levelLocked = isLevelLocked(node);
-    var act = cardActionState(node, levelLocked);
+    var lock = resolveCardLockOpts(node);
+    var act = cardActionState(node, lock.levelLocked);
     var isGroup = isChannelGroupNode(node);
     var children = isGroup ? channelChildNodes(node.node_key) : [];
     var expandable = isGroup && !!node.unlocked && children.length > 0;
     var expanded = expandable && !!expandedChannelKeys[node.node_key];
     var cls = 'cj-tree-card cj-tree-card--channel';
     if (isGroup) cls += ' cj-tree-card--channel-group';
-    if (levelLocked) cls += ' is-level-locked';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
@@ -1295,9 +1393,13 @@
       : '';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
+      lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction, levelLocked: levelLocked }) +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason
+      }) +
       act.actionHtml + '</div></article>';
   }
 
@@ -1394,16 +1496,16 @@
 
   function renderDesignSlotCard(node, opts) {
     opts = opts || {};
-    var levelLocked = isLevelLocked(node);
-    var act = cardActionState(node, levelLocked);
+    var seqBlocked = !!opts.seqBlocked;
+    var lock = resolveCardLockOpts(node, { seqBlocked: seqBlocked });
+    var act = cardActionState(node, lock.levelLocked);
     var isLevel = isDesignSlotLevelNode(node);
     var children = isLevel ? designSlotChildren(node) : [];
     var expandable = isLevel && !!node.unlocked && children.some(function (s) { return !s.unlocked; });
     var expanded = expandable && !!expandedSlotLevelKeys[node.node_key];
-    var seqBlocked = !!opts.seqBlocked;
     var cls = 'cj-tree-card cj-tree-card--design-slot';
     if (isLevel) cls += ' cj-tree-card--design-slot-level';
-    if (levelLocked || seqBlocked) cls += ' is-level-locked';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady && !seqBlocked) cls += ' is-ready';
     if (act.hasAction && !seqBlocked) cls += ' has-action';
@@ -1418,9 +1520,13 @@
 
     var actionHtml = seqBlocked ? '' : act.actionHtml;
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
+      lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: !!actionHtml, levelLocked: levelLocked }) +
+      renderTreeCardFrame(node, {
+        hasAction: !!actionHtml,
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason
+      }) +
       actionHtml + '</div></article>';
   }
 
@@ -1499,20 +1605,24 @@
     if (node.category === 'market') return renderMarketCard(node);
     if (node.category === 'channel') return renderChannelCard(node);
     if (node.category === 'design_slot') return renderDesignSlotCard(node);
-    var levelLocked = isLevelLocked(node);
-    var act = cardActionState(node, levelLocked);
+    var lock = resolveCardLockOpts(node);
+    var act = cardActionState(node, lock.levelLocked);
 
     var cls = 'cj-tree-card';
-    if (levelLocked) cls += ' is-level-locked';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' +
-      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
+      lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction, levelLocked: levelLocked }) +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason
+      }) +
       act.actionHtml + '</div></article>';
   }
 
@@ -1700,22 +1810,23 @@
     var badge = meta;
     if (isActive) badge = eazEconomyI18n('active', 'Active');
     else if (status === 'kickstarter_locked') {
-      badge = meta
-        ? meta + ' · ' + eazEconomyI18n('kickstarter_locked', 'Kickstarter')
-        : eazEconomyI18n('kickstarter_locked', 'Kickstarter');
+      badge = eazEconomyI18n('kickstarter_locked', 'Kickstarter');
+    } else if (status === 'axis_locked') {
+      badge = eazEconomyI18n('axis_locked', 'Unlock category first');
+    } else if (status === 'locked') {
+      badge = levelRequiredLabel({ min_level: node.mascot_min_level || 1 });
     }
-    else if (status === 'axis_locked') badge = eazEconomyI18n('axis_locked', 'Unlock category first');
-    else if (status === 'locked') badge = eazEconomyI18n('locked', 'Locked');
 
     var actionHtml = renderEazEconomyActionButton(node, 'cj-tree-card__action cj-btn');
+    var titleAttr = (isLocked && badge) ? ' title="' + escapeHtml(badge) + '"' : '';
 
     var statusHtml = isActive ? '<span class="cj-tree-card__status" aria-hidden="true">✓</span>' : '';
-    return '<article class="' + cls + '" data-eaz-skill="' + escapeHtml(node.skill_key) + '">' +
+    return '<article class="' + cls + '" data-eaz-skill="' + escapeHtml(node.skill_key) + '"' + titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       '<div class="cj-tree-card__frame' + (canAct ? ' cj-tree-card__frame--attached' : '') + '">' +
       '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>' +
       '<div class="cj-tree-card__media"><div class="cj-tree-card__img cj-tree-card__img--placeholder cj-tree-card__img--eaz" aria-hidden="true"></div></div>' +
-      '<span class="cj-tree-card__eaz-badge">' + escapeHtml(badge) + '</span>' +
+      '<span class="cj-tree-card__eaz-badge' + (isLocked ? ' cj-tree-card__level-badge' : '') + '">' + escapeHtml(badge) + '</span>' +
       statusHtml + '</div>' + actionHtml + '</div></article>';
   }
 
@@ -1773,13 +1884,17 @@
       if (isActive) cls += ' is-active';
       if (canAct) cls += ' is-ready';
       var metaParts = [];
-      metaParts.push(tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(lv) }));
-      if (bonus) metaParts.push(bonus);
-      if (node.activation_cost_eaz > 0 && !isActive) {
-        var paid = Number(node.eaz_paid) || 0;
-        var cost = Number(node.activation_cost_eaz) || 0;
-        if (paid > 0 && paid < cost) metaParts.push(formatEazBadge(paid, cost, false, false));
-        else metaParts.push(cost + ' EAZV');
+      if (status === 'locked') {
+        metaParts.push(levelRequiredLabel({ min_level: lv }));
+      } else {
+        metaParts.push(tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(lv) }));
+        if (bonus) metaParts.push(bonus);
+        if (node.activation_cost_eaz > 0 && !isActive) {
+          var paid = Number(node.eaz_paid) || 0;
+          var cost = Number(node.activation_cost_eaz) || 0;
+          if (paid > 0 && paid < cost) metaParts.push(formatEazBadge(paid, cost, false, false));
+          else metaParts.push(cost + ' EAZV');
+        }
       }
       var actionHtml = renderEazEconomyActionButton(node, 'cj-eaz-economy__subskill-action cj-btn');
       if (!actionHtml && isActive) {
@@ -1787,6 +1902,12 @@
       } else if (!actionHtml && status === 'kickstarter_locked') {
         actionHtml = '<span class="cj-eaz-economy__subskill-lock">' +
           escapeHtml(eazEconomyI18n('kickstarter_locked', 'Kickstarter')) + '</span>';
+      } else if (!actionHtml && status === 'axis_locked') {
+        actionHtml = '<span class="cj-eaz-economy__subskill-lock">' +
+          escapeHtml(eazEconomyI18n('axis_locked', 'Unlock category first')) + '</span>';
+      } else if (!actionHtml && status === 'locked') {
+        actionHtml = '<span class="cj-eaz-economy__subskill-lock">' +
+          escapeHtml(levelRequiredLabel({ min_level: lv })) + '</span>';
       }
       return '<li class="' + cls + '" data-eaz-skill="' + escapeHtml(node.skill_key) + '">' +
         '<div class="cj-eaz-economy__subskill-main">' +
@@ -1829,10 +1950,7 @@
           ? eazEconomyI18n('active', 'Active') + ' · ' + childBonus
           : eazEconomyI18n('active', 'Active');
       } else if (status === 'locked') {
-        badge = eazEconomyI18n('locked', 'Locked');
-        if (axisNode.mascot_min_level) {
-          badge += ' · ' + tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(axisNode.mascot_min_level) });
-        }
+        badge = levelRequiredLabel({ min_level: axisNode.mascot_min_level || 1 });
       } else {
         badge = eazSkillMeta(axisNode) || eazEconomyI18n('locked', 'Locked');
       }
