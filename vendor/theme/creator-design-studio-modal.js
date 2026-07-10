@@ -448,6 +448,46 @@
     return String(pos || 'front').trim().toLowerCase().replace(/\s+/g, '_');
   }
 
+  /** Match backend shop-config color keys (`Black` → `black`, `Sport Grey` → `sport_grey`). */
+  function normColorKey(s) {
+    return String(s || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+  }
+
+  function mockHasUrl(entry) {
+    if (!entry || typeof entry !== 'object') return false;
+    return !!(entry.editor_mock_url || entry.clean_mock_url || entry.mock_url || entry.shop_mock_url);
+  }
+
+  function mockCanvasUrl(entry) {
+    if (!entry) return '';
+    return entry.editor_mock_url || entry.clean_mock_url || entry.mock_url || entry.shop_mock_url || '';
+  }
+
+  /** Find mocks_by_color key for a variant label / draft color_key (case + slug tolerant). */
+  function findMocksColorKey(colorName) {
+    var cfg = studioConfig();
+    var mocks = cfg.mocks_by_color || {};
+    var want = normColorKey(colorName);
+    if (!want) return '';
+    if (mocks[colorName] && mocks[colorName].length) return colorName;
+    if (mocks[want] && mocks[want].length) return want;
+    var keys = Object.keys(mocks);
+    for (var i = 0; i < keys.length; i++) {
+      if (normColorKey(keys[i]) === want && mocks[keys[i]].length) return keys[i];
+    }
+    for (var j = 0; j < keys.length; j++) {
+      var k = normColorKey(keys[j]);
+      if (!k || !mocks[keys[j]].length) continue;
+      if (k === want || k.indexOf(want) !== -1 || want.indexOf(k) !== -1) return keys[j];
+    }
+    return want || String(colorName || '').trim();
+  }
+
   function formatPlacementLabel(pos) {
     return normPos(pos)
       .replace(/_/g, ' ')
@@ -720,17 +760,27 @@
   function resolveColorKey() {
     var cfg = studioConfig();
     var pa = ensurePrintArea();
-    var ck = String(pa.color_key || cfg.color_key_resolved || 'default').trim();
     var mocks = cfg.mocks_by_color || {};
-    if (mocks[ck] && mocks[ck].length) return ck;
-    if (cfg.color_key_resolved && mocks[cfg.color_key_resolved] && mocks[cfg.color_key_resolved].length) {
-      return cfg.color_key_resolved;
+    var preferred = String(pa.color_key || '').trim();
+    if (preferred) {
+      var hit = findMocksColorKey(preferred);
+      if (hit && mocks[hit] && mocks[hit].length) {
+        if (pa.color_key !== hit) pa.color_key = hit;
+        return hit;
+      }
+      // Keep explicit user choice even if mocks are missing — do not silently snap to white.
+      return hit || preferred;
+    }
+    var resolved = String(cfg.color_key_resolved || '').trim();
+    if (resolved) {
+      var resolvedHit = findMocksColorKey(resolved);
+      if (resolvedHit && mocks[resolvedHit] && mocks[resolvedHit].length) return resolvedHit;
     }
     var keys = Object.keys(mocks);
     for (var i = 0; i < keys.length; i++) {
       if (mocks[keys[i]] && mocks[keys[i]].length) return keys[i];
     }
-    return ck || 'default';
+    return resolved || 'default';
   }
 
   function mockEntryForPosition(pos) {
@@ -739,13 +789,15 @@
     var list = (cfg.mocks_by_color && cfg.mocks_by_color[ck]) || [];
     var want = normPos(pos);
     for (var i = 0; i < list.length; i++) {
-      if (normPos(list[i].position) === want && list[i].mock_url) return list[i];
+      if (normPos(list[i].position) === want && mockHasUrl(list[i])) return list[i];
     }
+    // Only cross-color fallback when the selected color has no mocks at all (initial load).
+    if (list.length) return null;
     var allKeys = Object.keys(cfg.mocks_by_color || {});
     for (var k = 0; k < allKeys.length; k++) {
       var alt = cfg.mocks_by_color[allKeys[k]] || [];
       for (var m = 0; m < alt.length; m++) {
-        if (normPos(alt[m].position) === want && alt[m].mock_url) return alt[m];
+        if (normPos(alt[m].position) === want && mockHasUrl(alt[m])) return alt[m];
       }
     }
     return null;
@@ -1182,7 +1234,7 @@
     renderPositionBar();
     var pos = currentPosition();
     var mock = mockEntryForPosition(pos);
-    var mockUrl = mock && (mock.editor_mock_url || mock.clean_mock_url || mock.mock_url);
+    var mockUrl = mockCanvasUrl(mock);
 
     setLayoutReady(false);
 
@@ -1637,19 +1689,7 @@
   }
 
   function resolveMockColorKeyForVariantColor(colorName) {
-    var cfg = studioConfig();
-    var mocks = cfg.mocks_by_color || {};
-    var want = String(colorName || '').trim().toLowerCase();
-    if (mocks[colorName] && mocks[colorName].length) return colorName;
-    var keys = Object.keys(mocks);
-    for (var i = 0; i < keys.length; i++) {
-      if (String(keys[i]).trim().toLowerCase() === want && mocks[keys[i]].length) return keys[i];
-    }
-    for (var j = 0; j < keys.length; j++) {
-      var k = String(keys[j]).toLowerCase();
-      if ((k.indexOf(want) !== -1 || want.indexOf(k) !== -1) && mocks[keys[j]].length) return keys[j];
-    }
-    return colorName;
+    return findMocksColorKey(colorName) || String(colorName || '').trim();
   }
 
   function switchMockColor(colorName) {
@@ -1658,6 +1698,12 @@
     renderViewer();
     markDirtyUi();
   }
+
+  /**
+   * Preview color = color swatch/dot (and selecting sizes for a color).
+   * Expand/collapse = name / chevron only — not the swatch.
+   * Color-all checkbox selects sizes for publish AND previews that color when checked on.
+   */
 
   function renderVariantSettingsPanel() {
     if (!panelVariantsEl || !ctxData) return;
@@ -1702,6 +1748,12 @@
     }
 
     var activeColor = resolveColorKey();
+    var activeNorm = normColorKey(activeColor);
+    var openColors = {};
+    panelVariantsEl.querySelectorAll('.cds-color-group.is-open').forEach(function (el) {
+      var ck = decodeURIComponent(el.getAttribute('data-color-group') || '');
+      if (ck) openColors[ck] = true;
+    });
 
     for (var g = 0; g < keys.length; g++) {
       var color = keys[g];
@@ -1717,11 +1769,11 @@
       var allChecked = unlockedItems.length > 0 && selectedInColor.length === unlockedItems.length;
       var someChecked = selectedInColor.length > 0;
       var sample = items[0] || { color: color };
+      var mockKeyForColor = resolveMockColorKeyForVariantColor(color);
       var isActiveColor =
-        String(activeColor).toLowerCase() === String(color).toLowerCase() ||
-        String(resolveMockColorKeyForVariantColor(color)).toLowerCase() ===
-          String(activeColor).toLowerCase();
-      var openByDefault = g === 0;
+        activeNorm &&
+        (normColorKey(color) === activeNorm || normColorKey(mockKeyForColor) === activeNorm);
+      var openByDefault = isActiveColor || openColors[color] || (g === 0 && !activeNorm);
 
       html +=
         '<div class="cds-color-group' +
@@ -1825,6 +1877,8 @@
           else ids.delete(Number(v.id));
         }
         draft.variants.selected_ids = Array.from(ids);
+        // Checking a color for publish also previews that mock (unchecking does not change preview).
+        if (cb.checked) switchMockColor(colorKey);
         renderVariantSettingsPanel();
         markDirtyUi();
       });
@@ -1837,6 +1891,13 @@
         if (inp.checked) ids.add(id);
         else ids.delete(id);
         draft.variants.selected_ids = Array.from(ids);
+        if (inp.checked) {
+          var row = inp.closest('.cds-color-group');
+          var colorFromRow = row
+            ? decodeURIComponent(row.getAttribute('data-color-group') || '')
+            : '';
+          if (colorFromRow) switchMockColor(colorFromRow);
+        }
         renderVariantSettingsPanel();
         markDirtyUi();
       });
