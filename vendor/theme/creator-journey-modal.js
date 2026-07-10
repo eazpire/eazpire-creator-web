@@ -608,18 +608,21 @@
     return { starter: starter, preview: preview, offline: offline };
   }
 
-  function renderUnlockedStrip(nodes) {
-    var unlocked = (nodes || []).filter(function (n) { return n.unlocked; });
-    if (!unlocked.length) return '';
-    return '<div class="cj-tree-unlocked-strip" role="list" aria-label="' + escapeHtml(t('creator.journey.unlocked', 'Unlocked')) + '">' +
-      unlocked.map(function (n) {
-        var img = nodeImageUrl(n);
-        var imgHtml = img
-          ? '<img class="cj-tree-unlocked-chip__img" src="' + escapeHtml(img) + '" alt="" loading="lazy">'
-          : '<span class="cj-tree-unlocked-chip__img cj-tree-unlocked-chip__img--ph" aria-hidden="true"></span>';
-        return '<div class="cj-tree-unlocked-chip" role="listitem">' + imgHtml +
-          '<span class="cj-tree-unlocked-chip__label">' + escapeHtml(nodeTitle(n)) + '</span></div>';
-      }).join('') + '</div>';
+  function splitUnlockedLocked(nodes) {
+    var unlocked = [];
+    var locked = [];
+    (nodes || []).forEach(function (n) {
+      if (n && n.unlocked) unlocked.push(n);
+      else locked.push(n);
+    });
+    return { unlocked: unlocked, locked: locked };
+  }
+
+  function renderSectionHead(title, subtitle, hintHtml) {
+    var sub = subtitle ? '<p class="cj-product-section__sub">' + escapeHtml(subtitle) + '</p>' : '';
+    return '<div class="cj-product-section__head">' +
+      '<h3 class="cj-product-section__title">' + escapeHtml(title) + '</h3>' +
+      sub + (hintHtml || '') + '</div>';
   }
 
   function formatEazBadge(committed, cost, unlocked, freePick) {
@@ -935,14 +938,14 @@
       '</div></div>';
   }
 
-  function renderCarouselSection(title, subtitle, nodes, sectionLocked) {
+  function renderCarouselSection(title, subtitle, nodes, sectionLocked, opts) {
+    opts = opts || {};
     if (!nodes.length) return '';
-    var freeProductHint = !sectionLocked && nodes.some(function (n) { return n.free_pick_eligible; })
+    var freeProductHint = !sectionLocked && !opts.skipFreeHint && nodes.some(function (n) { return n.free_pick_eligible; })
       ? '<p class="cj-product-section__hint">' +
         escapeHtml(t('creator.journey.free_pick_product_hint', 'One free starter product — pick any. Extra products cost EAZV.')) +
         '</p>'
       : '';
-    var sub = subtitle ? '<p class="cj-product-section__sub">' + escapeHtml(subtitle) + '</p>' : '';
     var cardsHtml = '';
     var expandHtml = '';
     nodes.forEach(function (n) {
@@ -952,10 +955,10 @@
         expandHtml += renderSoftstyleExpandPanel(n);
       }
     });
-    return '<section class="cj-product-section' + (sectionLocked ? ' is-locked' : '') + '">' +
-      '<div class="cj-product-section__head">' +
-      '<h3 class="cj-product-section__title">' + escapeHtml(title) + '</h3>' + sub + freeProductHint +
-      '</div>' +
+    var sectionCls = 'cj-product-section' + (sectionLocked ? ' is-locked' : '') +
+      (opts.unlockedRow ? ' cj-unlocked-skills' : '');
+    return '<section class="' + sectionCls + '">' +
+      renderSectionHead(title, subtitle, freeProductHint) +
       renderCarouselShell(cardsHtml) +
       expandHtml + '</section>';
   }
@@ -964,28 +967,41 @@
     var split = splitProductNodes(nodes);
     var secs = productSections();
     var dispLv = displayLevel();
-    var html = renderUnlockedStrip(nodes);
-    html += '<div class="cj-product-sections">';
+    var unlocked = (nodes || []).filter(function (n) { return n.unlocked; });
+    var lockedStarter = split.starter.filter(function (n) { return !n.unlocked; });
+    var lockedPreview = split.preview.filter(function (n) { return !n.unlocked; });
+    var lockedOffline = split.offline.filter(function (n) { return !n.unlocked; });
+
+    var html = '<div class="cj-product-sections">';
+    if (unlocked.length) {
+      html += renderCarouselSection(
+        t('creator.journey.unlocked_skills', 'Unlocked'),
+        '',
+        unlocked,
+        false,
+        { unlockedRow: true, skipFreeHint: true }
+      );
+    }
     html += renderCarouselSection(
       t('creator.journey.starter_products', 'Starter Products'),
       '',
-      split.starter,
+      lockedStarter,
       false
     );
     html += renderCarouselSection(
       tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(secs.preview) }),
       '',
-      split.preview,
+      lockedPreview,
       dispLv < secs.preview
     );
     html += renderCarouselSection(
       tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(secs.premium) }),
       t('creator.journey.product_premium_hint', 'Premium products available at this level'),
-      split.offline,
+      lockedOffline,
       dispLv < secs.premium
     );
     html += '</div>';
-    if (!split.starter.length && !split.preview.length && !split.offline.length) {
+    if (!unlocked.length && !lockedStarter.length && !lockedPreview.length && !lockedOffline.length) {
       html = '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
     }
     return html;
@@ -1060,54 +1076,121 @@
         '</p></div></div>';
     }
 
+    var freeCountryHint = countries.some(function (c) { return c.free_pick_eligible; })
+      ? '<p class="cj-variant-panel__hint">' +
+        escapeHtml(t('creator.journey.free_pick_country_hint', 'One free country pick for this continent — choose any. Extra countries cost EAZV.')) +
+        '</p>'
+      : '';
+
     return '<div class="cj-variant-branch cj-market-branch" data-cj-market-branch="' + escapeHtml(cont) + '">' +
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
       '<div class="cj-variant-panel" data-cj-market-panel="' + escapeHtml(cont) + '">' +
       '<h4 class="cj-variant-panel__title">' +
       escapeHtml(t('creator.journey.market_countries_title', 'Countries')) +
       ' · ' + escapeHtml(nodeTitle(continentNode)) + '</h4>' +
+      freeCountryHint +
       renderCarouselShell(countries.map(function (n) { return renderMarketCard(n); }).join('')) +
       '</div></div>';
   }
 
-  function renderMarketTree(nodes) {
-    var continents = marketContinentNodes(nodes);
-    var unlockedCountries = (nodes || []).filter(function (n) {
-      return isMarketCountryNode(n) && n.unlocked;
-    });
-    var html = renderUnlockedStrip(unlockedCountries.length ? unlockedCountries : continents.filter(function (n) {
-      return n.unlocked;
-    }));
-
-    if (!continents.length) {
-      // Fallback: flat list if catalog not yet migrated
-      var flat = (nodes || []).filter(isMarketCountryNode);
-      if (!flat.length) {
-        return html + '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
-      }
-      html += '<p class="cj-market-hint">' +
-        escapeHtml(t('creator.journey.market_hint', 'Unlock a continent first, then expand it to unlock individual countries. Same EAZV cost for every continent and every country.')) +
-        '</p>';
-      html += renderCarouselShell(flat.map(function (n) { return renderMarketCard(n); }).join(''));
-      return html;
-    }
-
-    html += '<p class="cj-market-hint">' +
-      escapeHtml(t('creator.journey.market_hint', 'Unlock a continent first, then expand it to unlock individual countries. Same EAZV cost for every continent and every country.')) +
-      '</p>';
-    html += '<h3 class="cj-product-section__title">' +
-      escapeHtml(t('creator.journey.market_continents_title', 'Continents')) + '</h3>';
-
+  function renderMarketContinentRow(title, continents, allMarketNodes, opts) {
+    opts = opts || {};
+    if (!continents.length) return '';
+    var freeContinentHint = continents.some(function (n) { return n.free_pick_eligible; })
+      ? '<p class="cj-product-section__hint">' +
+        escapeHtml(t('creator.journey.free_pick_continent_hint', 'One free continent — pick any. Extra continents cost EAZV.')) +
+        '</p>'
+      : '';
     var cardsHtml = '';
     var expandHtml = '';
     continents.forEach(function (n) {
       cardsHtml += renderMarketCard(n);
       if (n.unlocked && expandedContinentKeys[marketContinentCode(n)]) {
-        expandHtml += renderContinentExpandPanel(n, nodes);
+        expandHtml += renderContinentExpandPanel(n, allMarketNodes);
       }
     });
-    html += renderCarouselShell(cardsHtml);
-    html += expandHtml;
+    var sectionCls = 'cj-product-section' + (opts.unlockedRow ? ' cj-unlocked-skills' : '');
+    return '<section class="' + sectionCls + '">' +
+      renderSectionHead(title, '', freeContinentHint) +
+      renderCarouselShell(cardsHtml) +
+      expandHtml + '</section>';
+  }
+
+  function renderMarketTree(nodes) {
+    var continents = marketContinentNodes(nodes);
+    var hint = '<p class="cj-market-hint">' +
+      escapeHtml(t('creator.journey.market_hint', 'Unlock a continent first, then expand it to unlock individual countries.')) +
+      '</p>';
+
+    if (!continents.length) {
+      // Fallback: flat country list if catalog not yet migrated
+      var flat = (nodes || []).filter(isMarketCountryNode);
+      if (!flat.length) {
+        return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+      }
+      var flatSplit = splitUnlockedLocked(flat);
+      var htmlFlat = hint;
+      if (flatSplit.unlocked.length) {
+        htmlFlat += '<section class="cj-product-section cj-unlocked-skills">' +
+          renderSectionHead(t('creator.journey.unlocked_skills', 'Unlocked'), '', '') +
+          renderCarouselShell(flatSplit.unlocked.map(function (n) { return renderMarketCard(n); }).join('')) +
+          '</section>';
+      }
+      if (flatSplit.locked.length) {
+        htmlFlat += '<section class="cj-product-section">' +
+          renderSectionHead(t('creator.journey.available_skills', 'Available'), '', '') +
+          renderCarouselShell(flatSplit.locked.map(function (n) { return renderMarketCard(n); }).join('')) +
+          '</section>';
+      }
+      return htmlFlat;
+    }
+
+    var unlocked = continents.filter(function (n) { return n.unlocked; });
+    var locked = continents.filter(function (n) { return !n.unlocked; });
+    var html = hint;
+    html += '<div class="cj-product-sections">';
+    html += renderMarketContinentRow(
+      t('creator.journey.unlocked_skills', 'Unlocked'),
+      unlocked,
+      nodes,
+      { unlockedRow: true }
+    );
+    html += renderMarketContinentRow(
+      t('creator.journey.market_continents_title', 'Continents'),
+      locked,
+      nodes,
+      {}
+    );
+    html += '</div>';
+    return html;
+  }
+
+  function renderGenericSkillTree(nodes) {
+    var split = splitUnlockedLocked(nodes);
+    var dispLv = displayLevel();
+    var html = '';
+
+    if (split.unlocked.length) {
+      html += '<section class="cj-product-section cj-unlocked-skills">' +
+        renderSectionHead(t('creator.journey.unlocked_skills', 'Unlocked'), '', '') +
+        renderCarouselShell(split.unlocked.map(renderTreeCard).join('')) +
+        '</section>';
+    }
+
+    var rows = groupNodesByLevel(split.locked);
+    if (!rows.length) {
+      if (!split.unlocked.length) {
+        html += '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+      }
+      return html;
+    }
+
+    html += '<div class="cj-tree-levels">' + rows.map(function (row) {
+      var rowLocked = row.level > dispLv;
+      return '<section class="cj-level-row' + (rowLocked ? ' is-locked' : '') + '" data-level="' + row.level + '">' +
+        '<div class="cj-level-row__label">' + escapeHtml(tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(row.level) })) + '</div>' +
+        '<div class="cj-level-row__cards">' + row.nodes.map(renderTreeCard).join('') + '</div></section>';
+    }).join('') + '</div>';
     return html;
   }
 
@@ -1374,8 +1457,15 @@
       '</div>' + actionHtml + '</article>';
   }
 
+  function eazAxisIsActive(axis, axisNode, data) {
+    if (axis === 'kickstarter') return !!(data && data.kickstarter_redeemed);
+    if (!axisNode) return false;
+    var status = axisNode.status || 'locked';
+    return status === 'active' || status === 'grandfathered';
+  }
+
   function renderEazEconomyExpandedPanel(data, axis, axisNode, tabNodes) {
-    var html = '<div class="cj-eaz-economy__expand-panel" data-expanded-axis="' + escapeHtml(axis) + '">';
+    var html = '<div class="cj-eaz-economy__expand-panel cj-variant-panel" data-expanded-axis="' + escapeHtml(axis) + '">';
     if (axis === 'kickstarter') {
       html += renderEazEconomyKickstarterSection(data);
       html += '<p class="cj-eaz-economy__expand-label">' +
@@ -1396,10 +1486,56 @@
       return html;
     }
 
-    html += '<p class="cj-eaz-economy__expand-label">' +
-      escapeHtml(t('creator.eaz_economy.subskills_label', 'Skills in this category')) + '</p>';
-    html += renderEazEconomySubSkillList(tabNodes);
+    var activeSkills = [];
+    var lockedSkills = [];
+    (tabNodes || []).forEach(function (node) {
+      var status = node.status || 'locked';
+      if (status === 'active' || status === 'grandfathered') activeSkills.push(node);
+      else lockedSkills.push(node);
+    });
+
+    if (activeSkills.length) {
+      html += '<p class="cj-eaz-economy__expand-label">' +
+        escapeHtml(t('creator.journey.unlocked_skills', 'Unlocked')) + '</p>';
+      html += renderEazEconomySubSkillList(activeSkills);
+    }
+    if (lockedSkills.length) {
+      html += '<p class="cj-eaz-economy__expand-label">' +
+        escapeHtml(t('creator.journey.available_skills', 'Available')) + '</p>';
+      html += renderEazEconomySubSkillList(lockedSkills);
+    }
+    if (!activeSkills.length && !lockedSkills.length) {
+      html += '<p class="cj-eaz-economy__expand-label">' +
+        escapeHtml(t('creator.eaz_economy.subskills_label', 'Skills in this category')) + '</p>';
+      html += renderEazEconomySubSkillList(tabNodes);
+    }
     html += '</div>';
+    return html;
+  }
+
+  function renderEazEconomyAxisRow(axes, axisByTab, data, opts) {
+    opts = opts || {};
+    if (!axes.length) return '';
+    var expanded = eazEconomyExpandedAxis;
+    var html = '<section class="cj-product-section' + (opts.unlockedRow ? ' cj-unlocked-skills' : '') + '">';
+    html += renderSectionHead(
+      opts.title || t('creator.journey.available_skills', 'Available'),
+      '',
+      ''
+    );
+    html += '<div class="cj-eaz-economy__cat-row" role="group" aria-label="' +
+      escapeHtml(opts.title || t('creator.eaz_economy.axis_tabs_aria', 'EAZV economy categories')) + '">';
+    axes.forEach(function (ax) {
+      html += renderEazEconomyCategoryCard(ax, axisByTab[ax], data);
+    });
+    html += '</div>';
+    if (expanded && axes.indexOf(expanded) >= 0) {
+      html += '<div class="cj-variant-branch cj-eaz-economy__branch" data-cj-eaz-branch="' + escapeHtml(expanded) + '">' +
+        '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+        renderEazEconomyExpandedPanel(data, expanded, axisByTab[expanded], opts.byTab[expanded] || []) +
+        '</div>';
+    }
+    html += '</section>';
     return html;
   }
 
@@ -1422,21 +1558,29 @@
     });
 
     var expanded = eazEconomyExpandedAxis;
-    if (expanded && EAZ_CATEGORY_ORDER.indexOf(expanded) < 0) expanded = '';
-
-    var html = '<div class="cj-eaz-economy">';
-    html += '<div class="cj-eaz-economy__cat-row" role="group" aria-label="' +
-      escapeHtml(t('creator.eaz_economy.axis_tabs_aria', 'EAZV economy categories')) + '">';
-    EAZ_CATEGORY_ORDER.forEach(function (ax) {
-      html += renderEazEconomyCategoryCard(ax, axisByTab[ax], data);
-    });
-    html += '</div>';
-
-    if (expanded) {
-      html += '<div class="cj-eaz-economy__connector" aria-hidden="true"></div>';
-      html += renderEazEconomyExpandedPanel(data, expanded, axisByTab[expanded], byTab[expanded] || []);
+    if (expanded && EAZ_CATEGORY_ORDER.indexOf(expanded) < 0) {
+      eazEconomyExpandedAxis = '';
+      expanded = '';
     }
 
+    var activeAxes = [];
+    var lockedAxes = [];
+    EAZ_CATEGORY_ORDER.forEach(function (ax) {
+      if (eazAxisIsActive(ax, axisByTab[ax], data)) activeAxes.push(ax);
+      else lockedAxes.push(ax);
+    });
+
+    var html = '<div class="cj-eaz-economy cj-product-sections">';
+    html += renderEazEconomyAxisRow(activeAxes, axisByTab, data, {
+      unlockedRow: true,
+      title: t('creator.journey.unlocked_skills', 'Unlocked'),
+      byTab: byTab
+    });
+    html += renderEazEconomyAxisRow(lockedAxes, axisByTab, data, {
+      unlockedRow: false,
+      title: t('creator.journey.available_skills', 'Available'),
+      byTab: byTab
+    });
     html += '</div>';
     return html;
   }
@@ -1593,11 +1737,12 @@
       }
       list.innerHTML = renderEazEconomyTreeHtml(eazEconomyData);
       wireEazEconomyTree(list);
+      positionVariantConnectors(list);
+      requestAnimationFrame(function () { positionVariantConnectors(list); });
       return;
     }
 
     var filtered = nodes.filter(function (n) { return n.category === treeFilter; });
-    var dispLv = displayLevel();
     var html = '';
 
     if (treeFilter === 'product') {
@@ -1605,25 +1750,14 @@
     } else if (treeFilter === 'market') {
       html = renderMarketTree(filtered);
     } else {
-      html = renderUnlockedStrip(filtered);
-      var rows = groupNodesByLevel(filtered);
-      if (!rows.length) {
-        html += '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
-      } else {
-        html += '<div class="cj-tree-levels">' + rows.map(function (row) {
-          var rowLocked = row.level > dispLv;
-          return '<section class="cj-level-row' + (rowLocked ? ' is-locked' : '') + '" data-level="' + row.level + '">' +
-            '<div class="cj-level-row__label">' + escapeHtml(tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(row.level) })) + '</div>' +
-            '<div class="cj-level-row__cards">' + row.nodes.map(renderTreeCard).join('') + '</div></section>';
-        }).join('') + '</div>';
-      }
+      html = renderGenericSkillTree(filtered);
     }
 
     list.innerHTML = html;
 
-    // Product + Markets both use carousels and expand panels (colors/sizes or continents/countries).
+    // Carousels on unlocked/locked rows; expand panels for product + markets.
+    wireProductCarousel(list);
     if (treeFilter === 'product' || treeFilter === 'market') {
-      wireProductCarousel(list);
       wireProductExpand(list);
     }
 
@@ -1660,9 +1794,40 @@
   }
 
   /**
-   * Anchor skill-tree connector lines to the horizontal center of the selected card
-   * (product → colors panel, color → sizes panel), not the section midpoint.
+   * Anchor skill-tree connector stems to the selected card center and stretch them
+   * flush from parent frame bottom border into child panel top border (no gap).
    */
+  function clearConnectorAnchor(connector, panel) {
+    if (!connector) return;
+    connector.style.removeProperty('--cj-connector-x');
+    connector.style.removeProperty('--cj-connector-top');
+    connector.style.removeProperty('--cj-connector-h');
+    connector.classList.remove('is-anchored');
+    if (panel) panel.style.removeProperty('--cj-connector-x');
+  }
+
+  function anchorConnectorToCard(connector, panel, card, branch) {
+    if (!connector || !branch) return;
+    if (!card || !panel) {
+      clearConnectorAnchor(connector, panel);
+      return;
+    }
+    var branchRect = branch.getBoundingClientRect();
+    var cardRect = card.getBoundingClientRect();
+    var panelRect = panel.getBoundingClientRect();
+    var x = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
+    // Overlap 3px into both frames so the stem merges with the gold borders.
+    var overlap = 3;
+    var top = Math.round(cardRect.bottom - branchRect.top - overlap);
+    var bottom = Math.round(panelRect.top - branchRect.top + overlap);
+    var h = Math.max(10, bottom - top);
+    connector.style.setProperty('--cj-connector-x', x + 'px');
+    connector.style.setProperty('--cj-connector-top', top + 'px');
+    connector.style.setProperty('--cj-connector-h', h + 'px');
+    connector.classList.add('is-anchored');
+    panel.style.setProperty('--cj-connector-x', x + 'px');
+  }
+
   function positionVariantConnectors(root) {
     if (!root) return;
     var list = root;
@@ -1674,18 +1839,7 @@
       if (!connector || !pk) return;
       var section = branch.closest('.cj-product-section') || list;
       var card = section.querySelector('.cj-tree-card--product.is-expanded[data-cj-expand-product="' + pk + '"]');
-      if (!card) {
-        connector.style.removeProperty('--cj-connector-x');
-        connector.classList.remove('is-anchored');
-        if (panel) panel.style.removeProperty('--cj-connector-x');
-        return;
-      }
-      var branchRect = branch.getBoundingClientRect();
-      var cardRect = card.getBoundingClientRect();
-      var x = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
-      connector.style.setProperty('--cj-connector-x', x + 'px');
-      connector.classList.add('is-anchored');
-      if (panel) panel.style.setProperty('--cj-connector-x', x + 'px');
+      anchorConnectorToCard(connector, panel, card, branch);
     });
 
     list.querySelectorAll('[data-cj-size-panel]').forEach(function (branch) {
@@ -1698,18 +1852,7 @@
       variantPanel.querySelectorAll('.cj-tree-card--variant-color.is-expanded[data-cj-expand-color]').forEach(function (el) {
         if (el.getAttribute('data-cj-expand-color') === colorKey) card = el;
       });
-      if (!card) {
-        connector.style.removeProperty('--cj-connector-x');
-        connector.classList.remove('is-anchored');
-        if (panel) panel.style.removeProperty('--cj-connector-x');
-        return;
-      }
-      var branchRect = branch.getBoundingClientRect();
-      var cardRect = card.getBoundingClientRect();
-      var x = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
-      connector.style.setProperty('--cj-connector-x', x + 'px');
-      connector.classList.add('is-anchored');
-      if (panel) panel.style.setProperty('--cj-connector-x', x + 'px');
+      anchorConnectorToCard(connector, panel, card, branch);
     });
 
     list.querySelectorAll('[data-cj-market-branch]').forEach(function (branch) {
@@ -1721,18 +1864,17 @@
       list.querySelectorAll('.cj-tree-card--market-continent.is-expanded[data-cj-expand-continent]').forEach(function (el) {
         if (el.getAttribute('data-cj-expand-continent') === code) card = el;
       });
-      if (!card) {
-        connector.style.removeProperty('--cj-connector-x');
-        connector.classList.remove('is-anchored');
-        if (panel) panel.style.removeProperty('--cj-connector-x');
-        return;
-      }
-      var branchRect = branch.getBoundingClientRect();
-      var cardRect = card.getBoundingClientRect();
-      var x = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
-      connector.style.setProperty('--cj-connector-x', x + 'px');
-      connector.classList.add('is-anchored');
-      if (panel) panel.style.setProperty('--cj-connector-x', x + 'px');
+      anchorConnectorToCard(connector, panel, card, branch);
+    });
+
+    list.querySelectorAll('[data-cj-eaz-branch]').forEach(function (branch) {
+      var code = branch.getAttribute('data-cj-eaz-branch');
+      var connector = branch.querySelector(':scope > .cj-variant-connector');
+      var panel = branch.querySelector(':scope > .cj-eaz-economy__expand-panel, :scope > .cj-variant-panel');
+      if (!connector || !code) return;
+      var cardEl = list.querySelector('.cj-eaz-economy__cat-card.is-expanded[data-cj-expand-eaz-axis="' + code + '"]');
+      var frame = cardEl && (cardEl.querySelector('.cj-eaz-economy__cat-card-inner') || cardEl);
+      anchorConnectorToCard(connector, panel, frame, branch);
     });
   }
 
