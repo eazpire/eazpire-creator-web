@@ -21,6 +21,10 @@
   var closeTimer = null;
   var CJ_MOBILE_MAX = 991;
   var pendingCommitNodeKey = null;
+  var pendingCommitMeta = null;
+  var pendingCommitAmount = null;
+  var celebrateTimer = null;
+  var toastTimer = null;
   var bgAppliedKey = '';
   var journeyLoadPromise = null;
   var onboardingData = null;
@@ -191,9 +195,142 @@
   async function apiFetch(op, params, method, body) {
     if (typeof window.creatorApiFetch !== 'function') throw new Error('creatorApiFetch unavailable');
     if (method === 'POST') {
-      return window.creatorApiFetch(op, params || {}, { method: 'POST', body: body || {} });
+      var opts = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+      };
+      return window.creatorApiFetch(op, params || {}, opts);
     }
     return window.creatorApiFetch(op, params || {});
+  }
+
+  function parseLocaleAmount(raw) {
+    var s = String(raw == null ? '' : raw).trim().replace(/\s/g, '').replace(/[^\d.,\-]/g, '');
+    if (!s || s === '-' || s === '.' || s === ',') return NaN;
+    var lastComma = s.lastIndexOf(',');
+    var lastDot = s.lastIndexOf('.');
+    if (lastComma >= 0 && lastDot >= 0) {
+      if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.');
+      else s = s.replace(/,/g, '');
+    } else if (lastComma >= 0) {
+      s = s.replace(',', '.');
+    }
+    var n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function formatEazAmount(n) {
+    var v = Math.round((Number(n) || 0) * 100) / 100;
+    return String(v);
+  }
+
+  function findJourneyNode(nodeKey) {
+    if (!nodeKey || !journeyData || !Array.isArray(journeyData.nodes)) return null;
+    for (var i = 0; i < journeyData.nodes.length; i++) {
+      if (journeyData.nodes[i].node_key === nodeKey) return journeyData.nodes[i];
+    }
+    return null;
+  }
+
+  function showCjToast(message, isError) {
+    if (!message) return;
+    var el = document.getElementById('cjToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'cjToast';
+      el.className = 'cj-toast';
+      el.setAttribute('role', 'status');
+      (overlay || document.body).appendChild(el);
+    }
+    el.textContent = message;
+    el.classList.toggle('is-error', !!isError);
+    el.classList.add('is-open');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      el.classList.remove('is-open');
+      toastTimer = null;
+    }, 2800);
+  }
+
+  function journeyErrorDetail(err) {
+    var body = err && err.body;
+    var code = (body && (body.error || body.code)) || '';
+    if (!code && err && err.message) {
+      var m = String(err.message);
+      try {
+        var jsonStart = m.indexOf('{');
+        if (jsonStart >= 0) {
+          var parsed = JSON.parse(m.slice(jsonStart));
+          code = parsed.error || parsed.code || '';
+        }
+      } catch (_e) {}
+      if (!code && /parent_required/i.test(m)) code = 'parent_required';
+      if (!code && /level_required/i.test(m)) code = 'level_required';
+    }
+    if (code === 'parent_required' || code === 'prev_tier_required') {
+      return t('creator.journey.unlock_fail_parent', 'Unlock the parent skill first.');
+    }
+    if (code === 'level_required') {
+      return t('creator.journey.unlock_fail_level', 'Higher level required.');
+    }
+    if (code === 'invalid_amount') {
+      return t('creator.journey.commit_modal_invalid_amount', 'Enter a valid amount greater than zero.');
+    }
+    if (code === 'insufficient_balance' || code === 'INSUFFICIENT_EAZ' || code === 'insufficient_eaz') {
+      return t('creator.journey.commit_modal_insufficient', 'Not enough EAZV available.');
+    }
+    return code ? String(code).replace(/_/g, ' ') : '';
+  }
+
+  function celebrateMediaHtml(node) {
+    if (!node) return '<span class="cj-celebrate-fallback" aria-hidden="true">★</span>';
+    var img = nodeImageUrl(node);
+    if (img) return '<img src="' + escapeHtml(img) + '" alt="">';
+    if (node.category === 'market') {
+      var meta = node.metadata || {};
+      if (meta.market_kind === 'country' || meta.flag_code) return marketFlagHtml(node);
+      return continentMarkHtml(node);
+    }
+    if (node.metadata && node.metadata.variant_kind === 'size') {
+      var sizeLabel = node.metadata.size || nodeTitle(node);
+      return '<span class="cj-celebrate-fallback">' + escapeHtml(sizeLabel) + '</span>';
+    }
+    return '<span class="cj-celebrate-fallback" aria-hidden="true">★</span>';
+  }
+
+  function showUnlockCelebration(opts) {
+    opts = opts || {};
+    var celebrate = document.getElementById('cjCelebrateOverlay');
+    if (!celebrate) return;
+    var media = document.getElementById('cjCelebrateMedia');
+    var titleEl = document.getElementById('cjCelebrateTitle');
+    var subEl = document.getElementById('cjCelebrateSub');
+    var name = opts.name || '';
+    if (media) media.innerHTML = opts.mediaHtml || celebrateMediaHtml(opts.node);
+    if (titleEl) {
+      titleEl.textContent = opts.title || tpl(
+        'creator.journey.unlock_success_title',
+        'Congratulations — {{ name }} unlocked',
+        { name: name }
+      );
+    }
+    if (subEl) {
+      subEl.textContent = opts.sub || t(
+        'creator.journey.unlock_success_sub',
+        'New skill unlocked in your Creator Journey'
+      );
+    }
+    celebrate.hidden = false;
+    celebrate.classList.add('is-open');
+    celebrate.setAttribute('aria-hidden', 'false');
+    if (celebrateTimer) clearTimeout(celebrateTimer);
+    celebrateTimer = setTimeout(function () {
+      celebrate.classList.remove('is-open');
+      celebrate.setAttribute('aria-hidden', 'true');
+      celebrate.hidden = true;
+      celebrateTimer = null;
+    }, 2800);
   }
 
   function isOpen() {
@@ -1151,6 +1288,18 @@
         btn.disabled = true;
         apiFetch('activate-eaz-economy-skill', { owner_id: oid }, 'POST', { skill_key: key }).then(function (res) {
           if (!res || !res.ok) throw new Error((res && res.error) || 'failed');
+          var label = btn.closest('.cj-tree-card, .cj-eaz-economy__subskill, .cj-eaz-economy__cat-card');
+          var nameEl = label && (
+            label.querySelector('.cj-tree-card__title-in') ||
+            label.querySelector('.cj-eaz-economy__subskill-title') ||
+            label.querySelector('.cj-eaz-economy__cat-title')
+          );
+          var skillName = nameEl ? nameEl.textContent.trim() : key;
+          showUnlockCelebration({
+            title: tpl('creator.journey.activate_success_title', 'Activated — {{ name }}', { name: skillName }),
+            sub: t('creator.journey.activate_success_sub', 'Skill is now active'),
+            mediaHtml: '<span class="cj-celebrate-fallback" aria-hidden="true">⚡</span>'
+          });
           eazEconomyData = null;
           return loadEazEconomyTree().then(function () { renderTree(); });
         }).catch(function () {
@@ -1510,23 +1659,59 @@
     var commitOverlay = document.getElementById('cjCommitOverlay');
     var amountInput = document.getElementById('cjCommitAmount');
     var availEl = document.getElementById('cjCommitAvail');
+    var costEl = document.getElementById('cjCommitCost');
     var nodeEl = document.getElementById('cjCommitNodeLabel');
+    var errEl = document.getElementById('cjCommitError');
+    var coinEl = document.getElementById('cjCommitCoin');
     if (!commitOverlay || !amountInput) return;
 
-    pendingCommitNodeKey = nodeKey;
+    var node = findJourneyNode(nodeKey);
+    var title = nodeTitleText || (node ? nodeTitle(node) : '') || nodeKey || '';
+    var cost = node ? Number(node.cost_eaz) || 0 : 0;
+    var committed = node ? Number(node.eaz_committed) || 0 : 0;
+    var remaining = Math.max(0, Math.round((cost - committed) * 100) / 100);
     var avail = journeyData && journeyData.balance_eaz != null ? Number(journeyData.balance_eaz) : 0;
+    var defaultAmt = Math.min(avail > 0 ? avail : 0, remaining > 0 ? remaining : avail);
 
+    pendingCommitNodeKey = nodeKey;
+    pendingCommitMeta = {
+      title: title,
+      cost: cost,
+      committed: committed,
+      remaining: remaining,
+      node: node
+    };
+    pendingCommitAmount = null;
+
+    if (errEl) {
+      errEl.hidden = true;
+      errEl.textContent = '';
+    }
     if (nodeEl) {
-      nodeEl.textContent = nodeTitleText || nodeKey || '';
-      nodeEl.hidden = !nodeEl.textContent;
+      nodeEl.textContent = title;
+      nodeEl.hidden = !title;
     }
     if (availEl) {
       availEl.textContent = tpl('creator.journey.commit_modal_available', 'Available: {{ amount }} EAZV', {
-        amount: String(Math.round(avail * 100) / 100)
+        amount: formatEazAmount(avail)
       });
     }
-    amountInput.value = avail > 0 ? String(Math.round(avail * 100) / 100) : '';
-    amountInput.max = avail > 0 ? String(avail) : '';
+    if (costEl) {
+      costEl.textContent = tpl('creator.journey.commit_modal_cost', 'Needed: {{ remaining }} / {{ cost }} EAZV', {
+        remaining: formatEazAmount(remaining),
+        cost: formatEazAmount(cost)
+      });
+      costEl.hidden = !(cost > 0);
+    }
+    if (coinEl) {
+      coinEl.src = eazvCoinUrl();
+      coinEl.hidden = false;
+      coinEl.alt = 'EAZV';
+      if (window.EazCoinBrand && window.EazCoinBrand.hydrate) {
+        window.EazCoinBrand.hydrate(coinEl.parentNode || commitOverlay);
+      }
+    }
+    amountInput.value = defaultAmt > 0 ? formatEazAmount(defaultAmt) : '';
 
     commitOverlay.hidden = false;
     commitOverlay.classList.add('is-open');
@@ -1539,19 +1724,81 @@
     var commitOverlay = document.getElementById('cjCommitOverlay');
     if (!commitOverlay) return;
     pendingCommitNodeKey = null;
+    pendingCommitMeta = null;
+    pendingCommitAmount = null;
     commitOverlay.classList.remove('is-open');
     commitOverlay.setAttribute('aria-hidden', 'true');
     commitOverlay.hidden = true;
+    closeCommitConfirm();
+  }
+
+  function openCommitConfirm(amount) {
+    var overlayEl = document.getElementById('cjCommitConfirmOverlay');
+    var bodyEl = document.getElementById('cjCommitConfirmBody');
+    if (!overlayEl) return;
+    pendingCommitAmount = amount;
+    var name = (pendingCommitMeta && pendingCommitMeta.title) || pendingCommitNodeKey || '';
+    if (bodyEl) {
+      bodyEl.textContent = tpl(
+        'creator.journey.commit_reconfirm_body',
+        'Commit {{ amount }} EAZV to unlock “{{ name }}”? This cannot be undone.',
+        { amount: formatEazAmount(amount), name: name }
+      );
+    }
+    overlayEl.hidden = false;
+    overlayEl.classList.add('is-open');
+    overlayEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeCommitConfirm() {
+    var overlayEl = document.getElementById('cjCommitConfirmOverlay');
+    if (!overlayEl) return;
+    overlayEl.classList.remove('is-open');
+    overlayEl.setAttribute('aria-hidden', 'true');
+    overlayEl.hidden = true;
   }
 
   function confirmCommitModal() {
     var amountInput = document.getElementById('cjCommitAmount');
+    var errEl = document.getElementById('cjCommitError');
     if (!pendingCommitNodeKey || !amountInput) return;
-    var amt = Number(amountInput.value);
-    if (!Number.isFinite(amt) || amt <= 0) return;
+    var amt = parseLocaleAmount(amountInput.value);
+    var avail = journeyData && journeyData.balance_eaz != null ? Number(journeyData.balance_eaz) : 0;
+    if (!Number.isFinite(amt) || amt <= 0) {
+      if (errEl) {
+        errEl.textContent = t('creator.journey.commit_modal_invalid_amount', 'Enter a valid amount greater than zero.');
+        errEl.hidden = false;
+      }
+      return;
+    }
+    if (amt > avail + 1e-9) {
+      if (errEl) {
+        errEl.textContent = t('creator.journey.commit_modal_insufficient', 'Not enough EAZV available.');
+        errEl.hidden = false;
+      }
+      return;
+    }
+    if (errEl) {
+      errEl.hidden = true;
+      errEl.textContent = '';
+    }
+    openCommitConfirm(Math.round(amt * 100) / 100);
+  }
+
+  function executePendingCommit() {
     var key = pendingCommitNodeKey;
+    var amt = pendingCommitAmount;
+    var meta = pendingCommitMeta;
+    if (!key || !Number.isFinite(amt) || amt <= 0) return;
     closeCommitModal();
-    commitNode(key, amt).catch(console.warn);
+    commitNode(key, amt, meta).catch(function (err) {
+      console.warn('[CreatorJourney] commit', err);
+      var detail = journeyErrorDetail(err);
+      showCjToast(
+        detail || t('creator.journey.commit_fail', 'Could not commit EAZV. Please try again.'),
+        true
+      );
+    });
   }
 
   function defaultOverviewPrefs() {
@@ -2153,19 +2400,68 @@
     return questsLoadPromise;
   }
 
-  async function commitNode(nodeKey, amount) {
+  async function commitNode(nodeKey, amount, meta) {
     var oid = ownerId();
+    if (!oid) throw new Error('missing_owner_id');
     var avail = journeyData && journeyData.balance_eaz != null ? Number(journeyData.balance_eaz) : 0;
     var amt = amount != null ? amount : avail;
     if (!amt || amt <= 0) return;
-    await apiFetch('commit-creator-unlock', { owner_id: oid }, 'POST', { node_key: nodeKey, amount: amt });
+    var res = await apiFetch('commit-creator-unlock', { owner_id: oid }, 'POST', {
+      node_key: nodeKey,
+      amount: amt
+    });
+    if (!res || res.ok === false) {
+      var err = new Error((res && res.error) || 'commit_failed');
+      err.body = res || {};
+      throw err;
+    }
+    showCjToast(tpl('creator.journey.commit_success', 'Committed {{ amount }} EAZV', {
+      amount: formatEazAmount(res.committed != null ? res.committed : amt)
+    }));
     await loadJourney();
+    if (res.unlocked) {
+      var node = findJourneyNode(nodeKey) || (meta && meta.node) || null;
+      showUnlockCelebration({
+        name: (meta && meta.title) || (node ? nodeTitle(node) : nodeKey),
+        node: node
+      });
+    }
   }
 
   async function unlockNode(nodeKey) {
     var oid = ownerId();
-    await apiFetch('unlock-creator-node', { owner_id: oid }, 'POST', { node_key: nodeKey });
-    await loadJourney();
+    if (!oid) {
+      showCjToast(tpl('creator.journey.unlock_fail', 'Could not unlock. {{ detail }}', { detail: 'missing owner' }), true);
+      return;
+    }
+    var before = findJourneyNode(nodeKey);
+    var title = before ? nodeTitle(before) : nodeKey;
+    try {
+      var res = await apiFetch('unlock-creator-node', { owner_id: oid }, 'POST', { node_key: nodeKey });
+      if (!res || res.ok === false) {
+        var err = new Error((res && res.error) || 'unlock_failed');
+        err.body = res || {};
+        throw err;
+      }
+      await loadJourney();
+      var after = findJourneyNode(nodeKey) || before;
+      if (res.unlocked || res.already_unlocked || (after && after.unlocked)) {
+        showUnlockCelebration({ name: title, node: after || before });
+      } else {
+        showCjToast(tpl('creator.journey.commit_success', 'Committed {{ amount }} EAZV', {
+          amount: formatEazAmount(res.committed || 0)
+        }));
+      }
+    } catch (e) {
+      console.warn('[CreatorJourney] unlock', e);
+      var detail = journeyErrorDetail(e);
+      showCjToast(
+        tpl('creator.journey.unlock_fail', 'Could not unlock. {{ detail }}', {
+          detail: detail || ''
+        }),
+        true
+      );
+    }
   }
 
   function open(opts) {
@@ -2261,16 +2557,31 @@
     var commitCancel = document.getElementById('cjCommitCancel');
     var commitConfirm = document.getElementById('cjCommitConfirm');
     var commitOverlay = document.getElementById('cjCommitOverlay');
+    var commitConfirmCancel = document.getElementById('cjCommitConfirmCancel');
+    var commitConfirmOk = document.getElementById('cjCommitConfirmOk');
+    var commitConfirmOverlay = document.getElementById('cjCommitConfirmOverlay');
     if (commitCancel) commitCancel.addEventListener('click', closeCommitModal);
     if (commitConfirm) commitConfirm.addEventListener('click', confirmCommitModal);
+    if (commitConfirmCancel) commitConfirmCancel.addEventListener('click', closeCommitConfirm);
+    if (commitConfirmOk) commitConfirmOk.addEventListener('click', executePendingCommit);
     if (commitOverlay) {
       commitOverlay.addEventListener('click', function (e) {
         if (e.target === commitOverlay) closeCommitModal();
       });
     }
+    if (commitConfirmOverlay) {
+      commitConfirmOverlay.addEventListener('click', function (e) {
+        if (e.target === commitConfirmOverlay) closeCommitConfirm();
+      });
+    }
 
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
+      var confirmOpen = document.getElementById('cjCommitConfirmOverlay');
+      if (confirmOpen && confirmOpen.classList.contains('is-open')) {
+        closeCommitConfirm();
+        return;
+      }
       var commitOpen = document.getElementById('cjCommitOverlay');
       if (commitOpen && commitOpen.classList.contains('is-open')) {
         closeCommitModal();

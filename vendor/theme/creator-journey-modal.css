@@ -686,7 +686,16 @@
 }
 
 .cj-tree-card.is-ready .cj-tree-card__stack {
-  animation: cj-card-glow 2s ease-in-out infinite;
+  animation: cj-card-ready-pulse 1.7s ease-in-out infinite;
+}
+
+.cj-tree-card.is-ready .cj-tree-card__frame {
+  border-color: rgba(255, 180, 40, 0.95);
+  box-shadow: 0 0 22px rgba(255, 157, 0, 0.45), inset 0 0 14px rgba(255, 157, 0, 0.14);
+}
+
+.cj-tree-card.is-ready .cj-tree-card__action.is-unlock-ready {
+  animation: cj-unlock-btn-pulse 1.5s ease-in-out infinite;
 }
 
 .cj-tree-card.is-highlight .cj-tree-card__frame {
@@ -1214,6 +1223,22 @@
   50% { box-shadow: 0 0 28px rgba(255, 157, 0, 0.5); }
 }
 
+@keyframes cj-card-ready-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(255, 157, 0, 0.25));
+  }
+  50% {
+    transform: scale(1.035);
+    filter: drop-shadow(0 0 18px rgba(255, 157, 0, 0.55));
+  }
+}
+
+@keyframes cj-unlock-btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35); filter: brightness(1); }
+  50% { box-shadow: 0 0 16px 2px rgba(245, 158, 11, 0.55); filter: brightness(1.08); }
+}
+
 .cj-grid-card,
 .cj-tree-grid,
 .cj-tree-section__title {
@@ -1538,31 +1563,117 @@
 }
 
 .cj-commit-dialog {
-  width: min(420px, 100%);
-  padding: 20px;
-  border-radius: 14px;
-  border: 1px solid var(--cj-border);
-  background: linear-gradient(135deg, var(--cj-modal-bg-1), var(--cj-modal-bg-2));
+  width: min(400px, 100%);
+  padding: 22px 20px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 157, 0, 0.28);
+  background: linear-gradient(155deg, #1a1f2c 0%, #0d1118 100%);
   color: var(--cj-text);
-  box-shadow: var(--cj-shadow);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
 }
 
 .cj-commit-dialog__title {
   margin: 0 0 8px;
-  font-size: 1.1rem;
+  font-size: 1.12rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
 }
 
 .cj-commit-dialog__hint,
 .cj-commit-dialog__avail,
+.cj-commit-dialog__cost,
 .cj-commit-dialog__node {
-  margin: 0 0 10px;
-  font-size: 0.85rem;
+  margin: 0 0 8px;
+  font-size: 0.84rem;
   color: var(--cj-muted);
+  line-height: 1.4;
 }
 
 .cj-commit-dialog__node {
   color: var(--cj-text);
+  font-weight: 650;
+  font-size: 0.92rem;
+}
+
+.cj-commit-dialog__meta {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 157, 0, 0.08);
+  border: 1px solid rgba(255, 157, 0, 0.18);
+}
+
+.cj-commit-dialog__meta .cj-commit-dialog__avail,
+.cj-commit-dialog__meta .cj-commit-dialog__cost {
+  margin: 0;
+}
+
+.cj-commit-dialog__cost {
+  color: var(--cj-accent);
+  font-weight: 700;
+}
+
+.cj-commit-dialog__amount-label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.cj-commit-dialog__amount-caption {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
   font-weight: 600;
+  color: var(--cj-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cj-commit-dialog__amount-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(8, 12, 20, 0.85);
+  border: 1px solid rgba(255, 157, 0, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.cj-commit-dialog__coin {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(255, 157, 0, 0.35));
+}
+
+.cj-commit-dialog__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--cj-text);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.cj-commit-dialog__input::-webkit-outer-spin-button,
+.cj-commit-dialog__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.cj-commit-dialog__error {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: #f87171;
 }
 
 .cj-commit-dialog__actions {
@@ -1570,6 +1681,179 @@
   gap: 10px;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.cj-commit-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10070;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.cj-commit-confirm-overlay.is-open {
+  display: flex;
+}
+
+.cj-commit-confirm-dialog {
+  width: min(380px, 100%);
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 157, 0, 0.35);
+  background: linear-gradient(155deg, #222836, #10151e);
+  color: var(--cj-text);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+.cj-commit-confirm-dialog__title {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.cj-commit-confirm-dialog__body {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--cj-muted);
+  line-height: 1.45;
+}
+
+.cj-celebrate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10080;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255, 140, 0, 0.18), rgba(0, 0, 0, 0.55) 70%);
+}
+
+.cj-celebrate-overlay.is-open {
+  display: flex;
+  animation: cj-celebrate-fade 2.8s ease forwards;
+}
+
+.cj-celebrate-burst {
+  position: absolute;
+  inset: 18% 22%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 200, 80, 0.55), transparent 42%),
+    radial-gradient(circle at 80% 25%, rgba(255, 120, 40, 0.4), transparent 40%),
+    radial-gradient(circle at 50% 70%, rgba(255, 170, 60, 0.35), transparent 45%);
+  filter: blur(2px);
+  animation: cj-celebrate-burst 2.6s ease-out forwards;
+}
+
+.cj-celebrate-card {
+  position: relative;
+  z-index: 1;
+  width: min(320px, 92vw);
+  padding: 22px 18px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 180, 60, 0.55);
+  background: linear-gradient(165deg, rgba(28, 22, 12, 0.96), rgba(10, 12, 18, 0.98));
+  box-shadow: 0 0 40px rgba(255, 140, 0, 0.35), 0 24px 48px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  transform: scale(0.86);
+  animation: cj-celebrate-pop 2.8s cubic-bezier(0.2, 0.9, 0.25, 1.15) forwards;
+}
+
+.cj-celebrate-card__media {
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 170, 50, 0.45);
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(255, 157, 0, 0.3);
+}
+
+.cj-celebrate-card__media img,
+.cj-celebrate-card__media .cj-tree-card__flag {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.cj-celebrate-card__media .cj-celebrate-fallback {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--cj-accent);
+}
+
+.cj-celebrate-card__title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffe6b0;
+  line-height: 1.3;
+  text-shadow: 0 0 18px rgba(255, 157, 0, 0.35);
+}
+
+.cj-celebrate-card__sub {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--cj-muted);
+}
+
+@keyframes cj-celebrate-fade {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes cj-celebrate-pop {
+  0% { transform: scale(0.72) translateY(18px); opacity: 0; }
+  18% { transform: scale(1.04) translateY(0); opacity: 1; }
+  30% { transform: scale(1); }
+  78% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.96) translateY(-8px); opacity: 0; }
+}
+
+@keyframes cj-celebrate-burst {
+  0% { opacity: 0; transform: scale(0.6); }
+  20% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+
+.cj-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 10090;
+  transform: translateX(-50%) translateY(12px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(18, 22, 30, 0.94);
+  border: 1px solid rgba(255, 157, 0, 0.4);
+  color: #ffe8b8;
+  font-size: 0.85rem;
+  font-weight: 650;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.cj-toast.is-open {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.cj-toast.is-error {
+  border-color: rgba(248, 113, 113, 0.55);
+  color: #fecaca;
 }
 
 .cj-node {
@@ -1923,7 +2207,8 @@
 }
 
 .cj-eaz-economy__subskill.is-ready {
-  border-color: rgba(249, 115, 22, 0.45);
+  border-color: rgba(249, 115, 22, 0.55);
+  animation: cj-card-ready-pulse 1.7s ease-in-out infinite;
 }
 
 .cj-eaz-economy__subskill-main {

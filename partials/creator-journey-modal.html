@@ -210,14 +210,42 @@
       <h4 class="cj-commit-dialog__title" id="cjCommitTitle">Commit EAZV</h4>
       <p class="cj-commit-dialog__hint">How much EAZV do you want to allocate to this unlock? Allocated EAZV cannot be withdrawn.</p>
       <p class="cj-commit-dialog__node" id="cjCommitNodeLabel" hidden></p>
-      <p class="cj-commit-dialog__avail" id="cjCommitAvail"></p>
-      <label class="cj-label" for="cjCommitAmount">Commit EAZV
-        <input type="number" id="cjCommitAmount" class="cj-input" min="0" step="0.01" inputmode="decimal">
+      <div class="cj-commit-dialog__meta">
+        <p class="cj-commit-dialog__avail" id="cjCommitAvail"></p>
+        <p class="cj-commit-dialog__cost" id="cjCommitCost"></p>
+      </div>
+      <label class="cj-commit-dialog__amount-label" for="cjCommitAmount">
+        <span class="cj-commit-dialog__amount-caption" id="cjCommitAmountLabel">Amount to commit</span>
+        <span class="cj-commit-dialog__amount-field">
+          <img class="cj-commit-dialog__coin" id="cjCommitCoin" src="" alt="" width="22" height="22" hidden>
+          <input type="text" id="cjCommitAmount" class="cj-commit-dialog__input" inputmode="decimal" autocomplete="off" spellcheck="false">
+        </span>
       </label>
+      <p class="cj-commit-dialog__error" id="cjCommitError" hidden></p>
       <div class="cj-commit-dialog__actions">
         <button type="button" class="cj-btn" id="cjCommitCancel">Cancel</button>
         <button type="button" class="cj-btn cj-btn--primary" id="cjCommitConfirm">Confirm</button>
       </div>
+    </div>
+  </div>
+
+  <div class="cj-commit-confirm-overlay" id="cjCommitConfirmOverlay" aria-hidden="true" hidden>
+    <div class="cj-commit-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="cjCommitConfirmTitle">
+      <h4 class="cj-commit-confirm-dialog__title" id="cjCommitConfirmTitle">Confirm commitment</h4>
+      <p class="cj-commit-confirm-dialog__body" id="cjCommitConfirmBody"></p>
+      <div class="cj-commit-dialog__actions">
+        <button type="button" class="cj-btn" id="cjCommitConfirmCancel">Cancel</button>
+        <button type="button" class="cj-btn cj-btn--primary" id="cjCommitConfirmOk">Yes, commit</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cj-celebrate-overlay" id="cjCelebrateOverlay" aria-hidden="true" hidden>
+    <div class="cj-celebrate-burst" aria-hidden="true"></div>
+    <div class="cj-celebrate-card" role="status" aria-live="polite">
+      <div class="cj-celebrate-card__media" id="cjCelebrateMedia"></div>
+      <p class="cj-celebrate-card__title" id="cjCelebrateTitle"></p>
+      <p class="cj-celebrate-card__sub" id="cjCelebrateSub"></p>
     </div>
   </div>
 </div>
