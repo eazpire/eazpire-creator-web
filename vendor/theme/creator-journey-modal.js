@@ -747,11 +747,6 @@
       escapeHtml(btnLabel) + '</button>';
   }
 
-  /** FREE ribbon removed — Unlock button already signals unlock-ready (free pick or funded). */
-  function renderFreePickRibbon(/* freePick */) {
-    return '';
-  }
-
   function renderTreeCardFrame(node, opts) {
     opts = opts || {};
     var title = nodeTitle(node);
@@ -759,6 +754,8 @@
     var committed = Number(node.eaz_committed) || 0;
     var freePick = !!node.free_pick_eligible;
     var cost = nodeEffectiveCost(node);
+    // Unlock-ready (free pick or fully funded): Unlock button is enough — no FREE / progress badge.
+    var unlockReady = freePick || (cost > 0 && committed + 1e-9 >= cost);
     var hasAction = !!opts.hasAction;
     var frameCls = 'cj-tree-card__frame' + (hasAction ? ' cj-tree-card__frame--attached' : '');
     if (freePick) frameCls += ' is-free-pick';
@@ -777,20 +774,19 @@
     } else {
       mediaHtml = renderTreeCardMedia(imgUrl);
     }
-    // Size cards: size only in viewer (no title). Free pick / unlock-ready: no FREE ribbon (Unlock button is enough).
+    // Size cards: size only in viewer (no title).
     var titleHtml = opts.hideTitle
       ? ''
       : '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>';
     var badgeHtml = '';
     if (node.unlocked) {
       badgeHtml = renderUnlockedBadgeHtml(node);
-    } else if (!freePick) {
-      // Partial commits keep the EAZV progress badge (e.g. 0/80); free picks skip it.
+    } else if (!freePick && !unlockReady) {
+      // Partial commits keep the EAZV progress badge (e.g. 0/80).
       badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
         escapeHtml(formatEazBadge(committed, cost, false, false)) + '</span>';
     }
     return '<div class="' + frameCls + '">' +
-      renderFreePickRibbon(freePick) +
       titleHtml +
       '<div class="cj-tree-card__media' + mediaExtraCls + '">' + mediaHtml + '</div>' +
       badgeHtml +
@@ -908,10 +904,10 @@
 
   function renderCarouselShell(trackHtml) {
     return '<div class="cj-product-carousel" data-cj-carousel>' +
-      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--prev" data-cj-carousel-prev aria-label="' +
+      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--prev" data-cj-carousel-prev hidden aria-hidden="true" tabindex="-1" aria-label="' +
       escapeHtml(t('creator.journey.carousel_prev', 'Previous')) + '">‹</button>' +
       '<div class="cj-product-carousel__track" data-cj-carousel-track>' + trackHtml + '</div>' +
-      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--next" data-cj-carousel-next aria-label="' +
+      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--next" data-cj-carousel-next hidden aria-hidden="true" tabindex="-1" aria-label="' +
       escapeHtml(t('creator.journey.carousel_next', 'Next')) + '">›</button>' +
       '</div>';
   }
@@ -1487,6 +1483,7 @@
     var map = window.CreatorI18n || {};
     var short = {
       activate: map.eazEconomyActivate,
+      commit: map.eazEconomyCommit || t('creator.journey.commit_eaz', 'Commit'),
       active: map.eazEconomyActive,
       locked: map.eazEconomyLocked,
       kickstarter_locked: map.eazEconomyKickstarterLocked,
@@ -1544,31 +1541,110 @@
   function eazSkillMeta(node) {
     var parts = [];
     if (node.is_axis_gate) {
-      if (node.activation_cost_eaz > 0) parts.push(node.activation_cost_eaz + ' EAZV');
+      // Parent is a category gate only — no bonus (bonuses live on child tiers).
+      if (node.activation_cost_eaz > 0) {
+        var paidGate = Number(node.eaz_paid) || 0;
+        var costGate = Number(node.activation_cost_eaz) || 0;
+        if (paidGate > 0 && paidGate < costGate) {
+          parts.push(formatEazBadge(paidGate, costGate, false, false));
+        } else {
+          parts.push(costGate + ' EAZV');
+        }
+      }
       if (node.mascot_min_level) parts.push(tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(node.mascot_min_level) }));
       return parts.join(' · ');
     }
     var bonus = eazBonusLabel(node.axis, node.bonus_pct);
     if (bonus) parts.push(bonus);
     if (node.mascot_min_level) parts.push(tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(node.mascot_min_level) }));
-    if (node.activation_cost_eaz > 0) parts.push(node.activation_cost_eaz + ' EAZV');
+    if (node.activation_cost_eaz > 0) {
+      var paid = Number(node.eaz_paid) || 0;
+      var cost = Number(node.activation_cost_eaz) || 0;
+      if (paid > 0 && paid < cost) parts.push(formatEazBadge(paid, cost, false, false));
+      else parts.push(cost + ' EAZV');
+    }
     return parts.join(' · ');
   }
 
-  function groupEazNodesByLevel(nodes) {
-    var map = {};
-    (nodes || []).forEach(function (n) {
-      if (n.is_axis_gate) return;
-      var lv = Number(n.mascot_min_level) || 1;
-      if (!map[lv]) map[lv] = [];
-      map[lv].push(n);
+
+  /** First child tier bonus for an axis (parents themselves grant 0%). */
+  function eazFirstChildTierBonus(axis, tabNodes) {
+    var list = (tabNodes || []).slice().sort(function (a, b) {
+      return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0) ||
+        (Number(a.mascot_min_level) || 0) - (Number(b.mascot_min_level) || 0);
     });
-    return Object.keys(map)
-      .map(Number)
-      .sort(function (a, b) { return a - b; })
-      .map(function (lv) {
-        return { level: lv, nodes: map[lv] };
-      });
+    for (var i = 0; i < list.length; i++) {
+      var bonus = eazBonusLabel(axis, list[i].bonus_pct);
+      if (bonus) return bonus;
+    }
+    return '';
+  }
+
+  function eazAxisIsActive(axis, axisNode, data) {
+    if (axis === 'kickstarter') return !!(data && data.kickstarter_redeemed);
+    if (!axisNode) return false;
+    var status = axisNode.status || 'locked';
+    return status === 'active' || status === 'grandfathered';
+  }
+
+  /** Expand only when activated; Kickstarter keeps special expand (redeem / bonuses). */
+  function eazAxisCanExpand(axis, axisNode, data) {
+    if (axis === 'kickstarter') return true;
+    return eazAxisIsActive(axis, axisNode, data);
+  }
+
+  function eazSkillFullyFunded(node) {
+    if (!node) return false;
+    var cost = Number(node.activation_cost_eaz) || 0;
+    if (cost <= 0) return true;
+    return (Number(node.eaz_paid) || 0) >= cost - 0.0001;
+  }
+
+  function eazSkillCanCommit(node) {
+    return !!(node && node.status === 'unlocked' && !eazSkillFullyFunded(node));
+  }
+
+  function eazSkillCanActivate(node) {
+    return !!(node && node.status === 'unlocked' && eazSkillFullyFunded(node));
+  }
+
+  function findEazEconomyNode(skillKey) {
+    if (!eazEconomyData || !Array.isArray(eazEconomyData.nodes) || !skillKey) return null;
+    for (var i = 0; i < eazEconomyData.nodes.length; i++) {
+      if (eazEconomyData.nodes[i].skill_key === skillKey) return eazEconomyData.nodes[i];
+    }
+    return null;
+  }
+
+  function openEazEconomyCommitModal(skillKey) {
+    var node = findEazEconomyNode(skillKey);
+    if (!node) return;
+    var title = eazSkillLabel(node.skill_key, node.is_axis_gate);
+    var cost = Number(node.activation_cost_eaz) || 0;
+    var committed = Number(node.eaz_paid) || 0;
+    openCommitModal(skillKey, title, {
+      type: 'eaz_economy',
+      skillKey: skillKey,
+      title: title,
+      cost: cost,
+      committed: committed,
+      remaining: Math.max(0, Math.round((cost - committed) * 100) / 100),
+      node: node
+    });
+  }
+
+  function renderEazEconomyActionButton(node, btnClass) {
+    if (eazSkillCanActivate(node)) {
+      return '<button type="button" class="' + btnClass + ' is-unlock-ready" data-cj-eaz-skill="' +
+        escapeHtml(node.skill_key) + '" data-cj-eaz-action="activate">' +
+        escapeHtml(eazEconomyI18n('activate', 'Activate')) + '</button>';
+    }
+    if (eazSkillCanCommit(node)) {
+      return '<button type="button" class="' + btnClass + '" data-cj-eaz-skill="' +
+        escapeHtml(node.skill_key) + '" data-cj-eaz-action="commit">' +
+        escapeHtml(eazEconomyI18n('commit', 'Commit')) + '</button>';
+    }
+    return '';
   }
 
   function renderEazEconomySkillCard(node) {
@@ -1576,13 +1652,13 @@
     var title = eazSkillLabel(node.skill_key, node.is_axis_gate);
     var meta = eazSkillMeta(node);
     var isActive = status === 'active' || status === 'grandfathered';
-    var canActivate = status === 'unlocked';
+    var canAct = eazSkillCanActivate(node) || eazSkillCanCommit(node);
     var isLocked = status === 'locked' || status === 'axis_locked' || status === 'kickstarter_locked';
 
     var cls = 'cj-tree-card cj-tree-card--eaz-economy';
     if (isLocked) cls += ' is-level-locked';
     if (isActive) cls += ' is-unlocked';
-    if (canActivate) cls += ' is-ready has-action';
+    if (canAct) cls += ' is-ready has-action';
 
     var badge = meta;
     if (isActive) badge = eazEconomyI18n('active', 'Active');
@@ -1594,16 +1670,12 @@
     else if (status === 'axis_locked') badge = eazEconomyI18n('axis_locked', 'Unlock category first');
     else if (status === 'locked') badge = eazEconomyI18n('locked', 'Locked');
 
-    var actionHtml = '';
-    if (canActivate) {
-      actionHtml = '<button type="button" class="cj-tree-card__action cj-btn is-unlock-ready" data-cj-eaz-skill="' +
-        escapeHtml(node.skill_key) + '">' + escapeHtml(eazEconomyI18n('activate', 'Activate')) + '</button>';
-    }
+    var actionHtml = renderEazEconomyActionButton(node, 'cj-tree-card__action cj-btn');
 
     var statusHtml = isActive ? '<span class="cj-tree-card__status" aria-hidden="true">✓</span>' : '';
     return '<article class="' + cls + '" data-eaz-skill="' + escapeHtml(node.skill_key) + '">' +
       '<div class="cj-tree-card__stack">' +
-      '<div class="cj-tree-card__frame' + (canActivate ? ' cj-tree-card__frame--attached' : '') + '">' +
+      '<div class="cj-tree-card__frame' + (canAct ? ' cj-tree-card__frame--attached' : '') + '">' +
       '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>' +
       '<div class="cj-tree-card__media"><div class="cj-tree-card__img cj-tree-card__img--placeholder cj-tree-card__img--eaz" aria-hidden="true"></div></div>' +
       '<span class="cj-tree-card__eaz-badge">' + escapeHtml(badge) + '</span>' +
@@ -1657,23 +1729,25 @@
       var bonus = eazBonusLabel(node.axis, node.bonus_pct);
       var lv = Number(node.mascot_min_level) || 1;
       var isActive = status === 'active' || status === 'grandfathered';
-      var canActivate = status === 'unlocked';
+      var canAct = eazSkillCanActivate(node) || eazSkillCanCommit(node);
       var isLocked = status === 'locked' || status === 'axis_locked' || status === 'kickstarter_locked';
       var cls = 'cj-eaz-economy__subskill';
       if (isLocked) cls += ' is-locked';
       if (isActive) cls += ' is-active';
-      if (canActivate) cls += ' is-ready';
+      if (canAct) cls += ' is-ready';
       var metaParts = [];
       metaParts.push(tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(lv) }));
       if (bonus) metaParts.push(bonus);
-      if (node.activation_cost_eaz > 0 && !isActive) metaParts.push(node.activation_cost_eaz + ' EAZV');
-      var actionHtml = '';
-      if (canActivate) {
-        actionHtml = '<button type="button" class="cj-eaz-economy__subskill-action cj-btn is-unlock-ready" data-cj-eaz-skill="' +
-          escapeHtml(node.skill_key) + '">' + escapeHtml(eazEconomyI18n('activate', 'Activate')) + '</button>';
-      } else if (isActive) {
+      if (node.activation_cost_eaz > 0 && !isActive) {
+        var paid = Number(node.eaz_paid) || 0;
+        var cost = Number(node.activation_cost_eaz) || 0;
+        if (paid > 0 && paid < cost) metaParts.push(formatEazBadge(paid, cost, false, false));
+        else metaParts.push(cost + ' EAZV');
+      }
+      var actionHtml = renderEazEconomyActionButton(node, 'cj-eaz-economy__subskill-action cj-btn');
+      if (!actionHtml && isActive) {
         actionHtml = '<span class="cj-eaz-economy__subskill-status" aria-hidden="true">✓</span>';
-      } else if (status === 'kickstarter_locked') {
+      } else if (!actionHtml && status === 'kickstarter_locked') {
         actionHtml = '<span class="cj-eaz-economy__subskill-lock">' +
           escapeHtml(eazEconomyI18n('kickstarter_locked', 'Kickstarter')) + '</span>';
       }
@@ -1685,22 +1759,25 @@
     }).join('') + '</ul>';
   }
 
-  function renderEazEconomyCategoryCard(axis, axisNode, data) {
+  function renderEazEconomyCategoryCard(axis, axisNode, data, tabNodes) {
     var label = t('creator.eaz_economy.tab_' + axis, EAZ_AXIS_LABELS[axis] || axis);
-    var expanded = eazEconomyExpandedAxis === axis;
     var isKs = axis === 'kickstarter';
     var redeemed = !!data.kickstarter_redeemed;
     var status = axisNode ? (axisNode.status || 'locked') : (isKs && !redeemed ? 'kickstarter_locked' : 'locked');
     if (isKs) status = redeemed ? 'active' : 'kickstarter_locked';
     var isActive = status === 'active' || status === 'grandfathered';
-    var canActivate = !isKs && status === 'unlocked';
+    var canExpand = eazAxisCanExpand(axis, axisNode, data);
+    var expanded = canExpand && eazEconomyExpandedAxis === axis;
+    var canAct = !isKs && axisNode && (eazSkillCanActivate(axisNode) || eazSkillCanCommit(axisNode));
     var isLocked = status === 'locked' || status === 'axis_locked' || status === 'kickstarter_locked';
 
     var cls = 'cj-eaz-economy__cat-card';
+    if (canExpand) cls += ' is-expandable';
+    else cls += ' is-static';
     if (expanded) cls += ' is-expanded';
     if (isLocked) cls += ' is-locked';
     if (isActive) cls += ' is-active';
-    if (canActivate) cls += ' is-ready';
+    if (canAct) cls += ' is-ready';
 
     var badge = '';
     if (isKs) {
@@ -1708,32 +1785,38 @@
         ? eazEconomyI18n('active', 'Active')
         : eazEconomyI18n('kickstarter_locked', 'Kickstarter');
     } else if (axisNode) {
-      badge = eazSkillMeta(axisNode) || eazEconomyI18n('locked', 'Locked');
-      if (isActive) badge = eazEconomyI18n('active', 'Active');
-      else if (status === 'locked') badge = eazEconomyI18n('locked', 'Locked');
+      if (isActive) {
+        // Parent grants no bonus — surface first child tier bonus as the real reward cue.
+        var childBonus = eazFirstChildTierBonus(axis, tabNodes);
+        badge = childBonus
+          ? eazEconomyI18n('active', 'Active') + ' · ' + childBonus
+          : eazEconomyI18n('active', 'Active');
+      } else if (status === 'locked') {
+        badge = eazEconomyI18n('locked', 'Locked');
+        if (axisNode.mascot_min_level) {
+          badge += ' · ' + tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(axisNode.mascot_min_level) });
+        }
+      } else {
+        badge = eazSkillMeta(axisNode) || eazEconomyI18n('locked', 'Locked');
+      }
     }
 
-    var actionHtml = '';
-    if (canActivate && axisNode) {
-      actionHtml = '<button type="button" class="cj-eaz-economy__cat-action cj-btn is-unlock-ready" data-cj-eaz-skill="' +
-        escapeHtml(axisNode.skill_key) + '">' + escapeHtml(eazEconomyI18n('activate', 'Activate')) + '</button>';
-    }
+    var actionHtml = (!isKs && axisNode)
+      ? renderEazEconomyActionButton(axisNode, 'cj-eaz-economy__cat-action cj-btn')
+      : '';
 
-    return '<article class="' + cls + '" data-cj-expand-eaz-axis="' + escapeHtml(axis) + '" role="button" tabindex="0" aria-expanded="' +
-      (expanded ? 'true' : 'false') + '">' +
+    var expandAttr = canExpand
+      ? ' data-cj-expand-eaz-axis="' + escapeHtml(axis) + '" role="button" tabindex="0" aria-expanded="' +
+        (expanded ? 'true' : 'false') + '"'
+      : '';
+
+    return '<article class="' + cls + '"' + expandAttr + '>' +
       '<div class="cj-eaz-economy__cat-card-inner">' +
       '<h4 class="cj-eaz-economy__cat-title">' + escapeHtml(label) + '</h4>' +
       '<div class="cj-eaz-economy__cat-media" aria-hidden="true"></div>' +
       (badge ? '<span class="cj-eaz-economy__cat-badge">' + escapeHtml(badge) + '</span>' : '') +
       (isActive ? '<span class="cj-eaz-economy__cat-check" aria-hidden="true">✓</span>' : '') +
       '</div>' + actionHtml + '</article>';
-  }
-
-  function eazAxisIsActive(axis, axisNode, data) {
-    if (axis === 'kickstarter') return !!(data && data.kickstarter_redeemed);
-    if (!axisNode) return false;
-    var status = axisNode.status || 'locked';
-    return status === 'active' || status === 'grandfathered';
   }
 
   function renderEazEconomyExpandedPanel(data, axis, axisNode, tabNodes) {
@@ -1747,17 +1830,7 @@
       return html;
     }
 
-    var axisOpen = axisNode && (axisNode.status === 'active' || axisNode.status === 'grandfathered');
-    if (!axisOpen) {
-      if (axisNode) {
-        html += '<div class="cj-eaz-economy__axis-gate">' + renderEazEconomySkillCard(axisNode) + '</div>';
-      }
-      html += '<p class="cj-eaz-economy__axis-hint">' +
-        escapeHtml(t('creator.eaz_economy.axis_unlock_hint', 'Unlock this category with EAZV to access its skills.')) +
-        '</p></div>';
-      return html;
-    }
-
+    // Only reached when axis is already activated — show tier children.
     var activeSkills = [];
     var lockedSkills = [];
     (tabNodes || []).forEach(function (node) {
@@ -1798,10 +1871,11 @@
     html += '<div class="cj-eaz-economy__cat-row" role="group" aria-label="' +
       escapeHtml(opts.title || t('creator.eaz_economy.axis_tabs_aria', 'EAZV economy categories')) + '">';
     axes.forEach(function (ax) {
-      html += renderEazEconomyCategoryCard(ax, axisByTab[ax], data);
+      html += renderEazEconomyCategoryCard(ax, axisByTab[ax], data, opts.byTab[ax] || []);
     });
     html += '</div>';
-    if (expanded && axes.indexOf(expanded) >= 0) {
+    if (expanded && axes.indexOf(expanded) >= 0 &&
+        eazAxisCanExpand(expanded, axisByTab[expanded], data)) {
       html += '<div class="cj-variant-branch cj-eaz-economy__branch" data-cj-eaz-branch="' + escapeHtml(expanded) + '">' +
         '<div class="cj-variant-connector" aria-hidden="true"></div>' +
         renderEazEconomyExpandedPanel(data, expanded, axisByTab[expanded], opts.byTab[expanded] || []) +
@@ -1834,6 +1908,10 @@
       eazEconomyExpandedAxis = '';
       expanded = '';
     }
+    if (expanded && !eazAxisCanExpand(expanded, axisByTab[expanded], data)) {
+      eazEconomyExpandedAxis = '';
+      expanded = '';
+    }
 
     var activeAxes = [];
     var lockedAxes = [];
@@ -1863,8 +1941,13 @@
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
         var key = btn.getAttribute('data-cj-eaz-skill');
+        var action = btn.getAttribute('data-cj-eaz-action') || 'activate';
         var oid = ownerId();
         if (!oid || !key) return;
+        if (action === 'commit') {
+          openEazEconomyCommitModal(key);
+          return;
+        }
         btn.disabled = true;
         apiFetch('activate-eaz-economy-skill', { owner_id: oid }, 'POST', { skill_key: key }).then(function (res) {
           if (!res || !res.ok) throw new Error((res && res.error) || 'failed');
@@ -1880,6 +1963,9 @@
             sub: t('creator.journey.activate_success_sub', 'Skill is now active'),
             mediaHtml: '<span class="cj-celebrate-fallback" aria-hidden="true">⚡</span>'
           });
+          if (String(key).indexOf('axis_') === 0) {
+            eazEconomyExpandedAxis = String(key).replace('axis_', '');
+          }
           eazEconomyData = null;
           return loadEazEconomyTree().then(function () { renderTree(); });
         }).catch(function () {
@@ -2444,7 +2530,7 @@
     }
   }
 
-  function openCommitModal(nodeKey, nodeTitleText) {
+  function openCommitModal(nodeKey, nodeTitleText, metaOverride) {
     var commitOverlay = document.getElementById('cjCommitOverlay');
     var amountInput = document.getElementById('cjCommitAmount');
     var availEl = document.getElementById('cjCommitAvail');
@@ -2454,22 +2540,44 @@
     var coinEl = document.getElementById('cjCommitCoin');
     if (!commitOverlay || !amountInput) return;
 
-    var node = findJourneyNode(nodeKey);
-    var title = nodeTitleText || (node ? nodeTitle(node) : '') || nodeKey || '';
-    var cost = node ? Number(node.cost_eaz) || 0 : 0;
-    var committed = node ? Number(node.eaz_committed) || 0 : 0;
-    var remaining = Math.max(0, Math.round((cost - committed) * 100) / 100);
+    var title;
+    var cost;
+    var committed;
+    var remaining;
+    var node = null;
+    if (metaOverride && metaOverride.type === 'eaz_economy') {
+      title = metaOverride.title || nodeTitleText || nodeKey || '';
+      cost = Number(metaOverride.cost) || 0;
+      committed = Number(metaOverride.committed) || 0;
+      remaining = Math.max(0, Math.round((cost - committed) * 100) / 100);
+      node = metaOverride.node || null;
+      pendingCommitMeta = {
+        type: 'eaz_economy',
+        skillKey: metaOverride.skillKey || nodeKey,
+        title: title,
+        cost: cost,
+        committed: committed,
+        remaining: remaining,
+        node: node
+      };
+    } else {
+      node = findJourneyNode(nodeKey);
+      title = nodeTitleText || (node ? nodeTitle(node) : '') || nodeKey || '';
+      cost = node ? Number(node.cost_eaz) || 0 : 0;
+      committed = node ? Number(node.eaz_committed) || 0 : 0;
+      remaining = Math.max(0, Math.round((cost - committed) * 100) / 100);
+      pendingCommitMeta = {
+        title: title,
+        cost: cost,
+        committed: committed,
+        remaining: remaining,
+        node: node
+      };
+    }
     var avail = journeyData && journeyData.balance_eaz != null ? Number(journeyData.balance_eaz) : 0;
     var defaultAmt = Math.min(avail > 0 ? avail : 0, remaining > 0 ? remaining : avail);
 
     pendingCommitNodeKey = nodeKey;
-    pendingCommitMeta = {
-      title: title,
-      cost: cost,
-      committed: committed,
-      remaining: remaining,
-      node: node
-    };
     pendingCommitAmount = null;
 
     if (errEl) {
@@ -3238,6 +3346,26 @@
     var avail = journeyData && journeyData.balance_eaz != null ? Number(journeyData.balance_eaz) : 0;
     var amt = amount != null ? amount : avail;
     if (!amt || amt <= 0) return;
+
+    if (meta && meta.type === 'eaz_economy') {
+      var resEaz = await apiFetch('commit-eaz-economy-skill', { owner_id: oid }, 'POST', {
+        skill_key: nodeKey,
+        amount: amt
+      });
+      if (!resEaz || resEaz.ok === false) {
+        var errEaz = new Error((resEaz && resEaz.error) || 'commit_failed');
+        errEaz.body = resEaz || {};
+        throw errEaz;
+      }
+      showCjToast(tpl('creator.journey.commit_success', 'Committed {{ amount }} EAZV', {
+        amount: formatEazAmount(resEaz.committed != null ? resEaz.committed : amt)
+      }));
+      eazEconomyData = null;
+      await Promise.all([loadJourney({ force: true }), loadEazEconomyTree()]);
+      renderTree();
+      return resEaz;
+    }
+
     var res = await apiFetch('commit-creator-unlock', { owner_id: oid }, 'POST', {
       node_key: nodeKey,
       amount: amt
@@ -3258,6 +3386,7 @@
         node: node
       });
     }
+    return res;
   }
 
   async function unlockNode(nodeKey) {

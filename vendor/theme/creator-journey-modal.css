@@ -1150,40 +1150,16 @@
 }
 
 .cj-tree-card__free-ribbon {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 3;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-align: center;
-  color: #0b1a10;
-  background: linear-gradient(180deg, #b8f0c4, #6fd88a);
-  box-shadow: 0 0 12px rgba(110, 220, 140, 0.45);
-  pointer-events: none;
+  display: none;
 }
 
-/* Size cards: FREE centered; size only in media (no title header) */
-.cj-tree-card--variant-size .cj-tree-card__free-ribbon {
-  left: 50%;
-  transform: translateX(-50%);
-  top: 6px;
-}
-
+/* Size cards: size only in media (no title header) */
 .cj-tree-card--variant-size .cj-tree-card__title-in {
   display: none;
 }
 
 .cj-tree-card--variant-size .cj-tree-card__media--size {
   padding-top: 4px;
-}
-
-.cj-tree-card--variant-size .cj-tree-card__frame.is-free-pick .cj-tree-card__media--size {
-  padding-top: 22px;
 }
 
 .cj-tree-card--variant-size {
@@ -2288,13 +2264,17 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  cursor: pointer;
+  cursor: default;
   border: 0;
   background: transparent;
   padding: 0;
   font: inherit;
   color: inherit;
   text-align: center;
+}
+
+.cj-eaz-economy__cat-card.is-expandable {
+  cursor: pointer;
 }
 
 .cj-eaz-economy__cat-card-inner {
@@ -2310,10 +2290,20 @@
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
-.cj-eaz-economy__cat-card:hover .cj-eaz-economy__cat-card-inner,
-.cj-eaz-economy__cat-card:focus-visible .cj-eaz-economy__cat-card-inner {
+.cj-eaz-economy__cat-card.is-expandable:hover .cj-eaz-economy__cat-card-inner,
+.cj-eaz-economy__cat-card.is-expandable:focus-visible .cj-eaz-economy__cat-card-inner {
   border-color: rgba(249, 115, 22, 0.45);
   background: rgba(249, 115, 22, 0.08);
+}
+
+.cj-eaz-economy__cat-card.is-not-expandable {
+  cursor: default;
+}
+
+.cj-eaz-economy__cat-card.is-not-expandable:hover .cj-eaz-economy__cat-card-inner,
+.cj-eaz-economy__cat-card.is-not-expandable:focus-visible .cj-eaz-economy__cat-card-inner {
+  border-color: inherit;
+  background: inherit;
 }
 
 .cj-eaz-economy__cat-card.is-expanded {
