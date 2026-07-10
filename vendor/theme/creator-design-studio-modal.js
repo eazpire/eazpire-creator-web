@@ -64,6 +64,8 @@
 
   var MAX_OWN_ADDITIONAL = 5;
   var MAX_PUBLIC_ADDITIONAL = 1;
+  /** Manual scale ceiling (zone-width fraction). Overflow is clipped by the print-zone, not capped to contain. */
+  var UI_SCALE_MAX = 2.5;
   var DEFAULT_TRANSFORM = { x: 0.5, y: 0.5, scale: 0.95, rotate: 0 };
 
   function Mi() {
@@ -126,7 +128,8 @@
 
   /**
    * product_mockup_defaults.placement_scale is often a legacy mockup bbox width (~0.35–0.55),
-   * not Shop/Creator UI scale (zone-width fraction, typically ~0.95 / contain).
+   * not Shop/Creator UI scale (zone-width fraction, typically ~0.95).
+   * API already normalizes legacy rows to Shop-parity (x/y 0.5, scale 0.95); keep this as a client guard.
    */
   function looksLikeLegacyPlacementScale(scale) {
     var s = Number(scale);
@@ -141,8 +144,15 @@
     var hit = map[key] || map.front || null;
     if (!hit || typeof hit !== 'object') return cloneTransform(DEFAULT_TRANSFORM);
     var scale = Number(hit.scale);
-    // Match Shop Design Studio: keep admin x/y/rotate, use UI-scale default when DB scale is legacy.
-    if (looksLikeLegacyPlacementScale(scale)) scale = DEFAULT_TRANSFORM.scale;
+    // Legacy mockup bbox scale → Shop open defaults (center + UI scale). Modern admin scale keeps exact x/y.
+    if (looksLikeLegacyPlacementScale(scale)) {
+      return cloneTransform({
+        x: DEFAULT_TRANSFORM.x,
+        y: DEFAULT_TRANSFORM.y,
+        scale: DEFAULT_TRANSFORM.scale,
+        rotate: hit.rotate != null ? hit.rotate : hit.angle,
+      });
+    }
     return cloneTransform({
       x: hit.x,
       y: hit.y,
@@ -301,6 +311,26 @@
     return Math.abs(s - rounded2) > 1e-5;
   }
 
+  /**
+   * Previous API rewrote legacy scale→0.95 but kept mockup bbox y (e.g. Softstyle 0.47).
+   * Older layout also wrote contain-clamped scales (~0.7–1.0) into storage.
+   * Shop opens centered; re-seed those near-default transforms so open matches Shop.
+   * Skips clearly custom work (large moves, rotation, or scale above 1).
+   */
+  function looksLikeMisMappedLegacyPlacement(tr) {
+    if (!tr) return false;
+    var scale = Number(tr.scale);
+    var x = Number(tr.x);
+    var y = Number(tr.y);
+    var rot = Number(tr.rotate) || 0;
+    if (!Number.isFinite(scale) || scale < 0.7 || scale > 1.0 + 1e-6) return false;
+    if (!Number.isFinite(x) || Math.abs(x - 0.5) > 0.02) return false;
+    if (Math.abs(rot) > 1e-3) return false;
+    if (!Number.isFinite(y)) return false;
+    var dy = Math.abs(y - 0.5);
+    return dy > 0.01 && dy < 0.15;
+  }
+
   /** Apply admin placement defaults (open seed / Set Default). Does not invent contain-clamped scales. */
   function applyAdminDefaultsToDraft(forceAll) {
     ensurePrintArea();
@@ -312,7 +342,8 @@
         forceAll ||
         isDefaultishTransform(bucket.primary) ||
         looksLikeClampedScaleArtifact(bucket.primary && bucket.primary.scale) ||
-        looksLikeLegacyPlacementScale(bucket.primary && bucket.primary.scale)
+        looksLikeLegacyPlacementScale(bucket.primary && bucket.primary.scale) ||
+        looksLikeMisMappedLegacyPlacement(bucket.primary)
       ) {
         bucket.primary = adminDefaultTransform(pos);
       }
@@ -539,30 +570,30 @@
     mockImgEl.style.objectFit = 'contain';
   }
 
+  /** Fit-in-zone scale (informational). Manual scale may exceed this; overflow is clipped. */
   function maxContainScaleInZone() {
-    if (!printZoneEl) return 2.5;
+    if (!printZoneEl) return UI_SCALE_MAX;
     var zw = printZoneEl.offsetWidth || 1;
     var zh = printZoneEl.offsetHeight || 1;
-    if (zw < 1 || zh < 1) return 2.5;
+    if (zw < 1 || zh < 1) return UI_SCALE_MAX;
     var nw = designImgEl && designImgEl.naturalWidth ? designImgEl.naturalWidth : 0;
     var nh = designImgEl && designImgEl.naturalHeight ? designImgEl.naturalHeight : 0;
     if (nw > 0 && nh > 0) {
-      return Math.min(1, (zh * nw) / (zw * nh), 2.5);
+      return Math.min(1, (zh * nw) / (zw * nh), UI_SCALE_MAX);
     }
-    return 2.5;
+    return UI_SCALE_MAX;
   }
 
-  function clampScaleToContain(raw) {
-    return clamp(Number(raw) || 0.95, 0.08, maxContainScaleInZone());
+  /** Clamp manual scale to UI range only — do not force down to contain-fit. */
+  function clampScaleUi(raw) {
+    return clamp(Number(raw) || 0.95, 0.08, UI_SCALE_MAX);
   }
 
-  /** Visual width scale: never invent a new stored default; only cap overflow past zone. */
+  /** Visual width scale: use stored scale as-is (clipped by print-zone overflow:hidden). */
   function visualScaleForTransform(tr) {
     var scale = Number(tr && tr.scale);
     if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
-    var maxS = maxContainScaleInZone();
-    if (Number.isFinite(maxS) && maxS > 0 && scale > maxS) return maxS;
-    return scale;
+    return clampScaleUi(scale);
   }
 
   function setAssetSelected(on) {
@@ -853,10 +884,8 @@
 
     var scaleVal = Number(tr.scale);
     if (!Number.isFinite(scaleVal) || scaleVal <= 0) scaleVal = 0.95;
-    var scaleMax = 2.5;
-    if (printZoneEl && printZoneEl.offsetWidth > 1) {
-      scaleMax = Math.max(0.15, Math.min(2.5, Math.max(maxContainScaleInZone(), scaleVal)));
-    }
+    // Allow enlarging past contain-fit; zone clip hides overflow outside the orange box.
+    var scaleMax = UI_SCALE_MAX;
     var scaleDisplay = formatScaleDisplay(scaleVal);
     var rotVal = snapRotate5(tr.rotate);
     var scaleBody =
@@ -1042,7 +1071,7 @@
         var n = Number(val);
         if (!Number.isFinite(n)) return;
         if (key === 'scale') {
-          n = clampScaleToContain(n);
+          n = clampScaleUi(n);
           n = Math.round(n * 100) / 100;
         } else if (key === 'rotate') n = snapRotate5(n);
         tr[key] = n;
@@ -1575,7 +1604,7 @@
           e.clientY - transformDrag.center.cy
         );
         var ratio = startDist > 1 ? curDist / startDist : 1;
-        tr.scale = clampScaleToContain(transformDrag.startTr.scale * ratio);
+        tr.scale = clampScaleUi(transformDrag.startTr.scale * ratio);
       }
       applyTransformToDesignImg();
       syncTransformInputs();
