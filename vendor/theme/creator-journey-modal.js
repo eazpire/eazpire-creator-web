@@ -635,6 +635,57 @@
     });
   }
 
+  /**
+   * Child nodes used for unlock-progress % on parent cards (only when parent is unlocked).
+   * Product → colors; color → sizes; continent → countries.
+   */
+  function unlockProgressChildren(node) {
+    if (!node || !node.unlocked) return null;
+    if (node.category === 'product' && node.product_key) {
+      var colors = variantColorNodes(node.product_key);
+      return colors.length ? colors : null;
+    }
+    if (node.category === 'variant' && node.metadata && node.metadata.variant_kind === 'color') {
+      var sizes = variantSizeNodes(node.node_key);
+      return sizes.length ? sizes : null;
+    }
+    if (isMarketContinentNode(node)) {
+      var all = (journeyData && journeyData.nodes) || [];
+      var countries = marketCountryNodesForContinent(all, node);
+      return countries.length ? countries : null;
+    }
+    return null;
+  }
+
+  function unlockProgressPct(children) {
+    if (!children || !children.length) return null;
+    var unlockedCount = 0;
+    for (var i = 0; i < children.length; i++) {
+      if (children[i].unlocked) unlockedCount++;
+    }
+    return Math.round((unlockedCount / children.length) * 100);
+  }
+
+  /** Unlocked badge, or horizontal progress bar when parent has unlockable children. */
+  function renderUnlockedBadgeHtml(node) {
+    var children = unlockProgressChildren(node);
+    var pct = unlockProgressPct(children);
+    if (pct == null) {
+      return '<span class="cj-tree-card__eaz-badge">' +
+        escapeHtml(t('creator.journey.unlocked', 'Unlocked')) + '</span>';
+    }
+    var label = tpl('creator.journey.unlocked_progress', 'Unlocked {{ pct }}%', {
+      pct: String(pct)
+    });
+    return '<div class="cj-tree-card__progress" role="progressbar" aria-valuenow="' + pct +
+      '" aria-valuemin="0" aria-valuemax="100" aria-label="' + escapeHtml(label) + '">' +
+      '<div class="cj-tree-card__progress-track" aria-hidden="true">' +
+      '<div class="cj-tree-card__progress-fill" style="width:' + pct + '%"></div>' +
+      '</div>' +
+      '<span class="cj-tree-card__progress-label">' + escapeHtml(label) + '</span>' +
+      '</div>';
+  }
+
   function nodeEffectiveCost(node) {
     if (node && node.free_pick_eligible) return 0;
     if (node && node.effective_cost_eaz != null && Number.isFinite(Number(node.effective_cost_eaz))) {
@@ -702,8 +753,7 @@
       : '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>';
     var badgeHtml = '';
     if (node.unlocked) {
-      badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
-        escapeHtml(formatEazBadge(committed, cost, true, freePick)) + '</span>';
+      badgeHtml = renderUnlockedBadgeHtml(node);
     } else if (!freePick) {
       badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
         escapeHtml(formatEazBadge(committed, cost, false, false)) + '</span>';
