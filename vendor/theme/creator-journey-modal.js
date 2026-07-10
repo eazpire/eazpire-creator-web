@@ -139,6 +139,55 @@
 
   var SOFTSTYLE_PRODUCT_KEY = 'unisex-softstyle-cotton-tee';
   var FLAG_CDN = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.2/flags/4x3/';
+  /** Continent → lipis flag-icons code when a real regional flag exists. */
+  var CONTINENT_FLAG_CDN = { EU: 'eu', AN: 'aq' };
+  /**
+   * Custom 4×3 continent emblems (data URIs) for continents without ISO/regional flags.
+   * Kept inline so Shopify theme + creator-web portal both work without asset_url wiring.
+   */
+  var CONTINENT_FLAG_DATA = {
+    AF: 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">' +
+      '<rect width="640" height="480" fill="#008751"/>' +
+      '<circle cx="320" cy="240" r="108" fill="none" stroke="#FFD100" stroke-width="22"/>' +
+      '<path fill="#FFD100" d="M320 148l22 68h72l-58 42 22 68-58-42-58 42 22-68-58-42h72z"/>' +
+      '</svg>'
+    ),
+    AS: 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">' +
+      '<rect width="640" height="480" fill="#C8102E"/>' +
+      '<circle cx="320" cy="240" r="96" fill="#FFD100"/>' +
+      '<circle cx="320" cy="240" r="58" fill="#C8102E"/>' +
+      '<path fill="#FFD100" d="M320 120l18 56h58l-47 34 18 56-47-34-47 34 18-56-47-34h58z"/>' +
+      '</svg>'
+    ),
+    NA: 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">' +
+      '<rect width="640" height="480" fill="#0B3D91"/>' +
+      '<path fill="#FFFFFF" d="M180 300c40-120 90-170 140-180 55-10 95 30 120 70 30 48 55 70 100 90-55 20-100 10-140 35-55 35-100 55-160 40-35-8-50-30-60-55z"/>' +
+      '<circle cx="250" cy="170" r="10" fill="#FFD100"/><circle cx="320" cy="150" r="10" fill="#FFD100"/><circle cx="390" cy="175" r="10" fill="#FFD100"/>' +
+      '</svg>'
+    ),
+    SA: 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">' +
+      '<rect width="640" height="480" fill="#009C3B"/>' +
+      '<path fill="#FFDF00" d="M320 70L560 240 320 410 80 240z"/>' +
+      '<circle cx="320" cy="240" r="78" fill="#002776"/>' +
+      '<path fill="none" stroke="#FFFFFF" stroke-width="10" d="M260 250c30-35 70-50 120-35"/>' +
+      '</svg>'
+    ),
+    OC: 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">' +
+      '<rect width="640" height="480" fill="#012169"/>' +
+      '<path fill="#FFFFFF" d="M420 120l12 36h38l-30 22 12 36-32-22-32 22 12-36-30-22h38z"/>' +
+      '<path fill="#FFFFFF" d="M500 220l9 28h30l-24 18 9 28-24-18-24 18 9-28-24-18h30z"/>' +
+      '<path fill="#FFFFFF" d="M455 280l9 28h30l-24 18 9 28-24-18-24 18 9-28-24-18h30z"/>' +
+      '<path fill="#FFFFFF" d="M390 250l7 22h24l-19 14 7 22-19-14-19 14 7-22-19-14h24z"/>' +
+      '<path fill="#FFFFFF" d="M470 340l7 22h24l-19 14 7 22-19-14-19 14 7-22-19-14h24z"/>' +
+      '<circle cx="160" cy="160" r="36" fill="#FFD100"/>' +
+      '</svg>'
+    )
+  };
   var expandedProductKeys = {};
   var expandedColorKeys = {};
   var expandedContinentKeys = {};
@@ -288,9 +337,10 @@
     var img = nodeImageUrl(node);
     if (img) return '<img src="' + escapeHtml(img) + '" alt="">';
     if (node.category === 'market') {
+      if (isMarketContinentNode(node)) return continentFlagHtml(node);
       var meta = node.metadata || {};
       if (meta.market_kind === 'country' || meta.flag_code) return marketFlagHtml(node);
-      return continentMarkHtml(node);
+      return continentFlagHtml(node);
     }
     if (node.metadata && node.metadata.variant_kind === 'size') {
       var sizeLabel = node.metadata.size || nodeTitle(node);
@@ -487,10 +537,19 @@
     return '<img class="cj-tree-card__flag" src="' + FLAG_CDN + escapeHtml(code) + '.svg" alt="" loading="lazy" width="48" height="36">';
   }
 
-  function continentMarkHtml(node) {
+  /** Continent card media: real EU/AQ flags via CDN; custom emblems for other continents. */
+  function continentFlagHtml(node) {
     var code = marketContinentCode(node);
-    return '<div class="cj-tree-card__continent-mark" data-continent="' + escapeHtml(code) + '" aria-hidden="true">' +
-      '<span class="cj-tree-card__continent-code">' + escapeHtml(code) + '</span></div>';
+    var cdnCode = CONTINENT_FLAG_CDN[code];
+    var src = cdnCode
+      ? FLAG_CDN + cdnCode + '.svg'
+      : (CONTINENT_FLAG_DATA[code] || (FLAG_CDN + 'un.svg'));
+    return '<img class="cj-tree-card__flag" src="' + src + '" alt="" loading="lazy" width="48" height="36" data-continent="' +
+      escapeHtml(code) + '">';
+  }
+
+  function continentMarkHtml(node) {
+    return continentFlagHtml(node);
   }
 
   function nodeImageUrl(node) {
@@ -563,11 +622,11 @@
       }).join('') + '</div>';
   }
 
-  function formatEazBadge(committed, cost, unlocked) {
+  function formatEazBadge(committed, cost, unlocked, freePick) {
     if (unlocked) {
       return t('creator.journey.unlocked', 'Unlocked');
     }
-    if (cost <= 0) {
+    if (freePick || cost <= 0) {
       return t('creator.journey.eaz_free', 'Free');
     }
     return tpl('creator.journey.eaz_badge', '{{ committed }}/{{ cost }} EAZV', {
@@ -576,19 +635,28 @@
     });
   }
 
+  function nodeEffectiveCost(node) {
+    if (node && node.free_pick_eligible) return 0;
+    if (node && node.effective_cost_eaz != null && Number.isFinite(Number(node.effective_cost_eaz))) {
+      return Number(node.effective_cost_eaz);
+    }
+    return Number(node && node.cost_eaz) || 0;
+  }
+
   function renderTreeCardMedia(imgUrl) {
     return imgUrl
       ? '<img class="cj-tree-card__img" src="' + escapeHtml(imgUrl) + '" alt="" loading="lazy">'
       : '<div class="cj-tree-card__img cj-tree-card__img--placeholder" aria-hidden="true"></div>';
   }
 
-  function renderTreeCardAction(node, title, canAct, cost, unlockReady) {
-    if (!canAct || cost <= 0) return '';
-    var btnLabel = unlockReady
+  function renderTreeCardAction(node, title, canAct, cost, unlockReady, freePick) {
+    if (!canAct) return '';
+    if (!(cost > 0 || freePick || unlockReady)) return '';
+    var btnLabel = (unlockReady || freePick)
       ? t('creator.journey.unlock_short', 'Unlock')
       : t('creator.journey.commit_eaz', 'Commit');
-    var btnCls = 'cj-tree-card__action cj-btn' + (unlockReady ? ' is-unlock-ready' : '');
-    if (unlockReady) {
+    var btnCls = 'cj-tree-card__action cj-btn' + (unlockReady || freePick ? ' is-unlock-ready' : '');
+    if (unlockReady || freePick) {
       return '<button type="button" class="' + btnCls + '" data-cj-tree-action data-cj-action="unlock" data-cj-unlock="' +
         escapeHtml(node.node_key) + '">' + escapeHtml(btnLabel) + '</button>';
     }
@@ -597,15 +665,23 @@
       escapeHtml(btnLabel) + '</button>';
   }
 
+  function renderFreePickRibbon(freePick) {
+    if (!freePick) return '';
+    return '<span class="cj-tree-card__free-ribbon">' +
+      escapeHtml(t('creator.journey.free_pick_badge', 'Free')) + '</span>';
+  }
+
   function renderTreeCardFrame(node, opts) {
     opts = opts || {};
     var title = nodeTitle(node);
     var imgUrl = nodeImageUrl(node);
     var committed = Number(node.eaz_committed) || 0;
-    var cost = Number(node.cost_eaz) || 0;
-    var badge = formatEazBadge(committed, cost, !!node.unlocked);
+    var freePick = !!node.free_pick_eligible;
+    var cost = nodeEffectiveCost(node);
+    var badge = formatEazBadge(committed, cost, !!node.unlocked, freePick);
     var hasAction = !!opts.hasAction;
     var frameCls = 'cj-tree-card__frame' + (hasAction ? ' cj-tree-card__frame--attached' : '');
+    if (freePick) frameCls += ' is-free-pick';
     var statusHtml = node.unlocked ? '<span class="cj-tree-card__status" aria-hidden="true">✓</span>' : '';
     var mediaHtml;
     var mediaExtraCls = '';
@@ -622,6 +698,7 @@
       mediaHtml = renderTreeCardMedia(imgUrl);
     }
     return '<div class="' + frameCls + '">' +
+      renderFreePickRibbon(freePick) +
       '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>' +
       '<div class="cj-tree-card__media' + mediaExtraCls + '">' + mediaHtml + '</div>' +
       '<span class="cj-tree-card__eaz-badge">' + escapeHtml(badge) + '</span>' +
@@ -629,20 +706,24 @@
   }
 
   function cardActionState(node, levelLocked) {
-    var cost = Number(node.cost_eaz) || 0;
+    var freePick = !!node.free_pick_eligible;
+    var cost = nodeEffectiveCost(node);
+    var catalogCost = Number(node.cost_eaz) || 0;
     var title = nodeTitle(node);
     var isCreator = journeyData && journeyData.is_creator;
     var canAct = !node.unlocked && isCreator && !node.locked_reason && !levelLocked;
     var committed = Number(node.eaz_committed) || 0;
-    var unlockReady = canAct && cost > 0 && committed + 1e-9 >= cost;
-    var hasAction = canAct && cost > 0;
+    var unlockReady = canAct && (freePick || (cost > 0 && committed + 1e-9 >= cost));
+    var hasAction = canAct && (cost > 0 || freePick);
     return {
       title: title,
       canAct: canAct,
       cost: cost,
+      catalogCost: catalogCost,
+      freePick: freePick,
       unlockReady: unlockReady,
       hasAction: hasAction,
-      actionHtml: renderTreeCardAction(node, title, canAct, cost, unlockReady)
+      actionHtml: renderTreeCardAction(node, title, canAct, cost, unlockReady, freePick)
     };
   }
 
@@ -701,8 +782,9 @@
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
+    if (act.freePick) cls += ' is-free-pick';
     if (expandable) cls += ' is-expandable';
-    if (expanded) cls += ' is-expanded';
+    if (expanded) cls += ' is-expanded is-selected';
     if (!node.unlocked) cls += ' is-locked-expand';
 
     var expandAttr = expandable
@@ -721,9 +803,10 @@
     var sizeLabel = (node.metadata && node.metadata.size) || nodeTitle(node);
     var cls = 'cj-tree-card cj-tree-card--variant-size';
     if (levelLocked) cls += ' is-level-locked';
-    if (node.unlocked) cls += ' is-unlocked';
+    if (node.unlocked) cls += ' is-unlocked is-selected';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
+    if (act.freePick) cls += ' is-free-pick';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
       '<div class="cj-tree-card__stack">' +
@@ -754,24 +837,37 @@
         '<p class="cj-muted">' + escapeHtml(t('creator.journey.variants_empty', 'No color variants available yet.')) + '</p></div></div>';
     }
 
+    var freeColorHint = colors.some(function (c) { return c.free_pick_eligible; })
+      ? '<p class="cj-variant-panel__hint">' +
+        escapeHtml(t('creator.journey.free_pick_color_hint', 'One free color pick — choose any color. Extra colors cost EAZV.')) +
+        '</p>'
+      : '';
+
     var colorCards = colors.map(renderVariantColorCard).join('');
     var sizeHtml = '';
     colors.forEach(function (colorNode) {
       if (!(colorNode.unlocked && expandedColorKeys[colorNode.node_key])) return;
       var sizes = variantSizeNodes(colorNode.node_key);
       if (!sizes.length) return;
+      var freeSizeHint = sizes.some(function (s) { return s.free_pick_eligible; })
+        ? '<p class="cj-variant-panel__hint">' +
+          escapeHtml(t('creator.journey.free_pick_size_hint', 'One free size pick for this color — extra sizes cost EAZV.')) +
+          '</p>'
+        : '';
       sizeHtml += '<div class="cj-variant-size-panel" data-cj-size-panel="' + escapeHtml(colorNode.node_key) + '">' +
         '<div class="cj-variant-connector cj-variant-connector--size" aria-hidden="true"></div>' +
         '<h5 class="cj-variant-size-panel__title">' + escapeHtml(t('creator.journey.size_variants', 'Sizes')) +
         ' · ' + escapeHtml(nodeTitle(colorNode)) + '</h5>' +
+        freeSizeHint +
         renderCarouselShell(sizes.map(renderVariantSizeCard).join('')) +
         '</div>';
     });
 
     return '<div class="cj-variant-branch" data-cj-variant-branch="' + escapeHtml(productNode.product_key) + '">' +
-      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+      '<div class="cj-variant-connector" data-cj-connector-from="product" aria-hidden="true"></div>' +
       '<div class="cj-variant-panel" data-cj-variant-panel="' + escapeHtml(productNode.product_key) + '">' +
       '<h4 class="cj-variant-panel__title">' + escapeHtml(t('creator.journey.color_variants', 'Color variants')) + '</h4>' +
+      freeColorHint +
       renderCarouselShell(colorCards) +
       sizeHtml +
       '</div></div>';
@@ -779,6 +875,11 @@
 
   function renderCarouselSection(title, subtitle, nodes, sectionLocked) {
     if (!nodes.length) return '';
+    var freeProductHint = !sectionLocked && nodes.some(function (n) { return n.free_pick_eligible; })
+      ? '<p class="cj-product-section__hint">' +
+        escapeHtml(t('creator.journey.free_pick_product_hint', 'One free starter product — pick any. Extra products cost EAZV.')) +
+        '</p>'
+      : '';
     var sub = subtitle ? '<p class="cj-product-section__sub">' + escapeHtml(subtitle) + '</p>' : '';
     var cardsHtml = '';
     var expandHtml = '';
@@ -791,7 +892,7 @@
     });
     return '<section class="cj-product-section' + (sectionLocked ? ' is-locked' : '') + '">' +
       '<div class="cj-product-section__head">' +
-      '<h3 class="cj-product-section__title">' + escapeHtml(title) + '</h3>' + sub +
+      '<h3 class="cj-product-section__title">' + escapeHtml(title) + '</h3>' + sub + freeProductHint +
       '</div>' +
       renderCarouselShell(cardsHtml) +
       expandHtml + '</section>';
@@ -847,7 +948,8 @@
     if (expanded) cls += ' is-expanded';
 
     var expandAttr = expandable
-      ? ' data-cj-expand-continent="' + escapeHtml(contCode) + '"'
+      ? ' data-cj-expand-continent="' + escapeHtml(contCode) + '" role="button" tabindex="0" aria-expanded="' +
+        (expanded ? 'true' : 'false') + '"'
       : '';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
@@ -1457,7 +1559,8 @@
 
     list.innerHTML = html;
 
-    if (treeFilter === 'product') {
+    // Product + Markets both use carousels and expand panels (colors/sizes or continents/countries).
+    if (treeFilter === 'product' || treeFilter === 'market') {
       wireProductCarousel(list);
       wireProductExpand(list);
     }
@@ -1488,6 +1591,54 @@
       }
       if (prev) prev.addEventListener('click', function () { scrollBy(-1); });
       if (next) next.addEventListener('click', function () { scrollBy(1); });
+      track.addEventListener('scroll', function () {
+        positionVariantConnectors(root);
+      }, { passive: true });
+    });
+  }
+
+  /**
+   * Anchor skill-tree connector lines to the horizontal center of the selected card
+   * (product → colors panel, color → sizes panel), not the section midpoint.
+   */
+  function positionVariantConnectors(root) {
+    if (!root) return;
+    var list = root;
+
+    list.querySelectorAll('[data-cj-variant-branch]').forEach(function (branch) {
+      var pk = branch.getAttribute('data-cj-variant-branch');
+      var connector = branch.querySelector(':scope > .cj-variant-connector');
+      if (!connector || !pk) return;
+      var section = branch.closest('.cj-product-section') || list;
+      var card = section.querySelector('.cj-tree-card--product.is-expanded[data-cj-expand-product="' + pk + '"]');
+      if (!card) {
+        connector.style.removeProperty('--cj-connector-x');
+        connector.classList.remove('is-anchored');
+        return;
+      }
+      var branchRect = branch.getBoundingClientRect();
+      var cardRect = card.getBoundingClientRect();
+      var x = cardRect.left + cardRect.width / 2 - branchRect.left;
+      connector.style.setProperty('--cj-connector-x', Math.round(x) + 'px');
+      connector.classList.add('is-anchored');
+    });
+
+    list.querySelectorAll('[data-cj-size-panel]').forEach(function (panel) {
+      var colorKey = panel.getAttribute('data-cj-size-panel');
+      var connector = panel.querySelector(':scope > .cj-variant-connector');
+      if (!connector || !colorKey) return;
+      var variantPanel = panel.closest('[data-cj-variant-panel]') || list;
+      var card = variantPanel.querySelector('.cj-tree-card--variant-color.is-expanded[data-cj-expand-color="' + colorKey + '"]');
+      if (!card) {
+        connector.style.removeProperty('--cj-connector-x');
+        connector.classList.remove('is-anchored');
+        return;
+      }
+      var panelRect = panel.getBoundingClientRect();
+      var cardRect = card.getBoundingClientRect();
+      var x = cardRect.left + cardRect.width / 2 - panelRect.left;
+      connector.style.setProperty('--cj-connector-x', Math.round(x) + 'px');
+      connector.classList.add('is-anchored');
     });
   }
 
@@ -1517,13 +1668,31 @@
       });
     });
     root.querySelectorAll('[data-cj-expand-continent]').forEach(function (card) {
-      card.addEventListener('click', function (e) {
+      function toggleContinent(e) {
         if (e.target.closest('[data-cj-tree-action]')) return;
         var code = card.getAttribute('data-cj-expand-continent');
         if (!code) return;
+        // Toggle for any unlocked continent — including fully unlocked (all countries done).
         expandedContinentKeys[code] = !expandedContinentKeys[code];
         renderTree();
+      }
+      card.addEventListener('click', toggleContinent);
+      card.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        toggleContinent(e);
       });
+    });
+    positionVariantConnectors(root);
+    if (!window._cjConnectorResizeBound) {
+      window._cjConnectorResizeBound = true;
+      window.addEventListener('resize', function () {
+        var listEl = document.getElementById('cjTreeList');
+        if (listEl) positionVariantConnectors(listEl);
+      });
+    }
+    requestAnimationFrame(function () {
+      positionVariantConnectors(root);
     });
   }
 

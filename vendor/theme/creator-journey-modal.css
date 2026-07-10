@@ -990,6 +990,16 @@
   gap: 4px;
 }
 
+.cj-product-section__hint,
+.cj-variant-panel__hint {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba(255, 210, 120, 0.88);
+  max-width: 36rem;
+}
+
 .cj-product-carousel {
   position: relative;
   display: grid;
@@ -1044,7 +1054,8 @@
   transform: translateY(-2px);
 }
 
-.cj-tree-card.is-expanded .cj-tree-card__frame {
+.cj-tree-card.is-expanded .cj-tree-card__frame,
+.cj-tree-card.is-selected .cj-tree-card__frame {
   border-color: rgba(255, 200, 60, 1);
   box-shadow:
     0 0 0 2px rgba(255, 180, 40, 0.55),
@@ -1053,14 +1064,43 @@
   animation: cj-card-glow 2.4s ease-in-out infinite;
 }
 
-.cj-tree-card.is-expanded.cj-tree-card--product {
+.cj-tree-card.is-expanded.cj-tree-card--product,
+.cj-tree-card.is-selected.cj-tree-card--product,
+.cj-tree-card.is-expanded.cj-tree-card--variant-color,
+.cj-tree-card.is-selected.cj-tree-card--variant-color,
+.cj-tree-card.is-selected.cj-tree-card--variant-size {
   position: relative;
   z-index: 1;
 }
 
-.cj-tree-card.is-expanded.cj-tree-card--product .cj-tree-card__frame {
+.cj-tree-card.is-expanded.cj-tree-card--product .cj-tree-card__frame,
+.cj-tree-card.is-selected.cj-tree-card--product .cj-tree-card__frame,
+.cj-tree-card.is-expanded.cj-tree-card--variant-color .cj-tree-card__frame,
+.cj-tree-card.is-selected.cj-tree-card--variant-color .cj-tree-card__frame,
+.cj-tree-card.is-selected.cj-tree-card--variant-size .cj-tree-card__frame {
   border-width: 2px;
   transform: translateY(-2px);
+}
+
+.cj-tree-card.is-free-pick .cj-tree-card__frame,
+.cj-tree-card__frame.is-free-pick {
+  border-color: rgba(120, 220, 140, 0.75);
+}
+
+.cj-tree-card__free-ribbon {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0b1a10;
+  background: linear-gradient(180deg, #b8f0c4, #6fd88a);
+  box-shadow: 0 0 12px rgba(110, 220, 140, 0.45);
 }
 
 .cj-tree-card--variant-size {
@@ -1076,6 +1116,7 @@
   flex-direction: column;
   align-items: stretch;
   margin-top: 2px;
+  position: relative;
 }
 
 .cj-variant-connector {
@@ -1086,6 +1127,12 @@
   box-shadow: 0 0 10px rgba(255, 157, 0, 0.35);
   flex-shrink: 0;
   border-radius: 2px;
+}
+
+.cj-variant-connector.is-anchored {
+  margin-left: var(--cj-connector-x, 50%);
+  margin-right: 0;
+  transform: translateX(-50%);
 }
 
 .cj-variant-connector--size {
@@ -1129,6 +1176,7 @@
 }
 
 .cj-variant-size-panel {
+  position: relative;
   margin-top: 12px;
   padding: 10px;
   border-radius: 12px;
@@ -1180,6 +1228,16 @@
   justify-content: center;
 }
 
+.cj-tree-card__media--continent .cj-tree-card__flag {
+  width: 56px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 157, 0, 0.28);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* Legacy letter-mark styles kept for older cached HTML; unused by current JS. */
 .cj-tree-card__continent-mark {
   width: 56px;
   height: 42px;
