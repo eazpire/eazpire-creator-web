@@ -38,6 +38,8 @@
   var assetPlacementListEl = null;
   var unsavedDialogEl = null;
   var pendingUnsavedDiscard = null;
+  var viewerBusyEl = null;
+  var viewerBusyTextEl = null;
 
   var ctxDesign = null;
   var ctxProductKey = null;
@@ -61,6 +63,7 @@
   var pendingAssetKey = null;
   var pendingAssetAction = null;
   var pendingAssetSourcePos = null;
+  var CREATOR_DISPATCH_FALLBACK = 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
 
   var MAX_OWN_ADDITIONAL = 5;
   var MAX_PUBLIC_ADDITIONAL = 1;
@@ -201,7 +204,218 @@
   }
 
   function setStatus(msg) {
+    // Prefer centered viewer busy overlay for load/apply; keep strip for short non-busy notes.
     if (statusEl) statusEl.textContent = msg || '';
+  }
+
+  function isStudioBusy() {
+    return !!(isLoading || isSaving || cropApplying);
+  }
+
+  function setViewerBusy(show, message) {
+    if (!viewerBusyEl) return;
+    if (show) {
+      if (viewerBusyTextEl) {
+        viewerBusyTextEl.textContent =
+          message || t('designStudioLoading', 'Loading…');
+      }
+      viewerBusyEl.hidden = false;
+      viewerBusyEl.removeAttribute('hidden');
+      viewerBusyEl.setAttribute('aria-hidden', 'false');
+      viewerBusyEl.classList.add('cds-viewer-busy--visible');
+    } else {
+      viewerBusyEl.classList.remove('cds-viewer-busy--visible');
+      viewerBusyEl.setAttribute('hidden', '');
+      viewerBusyEl.hidden = true;
+      viewerBusyEl.setAttribute('aria-hidden', 'true');
+    }
+    if (root) root.classList.toggle('is-busy', !!show || isStudioBusy());
+  }
+
+  function syncBusyChrome() {
+    var busy = isStudioBusy();
+    if (root) root.classList.toggle('is-busy', busy);
+    if (!busy) {
+      setViewerBusy(false);
+    }
+    markDirtyUi();
+    var applyBtn = root && root.querySelector('#cds-crop-apply');
+    var cancelBtn = root && root.querySelector('#cds-crop-cancel');
+    if (applyBtn) applyBtn.disabled = !!cropApplying || !!isLoading;
+    if (cancelBtn) cancelBtn.disabled = !!cropApplying || !!isLoading;
+    if (btnReset) btnReset.disabled = busy;
+    if (btnClose) btnClose.disabled = !!cropApplying;
+  }
+
+  function blurFocusInside(el) {
+    try {
+      var active = document.activeElement;
+      if (active && el && el.contains && el.contains(active) && typeof active.blur === 'function') {
+        active.blur();
+      }
+    } catch (eBlur) {}
+  }
+
+  function cacheBustSrc(url) {
+    if (!url || typeof url !== 'string') return '';
+    var sep = url.indexOf('?') >= 0 ? '&' : '?';
+    return url + sep + 'v=' + Date.now();
+  }
+
+  /** If crop API returned /file/ URLs on the shop host, rewrite to creator worker. */
+  function normalizePersistedFileUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    var s = url.trim();
+    if (!s) return s;
+    try {
+      var u = new URL(s, window.location.href);
+      var hn = u.hostname.toLowerCase();
+      if (
+        u.pathname.indexOf('/file/') === 0 &&
+        (hn === 'www.eazpire.com' || hn === 'eazpire.com' || hn.indexOf('.myshopify.com') > 0)
+      ) {
+        return 'https://creator-engine.eazpire.workers.dev' + u.pathname + u.search + u.hash;
+      }
+    } catch (_) {}
+    return s;
+  }
+
+  function toCreatorDispatchEndpoint(base) {
+    var b = String(base || '')
+      .split('?')[0]
+      .trim()
+      .replace(/\/+$/, '');
+    if (!b) return '';
+    if (/\/apps\/creator-dispatch$/i.test(b)) return b;
+    return b + '/apps/creator-dispatch';
+  }
+
+  function buildCropDispatchCandidates() {
+    var out = [];
+    function pushUnique(url) {
+      if (!url) return;
+      var u = String(url).trim();
+      if (!u) return;
+      if (out.indexOf(u) >= 0) return;
+      out.push(u);
+    }
+    var origin = '';
+    var onEazStorefront = false;
+    try {
+      if (window.location && window.location.origin) {
+        origin = window.location.origin.replace(/\/$/, '');
+        var hn = (window.location.hostname || '').toLowerCase();
+        onEazStorefront = hn === 'www.eazpire.com' || hn === 'eazpire.com';
+      }
+    } catch (_) {}
+    var cfg = window.CREATOR_API_CONFIG || {};
+    var engineRoot = String(
+      cfg.BASE_URL || CREATOR_DISPATCH_FALLBACK.replace(/\/apps\/creator-dispatch$/i, '')
+    )
+      .split('?')[0]
+      .trim()
+      .replace(/\/+$/, '')
+      .replace(/\/apps\/creator-dispatch$/i, '');
+    if (onEazStorefront && origin) {
+      pushUnique(origin + '/api/eaz-crop-design');
+      pushUnique(toCreatorDispatchEndpoint(engineRoot));
+      pushUnique(CREATOR_DISPATCH_FALLBACK);
+      try {
+        var w = window.CreatorWidget && window.CreatorWidget.apiBaseUrl;
+        if (w) {
+          var wb = String(w).split('?')[0].trim().replace(/\/+$/, '');
+          if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(wb)) {
+            pushUnique(toCreatorDispatchEndpoint(wb));
+          }
+        }
+      } catch (_) {}
+      pushUnique(origin + '/apps/creator-dispatch');
+      return out;
+    }
+    if (origin) {
+      pushUnique(origin + '/api/eaz-crop-design');
+      pushUnique(toCreatorDispatchEndpoint(engineRoot));
+    }
+    pushUnique(apiBase());
+    try {
+      if (origin) {
+        pushUnique(origin + '/__eaz/creator-dispatch');
+        pushUnique(origin + '/api/eaz-crop-design');
+        pushUnique(origin + '/apps/creator-dispatch');
+      }
+    } catch (_) {}
+    if (cfg.BASE_URL) {
+      pushUnique(toCreatorDispatchEndpoint(cfg.BASE_URL));
+    }
+    pushUnique(CREATOR_DISPATCH_FALLBACK);
+    return out;
+  }
+
+  function resolveServerCropDimensions() {
+    var w = 0;
+    var h = 0;
+    if (ctxData) {
+      if (ctxData.design_width != null) w = Number(ctxData.design_width) || 0;
+      if (ctxData.design_height != null) h = Number(ctxData.design_height) || 0;
+    }
+    if ((!w || !h) && ctxDesign) {
+      if (ctxDesign.width != null) w = Number(ctxDesign.width) || w;
+      if (ctxDesign.height != null) h = Number(ctxDesign.height) || h;
+    }
+    return {
+      w: isFinite(w) && w > 0 ? Math.round(w) : 0,
+      h: isFinite(h) && h > 0 ? Math.round(h) : 0,
+    };
+  }
+
+  function manualCropRectForServer(rect, uiW, uiH, serverW, serverH) {
+    if (!rect) return null;
+    var uw = uiW > 0 ? uiW : 0;
+    var uh = uiH > 0 ? uiH : 0;
+    var sw = serverW > 0 ? serverW : uw;
+    var sh = serverH > 0 ? serverH : uh;
+    if (!uw || !uh || !sw || !sh) return rect;
+    if (Math.abs(uw - sw) <= 2 && Math.abs(uh - sh) <= 2) return rect;
+    return {
+      x: Math.round(rect.x * (sw / uw)),
+      y: Math.round(rect.y * (sh / uh)),
+      w: Math.max(1, Math.round(rect.w * (sw / uw))),
+      h: Math.max(1, Math.round(rect.h * (sh / uh))),
+    };
+  }
+
+  function applyCroppedDesignToStudio(designOut) {
+    if (!designOut) return;
+    var preview = normalizePersistedFileUrl(
+      designOut.preview_url || designOut.image_url || designOut.original_url || ''
+    );
+    var original = normalizePersistedFileUrl(
+      designOut.original_url || designOut.preview_url || preview
+    );
+    if (ctxDesign) {
+      ctxDesign.preview_url = preview || ctxDesign.preview_url;
+      ctxDesign.original_url = original || ctxDesign.original_url;
+      ctxDesign.image_url = preview || original || ctxDesign.image_url;
+      if (designOut.width) ctxDesign.width = designOut.width;
+      if (designOut.height) ctxDesign.height = designOut.height;
+    }
+    if (ctxData) {
+      ctxData.design_preview_url = preview || ctxData.design_preview_url;
+      ctxData.design_original_url = original || ctxData.design_original_url;
+      if (designOut.width) ctxData.design_width = designOut.width;
+      if (designOut.height) ctxData.design_height = designOut.height;
+    }
+    var bucket = currentBucket();
+    if (bucket) {
+      if (!bucket.primary_original_url) {
+        bucket.primary_original_url =
+          bucket.primary_url ||
+          (ctxData && ctxData.design_preview_url) ||
+          (ctxDesign && ctxDesign.preview_url) ||
+          '';
+      }
+      bucket.primary_url = cacheBustSrc(preview || original);
+    }
   }
 
   function enabledPositions() {
@@ -472,11 +686,13 @@
     assetPlacementEl = root.querySelector('#cds-asset-placement');
     assetPlacementListEl = root.querySelector('#cds-asset-placement-list');
     unsavedDialogEl = root.querySelector('#cds-unsaved-dialog');
+    viewerBusyEl = root.querySelector('#cds-viewer-busy');
+    viewerBusyTextEl = root.querySelector('#cds-viewer-busy-text');
     return true;
   }
 
   function markDirtyUi() {
-    if (btnSave) btnSave.disabled = isSaving || !isDirty();
+    if (btnSave) btnSave.disabled = isSaving || isLoading || cropApplying || !isDirty();
   }
 
   function studioConfig() {
@@ -916,6 +1132,7 @@
         btn.setAttribute('aria-selected', pos === current ? 'true' : 'false');
         btn.textContent = formatPlacementLabel(pos);
         btn.addEventListener('click', function () {
+          if (isStudioBusy()) return;
           ensurePrintArea().position = pos;
           var assets = listAssetsForPosition(pos);
           var hasPrimaryPaint =
@@ -1299,6 +1516,7 @@
     var cropBtn = panelDesignEl.querySelector('#cds-crop-toggle');
     if (cropBtn) {
       cropBtn.addEventListener('click', function () {
+        if (isStudioBusy()) return;
         if (!assetSelected || !activeAssetKey) {
           setStatus(t('designStudioCropSelectFirst', 'Select a design first, then crop.'));
           return;
@@ -1608,6 +1826,7 @@
   }
 
   function switchSettingsTab(tab) {
+    if (isStudioBusy() && tab !== activeSettingsTab) return;
     activeSettingsTab = tab === 'variants' ? 'variants' : 'design';
     root.querySelectorAll('[data-cds-settings-tab]').forEach(function (btn) {
       var on = btn.getAttribute('data-cds-settings-tab') === activeSettingsTab;
@@ -1646,7 +1865,12 @@
   }
 
   function enterCropMode() {
+    if (isStudioBusy()) return;
     if (!designWrapEl || !cropLayerEl || !cropBoxEl || !activeAssetKey) return;
+    if (activeAssetKey !== 'primary') {
+      setStatus(t('designStudioCropPrimaryOnly', 'Crop is available for the main design. Open Edit Design for other assets.'));
+      return;
+    }
     cropping = true;
     cropFrac = clampCropFrac(cropFrac || { x: 0, y: 0, w: 1, h: 1 });
     cropFracAtEnter = Object.assign({}, cropFrac);
@@ -1659,6 +1883,7 @@
   }
 
   function exitCropMode(restore) {
+    if (cropApplying) return;
     if (restore && cropFracAtEnter) cropFrac = Object.assign({}, cropFracAtEnter);
     cropping = false;
     cropDrag = null;
@@ -1669,58 +1894,205 @@
     layoutPrintZone();
   }
 
-  function applyCropClient() {
-    if (!designImgEl || !designImgEl.naturalWidth || !cropFrac || cropApplying) return;
+  async function applyCropViaServer() {
+    if (!ctxDesign || !ctxDesign.id || !cropFrac || cropApplying) return;
+    if (activeAssetKey && activeAssetKey !== 'primary') {
+      setStatus(
+        t(
+          'designStudioCropPrimaryOnly',
+          'Crop is available for the main design. Open Edit Design for other assets.'
+        )
+      );
+      return;
+    }
+    var owner = getOwnerId();
+    if (!owner) {
+      setStatus(t('designStudioCropError', 'Could not apply crop.'));
+      return;
+    }
+    if (!designImgEl || !designImgEl.naturalWidth) {
+      setStatus(t('designStudioCropError', 'Could not apply crop.'));
+      return;
+    }
+
     cropApplying = true;
-    setStatus(t('designStudioCropApplying', 'Applying crop…'));
-    var nw = designImgEl.naturalWidth;
-    var nh = designImgEl.naturalHeight;
+    syncBusyChrome();
+    setViewerBusy(true, t('designStudioCropApplying', 'Applying crop…'));
+    setStatus('');
+
     var f = clampCropFrac(cropFrac);
-    var sx = Math.round(f.x * nw);
-    var sy = Math.round(f.y * nh);
-    var sw = Math.max(1, Math.round(f.w * nw));
-    var sh = Math.max(1, Math.round(f.h * nh));
-    var c = document.createElement('canvas');
-    c.width = sw;
-    c.height = sh;
-    var cx = c.getContext('2d');
-    cx.drawImage(designImgEl, sx, sy, sw, sh, 0, 0, sw, sh);
-    c.toBlob(
-      function (blob) {
-        cropApplying = false;
-        if (!blob) {
-          setStatus(t('designStudioCropError', 'Could not apply crop.'));
-          return;
-        }
-        var url = URL.createObjectURL(blob);
-        var bucket = currentBucket();
-        var asset = findAsset(activeAssetKey, currentPosition());
-        if (asset && asset.kind === 'primary') {
-          if (!bucket.primary_original_url) {
-            bucket.primary_original_url =
-              bucket.primary_url ||
-              (ctxData && ctxData.design_preview_url) ||
-              (ctxDesign && ctxDesign.preview_url) ||
-              '';
-          }
-          bucket.primary_url = url;
-        } else if (asset && asset.slot) {
-          if (!asset.slot.original_url) asset.slot.original_url = asset.slot.preview_url || '';
-          asset.slot.preview_url = url;
-        }
-        cropFrac = null;
-        exitCropMode(false);
-        designImgEl.onload = function () {
-          layoutPrintZone();
-          setStatus('');
+    var uiW = designImgEl.naturalWidth;
+    var uiH = designImgEl.naturalHeight;
+    var uiRect = {
+      x: Math.round(f.x * uiW),
+      y: Math.round(f.y * uiH),
+      w: Math.max(1, Math.round(f.w * uiW)),
+      h: Math.max(1, Math.round(f.h * uiH)),
+    };
+    var serverDim = resolveServerCropDimensions();
+    var serverRect = manualCropRectForServer(uiRect, uiW, uiH, serverDim.w, serverDim.h);
+    if (!serverRect) {
+      cropApplying = false;
+      syncBusyChrome();
+      setViewerBusy(false);
+      setStatus(t('designStudioCropError', 'Could not apply crop.'));
+      return;
+    }
+
+    var shopDomain =
+      typeof window !== 'undefined' && window.Shopify && window.Shopify.shop
+        ? String(window.Shopify.shop).trim()
+        : '';
+    var candidates = buildCropDispatchCandidates();
+    var lastErr = null;
+    var data = null;
+    var CROP_FETCH_TIMEOUT_MS = 55000;
+
+    try {
+      for (var i = 0; i < candidates.length; i++) {
+        var base = String(candidates[i] || '');
+        var bodyPayload = {
+          design_id: ctxDesign.id,
+          owner_id: String(owner),
+          logged_in_customer_id: String(owner),
+          manual_crop: {
+            x: serverRect.x,
+            y: serverRect.y,
+            w: serverRect.w,
+            h: serverRect.h,
+          },
         };
-        designImgEl.src = url;
-        markDirtyUi();
-        renderDesignSettingsPanel();
-      },
-      'image/png',
-      0.94
-    );
+        if (shopDomain) bodyPayload.shop = shopDomain;
+
+        var reqUrl = base;
+        if (base.indexOf('/api/eaz-crop-design') === -1) {
+          try {
+            var cropUrl = new URL(base);
+            cropUrl.searchParams.set('op', 'crop-design');
+            cropUrl.searchParams.set('path_prefix', '/apps/creator-dispatch');
+            cropUrl.searchParams.set('logged_in_customer_id', String(owner));
+            if (shopDomain) cropUrl.searchParams.set('shop', shopDomain);
+            reqUrl = cropUrl.toString();
+          } catch (_) {
+            reqUrl = base;
+          }
+        }
+
+        try {
+          var isCropProxy = reqUrl.indexOf('/api/eaz-crop-design') !== -1;
+          var maxSub = isCropProxy ? 2 : 1;
+          var succeeded = false;
+          for (var sub = 0; sub < maxSub; sub++) {
+            if (sub > 0) {
+              await new Promise(function (resolve) {
+                setTimeout(resolve, 500 * sub);
+              });
+            }
+            var ac = new AbortController();
+            var toid = setTimeout(function () {
+              try {
+                ac.abort();
+              } catch (_) {}
+            }, CROP_FETCH_TIMEOUT_MS);
+            var response;
+            try {
+              response = await fetch(reqUrl, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyPayload),
+                signal: ac.signal,
+              });
+            } catch (fe) {
+              clearTimeout(toid);
+              if (fe && fe.name === 'AbortError') {
+                lastErr = new Error('crop_timeout');
+                if (isCropProxy && sub < maxSub - 1) continue;
+                throw lastErr;
+              }
+              throw fe;
+            }
+            clearTimeout(toid);
+
+            var ct = (response.headers.get('content-type') || '').toLowerCase();
+            var rawText = await response.text();
+            var statusRetryable =
+              isCropProxy &&
+              sub < maxSub - 1 &&
+              (response.status === 502 || response.status === 503 || response.status === 504);
+
+            if (!ct.includes('application/json')) {
+              lastErr = new Error('HTTP ' + response.status);
+              if (statusRetryable) continue;
+              throw lastErr;
+            }
+
+            try {
+              data = JSON.parse(rawText);
+            } catch (parseErr) {
+              lastErr = parseErr;
+              if (statusRetryable) continue;
+              throw new Error('invalid JSON');
+            }
+
+            if (data && data.ok) {
+              succeeded = true;
+              break;
+            }
+
+            var errCode = (data && data.error) || 'crop_failed';
+            var upstreamRetryable =
+              isCropProxy &&
+              sub < maxSub - 1 &&
+              (errCode === 'crop_upstream_non_json' ||
+                errCode === 'crop_upstream_timeout' ||
+                (response.status >= 502 && response.status <= 504));
+            lastErr = new Error(errCode);
+            if (upstreamRetryable) continue;
+            throw lastErr;
+          }
+          if (succeeded) break;
+        } catch (attemptErr) {
+          lastErr = attemptErr;
+          console.warn('[CDS] crop attempt failed', attemptErr && attemptErr.message ? attemptErr.message : attemptErr);
+        }
+      }
+
+      if (!data || !data.ok) {
+        throw lastErr || new Error('crop_failed');
+      }
+
+      applyCroppedDesignToStudio(data.design);
+      cropFrac = null;
+      cropFracAtEnter = null;
+      cropping = false;
+      cropDrag = null;
+      if (cropLayerEl) cropLayerEl.hidden = true;
+      if (printZoneEl) printZoneEl.classList.remove('is-cropping');
+      ensurePrimaryVisible();
+      renderStudioUi();
+      markDirtyUi();
+
+      try {
+        if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+          window.CreationsScreen.loadDesigns(true, { silent: true });
+        }
+      } catch (_) {}
+
+      setStatus(t('designStudioCropDone', 'Crop applied as a new design version.'));
+    } catch (err) {
+      console.warn('[CDS] crop failed', err);
+      setStatus(t('designStudioCropError', 'Could not apply crop.'));
+    } finally {
+      cropApplying = false;
+      setViewerBusy(false);
+      syncBusyChrome();
+    }
+  }
+
+  function applyCropClient() {
+    applyCropViaServer();
   }
 
   function bindCropInteractions() {
@@ -1729,11 +2101,16 @@
 
     var cancelBtn = root.querySelector('#cds-crop-cancel');
     var applyBtn = root.querySelector('#cds-crop-apply');
-    if (cancelBtn) cancelBtn.addEventListener('click', function () { exitCropMode(true); });
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        if (cropApplying) return;
+        exitCropMode(true);
+      });
+    }
     if (applyBtn) applyBtn.addEventListener('click', applyCropClient);
 
     function onMove(e) {
-      if (!cropDrag || !cropFrac) return;
+      if (!cropDrag || !cropFrac || cropApplying) return;
       var rect = designWrapEl.getBoundingClientRect();
       var dw = Math.max(1, rect.width);
       var dh = Math.max(1, rect.height);
@@ -1834,7 +2211,7 @@
 
     function startDrag(mode, e, rz) {
       if (e.button != null && e.button !== 0) return;
-      if (cropping) return;
+      if (cropping || isStudioBusy()) return;
       setAssetSelected(true);
       var rect = designWrapEl.getBoundingClientRect();
       transformDrag = {
@@ -2272,6 +2649,10 @@
           return;
         }
         if (cropping) {
+          if (cropApplying) {
+            ev.preventDefault();
+            return;
+          }
           exitCropMode(true);
           ev.preventDefault();
           return;
@@ -2296,6 +2677,7 @@
   }
 
   function resetToDefaults() {
+    if (isStudioBusy()) return;
     var cfg = studioConfig();
     var positions = enabledPositions();
     var colors = cfg.mocks_by_color ? Object.keys(cfg.mocks_by_color) : ['default'];
@@ -2353,6 +2735,7 @@
   function closeUnsavedDialog() {
     pendingUnsavedDiscard = null;
     if (!unsavedDialogEl) return;
+    blurFocusInside(unsavedDialogEl);
     unsavedDialogEl.hidden = true;
     unsavedDialogEl.setAttribute('aria-hidden', 'true');
   }
@@ -2407,18 +2790,27 @@
   }
 
   function doClose() {
+    blurFocusInside(root);
     isOpen = false;
     isLoading = false;
+    cropApplying = false;
+    setViewerBusy(false);
     setLayoutReady(false);
     if (layoutRaf) {
       cancelAnimationFrame(layoutRaf);
       layoutRaf = 0;
     }
-    exitCropMode(true);
+    // Force-exit crop even if apply was mid-flight (state already cleared above).
+    cropping = false;
+    cropDrag = null;
+    cropFracAtEnter = null;
+    if (cropLayerEl) cropLayerEl.hidden = true;
+    if (printZoneEl) printZoneEl.classList.remove('is-cropping');
     closeUnsavedDialog();
     closeSubmodals();
     teardownZonePatternOverlay();
     if (root) {
+      root.classList.remove('is-busy');
       root.hidden = true;
       root.setAttribute('aria-hidden', 'true');
     }
@@ -2445,13 +2837,14 @@
   }
 
   async function onSave() {
-    if (isSaving || !ctxDesign || !ctxProductKey || !draft) return false;
+    if (isSaving || cropApplying || isLoading || !ctxDesign || !ctxProductKey || !draft) return false;
     var owner = getOwnerId();
     if (!owner) return false;
 
     isSaving = true;
-    markDirtyUi();
-    setStatus(t('designStudioSaving', 'Saving…'));
+    syncBusyChrome();
+    setViewerBusy(true, t('designStudioSaving', 'Saving…'));
+    setStatus('');
 
     try {
       var res = await fetch(apiBase() + '?op=save-studio-draft&owner_id=' + encodeURIComponent(owner), {
@@ -2482,7 +2875,8 @@
       return false;
     } finally {
       isSaving = false;
-      markDirtyUi();
+      setViewerBusy(false);
+      syncBusyChrome();
     }
   }
 
@@ -2565,11 +2959,13 @@
       subtitleEl.textContent = (productMeta && productMeta.title) || ctxProductKey;
     }
 
-    setStatus(t('designStudioLoading', 'Loading…'));
+    setStatus('');
     root.hidden = false;
     root.setAttribute('aria-hidden', 'false');
     isOpen = true;
     isLoading = true;
+    setViewerBusy(true, t('designStudioLoading', 'Loading…'));
+    syncBusyChrome();
     setLayoutReady(false);
     ensureStageResizeObserver();
     if (window.CreatorModalPhysics && typeof window.CreatorModalPhysics.lockBodyScroll === 'function') {
@@ -2579,6 +2975,12 @@
     try {
       ctxData = await loadContext(design, ctxProductKey);
       if (!isOpen || ctxProductKey !== nextProductKey) return;
+      if (ctxDesign && ctxData) {
+        if (ctxData.design_preview_url) ctxDesign.preview_url = ctxData.design_preview_url;
+        if (ctxData.design_original_url) ctxDesign.original_url = ctxData.design_original_url;
+        if (ctxData.design_width) ctxDesign.width = ctxData.design_width;
+        if (ctxData.design_height) ctxDesign.height = ctxData.design_height;
+      }
       draft = ctxData.draft || { product_key: ctxProductKey };
       ensurePrintArea();
       draft.print_area.position = 'front';
@@ -2600,6 +3002,8 @@
       setStatus(t('designStudioLoadError', 'Could not load studio.'));
     } finally {
       isLoading = false;
+      setViewerBusy(false);
+      syncBusyChrome();
     }
   }
 
