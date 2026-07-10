@@ -71,6 +71,10 @@
   var pendingContainClampDefaults = false;
   /** When true, refresh savedDraftJson after contain-clamp so open does not look dirty. */
   var syncSavedAfterContainClamp = false;
+  /** Hide design until mock natural size + stage fit are ready (avoids loading offset flash). */
+  var layoutReady = false;
+  var stageResizeObserver = null;
+  var layoutRaf = 0;
 
   function Mi() {
     return window.CreatorMobileI18n || {};
@@ -631,6 +635,52 @@
     mockImgEl.style.objectFit = 'contain';
   }
 
+  function setLayoutReady(on) {
+    layoutReady = !!on;
+    if (printZoneEl) {
+      if (layoutReady) printZoneEl.classList.remove('is-layout-pending');
+      else printZoneEl.classList.add('is-layout-pending');
+    }
+    if (designWrapEl) {
+      if (layoutReady) designWrapEl.classList.remove('is-layout-pending');
+      else designWrapEl.classList.add('is-layout-pending');
+    }
+    if (designChromeEl && !layoutReady) {
+      designChromeEl.hidden = true;
+      designChromeEl.classList.remove('is-visible');
+    }
+  }
+
+  function canLayoutPrintZone() {
+    if (!printZoneEl || !viewerStageEl || !viewerEl) return false;
+    if (viewerEl.clientWidth < 8 || viewerEl.clientHeight < 8) return false;
+    if (mockImgEl && !mockImgEl.hidden) {
+      if (!mockImgEl.complete || !mockImgEl.naturalWidth || !mockImgEl.naturalHeight) return false;
+    }
+    return true;
+  }
+
+  function scheduleLayoutPrintZone() {
+    if (layoutRaf) cancelAnimationFrame(layoutRaf);
+    layoutRaf = requestAnimationFrame(function () {
+      layoutRaf = requestAnimationFrame(function () {
+        layoutRaf = 0;
+        if (isOpen) layoutPrintZone();
+      });
+    });
+  }
+
+  function ensureStageResizeObserver() {
+    if (!viewerEl || typeof ResizeObserver === 'undefined') return;
+    if (stageResizeObserver) return;
+    stageResizeObserver = new ResizeObserver(function () {
+      if (!isOpen) return;
+      scheduleLayoutPrintZone();
+    });
+    stageResizeObserver.observe(viewerEl);
+    if (viewerStageEl) stageResizeObserver.observe(viewerStageEl);
+  }
+
   /** Fit-in-zone scale (informational). Manual scale may exceed this; overflow is clipped. */
   function maxContainScaleInZone() {
     if (!printZoneEl) return UI_SCALE_MAX;
@@ -667,7 +717,13 @@
 
   function syncSelectionChrome() {
     if (!designChromeEl || !viewerStageEl) return;
-    var show = assetSelected && !cropping && !!activeAssetKey && designWrapEl && !designWrapEl.hidden;
+    var show =
+      layoutReady &&
+      assetSelected &&
+      !cropping &&
+      !!activeAssetKey &&
+      designWrapEl &&
+      !designWrapEl.hidden;
     if (!show) {
       designChromeEl.hidden = true;
       designChromeEl.classList.remove('is-visible');
@@ -809,7 +865,16 @@
 
   function layoutPrintZone() {
     if (!printZoneEl || !viewerStageEl || !viewerEl) return;
+    if (!canLayoutPrintZone()) {
+      setLayoutReady(false);
+      return;
+    }
     fitViewerStage();
+    // Stage must be sized from the fitted mock before zone % / design transform.
+    if (viewerStageEl.offsetWidth < 8 || viewerStageEl.offsetHeight < 8) {
+      setLayoutReady(false);
+      return;
+    }
     var z = currentZoneFrac();
     printZoneEl.style.left = z.l * 100 + '%';
     printZoneEl.style.top = z.t * 100 + '%';
@@ -825,6 +890,16 @@
     }
     applyTransformToDesignImg();
     syncTransformInputs();
+    // Design image may still be loading — keep hidden until natural size is known when a URL is set.
+    var paintUrl = designImgEl && designImgEl.getAttribute('src');
+    if (paintUrl && designWrapEl && !designWrapEl.hidden) {
+      if (!designImgEl.complete || !designImgEl.naturalWidth) {
+        setLayoutReady(false);
+        return;
+      }
+    }
+    setLayoutReady(true);
+    syncSelectionChrome();
   }
 
   function renderPositionBar() {
@@ -874,8 +949,10 @@
     var mock = mockEntryForPosition(pos);
     var mockUrl = mock && (mock.editor_mock_url || mock.clean_mock_url || mock.mock_url);
 
+    setLayoutReady(false);
+
     function afterMockReady() {
-      layoutPrintZone();
+      scheduleLayoutPrintZone();
     }
 
     if (mockImgEl && mockUrl) {
@@ -904,16 +981,17 @@
       designImgEl.hidden = false;
       if (designImgEl.src !== url) {
         designImgEl.onload = function () {
-          layoutPrintZone();
+          scheduleLayoutPrintZone();
         };
         designImgEl.src = url;
       } else {
-        layoutPrintZone();
+        scheduleLayoutPrintZone();
       }
     } else if (designWrapEl) {
       designWrapEl.hidden = true;
       if (designChromeEl) designChromeEl.hidden = true;
       teardownZonePatternOverlay();
+      scheduleLayoutPrintZone();
     }
   }
 
@@ -934,6 +1012,47 @@
       '<span class="cds-asset-badge">' +
       formatPlacementLabel(asset.position || currentPosition()) +
       '</span>'
+    );
+  }
+
+  function sliderFieldHtml(opts) {
+    var id = opts.id;
+    var label = opts.label;
+    var min = opts.min;
+    var max = opts.max;
+    var step = opts.step;
+    var value = opts.value;
+    return (
+      '<div class="cds-field-row cds-field-row--slider">' +
+      '<label for="' +
+      id +
+      '-range">' +
+      label +
+      '</label>' +
+      '<div class="cds-slider-row">' +
+      '<input type="number" class="cds-slider-value" id="' +
+      id +
+      '-num" min="' +
+      min +
+      '" max="' +
+      max +
+      '" step="' +
+      step +
+      '" value="' +
+      value +
+      '">' +
+      '<input type="range" class="cds-slider-range" id="' +
+      id +
+      '-range" min="' +
+      min +
+      '" max="' +
+      max +
+      '" step="' +
+      step +
+      '" value="' +
+      value +
+      '">' +
+      '</div></div>'
     );
   }
 
@@ -976,31 +1095,22 @@
     var scaleMax = UI_SCALE_MAX;
     var scaleDisplay = formatScaleDisplay(scaleVal);
     var rotVal = snapRotate5(tr.rotate);
-    var scaleBody =
-      '<div class="cds-field-row"><label for="cds-scale-range">' +
-      t('designStudioScale', 'Scale') +
-      '</label>' +
-      '<input type="range" id="cds-scale-range" min="0.08" max="' +
-      scaleMax +
-      '" step="0.01" value="' +
-      scaleDisplay +
-      '">' +
-      '<input type="number" id="cds-scale-num" min="0.08" max="' +
-      scaleMax +
-      '" step="0.01" value="' +
-      scaleDisplay +
-      '"></div>';
-
-    var rotateBody =
-      '<div class="cds-field-row"><label for="cds-rotate-range">' +
-      t('designStudioRotate', 'Rotate') +
-      '</label>' +
-      '<input type="range" id="cds-rotate-range" min="-180" max="180" step="5" value="' +
-      rotVal +
-      '">' +
-      '<input type="number" id="cds-rotate-num" min="-180" max="180" step="5" value="' +
-      rotVal +
-      '"></div>';
+    var scaleBody = sliderFieldHtml({
+      id: 'cds-scale',
+      label: t('designStudioScale', 'Scale'),
+      min: 0.08,
+      max: scaleMax,
+      step: 0.01,
+      value: scaleDisplay,
+    });
+    var rotateBody = sliderFieldHtml({
+      id: 'cds-rotate',
+      label: t('designStudioRotate', 'Rotate'),
+      min: -180,
+      max: 180,
+      step: 5,
+      value: rotVal,
+    });
 
     var cropBody =
       '<p class="cds-muted">' +
@@ -1057,42 +1167,54 @@
       t('designStudioPatternModeBrickV', 'Brick vertical') +
       '</label>' +
       '</div>' +
-      '<div class="cds-field-row"><label>' +
-      t('designStudioPatternSpacingX', 'Horizontal spacing') +
-      '</label>' +
-      '<input type="number" id="cds-pattern-sx" min="0.05" max="10" step="0.05" value="' +
-      (pat.spacing_x != null ? pat.spacing_x : 1) +
-      '"></div>' +
-      '<div class="cds-field-row"><label>' +
-      t('designStudioPatternSpacingY', 'Vertical spacing') +
-      '</label>' +
-      '<input type="number" id="cds-pattern-sy" min="0.05" max="10" step="0.05" value="' +
-      (pat.spacing_y != null ? pat.spacing_y : 1) +
-      '"></div>' +
-      '<div class="cds-field-row"><label>' +
-      t('designStudioPatternAngle', 'Angle') +
-      '</label>' +
-      '<input type="number" id="cds-pattern-angle" min="-45" max="45" step="1" value="' +
-      (pat.pattern_angle != null ? pat.pattern_angle : 0) +
-      '"></div>' +
-      '<div class="cds-field-row"><label>' +
-      t('designStudioPatternOffset', 'Horizontal offset') +
-      '</label>' +
-      '<input type="number" id="cds-pattern-offset" min="-1" max="1" step="0.05" value="' +
-      (pat.offset != null ? pat.offset : 0) +
-      '"></div>' +
-      '<div class="cds-field-row"><label>' +
-      t('designStudioPatternRotH', 'Rotation each horizontal step') +
-      '</label>' +
-      '<input type="number" id="cds-pattern-rh" min="-180" max="180" step="5" value="' +
-      snapRotate5(pat.rotation_step_horizontal) +
-      '"></div>' +
-      '<div class="cds-field-row"><label>' +
-      t('designStudioPatternRotV', 'Rotation each vertical step') +
-      '</label>' +
-      '<input type="number" id="cds-pattern-rv" min="-180" max="180" step="5" value="' +
-      snapRotate5(pat.rotation_step_vertical) +
-      '"></div>';
+      sliderFieldHtml({
+        id: 'cds-pattern-sx',
+        label: t('designStudioPatternSpacingX', 'Horizontal spacing'),
+        min: 0.05,
+        max: 10,
+        step: 0.05,
+        value: pat.spacing_x != null ? pat.spacing_x : 1,
+      }) +
+      sliderFieldHtml({
+        id: 'cds-pattern-sy',
+        label: t('designStudioPatternSpacingY', 'Vertical spacing'),
+        min: 0.05,
+        max: 10,
+        step: 0.05,
+        value: pat.spacing_y != null ? pat.spacing_y : 1,
+      }) +
+      sliderFieldHtml({
+        id: 'cds-pattern-angle',
+        label: t('designStudioPatternAngle', 'Angle'),
+        min: -45,
+        max: 45,
+        step: 1,
+        value: pat.pattern_angle != null ? pat.pattern_angle : 0,
+      }) +
+      sliderFieldHtml({
+        id: 'cds-pattern-offset',
+        label: t('designStudioPatternOffset', 'Horizontal offset'),
+        min: -1,
+        max: 1,
+        step: 0.05,
+        value: pat.offset != null ? pat.offset : 0,
+      }) +
+      sliderFieldHtml({
+        id: 'cds-pattern-rh',
+        label: t('designStudioPatternRotH', 'Rotation each horizontal step'),
+        min: -180,
+        max: 180,
+        step: 5,
+        value: snapRotate5(pat.rotation_step_horizontal),
+      }) +
+      sliderFieldHtml({
+        id: 'cds-pattern-rv',
+        label: t('designStudioPatternRotV', 'Rotation each vertical step'),
+        min: -180,
+        max: 180,
+        step: 5,
+        value: snapRotate5(pat.rotation_step_vertical),
+      });
 
     panelDesignEl.innerHTML =
       assetsHtml +
@@ -1221,24 +1343,28 @@
         redrawZonePatternOverlay();
       });
     });
-    function bindPatNum(sel, key, fallback, snap5) {
-      var el = panelDesignEl.querySelector(sel);
-      if (!el) return;
-      el.addEventListener('input', function () {
-        var n = Number(el.value);
+    function bindPatSlider(id, key, fallback, snap5) {
+      var range = panelDesignEl.querySelector('#' + id + '-range');
+      var num = panelDesignEl.querySelector('#' + id + '-num');
+      function apply(val) {
+        var n = Number(val);
         if (!Number.isFinite(n)) n = fallback;
         if (snap5) n = snapRotate5(n);
         currentBucket().pattern[key] = n;
+        if (range) range.value = String(n);
+        if (num) num.value = String(n);
         markDirtyUi();
         redrawZonePatternOverlay();
-      });
+      }
+      if (range) range.addEventListener('input', function () { apply(range.value); });
+      if (num) num.addEventListener('input', function () { apply(num.value); });
     }
-    bindPatNum('#cds-pattern-sx', 'spacing_x', 1, false);
-    bindPatNum('#cds-pattern-sy', 'spacing_y', 1, false);
-    bindPatNum('#cds-pattern-angle', 'pattern_angle', 0, false);
-    bindPatNum('#cds-pattern-offset', 'offset', 0, false);
-    bindPatNum('#cds-pattern-rh', 'rotation_step_horizontal', 0, true);
-    bindPatNum('#cds-pattern-rv', 'rotation_step_vertical', 0, true);
+    bindPatSlider('cds-pattern-sx', 'spacing_x', 1, false);
+    bindPatSlider('cds-pattern-sy', 'spacing_y', 1, false);
+    bindPatSlider('cds-pattern-angle', 'pattern_angle', 0, false);
+    bindPatSlider('cds-pattern-offset', 'offset', 0, false);
+    bindPatSlider('cds-pattern-rh', 'rotation_step_horizontal', 0, true);
+    bindPatSlider('cds-pattern-rv', 'rotation_step_vertical', 0, true);
   }
 
   function colorDotStyle(itemOrName) {
@@ -1766,8 +1892,9 @@
     }
 
     window.addEventListener('resize', function () {
-      if (isOpen) layoutPrintZone();
+      if (isOpen) scheduleLayoutPrintZone();
     });
+    ensureStageResizeObserver();
   }
 
   function closeAssetDialogs() {
@@ -2282,6 +2409,11 @@
   function doClose() {
     isOpen = false;
     isLoading = false;
+    setLayoutReady(false);
+    if (layoutRaf) {
+      cancelAnimationFrame(layoutRaf);
+      layoutRaf = 0;
+    }
     exitCropMode(true);
     closeUnsavedDialog();
     closeSubmodals();
@@ -2438,6 +2570,8 @@
     root.setAttribute('aria-hidden', 'false');
     isOpen = true;
     isLoading = true;
+    setLayoutReady(false);
+    ensureStageResizeObserver();
     if (window.CreatorModalPhysics && typeof window.CreatorModalPhysics.lockBodyScroll === 'function') {
       window.CreatorModalPhysics.lockBodyScroll();
     }
@@ -2458,6 +2592,8 @@
       renderStudioUi();
       savedDraftJson = draftJson();
       setStatus('');
+      // Status text / settings panel can change viewer size — re-layout after chrome settles.
+      scheduleLayoutPrintZone();
       markDirtyUi();
     } catch (e) {
       console.warn('[creator-design-studio]', e);
