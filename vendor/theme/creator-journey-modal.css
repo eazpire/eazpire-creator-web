@@ -1012,9 +1012,14 @@
 .cj-product-carousel {
   position: relative;
   display: grid;
-  grid-template-columns: 36px 1fr 36px;
+  /* No arrow columns until content overflows — avoids empty < > gutters. */
+  grid-template-columns: 1fr;
   align-items: center;
   gap: 6px;
+}
+
+.cj-product-carousel.is-scrollable {
+  grid-template-columns: 36px 1fr 36px;
 }
 
 .cj-product-carousel__track {
@@ -1066,6 +1071,7 @@
 }
 
 .cj-product-carousel__nav {
+  display: none;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -1075,6 +1081,16 @@
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.cj-product-carousel.is-scrollable .cj-product-carousel__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cj-product-carousel.is-scrollable .cj-product-carousel__nav[hidden] {
+  display: none;
 }
 
 .cj-product-carousel__nav:hover {

@@ -32,6 +32,12 @@
   var questType = 'main';
   var questFilter = 'available';
 
+  /** In-memory cache so reopening / tab switches do not refetch every time. */
+  var JOURNEY_CACHE_TTL_MS = 60000;
+  var OVERVIEW_CACHE_TTL_MS = 60000;
+  var journeyFetchedAt = 0;
+  var overviewFetchedAt = 0;
+
   var overviewStatsData = null;
   var overviewPrefs = null;
   var overviewLoadPromise = null;
@@ -439,7 +445,11 @@
       loadQuests().catch(console.warn);
     }
     if (currentTab === 'overview') {
-      loadOverviewStats().then(function () { renderOverview(); }).catch(console.warn);
+      if (overviewCacheFresh()) {
+        renderOverview();
+      } else {
+        loadOverviewStats().then(function () { renderOverview(); }).catch(console.warn);
+      }
     }
     document.dispatchEvent(new CustomEvent('creator-journey-tab-changed', {
       detail: { tab: currentTab }
@@ -737,10 +747,9 @@
       escapeHtml(btnLabel) + '</button>';
   }
 
-  function renderFreePickRibbon(freePick) {
-    if (!freePick) return '';
-    return '<span class="cj-tree-card__free-ribbon">' +
-      escapeHtml(t('creator.journey.free_pick_badge', 'Free')) + '</span>';
+  /** FREE ribbon removed — Unlock button already signals unlock-ready (free pick or funded). */
+  function renderFreePickRibbon(/* freePick */) {
+    return '';
   }
 
   function renderTreeCardFrame(node, opts) {
@@ -768,7 +777,7 @@
     } else {
       mediaHtml = renderTreeCardMedia(imgUrl);
     }
-    // Size cards: size only in viewer (no title). Free pick: FREE ribbon only (no duplicate badge above Unlock).
+    // Size cards: size only in viewer (no title). Free pick / unlock-ready: no FREE ribbon (Unlock button is enough).
     var titleHtml = opts.hideTitle
       ? ''
       : '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>';
@@ -776,6 +785,7 @@
     if (node.unlocked) {
       badgeHtml = renderUnlockedBadgeHtml(node);
     } else if (!freePick) {
+      // Partial commits keep the EAZV progress badge (e.g. 0/80); free picks skip it.
       badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
         escapeHtml(formatEazBadge(committed, cost, false, false)) + '</span>';
     }
@@ -2040,6 +2050,38 @@
     });
   }
 
+  /**
+   * Show prev/next only when the track content overflows the visible width.
+   * Uses ResizeObserver so expand/collapse, font load, and window resize stay in sync.
+   */
+  function updateCarouselScrollable(carousel) {
+    if (!carousel) return;
+    var track = carousel.querySelector('[data-cj-carousel-track]');
+    if (!track) {
+      carousel.classList.remove('is-scrollable');
+      return;
+    }
+    var overflow = track.scrollWidth > track.clientWidth + 1;
+    carousel.classList.toggle('is-scrollable', overflow);
+    var prev = carousel.querySelector('[data-cj-carousel-prev]');
+    var next = carousel.querySelector('[data-cj-carousel-next]');
+    if (prev) {
+      prev.hidden = !overflow;
+      prev.setAttribute('aria-hidden', overflow ? 'false' : 'true');
+      prev.tabIndex = overflow ? 0 : -1;
+    }
+    if (next) {
+      next.hidden = !overflow;
+      next.setAttribute('aria-hidden', overflow ? 'false' : 'true');
+      next.tabIndex = overflow ? 0 : -1;
+    }
+  }
+
+  function updateAllCarouselsScrollable(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-cj-carousel]').forEach(updateCarouselScrollable);
+  }
+
   function wireProductCarousel(root) {
     if (!root) return;
     root.querySelectorAll('[data-cj-carousel]').forEach(function (carousel) {
@@ -2054,8 +2096,33 @@
       if (prev) prev.addEventListener('click', function () { scrollBy(-1); });
       if (next) next.addEventListener('click', function () { scrollBy(1); });
       track.addEventListener('scroll', function () {
+        updateCarouselScrollable(carousel);
         positionVariantConnectors(root);
       }, { passive: true });
+
+      if (typeof ResizeObserver !== 'undefined') {
+        if (carousel._cjOverflowObserver) {
+          try { carousel._cjOverflowObserver.disconnect(); } catch (e) { /* ignore */ }
+        }
+        var ro = new ResizeObserver(function () {
+          updateCarouselScrollable(carousel);
+        });
+        ro.observe(track);
+        carousel._cjOverflowObserver = ro;
+      }
+
+      // Images / fonts can change intrinsic card width after first paint.
+      track.querySelectorAll('img').forEach(function (img) {
+        if (img.complete) return;
+        img.addEventListener('load', function () {
+          updateCarouselScrollable(carousel);
+        }, { once: true });
+      });
+
+      updateCarouselScrollable(carousel);
+      requestAnimationFrame(function () {
+        updateCarouselScrollable(carousel);
+      });
     });
   }
 
@@ -2238,10 +2305,13 @@
       window._cjConnectorResizeBound = true;
       window.addEventListener('resize', function () {
         var listEl = document.getElementById('cjTreeList');
-        if (listEl) positionVariantConnectors(listEl);
+        if (!listEl) return;
+        updateAllCarouselsScrollable(listEl);
+        positionVariantConnectors(listEl);
       });
     }
     requestAnimationFrame(function () {
+      updateAllCarouselsScrollable(root);
       positionVariantConnectors(root);
     });
   }
@@ -2856,17 +2926,40 @@
     });
   }
 
-  async function loadOverviewStats() {
+  function journeyCacheFresh() {
+    return !!(journeyData && journeyData.ok && journeyFetchedAt &&
+      (Date.now() - journeyFetchedAt) < JOURNEY_CACHE_TTL_MS);
+  }
+
+  function overviewCacheFresh() {
+    return !!(overviewStatsData && overviewStatsData.ok && overviewFetchedAt &&
+      (Date.now() - overviewFetchedAt) < OVERVIEW_CACHE_TTL_MS);
+  }
+
+  function invalidateJourneyCaches() {
+    journeyFetchedAt = 0;
+    overviewFetchedAt = 0;
+    journeyLoadPromise = null;
+    overviewLoadPromise = null;
+    eazEconomyData = null;
+    eazEconomyLoadPromise = null;
+  }
+
+  async function loadOverviewStats(opts) {
+    opts = opts || {};
     var oid = ownerId();
     if (!oid) return null;
+    if (!opts.force && overviewCacheFresh()) return overviewStatsData;
     if (overviewLoadPromise) return overviewLoadPromise;
     overviewLoadPromise = (async function () {
       try {
         await loadOverviewPrefs();
         overviewStatsData = await apiFetch('get-journey-overview-stats', { owner_id: oid, days: '90' });
+        overviewFetchedAt = Date.now();
         return overviewStatsData;
       } catch (e) {
         overviewStatsData = null;
+        overviewFetchedAt = 0;
         console.warn('[CreatorJourney] overview stats', e);
         return null;
       } finally {
@@ -2913,21 +3006,41 @@
     renderFloatLevel();
   }
 
-  async function loadJourney() {
+  async function loadJourney(opts) {
+    opts = opts || {};
+    var force = !!opts.force;
     var oid = ownerId();
     if (!oid) return;
+    if (!force && journeyCacheFresh()) {
+      setPanelLoading(false);
+      renderSidebarBalance();
+      renderTree();
+      if (overviewCacheFresh()) {
+        renderOverview();
+      } else {
+        loadOverviewStats().then(function () { renderOverview(); }).catch(console.warn);
+      }
+      return journeyData;
+    }
     if (journeyLoadPromise) return journeyLoadPromise;
 
     setPanelLoading(true);
     journeyLoadPromise = (async function () {
       try {
+        // Journey first — paint shell ASAP. Overview is independent and must not block the tree.
         journeyData = await apiFetch('get-creator-journey', { owner_id: oid });
-        await loadOverviewStats();
-        renderOverview();
+        journeyFetchedAt = Date.now();
         renderSidebarBalance();
         renderTree();
+        setPanelLoading(false);
+        loadOverviewStats({ force: force }).then(function () {
+          renderOverview();
+        }).catch(function (e) {
+          console.warn('[CreatorJourney] overview stats', e);
+        });
       } catch (e) {
         journeyData = null;
+        journeyFetchedAt = 0;
         console.warn('[CreatorJourney] journey', e);
         var overviewLoad = document.getElementById('cjOverviewLoading');
         if (overviewLoad) {
@@ -3137,7 +3250,7 @@
     showCjToast(tpl('creator.journey.commit_success', 'Committed {{ amount }} EAZV', {
       amount: formatEazAmount(res.committed != null ? res.committed : amt)
     }));
-    await loadJourney();
+    await loadJourney({ force: true });
     if (res.unlocked) {
       var node = findJourneyNode(nodeKey) || (meta && meta.node) || null;
       showUnlockCelebration({
@@ -3162,7 +3275,7 @@
         err.body = res || {};
         throw err;
       }
-      await loadJourney();
+      await loadJourney({ force: true });
       var after = findJourneyNode(nodeKey) || before;
       if (res.unlocked || res.already_unlocked || (after && after.unlocked)) {
         showUnlockCelebration({ name: title, node: after || before });
@@ -3338,9 +3451,8 @@
     close: close,
     isOpen: isOpen,
     reload: function () {
-      journeyLoadPromise = null;
-      overviewLoadPromise = null;
-      return Promise.all([loadJourney(), loadLevelData()]);
+      invalidateJourneyCaches();
+      return Promise.all([loadJourney({ force: true }), loadLevelData()]);
     },
   };
 
