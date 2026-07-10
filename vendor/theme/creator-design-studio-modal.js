@@ -124,18 +124,46 @@
     return (Math.round(v * 100) / 100).toFixed(2);
   }
 
+  /**
+   * product_mockup_defaults.placement_scale is often a legacy mockup bbox width (~0.35–0.55),
+   * not Shop/Creator UI scale (zone-width fraction, typically ~0.95 / contain).
+   */
+  function looksLikeLegacyPlacementScale(scale) {
+    var s = Number(scale);
+    if (!Number.isFinite(s) || s <= 0) return true;
+    return s < 0.7;
+  }
+
   function adminDefaultTransform(pos) {
     var cfg = studioConfig();
     var map = cfg.placement_defaults_by_position || {};
     var key = normPos(pos || 'front');
     var hit = map[key] || map.front || null;
     if (!hit || typeof hit !== 'object') return cloneTransform(DEFAULT_TRANSFORM);
+    var scale = Number(hit.scale);
+    // Match Shop Design Studio: keep admin x/y/rotate, use UI-scale default when DB scale is legacy.
+    if (looksLikeLegacyPlacementScale(scale)) scale = DEFAULT_TRANSFORM.scale;
     return cloneTransform({
       x: hit.x,
       y: hit.y,
-      scale: hit.scale,
+      scale: scale,
       rotate: hit.rotate != null ? hit.rotate : hit.angle,
     });
+  }
+
+  /** Primary artwork URL for a print position — Front only unless explicitly set on that bucket. */
+  function primaryDesignUrlForPosition(pos, bucket) {
+    var key = normPos(pos);
+    if (bucket && bucket.primary_url) return bucket.primary_url;
+    // Never mirror the product design onto Back/other views on open/reset.
+    if (key === 'front') {
+      return (
+        (ctxData && ctxData.design_preview_url) ||
+        (ctxDesign && ctxDesign.preview_url) ||
+        ''
+      );
+    }
+    return '';
   }
 
   /** Keep primary design visible in the viewer (open / reset / Front↔Back). */
@@ -273,7 +301,7 @@
     return Math.abs(s - rounded2) > 1e-5;
   }
 
-  /** Apply admin placement defaults (open seed / Reset). Does not invent contain-clamped scales. */
+  /** Apply admin placement defaults (open seed / Set Default). Does not invent contain-clamped scales. */
   function applyAdminDefaultsToDraft(forceAll) {
     ensurePrintArea();
     var positions = enabledPositions();
@@ -283,9 +311,15 @@
       if (
         forceAll ||
         isDefaultishTransform(bucket.primary) ||
-        looksLikeClampedScaleArtifact(bucket.primary && bucket.primary.scale)
+        looksLikeClampedScaleArtifact(bucket.primary && bucket.primary.scale) ||
+        looksLikeLegacyPlacementScale(bucket.primary && bucket.primary.scale)
       ) {
         bucket.primary = adminDefaultTransform(pos);
+      }
+      // Keep non-front primary empty unless the user explicitly placed a design there.
+      if (normPos(pos) !== 'front' && !bucket.primary_url && !bucket.primary_original_url) {
+        bucket.primary_url = null;
+        bucket.primary_original_url = null;
       }
     }
   }
@@ -390,19 +424,19 @@
   function listAssetsForPosition(pos) {
     var bucket = ensurePositionBucket(pos);
     var assets = [];
-    var primaryUrl =
-      bucket.primary_url ||
-      (ctxData && ctxData.design_preview_url) ||
-      (ctxDesign && ctxDesign.preview_url) ||
-      '';
-    assets.push({
-      key: 'primary',
-      kind: 'primary',
-      preview_url: primaryUrl,
-      position: normPos(pos),
-      transform: bucket.primary,
-      original_url: bucket.primary_original_url || primaryUrl,
-    });
+    var key = normPos(pos);
+    var primaryUrl = primaryDesignUrlForPosition(key, bucket);
+    // Front always has the product primary slot; other views only if a design was placed there.
+    if (primaryUrl || key === 'front') {
+      assets.push({
+        key: 'primary',
+        kind: 'primary',
+        preview_url: primaryUrl,
+        position: key,
+        transform: bucket.primary,
+        original_url: bucket.primary_original_url || primaryUrl,
+      });
+    }
     var own = bucket.additional || [];
     for (var i = 0; i < own.length; i++) {
       assets.push({
@@ -410,7 +444,7 @@
         kind: 'own',
         index: i,
         preview_url: own[i].preview_url || '',
-        position: normPos(pos),
+        position: key,
         transform: own[i].transform || cloneTransform({ scale: 0.5 }),
         slot: own[i],
         original_url: own[i].original_url || own[i].preview_url || '',
@@ -421,7 +455,7 @@
         key: 'public',
         kind: 'public',
         preview_url: bucket.public_additional.preview_url || '',
-        position: normPos(pos),
+        position: key,
         transform: bucket.public_additional.transform || cloneTransform({ scale: 0.4 }),
         slot: bucket.public_additional,
         original_url: bucket.public_additional.original_url || bucket.public_additional.preview_url || '',
@@ -689,7 +723,20 @@
         btn.textContent = formatPlacementLabel(pos);
         btn.addEventListener('click', function () {
           ensurePrintArea().position = pos;
-          ensurePrimaryVisible();
+          var assets = listAssetsForPosition(pos);
+          var hasPrimaryPaint =
+            assets.some(function (a) {
+              return a.key === 'primary' && a.preview_url;
+            });
+          if (hasPrimaryPaint) {
+            ensurePrimaryVisible();
+          } else if (assets.length) {
+            activeAssetKey = assets[0].key;
+            setAssetSelected(true);
+          } else {
+            activeAssetKey = null;
+            setAssetSelected(false);
+          }
           renderStudioUi();
           markDirtyUi();
         });
