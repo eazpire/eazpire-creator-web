@@ -70,6 +70,26 @@
   var viewerBusyTextEl = null;
   var gridSwitchEl = null;
   var colorGridEl = null;
+  var btnPreviewEl = null;
+  var previewModalEl = null;
+  var previewLoadingEl = null;
+  var previewLoadingTextEl = null;
+  var previewErrorEl = null;
+  var previewContentEl = null;
+  var previewViewsEl = null;
+  var previewMainImgEl = null;
+  var previewMainEmptyEl = null;
+  var previewFooterEl = null;
+  var previewColorCarouselEl = null;
+  var previewColorPrevEl = null;
+  var previewColorNextEl = null;
+  var previewPrintifyId = null;
+  var previewBusy = false;
+  var previewColors = [];
+  var previewViewsByColor = {};
+  var previewActiveColor = null;
+  var previewActiveView = null;
+  var previewUnloadBound = false;
 
   var ctxDesign = null;
   var ctxProductKey = null;
@@ -824,6 +844,19 @@
     versionSaveSubmitEl = root.querySelector('#cds-version-save-submit');
     viewerBusyEl = root.querySelector('#cds-viewer-busy');
     viewerBusyTextEl = root.querySelector('#cds-viewer-busy-text');
+    btnPreviewEl = root.querySelector('#cds-btn-preview');
+    previewModalEl = root.querySelector('#cds-preview-modal');
+    previewLoadingEl = root.querySelector('#cds-preview-loading');
+    previewLoadingTextEl = root.querySelector('#cds-preview-loading-text');
+    previewErrorEl = root.querySelector('#cds-preview-error');
+    previewContentEl = root.querySelector('#cds-preview-content');
+    previewViewsEl = root.querySelector('#cds-preview-views');
+    previewMainImgEl = root.querySelector('#cds-preview-main-img');
+    previewMainEmptyEl = root.querySelector('#cds-preview-main-empty');
+    previewFooterEl = root.querySelector('#cds-preview-footer');
+    previewColorCarouselEl = root.querySelector('#cds-preview-color-carousel');
+    previewColorPrevEl = root.querySelector('#cds-preview-color-prev');
+    previewColorNextEl = root.querySelector('#cds-preview-color-next');
     return true;
   }
 
@@ -2755,6 +2788,8 @@
           if (e.target.closest('#cds-design-chrome')) return;
           if (e.target.closest('#cds-crop-layer')) return;
           if (e.target.closest('#cds-pos-bar')) return;
+          if (e.target.closest('#cds-viewer-top-right')) return;
+          if (e.target.closest('#cds-btn-preview')) return;
           if (e.target.closest('#cds-grid-switch')) return;
           if (e.target.closest('#cds-color-grid')) return;
         }
@@ -3033,6 +3068,384 @@
     setAddMenuView('menu');
     addMenuEl.hidden = false;
     addMenuEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function setPreviewLoading(on, text) {
+    if (previewLoadingEl) {
+      previewLoadingEl.hidden = !on;
+    }
+    if (previewLoadingTextEl && text) {
+      previewLoadingTextEl.textContent = text;
+    }
+    if (previewModalEl) {
+      previewModalEl.classList.toggle('is-preview-busy', !!on);
+    }
+    if (btnPreviewEl) btnPreviewEl.disabled = !!on || previewBusy;
+  }
+
+  function setPreviewError(msg) {
+    if (!previewErrorEl) return;
+    if (!msg) {
+      previewErrorEl.hidden = true;
+      previewErrorEl.textContent = '';
+      return;
+    }
+    previewErrorEl.hidden = false;
+    previewErrorEl.textContent = msg;
+  }
+
+  function currentPrimaryDesignUrl() {
+    var bucket = currentBucket();
+    var url =
+      (bucket && bucket.primary_url) ||
+      (ctxData && ctxData.design_preview_url) ||
+      (ctxDesign && (ctxDesign.preview_url || ctxDesign.original_url)) ||
+      '';
+    return String(url || '').trim();
+  }
+
+  function currentPlacementPayload() {
+    var tr = activeTransform();
+    var mock = mockEntryForPosition(currentPosition());
+    var frac = parseZoneFrac(mock && mock.print_area_frac);
+    // Approximate print-area px from mock metadata when present.
+    var paw = Number(mock && (mock.print_area_width_px || mock.printAreaWidthPx));
+    var pah = Number(mock && (mock.print_area_height_px || mock.printAreaHeightPx));
+    return {
+      x: tr.x,
+      y: tr.y,
+      scale: tr.scale,
+      angle: tr.rotate || 0,
+      design_width: (ctxDesign && ctxDesign.width) || (ctxData && ctxData.design_width) || null,
+      design_height: (ctxDesign && ctxDesign.height) || (ctxData && ctxData.design_height) || null,
+      print_area_width_px: Number.isFinite(paw) && paw > 0 ? paw : null,
+      print_area_height_px: Number.isFinite(pah) && pah > 0 ? pah : null,
+      print_area_frac: frac,
+    };
+  }
+
+  function previewErrorMessage(data) {
+    var code = data && data.error ? String(data.error) : '';
+    if (code === 'printify_not_configured') {
+      return t(
+        'designStudioPreviewCredentials',
+        'Printify credentials are missing. Preview is unavailable.'
+      );
+    }
+    if (data && data.detail) return String(data.detail);
+    if (code === 'template_printify_product_id_required') {
+      return t(
+        'designStudioPreviewError',
+        'Could not create preview.'
+      ) + ' (no Printify template)';
+    }
+    return t('designStudioPreviewError', 'Could not create preview.');
+  }
+
+  function setPreviewMainImage(url) {
+    if (!previewMainImgEl) return;
+    var src = String(url || '').trim();
+    if (!src) {
+      previewMainImgEl.hidden = true;
+      previewMainImgEl.removeAttribute('src');
+      if (previewMainEmptyEl) previewMainEmptyEl.hidden = false;
+      return;
+    }
+    if (previewMainEmptyEl) previewMainEmptyEl.hidden = true;
+    previewMainImgEl.hidden = false;
+    previewMainImgEl.src = src;
+  }
+
+  function renderPreviewViews() {
+    if (!previewViewsEl) return;
+    var views = previewViewsByColor[previewActiveColor] || [];
+    if (!views.length && previewColors.length) {
+      var hit = previewColors.find(function (c) {
+        return c.color_key === previewActiveColor;
+      });
+      if (hit && hit.front_preview_url) {
+        views = [
+          {
+            view_key: 'front',
+            label: 'Front',
+            preview_url: hit.front_preview_url,
+          },
+        ];
+      }
+    }
+    var html = '';
+    for (var i = 0; i < views.length; i++) {
+      var v = views[i];
+      var on = v.view_key === previewActiveView;
+      html +=
+        '<button type="button" class="cds-preview-view' +
+        (on ? ' is-active' : '') +
+        '" data-cds-preview-view="' +
+        encodeURIComponent(v.view_key) +
+        '" role="option" aria-selected="' +
+        (on ? 'true' : 'false') +
+        '">' +
+        '<img class="cds-preview-view__img" src="' +
+        String(v.preview_url || '').replace(/"/g, '&quot;') +
+        '" alt="" decoding="async">' +
+        '<span class="cds-preview-view__label">' +
+        String(v.label || v.view_key) +
+        '</span></button>';
+    }
+    previewViewsEl.innerHTML = html;
+    previewViewsEl.querySelectorAll('[data-cds-preview-view]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var vk = decodeURIComponent(btn.getAttribute('data-cds-preview-view') || '');
+        selectPreviewView(vk);
+      });
+    });
+    var active =
+      views.find(function (x) {
+        return x.view_key === previewActiveView;
+      }) || views[0];
+    if (active) {
+      previewActiveView = active.view_key;
+      setPreviewMainImage(active.preview_url);
+    } else {
+      setPreviewMainImage('');
+    }
+  }
+
+  function updatePreviewCarouselNav() {
+    if (!previewColorCarouselEl) return;
+    var canScroll = previewColorCarouselEl.scrollWidth > previewColorCarouselEl.clientWidth + 4;
+    if (previewColorPrevEl) previewColorPrevEl.hidden = !canScroll;
+    if (previewColorNextEl) previewColorNextEl.hidden = !canScroll;
+  }
+
+  function renderPreviewColorCarousel() {
+    if (!previewColorCarouselEl) return;
+    var html = '';
+    for (var i = 0; i < previewColors.length; i++) {
+      var c = previewColors[i];
+      var on = c.color_key === previewActiveColor;
+      var hex = c.hex || '#888888';
+      html +=
+        '<button type="button" class="cds-preview-color' +
+        (on ? ' is-active' : '') +
+        '" data-cds-preview-color="' +
+        encodeURIComponent(c.color_key) +
+        '" role="option" aria-selected="' +
+        (on ? 'true' : 'false') +
+        '" title="' +
+        String(c.label || c.color_key).replace(/"/g, '&quot;') +
+        '">' +
+        (c.front_preview_url
+          ? '<img class="cds-preview-color__img" src="' +
+            String(c.front_preview_url).replace(/"/g, '&quot;') +
+            '" alt="" decoding="async">'
+          : '<span class="cds-preview-color__img" aria-hidden="true"></span>') +
+        '<span class="cds-preview-color__swatch" style="background:' +
+        String(hex).replace(/"/g, '') +
+        '"></span>' +
+        '<span class="cds-preview-color__label">' +
+        String(c.label || c.color_key) +
+        '</span></button>';
+    }
+    previewColorCarouselEl.innerHTML = html;
+    previewColorCarouselEl.querySelectorAll('[data-cds-preview-color]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var ck = decodeURIComponent(btn.getAttribute('data-cds-preview-color') || '');
+        selectPreviewColor(ck);
+      });
+    });
+    if (previewFooterEl) previewFooterEl.hidden = !previewColors.length;
+    requestAnimationFrame(updatePreviewCarouselNav);
+  }
+
+  function selectPreviewView(viewKey) {
+    previewActiveView = normPos(viewKey) || 'front';
+    renderPreviewViews();
+  }
+
+  function selectPreviewColor(colorKey) {
+    var ck = normColorKey(colorKey) || colorKey;
+    previewActiveColor = ck;
+    var views = previewViewsByColor[ck] || [];
+    var keep =
+      views.find(function (v) {
+        return v.view_key === previewActiveView;
+      }) ||
+      views.find(function (v) {
+        return v.view_key === 'front';
+      }) ||
+      views[0];
+    previewActiveView = keep ? keep.view_key : 'front';
+    renderPreviewColorCarousel();
+    renderPreviewViews();
+  }
+
+  function applyPreviewPayload(data) {
+    previewPrintifyId = data && data.printify_product_id ? String(data.printify_product_id) : null;
+    previewColors = Array.isArray(data && data.colors) ? data.colors : [];
+    previewViewsByColor =
+      data && data.views_by_color && typeof data.views_by_color === 'object' ? data.views_by_color : {};
+    if (!Object.keys(previewViewsByColor).length && Array.isArray(data && data.views)) {
+      var ack = data.active_color_key || (previewColors[0] && previewColors[0].color_key) || 'default';
+      previewViewsByColor[ack] = data.views;
+    }
+    previewActiveColor =
+      data.active_color_key ||
+      (previewColors[0] && previewColors[0].color_key) ||
+      normColorKey(resolveColorKey()) ||
+      null;
+    previewActiveView = data.active_view || 'front';
+    setPreviewError('');
+    if (previewContentEl) previewContentEl.hidden = false;
+    renderPreviewColorCarousel();
+    renderPreviewViews();
+  }
+
+  async function cleanupPreviewDraft(opts) {
+    opts = opts || {};
+    var pid =
+      opts.printify_product_id != null
+        ? String(opts.printify_product_id || '').trim()
+        : previewPrintifyId;
+    var designId =
+      opts.design_id != null
+        ? Number(opts.design_id)
+        : ctxDesign && ctxDesign.id != null
+          ? Number(ctxDesign.id)
+          : 0;
+    var productKey =
+      opts.product_key != null ? opts.product_key : ctxProductKey;
+    previewPrintifyId = null;
+    if (!pid && !(designId > 0 && productKey)) return;
+    var owner = getOwnerId();
+    if (!owner) return;
+    try {
+      await fetch(apiBase() + '?op=creator-studio-preview-cleanup&owner_id=' + encodeURIComponent(owner), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          owner_id: owner,
+          design_id: designId || undefined,
+          product_key: productKey || undefined,
+          printify_product_id: pid || undefined,
+        }),
+        keepalive: true,
+      });
+    } catch (e) {
+      console.warn('[creator-design-studio] preview cleanup', e);
+    }
+  }
+
+  function closePreviewModal() {
+    var snapDesignId = ctxDesign && ctxDesign.id != null ? Number(ctxDesign.id) : 0;
+    var snapProductKey = ctxProductKey;
+    var snapPid = previewPrintifyId;
+    var cleanupOpts = {
+      design_id: snapDesignId,
+      product_key: snapProductKey,
+      printify_product_id: snapPid,
+    };
+
+    if (!previewModalEl || previewModalEl.hidden) {
+      if (snapPid || (snapDesignId > 0 && snapProductKey)) {
+        cleanupPreviewDraft(cleanupOpts);
+      }
+      return;
+    }
+    setPreviewLoading(true, t('designStudioPreviewCloseCleanup', 'Closing preview…'));
+    var done = function () {
+      blurFocusInside(previewModalEl);
+      previewModalEl.hidden = true;
+      previewModalEl.setAttribute('aria-hidden', 'true');
+      previewModalEl.classList.remove('is-preview-busy');
+      setPreviewLoading(false);
+      setPreviewError('');
+      if (previewContentEl) previewContentEl.hidden = true;
+      if (previewFooterEl) previewFooterEl.hidden = true;
+      if (previewViewsEl) previewViewsEl.innerHTML = '';
+      if (previewColorCarouselEl) previewColorCarouselEl.innerHTML = '';
+      previewColors = [];
+      previewViewsByColor = {};
+      previewActiveColor = null;
+      previewActiveView = null;
+      previewBusy = false;
+      if (btnPreviewEl) btnPreviewEl.disabled = false;
+    };
+    cleanupPreviewDraft(cleanupOpts).finally(done);
+  }
+
+  async function openPreviewModal() {
+    if (!isOpen || previewBusy || isStudioBusy() || !ctxDesign || !ctxProductKey) return;
+    var owner = getOwnerId();
+    if (!owner) {
+      setStatus(t('designStudioLoadError', 'Could not load studio.'));
+      return;
+    }
+    if (!previewModalEl) return;
+
+    previewBusy = true;
+    if (btnPreviewEl) btnPreviewEl.disabled = true;
+    closeSubmodals();
+    previewModalEl.hidden = false;
+    previewModalEl.setAttribute('aria-hidden', 'false');
+    if (previewContentEl) previewContentEl.hidden = true;
+    if (previewFooterEl) previewFooterEl.hidden = true;
+    setPreviewError('');
+    setPreviewLoading(true, t('designStudioPreviewLoading', 'Creating Printify preview…'));
+
+    try {
+      var designUrl = currentPrimaryDesignUrl();
+      var res = await fetch(
+        apiBase() + '?op=creator-studio-preview-open&owner_id=' + encodeURIComponent(owner),
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            owner_id: owner,
+            design_id: Number(ctxDesign.id),
+            product_key: ctxProductKey,
+            design_url: designUrl || undefined,
+            position: currentPosition(),
+            color_key: resolveColorKey(),
+            placement: currentPlacementPayload(),
+          }),
+        }
+      );
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok || !data || !data.ok) {
+        setPreviewLoading(false);
+        if (previewContentEl) previewContentEl.hidden = true;
+        setPreviewError(previewErrorMessage(data || { error: 'preview_failed' }));
+        previewBusy = false;
+        if (btnPreviewEl) btnPreviewEl.disabled = false;
+        return;
+      }
+      applyPreviewPayload(data);
+      setPreviewLoading(false);
+      previewBusy = false;
+      if (btnPreviewEl) btnPreviewEl.disabled = false;
+    } catch (e) {
+      console.warn('[creator-design-studio] preview open', e);
+      setPreviewLoading(false);
+      setPreviewError(t('designStudioPreviewError', 'Could not create preview.'));
+      previewBusy = false;
+      if (btnPreviewEl) btnPreviewEl.disabled = false;
+    }
+  }
+
+  function ensurePreviewUnloadHook() {
+    if (previewUnloadBound) return;
+    previewUnloadBound = true;
+    window.addEventListener('pagehide', function () {
+      if (previewPrintifyId) cleanupPreviewDraft();
+    });
+    window.addEventListener('beforeunload', function () {
+      if (previewPrintifyId) cleanupPreviewDraft();
+    });
   }
 
   function closeSubmodals() {
@@ -3651,6 +4064,40 @@
     root.querySelectorAll('[data-cds-version-save-close]').forEach(function (el) {
       el.addEventListener('click', closeVersionSaveModal);
     });
+    root.querySelectorAll('[data-cds-preview-close]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        closePreviewModal();
+      });
+    });
+    if (btnPreviewEl) {
+      btnPreviewEl.addEventListener('click', function () {
+        openPreviewModal();
+      });
+    }
+    if (previewColorPrevEl) {
+      previewColorPrevEl.addEventListener('click', function () {
+        if (!previewColorCarouselEl) return;
+        previewColorCarouselEl.scrollBy({
+          left: -Math.max(120, previewColorCarouselEl.clientWidth * 0.7),
+          behavior: 'smooth',
+        });
+      });
+    }
+    if (previewColorNextEl) {
+      previewColorNextEl.addEventListener('click', function () {
+        if (!previewColorCarouselEl) return;
+        previewColorCarouselEl.scrollBy({
+          left: Math.max(120, previewColorCarouselEl.clientWidth * 0.7),
+          behavior: 'smooth',
+        });
+      });
+    }
+    if (previewColorCarouselEl) {
+      previewColorCarouselEl.addEventListener('scroll', function () {
+        updatePreviewCarouselNav();
+      });
+    }
+    ensurePreviewUnloadHook();
     if (versionSaveFormEl) {
       versionSaveFormEl.addEventListener('submit', submitSaveVersion);
     }
@@ -3733,6 +4180,11 @@
       if (ev.key === 'Escape') {
         if (unsavedDialogEl && !unsavedDialogEl.hidden) {
           handleUnsavedAction('cancel');
+          ev.preventDefault();
+          return;
+        }
+        if (previewModalEl && !previewModalEl.hidden) {
+          closePreviewModal();
           ev.preventDefault();
           return;
         }
@@ -3887,6 +4339,7 @@
     if (cropLayerEl) cropLayerEl.hidden = true;
     if (printZoneEl) printZoneEl.classList.remove('is-cropping');
     closeUnsavedDialog();
+    closePreviewModal();
     closeSubmodals();
     teardownZonePatternOverlay();
     if (root) {
