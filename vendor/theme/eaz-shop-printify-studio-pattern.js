@@ -131,6 +131,9 @@
         ctx.save();
         ctx.translate(bx, by);
         ctx.rotate((tileBodyDeg + stepRot) * rad);
+        if (opts.flipH || opts.flipV) {
+          ctx.scale(opts.flipH ? -1 : 1, opts.flipV ? -1 : 1);
+        }
         ctx.globalAlpha = opts.alpha != null ? opts.alpha : 0.97;
         try {
           ctx.drawImage(opts.image, 0, 0, nw, nh, -tileW / 2, -tileH / 2, tileW, tileH);

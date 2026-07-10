@@ -101,7 +101,7 @@
   var MAX_PUBLIC_ADDITIONAL = 1;
   /** Manual scale ceiling (zone-width fraction). Overflow is clipped by the print-zone, not capped to contain. */
   var UI_SCALE_MAX = 2.5;
-  var DEFAULT_TRANSFORM = { x: 0.5, y: 0.5, scale: 0.95, rotate: 0 };
+  var DEFAULT_TRANSFORM = { x: 0.5, y: 0.5, scale: 0.95, rotate: 0, flipX: false, flipY: false };
   /** After open/Set Default: shrink admin seed (often 0.95) to fit inside the print zone once the design image is measured. */
   var pendingContainClampDefaults = false;
   /** When true, refresh savedDraftJson after contain-clamp so open does not look dirty. */
@@ -142,9 +142,17 @@
     var I = window.CreatorI18n || {};
     if (I[key]) return I[key];
     if (key.indexOf('design_studio_') === 0) {
-      var dotted = 'creator.design_studio.' + key.replace(/^design_studio_/, '');
+      var suffix = key.replace(/^design_studio_/, '');
+      var dotted = 'creator.design_studio.' + suffix;
       if (I[dotted]) return I[dotted];
       if (M[dotted]) return M[dotted];
+      // Flat portal i18n: creator.design_studio.quick_fit → often also as nested or leaf key
+      if (I['design_studio.' + suffix]) return I['design_studio.' + suffix];
+      if (M['design_studio.' + suffix]) return M['design_studio.' + suffix];
+      var nest = I.creator && I.creator.design_studio;
+      if (nest && nest[suffix]) return nest[suffix];
+      nest = M.creator && M.creator.design_studio;
+      if (nest && nest[suffix]) return nest[suffix];
     }
     return fallback;
   }
@@ -166,6 +174,8 @@
       y: Number.isFinite(Number(src.y)) ? Number(src.y) : 0.5,
       scale: Number.isFinite(Number(src.scale)) && Number(src.scale) > 0 ? Number(src.scale) : 0.95,
       rotate: snapRotate5(src.rotate),
+      flipX: !!src.flipX,
+      flipY: !!src.flipY,
     };
   }
 
@@ -620,7 +630,9 @@
       Math.abs(Number(tr.x) - 0.5) < 1e-6 &&
       Math.abs(Number(tr.y) - 0.5) < 1e-6 &&
       Math.abs(Number(tr.scale) - 0.95) < 1e-6 &&
-      Math.abs(Number(tr.rotate) || 0) < 1e-6
+      Math.abs(Number(tr.rotate) || 0) < 1e-6 &&
+      !tr.flipX &&
+      !tr.flipY
     );
   }
 
@@ -721,6 +733,8 @@
         y: admin.y,
         scale: Math.round(Math.min(seedScale, maxContain) * 100) / 100,
         rotate: admin.rotate,
+        flipX: false,
+        flipY: false,
       });
     }
     pendingContainClampDefaults = false;
@@ -1045,6 +1059,20 @@
     return UI_SCALE_MAX;
   }
 
+  /** Cover-zone scale: design completely fills the print area (overflow clipped). */
+  function maxCoverScaleInZone() {
+    if (!printZoneEl) return UI_SCALE_MAX;
+    var zw = printZoneEl.offsetWidth || 1;
+    var zh = printZoneEl.offsetHeight || 1;
+    if (zw < 1 || zh < 1) return UI_SCALE_MAX;
+    var nw = designImgEl && designImgEl.naturalWidth ? designImgEl.naturalWidth : 0;
+    var nh = designImgEl && designImgEl.naturalHeight ? designImgEl.naturalHeight : 0;
+    if (nw > 0 && nh > 0) {
+      return Math.min(Math.max(1, (zh * nw) / (zw * nh)), UI_SCALE_MAX);
+    }
+    return UI_SCALE_MAX;
+  }
+
   /** Clamp manual scale to UI range only — do not force down to contain-fit. */
   function clampScaleUi(raw) {
     return clamp(Number(raw) || 0.95, 0.08, UI_SCALE_MAX);
@@ -1223,7 +1251,11 @@
     tr.y = y;
     tr.scale = scale;
     tr.rotate = rot;
+    tr.flipX = !!tr.flipX;
+    tr.flipY = !!tr.flipY;
     var visualScale = visualScaleForTransform(tr);
+    var flipSx = tr.flipX ? -1 : 1;
+    var flipSy = tr.flipY ? -1 : 1;
 
     var zoneW = printZoneEl.offsetWidth || 1;
     var zoneH = printZoneEl.offsetHeight || 1;
@@ -1236,8 +1268,19 @@
     var dy = (y - 0.5) * zoneH;
     designWrapEl.style.left = '50%';
     designWrapEl.style.top = '50%';
+    // Shop parity: flip via CSS scale after rotate (persisted as flipX/flipY on transform).
     designWrapEl.style.transform =
-      'translate(-50%, -50%) translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg)';
+      'translate(-50%, -50%) translate(' +
+      dx +
+      'px,' +
+      dy +
+      'px) rotate(' +
+      rot +
+      'deg) scale(' +
+      flipSx +
+      ',' +
+      flipSy +
+      ')';
 
     syncSelectionChrome();
     redrawZonePatternOverlay();
@@ -1315,6 +1358,8 @@
       tileAngle: snapRotate5(tr.rotate),
       rotationStepH: pat.rotation_step_horizontal,
       rotationStepV: pat.rotation_step_vertical,
+      flipH: !!tr.flipX,
+      flipV: !!tr.flipY,
     });
   }
 
@@ -1545,6 +1590,114 @@
     );
   }
 
+  function quickActionIconSvg(kind) {
+    if (kind === 'flip-h') {
+      return (
+        '<svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true">' +
+        '<path d="M11 3v16M6 8l5-5 5 5M6 14l5 5 5-5" stroke="currentColor" stroke-width="1.5" ' +
+        'stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
+      );
+    }
+    if (kind === 'flip-v') {
+      return (
+        '<svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true">' +
+        '<path d="M3 11h16M8 6l5 5-5 5M14 6l5 5-5 5" stroke="currentColor" stroke-width="1.5" ' +
+        'stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
+      );
+    }
+    if (kind === 'fit') {
+      return (
+        '<svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true">' +
+        '<path d="M7 4H4v3M15 4h3v3M7 18H4v-3M15 18h3v-3" stroke="currentColor" stroke-width="1.5" ' +
+        'stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+        '<rect x="7" y="7" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>' +
+        '</svg>'
+      );
+    }
+    return (
+      '<svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true">' +
+      '<rect x="3" y="3" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>' +
+      '<rect x="5.5" y="5.5" width="11" height="11" rx="1" fill="currentColor" opacity="0.35"/>' +
+      '<path d="M8 11h6M11 8v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+      '</svg>'
+    );
+  }
+
+  function quickActionBtnHtml(action, title, label, pressed) {
+    return (
+      '<button type="button" class="cds-quick-btn' +
+      (pressed ? ' is-active' : '') +
+      '" data-cds-quick="' +
+      action +
+      '" title="' +
+      title.replace(/"/g, '&quot;') +
+      '" aria-label="' +
+      title.replace(/"/g, '&quot;') +
+      '"' +
+      (pressed != null ? ' aria-pressed="' + (pressed ? 'true' : 'false') + '"' : '') +
+      '>' +
+      '<span class="cds-quick-btn__label">' +
+      label +
+      '</span>' +
+      quickActionIconSvg(action) +
+      '</button>'
+    );
+  }
+
+  /** Fit = admin placement seed for this position, contain-clamped (same as Default / open). */
+  function fitActiveToPlaceholder() {
+    if (!activeAssetKey) {
+      activeAssetKey = 'primary';
+      setAssetSelected(true);
+    }
+    var pos = currentPosition();
+    var admin = adminDefaultTransform(pos);
+    var tr = activeTransform();
+    var seedScale = Number(admin.scale);
+    if (!Number.isFinite(seedScale) || seedScale <= 0) seedScale = 0.95;
+    var maxContain = maxContainScaleInZone();
+    if (!(maxContain > 0) || !Number.isFinite(maxContain)) maxContain = seedScale;
+    tr.x = Number.isFinite(Number(admin.x)) ? Number(admin.x) : 0.5;
+    tr.y = Number.isFinite(Number(admin.y)) ? Number(admin.y) : 0.5;
+    tr.rotate = snapRotate5(admin.rotate);
+    tr.scale = Math.round(Math.min(seedScale, maxContain) * 100) / 100;
+    tr.flipX = false;
+    tr.flipY = false;
+    markDirtyUi();
+    applyTransformToDesignImg();
+    syncTransformInputs();
+    renderDesignSettingsPanel();
+  }
+
+  /** Fill = cover the print zone completely (overflow clipped). Keeps current center. */
+  function fillActiveToPlaceholder() {
+    if (!activeAssetKey) {
+      activeAssetKey = 'primary';
+      setAssetSelected(true);
+    }
+    var tr = activeTransform();
+    var cover = maxCoverScaleInZone();
+    tr.scale = Math.round(clampScaleUi(cover) * 100) / 100;
+    if (!Number.isFinite(Number(tr.x))) tr.x = 0.5;
+    if (!Number.isFinite(Number(tr.y))) tr.y = 0.5;
+    markDirtyUi();
+    applyTransformToDesignImg();
+    syncTransformInputs();
+  }
+
+  function toggleActiveFlip(axis) {
+    if (!activeAssetKey) {
+      activeAssetKey = 'primary';
+      setAssetSelected(true);
+    }
+    var tr = activeTransform();
+    if (axis === 'x') tr.flipX = !tr.flipX;
+    else tr.flipY = !tr.flipY;
+    markDirtyUi();
+    applyTransformToDesignImg();
+    renderDesignSettingsPanel();
+  }
+
   function renderDesignSettingsPanel() {
     if (!panelDesignEl) return;
     ensurePrintArea();
@@ -1608,6 +1761,36 @@
       '<button type="button" class="cds-btn-secondary" id="cds-crop-toggle">' +
       t('designStudioCrop', 'Crop') +
       '</button>';
+
+    var quickBody =
+      '<div class="cds-quick-grid" role="group" aria-label="' +
+      t('design_studio_quick_actions', 'Quick Actions').replace(/"/g, '&quot;') +
+      '">' +
+      quickActionBtnHtml(
+        'flip-h',
+        t('design_studio_quick_flip_h', 'Flip horizontally'),
+        t('design_studio_quick_flip_h_btn', 'Flip H'),
+        !!tr.flipX
+      ) +
+      quickActionBtnHtml(
+        'flip-v',
+        t('design_studio_quick_flip_v', 'Flip vertically'),
+        t('design_studio_quick_flip_v_btn', 'Flip V'),
+        !!tr.flipY
+      ) +
+      quickActionBtnHtml(
+        'fit',
+        t('design_studio_quick_fit', 'Fit to placeholder'),
+        t('design_studio_quick_fit_btn', 'Fit'),
+        null
+      ) +
+      quickActionBtnHtml(
+        'fill',
+        t('design_studio_quick_fill', 'Fill to placeholder'),
+        t('design_studio_quick_fill_btn', 'Fill'),
+        null
+      ) +
+      '</div>';
 
     var align = bucket.alignment || { h: 'center', v: 'center' };
     var alignBtns = [];
@@ -1708,6 +1891,12 @@
     panelDesignEl.innerHTML =
       assetsHtml +
       collapseHtml(
+        'quick',
+        t('design_studio_quick_actions', 'Quick Actions'),
+        quickBody,
+        true
+      ) +
+      collapseHtml(
         'transform',
         t('designStudioSectionTransform', 'Scale, Rotate, Crop'),
         scaleBody + rotateBody + cropBody,
@@ -1757,6 +1946,17 @@
 
     var addBtn = panelDesignEl.querySelector('[data-cds-open-add]');
     if (addBtn) addBtn.addEventListener('click', openAddMenu);
+
+    panelDesignEl.querySelectorAll('[data-cds-quick]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (isStudioBusy()) return;
+        var action = btn.getAttribute('data-cds-quick') || '';
+        if (action === 'flip-h') toggleActiveFlip('x');
+        else if (action === 'flip-v') toggleActiveFlip('y');
+        else if (action === 'fit') fitActiveToPlaceholder();
+        else if (action === 'fill') fillActiveToPlaceholder();
+      });
+    });
 
     function bindRangePair(rangeId, numId, key) {
       var range = panelDesignEl.querySelector(rangeId);

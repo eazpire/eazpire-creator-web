@@ -827,6 +827,55 @@
   display: block;
 }
 
+.cds-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.cds-quick-btn {
+  width: 100%;
+  min-height: 64px;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 250, 252, 0.18);
+  background: rgba(248, 250, 252, 0.06);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 8px 4px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cds-quick-btn__label {
+  font-size: 0.72rem;
+  line-height: 1.1;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.cds-quick-btn svg {
+  flex-shrink: 0;
+  display: block;
+  color: #f97316;
+}
+
+.cds-quick-btn:hover {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.cds-quick-btn.is-active,
+.cds-quick-btn[aria-pressed='true'] {
+  border-color: rgba(249, 115, 22, 0.75);
+  background: rgba(249, 115, 22, 0.18);
+}
+
 .cds-field-row {
   display: flex;
   flex-direction: column;
