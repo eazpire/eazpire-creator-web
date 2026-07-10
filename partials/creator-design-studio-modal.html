@@ -30,18 +30,37 @@
             <img class="cds-viewer__mock" id="cds-mock-img" alt="" hidden decoding="async">
             <p class="cds-viewer__empty" id="cds-viewer-empty" hidden data-t="creator.design_studio.no_mock">No mock available for this view.</p>
             <div class="cds-print-zone" id="cds-print-zone" hidden>
-              <div class="cds-viewer__design-wrap" id="cds-design-wrap" hidden>
-                <img class="cds-viewer__design" id="cds-primary-design" alt="" decoding="async" draggable="false">
-                <div class="cds-design-chrome" id="cds-design-chrome" hidden>
-                  <span class="cds-design-handle cds-design-handle--nw" data-cds-rz="nw"></span>
-                  <span class="cds-design-handle cds-design-handle--n" data-cds-rz="n"></span>
-                  <span class="cds-design-handle cds-design-handle--ne" data-cds-rz="ne"></span>
-                  <span class="cds-design-handle cds-design-handle--e" data-cds-rz="e"></span>
-                  <span class="cds-design-handle cds-design-handle--se" data-cds-rz="se"></span>
-                  <span class="cds-design-handle cds-design-handle--s" data-cds-rz="s"></span>
-                  <span class="cds-design-handle cds-design-handle--sw" data-cds-rz="sw"></span>
-                  <span class="cds-design-handle cds-design-handle--w" data-cds-rz="w"></span>
-                  <span class="cds-design-handle cds-design-handle--rotate" data-cds-rz="rotate"></span>
+              <div class="cds-print-zone__clip" id="cds-print-zone-clip">
+                <canvas class="cds-pattern-canvas" id="cds-pattern-canvas" hidden></canvas>
+                <div class="cds-viewer__design-wrap" id="cds-design-wrap" hidden>
+                  <img class="cds-viewer__design" id="cds-primary-design" alt="" decoding="async" draggable="false">
+                  <div class="cds-crop-layer" id="cds-crop-layer" hidden>
+                    <div class="cds-crop-box" id="cds-crop-box">
+                      <span class="cds-crop-edge cds-crop-edge--n" data-cds-crop-rz="n"></span>
+                      <span class="cds-crop-edge cds-crop-edge--s" data-cds-crop-rz="s"></span>
+                      <span class="cds-crop-edge cds-crop-edge--e" data-cds-crop-rz="e"></span>
+                      <span class="cds-crop-edge cds-crop-edge--w" data-cds-crop-rz="w"></span>
+                      <span class="cds-crop-edge cds-crop-edge--nw" data-cds-crop-rz="nw"></span>
+                      <span class="cds-crop-edge cds-crop-edge--ne" data-cds-crop-rz="ne"></span>
+                      <span class="cds-crop-edge cds-crop-edge--sw" data-cds-crop-rz="sw"></span>
+                      <span class="cds-crop-edge cds-crop-edge--se" data-cds-crop-rz="se"></span>
+                    </div>
+                    <div class="cds-crop-actions" id="cds-crop-actions">
+                      <button type="button" class="cds-crop-action cds-crop-action--cancel" id="cds-crop-cancel" data-t="creator.design_studio.crop_cancel">Cancel crop</button>
+                      <button type="button" class="cds-crop-action cds-crop-action--ok" id="cds-crop-apply" data-t="creator.design_studio.crop_apply">Apply crop</button>
+                    </div>
+                  </div>
+                  <div class="cds-design-chrome" id="cds-design-chrome" hidden>
+                    <span class="cds-design-handle cds-design-handle--nw" data-cds-rz="nw"></span>
+                    <span class="cds-design-handle cds-design-handle--n" data-cds-rz="n"></span>
+                    <span class="cds-design-handle cds-design-handle--ne" data-cds-rz="ne"></span>
+                    <span class="cds-design-handle cds-design-handle--e" data-cds-rz="e"></span>
+                    <span class="cds-design-handle cds-design-handle--se" data-cds-rz="se"></span>
+                    <span class="cds-design-handle cds-design-handle--s" data-cds-rz="s"></span>
+                    <span class="cds-design-handle cds-design-handle--sw" data-cds-rz="sw"></span>
+                    <span class="cds-design-handle cds-design-handle--w" data-cds-rz="w"></span>
+                    <span class="cds-design-handle cds-design-handle--rotate" data-cds-rz="rotate"></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -92,6 +111,53 @@
       </header>
       <div class="cds-picker-grid" id="cds-picker-grid"></div>
       <p class="cds-muted cds-picker-empty" id="cds-picker-empty" hidden></p>
+    </div>
+  </div>
+
+  <div class="cds-submodal" id="cds-asset-actions" hidden aria-hidden="true">
+    <div class="cds-submodal__backdrop" data-cds-asset-close></div>
+    <div class="cds-submodal__sheet cds-asset-actions-sheet" role="dialog" aria-labelledby="cds-asset-actions-title">
+      <header class="cds-submodal__head">
+        <h3 id="cds-asset-actions-title" class="cds-submodal__title" data-t="creator.design_studio.asset_actions_title">Asset</h3>
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-asset-close aria-label="Close">&times;</button>
+      </header>
+      <div class="cds-asset-actions-preview">
+        <img id="cds-asset-actions-preview" alt="" decoding="async">
+      </div>
+      <div class="cds-asset-actions-grid">
+        <button type="button" class="cds-asset-action-tile" data-cds-asset-action="duplicate" data-t="creator.design_studio.asset_action_duplicate">Duplicate</button>
+        <button type="button" class="cds-asset-action-tile" data-cds-asset-action="reset" data-t="creator.design_studio.asset_action_reset">Reset to original</button>
+        <button type="button" class="cds-asset-action-tile" data-cds-asset-action="copy" data-t="creator.design_studio.asset_action_copy_to">Copy to</button>
+        <button type="button" class="cds-asset-action-tile" data-cds-asset-action="move" data-t="creator.design_studio.asset_action_move_to">Move to</button>
+        <button type="button" class="cds-asset-action-tile cds-asset-action-tile--danger" data-cds-asset-action="remove" data-t="creator.design_studio.asset_action_remove">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cds-submodal" id="cds-asset-placement" hidden aria-hidden="true">
+    <div class="cds-submodal__backdrop" data-cds-placement-close></div>
+    <div class="cds-submodal__sheet" role="dialog" aria-labelledby="cds-asset-placement-title">
+      <header class="cds-submodal__head">
+        <h3 id="cds-asset-placement-title" class="cds-submodal__title" data-t="creator.design_studio.asset_placement_title">Choose view</h3>
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-placement-close aria-label="Close">&times;</button>
+      </header>
+      <div class="cds-asset-placement-list" id="cds-asset-placement-list" role="list"></div>
+    </div>
+  </div>
+
+  <div class="cds-submodal cds-submodal--unsaved" id="cds-unsaved-dialog" hidden aria-hidden="true">
+    <div class="cds-submodal__backdrop" data-cds-unsaved="cancel"></div>
+    <div class="cds-submodal__sheet cds-unsaved-sheet" role="dialog" aria-modal="true" aria-labelledby="cds-unsaved-title">
+      <header class="cds-submodal__head">
+        <h3 id="cds-unsaved-title" class="cds-submodal__title" data-t="creator.design_studio.unsaved_title">Unsaved changes</h3>
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-unsaved="cancel" aria-label="Close">&times;</button>
+      </header>
+      <p class="cds-unsaved-message" id="cds-unsaved-message" data-t="creator.design_studio.unsaved_body">You have unsaved changes. Save them, discard them, or cancel to keep editing.</p>
+      <div class="cds-unsaved-actions">
+        <button type="button" class="cds-btn-secondary" data-cds-unsaved="cancel" data-t="creator.design_studio.unsaved_cancel">Cancel</button>
+        <button type="button" class="cds-btn-secondary cds-unsaved-discard" data-cds-unsaved="discard" data-t="creator.design_studio.unsaved_discard">Discard</button>
+        <button type="button" class="cds-modal__btn cds-modal__btn--save" data-cds-unsaved="save" data-t="creator.design_studio.unsaved_save">Save</button>
+      </div>
     </div>
   </div>
 

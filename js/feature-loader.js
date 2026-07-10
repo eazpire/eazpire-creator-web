@@ -25,7 +25,7 @@
     if (!href || document.querySelector('link[data-portal-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href + "?v=7";
+    link.href = href + "?v=10";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -37,7 +37,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=4";
+      s.src = src + "?v=5";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -163,6 +163,7 @@
         asset("creator-creations-library-actions.js"),
         asset("creator-creations-bulk.js"),
         asset("creator-design-products-modal.js"),
+        asset("eaz-shop-printify-studio-pattern.js"),
         asset("creator-design-studio-modal.js"),
         asset("creator-design-preview-modal.js"),
         asset("creator-creations-screen.js"),

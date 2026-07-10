@@ -1,5 +1,6 @@
 /**
  * Creator Design Studio — fullscreen overlay (IDEA-026).
+ * Shop-parity: contain scale, zone clip, pattern overlay, per-position assets, crop, asset menu.
  */
 (function () {
   'use strict';
@@ -15,9 +16,13 @@
   var mockImgEl = null;
   var viewerEmptyEl = null;
   var printZoneEl = null;
+  var printZoneClipEl = null;
+  var patternCanvasEl = null;
   var designWrapEl = null;
   var designImgEl = null;
   var designChromeEl = null;
+  var cropLayerEl = null;
+  var cropBoxEl = null;
   var posBarEl = null;
   var panelDesignEl = null;
   var panelVariantsEl = null;
@@ -27,6 +32,12 @@
   var pickerTitleEl = null;
   var pickerEmptyEl = null;
   var uploadInputEl = null;
+  var assetActionsEl = null;
+  var assetActionsPreviewEl = null;
+  var assetPlacementEl = null;
+  var assetPlacementListEl = null;
+  var unsavedDialogEl = null;
+  var pendingUnsavedDiscard = null;
 
   var ctxDesign = null;
   var ctxProductKey = null;
@@ -35,15 +46,25 @@
   var draft = null;
   var savedDraftJson = '';
   var activeSettingsTab = 'design';
-  var activeAssetKey = 'primary';
+  var activeAssetKey = null;
+  var assetSelected = false;
   var isOpen = false;
   var isSaving = false;
   var isLoading = false;
   var pickerMode = 'mine';
   var transformDrag = null;
+  var cropDrag = null;
+  var cropping = false;
+  var cropFrac = null;
+  var cropFracAtEnter = null;
+  var cropApplying = false;
+  var pendingAssetKey = null;
+  var pendingAssetAction = null;
+  var pendingAssetSourcePos = null;
 
   var MAX_OWN_ADDITIONAL = 5;
   var MAX_PUBLIC_ADDITIONAL = 1;
+  var DEFAULT_TRANSFORM = { x: 0.5, y: 0.5, scale: 0.95, rotate: 0 };
 
   function Mi() {
     return window.CreatorMobileI18n || {};
@@ -76,6 +97,26 @@
     return fallback;
   }
 
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function snapRotate5(deg) {
+    var n = Number(deg);
+    if (!Number.isFinite(n)) n = 0;
+    return clamp(Math.round(n / 5) * 5, -180, 180);
+  }
+
+  function cloneTransform(tr) {
+    var src = tr || DEFAULT_TRANSFORM;
+    return {
+      x: Number.isFinite(Number(src.x)) ? Number(src.x) : 0.5,
+      y: Number.isFinite(Number(src.y)) ? Number(src.y) : 0.5,
+      scale: Number.isFinite(Number(src.scale)) && Number(src.scale) > 0 ? Number(src.scale) : 0.95,
+      rotate: snapRotate5(src.rotate),
+    };
+  }
+
   function draftJson() {
     return JSON.stringify(draft || {});
   }
@@ -89,11 +130,70 @@
     if (statusEl) statusEl.textContent = msg || '';
   }
 
+  function enabledPositions() {
+    var cfg = studioConfig();
+    var list = (cfg.enabled_positions || ['front', 'back']).map(normPos).filter(Boolean);
+    if (!list.length) list = ['front'];
+    if (list.indexOf('front') === -1) list.unshift('front');
+    return list;
+  }
+
+  function normPos(pos) {
+    return String(pos || 'front').trim().toLowerCase().replace(/\s+/g, '_');
+  }
+
+  function formatPlacementLabel(pos) {
+    return normPos(pos)
+      .replace(/_/g, ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map(function (w) {
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      })
+      .join(' ');
+  }
+
   function ensurePrintArea() {
     draft.print_area = draft.print_area || {};
-    draft.print_area.primary = draft.print_area.primary || { x: 0.5, y: 0.5, scale: 0.95, rotate: 0 };
-    draft.print_area.additional = draft.print_area.additional || [];
-    draft.print_area.pattern = draft.print_area.pattern || {
+    var pa = draft.print_area;
+    if (!pa.position) pa.position = 'front';
+    else pa.position = normPos(pa.position);
+    pa.by_position = pa.by_position || {};
+    migrateLegacyPrintArea(pa);
+    var positions = enabledPositions();
+    for (var i = 0; i < positions.length; i++) {
+      ensurePositionBucket(positions[i]);
+    }
+    if (positions.indexOf(pa.position) === -1) pa.position = positions[0] || 'front';
+    return pa;
+  }
+
+  function migrateLegacyPrintArea(pa) {
+    if (!pa || pa.__cdsMigrated) return;
+    var hasLegacy =
+      pa.primary ||
+      (Array.isArray(pa.additional) && pa.additional.length) ||
+      pa.public_additional ||
+      pa.pattern ||
+      pa.alignment;
+    var keys = Object.keys(pa.by_position || {});
+    if (hasLegacy && !keys.length) {
+      var pos = normPos(pa.position || 'front');
+      pa.by_position[pos] = {
+        primary: cloneTransform(pa.primary),
+        primary_url: pa.primary_url || null,
+        primary_original_url: pa.primary_original_url || null,
+        additional: Array.isArray(pa.additional) ? pa.additional.slice() : [],
+        public_additional: pa.public_additional || null,
+        alignment: pa.alignment || { h: 'center', v: 'center' },
+        pattern: pa.pattern || defaultPattern(),
+      };
+    }
+    pa.__cdsMigrated = true;
+  }
+
+  function defaultPattern() {
+    return {
       enabled: false,
       mode: 'grid',
       spacing_x: 1,
@@ -103,16 +203,45 @@
       rotation_step_horizontal: 0,
       rotation_step_vertical: 0,
     };
-    draft.print_area.alignment = draft.print_area.alignment || { h: 'center', v: 'center' };
-    return draft.print_area;
+  }
+
+  function ensurePositionBucket(pos) {
+    var pa = draft.print_area;
+    var key = normPos(pos);
+    pa.by_position = pa.by_position || {};
+    if (!pa.by_position[key]) {
+      pa.by_position[key] = {
+        primary: cloneTransform(DEFAULT_TRANSFORM),
+        primary_url: null,
+        primary_original_url: null,
+        additional: [],
+        public_additional: null,
+        alignment: { h: 'center', v: 'center' },
+        pattern: defaultPattern(),
+      };
+    }
+    var bucket = pa.by_position[key];
+    bucket.primary = cloneTransform(bucket.primary);
+    bucket.additional = Array.isArray(bucket.additional) ? bucket.additional : [];
+    bucket.pattern = bucket.pattern || defaultPattern();
+    bucket.alignment = bucket.alignment || { h: 'center', v: 'center' };
+    return bucket;
+  }
+
+  function currentPosition() {
+    ensurePrintArea();
+    return normPos(draft.print_area.position || 'front');
+  }
+
+  function currentBucket() {
+    return ensurePositionBucket(currentPosition());
   }
 
   function findStudioRoot() {
     var nodes = document.querySelectorAll('#creatorDesignStudioModal');
     if (!nodes || !nodes.length) return null;
     for (var i = nodes.length - 1; i >= 0; i--) {
-      var node = nodes[i];
-      if (node && node.isConnected) return node;
+      if (nodes[i] && nodes[i].isConnected) return nodes[i];
     }
     return nodes[nodes.length - 1];
   }
@@ -130,9 +259,13 @@
     mockImgEl = root.querySelector('#cds-mock-img');
     viewerEmptyEl = root.querySelector('#cds-viewer-empty');
     printZoneEl = root.querySelector('#cds-print-zone');
+    printZoneClipEl = root.querySelector('#cds-print-zone-clip');
+    patternCanvasEl = root.querySelector('#cds-pattern-canvas');
     designWrapEl = root.querySelector('#cds-design-wrap');
     designImgEl = root.querySelector('#cds-primary-design');
     designChromeEl = root.querySelector('#cds-design-chrome');
+    cropLayerEl = root.querySelector('#cds-crop-layer');
+    cropBoxEl = root.querySelector('#cds-crop-box');
     posBarEl = root.querySelector('#cds-pos-bar');
     panelDesignEl = root.querySelector('#cds-panel-design');
     panelVariantsEl = root.querySelector('#cds-panel-variants');
@@ -142,6 +275,11 @@
     pickerTitleEl = root.querySelector('#cds-picker-title');
     pickerEmptyEl = root.querySelector('#cds-picker-empty');
     uploadInputEl = root.querySelector('#cds-upload-input');
+    assetActionsEl = root.querySelector('#cds-asset-actions');
+    assetActionsPreviewEl = root.querySelector('#cds-asset-actions-preview');
+    assetPlacementEl = root.querySelector('#cds-asset-placement');
+    assetPlacementListEl = root.querySelector('#cds-asset-placement-list');
+    unsavedDialogEl = root.querySelector('#cds-unsaved-dialog');
     return true;
   }
 
@@ -169,65 +307,98 @@
     return ck || 'default';
   }
 
-  function currentPosition() {
-    var cfg = studioConfig();
-    var positions = cfg.enabled_positions || ['front', 'back'];
-    var pos = (draft && draft.print_area && draft.print_area.position) || positions[0] || 'front';
-    return pos;
-  }
-
   function mockEntryForPosition(pos) {
     var cfg = studioConfig();
     var ck = resolveColorKey();
     var list = (cfg.mocks_by_color && cfg.mocks_by_color[ck]) || [];
+    var want = normPos(pos);
     for (var i = 0; i < list.length; i++) {
-      if (list[i].position === pos && list[i].mock_url) return list[i];
-    }
-    for (var j = 0; j < list.length; j++) {
-      if (list[j].mock_url) return list[j];
+      if (normPos(list[i].position) === want && list[i].mock_url) return list[i];
     }
     var allKeys = Object.keys(cfg.mocks_by_color || {});
     for (var k = 0; k < allKeys.length; k++) {
       var alt = cfg.mocks_by_color[allKeys[k]] || [];
       for (var m = 0; m < alt.length; m++) {
-        if (alt[m].position === pos && alt[m].mock_url) return alt[m];
+        if (normPos(alt[m].position) === want && alt[m].mock_url) return alt[m];
       }
     }
     return null;
   }
 
+  function listAssetsForPosition(pos) {
+    var bucket = ensurePositionBucket(pos);
+    var assets = [];
+    var primaryUrl =
+      bucket.primary_url ||
+      (ctxData && ctxData.design_preview_url) ||
+      (ctxDesign && ctxDesign.preview_url) ||
+      '';
+    assets.push({
+      key: 'primary',
+      kind: 'primary',
+      preview_url: primaryUrl,
+      position: normPos(pos),
+      transform: bucket.primary,
+      original_url: bucket.primary_original_url || primaryUrl,
+    });
+    var own = bucket.additional || [];
+    for (var i = 0; i < own.length; i++) {
+      assets.push({
+        key: 'own-' + i,
+        kind: 'own',
+        index: i,
+        preview_url: own[i].preview_url || '',
+        position: normPos(pos),
+        transform: own[i].transform || cloneTransform({ scale: 0.5 }),
+        slot: own[i],
+        original_url: own[i].original_url || own[i].preview_url || '',
+      });
+    }
+    if (bucket.public_additional) {
+      assets.push({
+        key: 'public',
+        kind: 'public',
+        preview_url: bucket.public_additional.preview_url || '',
+        position: normPos(pos),
+        transform: bucket.public_additional.transform || cloneTransform({ scale: 0.4 }),
+        slot: bucket.public_additional,
+        original_url: bucket.public_additional.original_url || bucket.public_additional.preview_url || '',
+      });
+    }
+    return assets;
+  }
+
+  function findAsset(key, pos) {
+    var list = listAssetsForPosition(pos || currentPosition());
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].key === key) return list[i];
+    }
+    return null;
+  }
+
   function activeTransform() {
-    ensurePrintArea();
-    if (activeAssetKey === 'primary') return draft.print_area.primary;
-    if (activeAssetKey === 'public' && draft.print_area.public_additional) {
-      draft.print_area.public_additional.transform = draft.print_area.public_additional.transform || { x: 0.5, y: 0.5, scale: 0.4, rotate: 0 };
-      return draft.print_area.public_additional.transform;
+    var bucket = currentBucket();
+    if (!activeAssetKey || activeAssetKey === 'primary') return bucket.primary;
+    if (activeAssetKey === 'public' && bucket.public_additional) {
+      bucket.public_additional.transform =
+        bucket.public_additional.transform || cloneTransform({ scale: 0.4 });
+      return bucket.public_additional.transform;
     }
     var m = String(activeAssetKey || '').match(/^own-(\d+)$/);
     if (m) {
       var idx = Number(m[1]);
-      var slot = draft.print_area.additional[idx];
+      var slot = bucket.additional[idx];
       if (slot) {
-        slot.transform = slot.transform || { x: 0.5, y: 0.5, scale: 0.5, rotate: 0 };
+        slot.transform = slot.transform || cloneTransform({ scale: 0.5 });
         return slot.transform;
       }
     }
-    return draft.print_area.primary;
+    return bucket.primary;
   }
 
   function designUrlForAsset(key) {
-    if (key === 'primary') {
-      return (ctxData && ctxData.design_preview_url) || (ctxDesign && ctxDesign.preview_url) || '';
-    }
-    if (key === 'public' && draft.print_area.public_additional && draft.print_area.public_additional.preview_url) {
-      return draft.print_area.public_additional.preview_url;
-    }
-    var m = String(key || '').match(/^own-(\d+)$/);
-    if (m) {
-      var slot = draft.print_area.additional[Number(m[1])];
-      if (slot && slot.preview_url) return slot.preview_url;
-    }
-    return '';
+    var asset = findAsset(key, currentPosition());
+    return (asset && asset.preview_url) || '';
   }
 
   function parseZoneFrac(f) {
@@ -259,9 +430,7 @@
     var scale = Math.min(boxW / nw, boxH / nh);
     var w = nw * scale;
     var h = nh * scale;
-    var left = (boxW - w) / 2;
-    var top = (boxH - h) / 2;
-    return { left: left, top: top, width: w, height: h };
+    return { left: (boxW - w) / 2, top: (boxH - h) / 2, width: w, height: h };
   }
 
   function fitViewerStage() {
@@ -274,8 +443,36 @@
     mockImgEl.style.objectFit = 'contain';
   }
 
-  function clamp(n, min, max) {
-    return Math.max(min, Math.min(max, n));
+  function maxContainScaleInZone() {
+    if (!printZoneEl) return 2.5;
+    var zw = printZoneEl.offsetWidth || 1;
+    var zh = printZoneEl.offsetHeight || 1;
+    if (zw < 1 || zh < 1) return 2.5;
+    var nw = designImgEl && designImgEl.naturalWidth ? designImgEl.naturalWidth : 0;
+    var nh = designImgEl && designImgEl.naturalHeight ? designImgEl.naturalHeight : 0;
+    if (nw > 0 && nh > 0) {
+      return Math.min(1, (zh * nw) / (zw * nh), 2.5);
+    }
+    return 2.5;
+  }
+
+  function clampScaleToContain(raw) {
+    return clamp(Number(raw) || 0.95, 0.08, maxContainScaleInZone());
+  }
+
+  function setAssetSelected(on) {
+    assetSelected = !!on;
+    if (!assetSelected) {
+      exitCropMode(true);
+    }
+    syncSelectionChrome();
+  }
+
+  function syncSelectionChrome() {
+    if (!designChromeEl) return;
+    var show = assetSelected && !cropping && !!activeAssetKey && designWrapEl && !designWrapEl.hidden;
+    designChromeEl.hidden = !show;
+    designChromeEl.classList.toggle('is-visible', show);
   }
 
   function applyTransformToDesignImg() {
@@ -289,75 +486,150 @@
     if (!Number.isFinite(y)) y = 0.5;
     if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
     if (!Number.isFinite(rot)) rot = 0;
+    scale = clampScaleToContain(scale);
+    rot = snapRotate5(rot);
+    tr.scale = scale;
+    tr.x = x;
+    tr.y = y;
+    tr.rotate = rot;
 
     var zoneW = printZoneEl.offsetWidth || 1;
-    var designW = Math.max(24, zoneW * scale);
-    designImgEl.style.width = designW + 'px';
+    var zoneH = printZoneEl.offsetHeight || 1;
+    designImgEl.style.width = Math.max(24, zoneW * scale) + 'px';
     designImgEl.style.height = 'auto';
     designImgEl.style.maxWidth = 'none';
     designImgEl.style.maxHeight = 'none';
-    designImgEl.style.left = '';
-    designImgEl.style.top = '';
-    designImgEl.style.transform = '';
 
-    // x/y = center inside print zone (0..1), same model as Shop Design Studio
     var dx = (x - 0.5) * zoneW;
-    var dy = (y - 0.5) * (printZoneEl.offsetHeight || 1);
+    var dy = (y - 0.5) * zoneH;
     designWrapEl.style.left = '50%';
     designWrapEl.style.top = '50%';
     designWrapEl.style.transform =
       'translate(-50%, -50%) translate(' + dx + 'px,' + dy + 'px) rotate(' + rot + 'deg)';
 
-    if (designChromeEl) {
-      designChromeEl.hidden = false;
-      designChromeEl.classList.add('is-visible');
-      designChromeEl.style.left = '0';
-      designChromeEl.style.top = '0';
-      designChromeEl.style.width = '100%';
-      designChromeEl.style.height = '100%';
+    syncSelectionChrome();
+    redrawZonePatternOverlay();
+    if (cropping) syncCropUiFromFrac();
+  }
+
+  function normalizeActiveScaleToContain() {
+    var tr = activeTransform();
+    if (tr) tr.scale = clampScaleToContain(tr.scale);
+  }
+
+  function teardownZonePatternOverlay() {
+    if (!patternCanvasEl) return;
+    patternCanvasEl.hidden = true;
+    try {
+      patternCanvasEl.style.setProperty('display', 'none', 'important');
+    } catch (e1) {}
+    try {
+      var zc = patternCanvasEl.getContext('2d');
+      if (zc) zc.clearRect(0, 0, patternCanvasEl.width, patternCanvasEl.height);
+    } catch (e2) {}
+    if (designImgEl) {
+      designImgEl.hidden = false;
+      try {
+        designImgEl.style.removeProperty('display');
+      } catch (e3) {}
     }
+    if (printZoneEl) printZoneEl.classList.remove('is-pattern-active');
+  }
+
+  function redrawZonePatternOverlay() {
+    if (!patternCanvasEl || !printZoneEl || !designWrapEl || !designImgEl) return;
+    var bucket = currentBucket();
+    var pat = bucket.pattern || {};
+    if (cropping || !pat.enabled || designWrapEl.hidden || !designImgEl.naturalWidth) {
+      teardownZonePatternOverlay();
+      return;
+    }
+    var patMath = window.eazPfsPatternMath;
+    if (!patMath || typeof patMath.drawStudioPatternTiles !== 'function') {
+      teardownZonePatternOverlay();
+      return;
+    }
+
+    var zw = Math.max(2, printZoneEl.clientWidth | 0 || 2);
+    var zh = Math.max(2, printZoneEl.clientHeight | 0 || 2);
+    var dpr = clamp(typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : 1, 1, 2);
+    patternCanvasEl.hidden = false;
+    try {
+      patternCanvasEl.style.removeProperty('display');
+    } catch (eSh) {}
+    patternCanvasEl.width = Math.floor(zw * dpr);
+    patternCanvasEl.height = Math.floor(zh * dpr);
+    patternCanvasEl.style.width = zw + 'px';
+    patternCanvasEl.style.height = zh + 'px';
+    var ctx = patternCanvasEl.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, zw, zh);
+
+    var tr = activeTransform();
+    var scaleVal = clampScaleToContain(tr.scale);
+    var zoneW = printZoneEl.offsetWidth || zw;
+    var zoneH = printZoneEl.offsetHeight || zh;
+    designImgEl.hidden = true;
+    try {
+      designImgEl.style.setProperty('display', 'none', 'important');
+    } catch (eHd) {}
+    if (printZoneEl) printZoneEl.classList.add('is-pattern-active');
+
+    patMath.drawStudioPatternTiles(ctx, {
+      pattern: pat,
+      image: designImgEl,
+      zoneWidth: zw,
+      zoneHeight: zh,
+      zoneWidthPx: Math.max(24, zoneW),
+      tileScale: scaleVal,
+      designDx: (Number(tr.x) - 0.5) * zoneW,
+      designDy: (Number(tr.y) - 0.5) * zoneH,
+      tileAngle: snapRotate5(tr.rotate),
+      rotationStepH: pat.rotation_step_horizontal,
+      rotationStepV: pat.rotation_step_vertical,
+    });
   }
 
   function layoutPrintZone() {
     if (!printZoneEl || !viewerStageEl || !viewerEl) return;
     fitViewerStage();
-    var fr = measureMockRect();
     var z = currentZoneFrac();
-    // Zone is positioned relative to stage; stage is already fitted to mock pixels.
-    printZoneEl.style.left = (z.l * 100) + '%';
-    printZoneEl.style.top = (z.t * 100) + '%';
-    printZoneEl.style.width = (z.w * 100) + '%';
-    printZoneEl.style.height = (z.h * 100) + '%';
+    printZoneEl.style.left = z.l * 100 + '%';
+    printZoneEl.style.top = z.t * 100 + '%';
+    printZoneEl.style.width = z.w * 100 + '%';
+    printZoneEl.style.height = z.h * 100 + '%';
     printZoneEl.hidden = false;
+    if (printZoneClipEl) {
+      printZoneClipEl.style.overflow = 'hidden';
+    }
+    normalizeActiveScaleToContain();
     applyTransformToDesignImg();
-  }
-
-  function syncDesignChrome() {
-    // Chrome is sized to the design wrap via CSS (100%); nothing to sync.
+    syncTransformInputs();
   }
 
   function renderPositionBar() {
     if (!posBarEl) return;
-    var cfg = studioConfig();
-    var positions = cfg.enabled_positions || ['front', 'back'];
+    var positions = enabledPositions();
     var current = currentPosition();
     posBarEl.innerHTML = '';
     for (var i = 0; i < positions.length; i++) {
-      var pos = positions[i];
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cds-pos-tab' + (pos === current ? ' is-active' : '');
-      btn.setAttribute('role', 'tab');
-      btn.setAttribute('aria-selected', pos === current ? 'true' : 'false');
-      btn.textContent = pos;
-      btn.addEventListener('click', function (p) {
-        return function () {
-          ensurePrintArea().position = p;
-          renderViewer();
+      (function (pos) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cds-pos-tab' + (pos === current ? ' is-active' : '');
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', pos === current ? 'true' : 'false');
+        btn.textContent = formatPlacementLabel(pos);
+        btn.addEventListener('click', function () {
+          ensurePrintArea().position = pos;
+          activeAssetKey = null;
+          setAssetSelected(false);
+          renderStudioUi();
           markDirtyUi();
-        };
-      }(pos));
-      posBarEl.appendChild(btn);
+        });
+        posBarEl.appendChild(btn);
+      })(positions[i]);
     }
   }
 
@@ -390,6 +662,15 @@
       if (mockImgEl) mockImgEl.hidden = true;
       if (viewerEmptyEl) viewerEmptyEl.hidden = false;
       if (printZoneEl) printZoneEl.hidden = true;
+      teardownZonePatternOverlay();
+    }
+
+    if (!activeAssetKey) {
+      if (designWrapEl) designWrapEl.hidden = true;
+      if (designChromeEl) designChromeEl.hidden = true;
+      teardownZonePatternOverlay();
+      exitCropMode(true);
+      return;
     }
 
     var url = designUrlForAsset(activeAssetKey);
@@ -407,103 +688,197 @@
     } else if (designWrapEl) {
       designWrapEl.hidden = true;
       if (designChromeEl) designChromeEl.hidden = true;
+      teardownZonePatternOverlay();
     }
   }
 
   function collapseHtml(id, title, bodyHtml, open) {
     return (
       '<div class="cds-collapse' + (open ? ' is-open' : '') + '" data-cds-collapse="' + id + '">' +
-      '<button type="button" class="cds-collapse__head">' + title + '</button>' +
-      '<div class="cds-collapse__body">' + bodyHtml + '</div></div>'
+      '<button type="button" class="cds-collapse__head">' +
+      title +
+      '</button>' +
+      '<div class="cds-collapse__body">' +
+      bodyHtml +
+      '</div></div>'
+    );
+  }
+
+  function assetBadgeFor(asset) {
+    return (
+      '<span class="cds-asset-badge">' +
+      formatPlacementLabel(asset.position || currentPosition()) +
+      '</span>'
     );
   }
 
   function renderDesignSettingsPanel() {
     if (!panelDesignEl) return;
     ensurePrintArea();
-    var pa = draft.print_area;
+    var bucket = currentBucket();
     var tr = activeTransform();
+    var assets = listAssetsForPosition(currentPosition());
 
     var assetsHtml = '<div class="cds-asset-grid" id="cds-asset-grid">';
-    assetsHtml +=
-      '<button type="button" class="cds-asset-tile' + (activeAssetKey === 'primary' ? ' is-active' : '') + '" data-cds-asset="primary">' +
-      '<img src="' + (designUrlForAsset('primary') || '') + '" alt=""></button>';
-    var own = pa.additional || [];
-    for (var i = 0; i < own.length; i++) {
-      var key = 'own-' + i;
+    for (var i = 0; i < assets.length; i++) {
+      var a = assets[i];
+      var active = assetSelected && activeAssetKey === a.key;
       assetsHtml +=
-        '<button type="button" class="cds-asset-tile' + (activeAssetKey === key ? ' is-active' : '') + '" data-cds-asset="' + key + '">' +
-        (own[i].preview_url ? '<img src="' + own[i].preview_url + '" alt="">' : '<span>#' + (i + 1) + '</span>') +
+        '<button type="button" class="cds-asset-tile' +
+        (active ? ' is-active' : '') +
+        '" data-cds-asset="' +
+        a.key +
+        '">' +
+        (a.preview_url
+          ? '<img src="' + a.preview_url + '" alt="">'
+          : '<span>#' + (i + 1) + '</span>') +
+        assetBadgeFor(a) +
         '</button>';
     }
-    if (pa.public_additional) {
-      assetsHtml +=
-        '<button type="button" class="cds-asset-tile' + (activeAssetKey === 'public' ? ' is-active' : '') + '" data-cds-asset="public">' +
-        (pa.public_additional.preview_url ? '<img src="' + pa.public_additional.preview_url + '" alt="">' : '<span>P</span>') +
-        '</button>';
-    }
-    if (own.length < MAX_OWN_ADDITIONAL || !pa.public_additional) {
+    var ownCount = (bucket.additional || []).length;
+    if (ownCount < MAX_OWN_ADDITIONAL || !bucket.public_additional) {
       assetsHtml +=
         '<button type="button" class="cds-asset-tile cds-asset-tile--add" data-cds-open-add>' +
-        '<span>+</span><span>' + t('designStudioAddDesigns', 'Add Designs') + '</span></button>';
+        '<span>+</span><span>' +
+        t('designStudioAddDesigns', 'Add Designs') +
+        '</span></button>';
     }
     assetsHtml += '</div>';
 
+    var scaleVal = Number(tr.scale);
+    if (!Number.isFinite(scaleVal) || scaleVal <= 0) scaleVal = 0.95;
+    var scaleMax = 2.5;
+    if (printZoneEl && printZoneEl.offsetWidth > 1) {
+      scaleMax = Math.max(0.15, Math.min(2.5, maxContainScaleInZone()));
+      scaleVal = clampScaleToContain(scaleVal);
+    }
+    var rotVal = snapRotate5(tr.rotate);
     var scaleBody =
-      '<div class="cds-field-row"><label for="cds-scale-range">' + t('designStudioScale', 'Scale') + '</label>' +
-      '<input type="range" id="cds-scale-range" min="0.15" max="3" step="0.01" value="' + (tr.scale != null ? tr.scale : 1) + '">' +
-      '<input type="number" id="cds-scale-num" min="0.15" max="3" step="0.01" value="' + (tr.scale != null ? tr.scale : 1) + '"></div>';
+      '<div class="cds-field-row"><label for="cds-scale-range">' +
+      t('designStudioScale', 'Scale') +
+      '</label>' +
+      '<input type="range" id="cds-scale-range" min="0.08" max="' +
+      scaleMax +
+      '" step="0.01" value="' +
+      scaleVal +
+      '">' +
+      '<input type="number" id="cds-scale-num" min="0.08" max="' +
+      scaleMax +
+      '" step="0.01" value="' +
+      scaleVal +
+      '"></div>';
 
     var rotateBody =
-      '<div class="cds-field-row"><label for="cds-rotate-range">' + t('designStudioRotate', 'Rotate') + '</label>' +
-      '<input type="range" id="cds-rotate-range" min="-180" max="180" step="1" value="' + (tr.rotate != null ? tr.rotate : 0) + '">' +
-      '<input type="number" id="cds-rotate-num" min="-180" max="180" step="1" value="' + (tr.rotate != null ? tr.rotate : 0) + '"></div>';
+      '<div class="cds-field-row"><label for="cds-rotate-range">' +
+      t('designStudioRotate', 'Rotate') +
+      '</label>' +
+      '<input type="range" id="cds-rotate-range" min="-180" max="180" step="5" value="' +
+      rotVal +
+      '">' +
+      '<input type="number" id="cds-rotate-num" min="-180" max="180" step="5" value="' +
+      rotVal +
+      '"></div>';
 
     var cropBody =
-      '<p class="cds-muted">' + t('designStudioCropHint', 'Crop adjusts the visible area of the selected design.') + '</p>' +
-      '<button type="button" class="cds-btn-secondary" id="cds-crop-toggle">' + t('designStudioCrop', 'Crop') + '</button>';
+      '<p class="cds-muted">' +
+      t('designStudioCropHint', 'Crop adjusts the visible area of the selected design.') +
+      '</p>' +
+      '<button type="button" class="cds-btn-secondary" id="cds-crop-toggle">' +
+      t('designStudioCrop', 'Crop') +
+      '</button>';
 
-    var align = pa.alignment || { h: 'center', v: 'center' };
+    var align = bucket.alignment || { h: 'center', v: 'center' };
     var alignBtns = [];
     ['left', 'center', 'right'].forEach(function (h) {
       ['top', 'middle', 'bottom'].forEach(function (v) {
         var on = align.h === h && align.v === v;
         alignBtns.push(
-          '<button type="button" class="cds-align-btn' + (on ? ' is-active' : '') + '" data-align-h="' + h + '" data-align-v="' + v + '">' + h + '/' + v + '</button>'
+          '<button type="button" class="cds-align-btn' +
+            (on ? ' is-active' : '') +
+            '" data-align-h="' +
+            h +
+            '" data-align-v="' +
+            v +
+            '">' +
+            h +
+            '/' +
+            v +
+            '</button>'
         );
       });
     });
     var alignBody = '<div class="cds-align-grid" id="cds-align-grid">' + alignBtns.join('') + '</div>';
 
-    var pat = pa.pattern || {};
+    var pat = bucket.pattern || defaultPattern();
     var mode = pat.mode || 'grid';
     var patternBody =
-      '<label class="cds-size-chip"><input type="checkbox" id="cds-pattern-enabled"' + (pat.enabled ? ' checked' : '') + '> ' +
-      t('designStudioPatternEnable', 'Enable pattern') + '</label>' +
+      '<label class="cds-size-chip"><input type="checkbox" id="cds-pattern-enabled"' +
+      (pat.enabled ? ' checked' : '') +
+      '> ' +
+      t('designStudioPatternEnable', 'Enable pattern') +
+      '</label>' +
       '<div class="cds-pattern-modes" role="radiogroup">' +
-      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="grid"' + (mode === 'grid' ? ' checked' : '') + '> ' +
-      t('designStudioPatternModeGrid', 'Grid') + '</label>' +
-      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="brick_h"' + (mode === 'brick_h' ? ' checked' : '') + '> ' +
-      t('designStudioPatternModeBrickH', 'Brick horizontal') + '</label>' +
-      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="brick_v"' + (mode === 'brick_v' ? ' checked' : '') + '> ' +
-      t('designStudioPatternModeBrickV', 'Brick vertical') + '</label>' +
+      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="grid"' +
+      (mode === 'grid' ? ' checked' : '') +
+      '> ' +
+      t('designStudioPatternModeGrid', 'Grid') +
+      '</label>' +
+      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="brick_h"' +
+      (mode === 'brick_h' ? ' checked' : '') +
+      '> ' +
+      t('designStudioPatternModeBrickH', 'Brick horizontal') +
+      '</label>' +
+      '<label class="cds-size-chip"><input type="radio" name="cds-pattern-mode" value="brick_v"' +
+      (mode === 'brick_v' ? ' checked' : '') +
+      '> ' +
+      t('designStudioPatternModeBrickV', 'Brick vertical') +
+      '</label>' +
       '</div>' +
-      '<div class="cds-field-row"><label>' + t('designStudioPatternSpacingX', 'Horizontal spacing') + '</label>' +
-      '<input type="number" id="cds-pattern-sx" min="0.05" max="10" step="0.05" value="' + (pat.spacing_x != null ? pat.spacing_x : 1) + '"></div>' +
-      '<div class="cds-field-row"><label>' + t('designStudioPatternSpacingY', 'Vertical spacing') + '</label>' +
-      '<input type="number" id="cds-pattern-sy" min="0.05" max="10" step="0.05" value="' + (pat.spacing_y != null ? pat.spacing_y : 1) + '"></div>' +
-      '<div class="cds-field-row"><label>' + t('designStudioPatternAngle', 'Angle') + '</label>' +
-      '<input type="number" id="cds-pattern-angle" min="-45" max="45" step="1" value="' + (pat.pattern_angle != null ? pat.pattern_angle : 0) + '"></div>' +
-      '<div class="cds-field-row"><label>' + t('designStudioPatternOffset', 'Horizontal offset') + '</label>' +
-      '<input type="number" id="cds-pattern-offset" min="-1" max="1" step="0.05" value="' + (pat.offset != null ? pat.offset : 0) + '"></div>' +
-      '<div class="cds-field-row"><label>' + t('designStudioPatternRotH', 'Rotation each horizontal step') + '</label>' +
-      '<input type="number" id="cds-pattern-rh" min="-180" max="180" step="1" value="' + (pat.rotation_step_horizontal != null ? pat.rotation_step_horizontal : 0) + '"></div>' +
-      '<div class="cds-field-row"><label>' + t('designStudioPatternRotV', 'Rotation each vertical step') + '</label>' +
-      '<input type="number" id="cds-pattern-rv" min="-180" max="180" step="1" value="' + (pat.rotation_step_vertical != null ? pat.rotation_step_vertical : 0) + '"></div>';
+      '<div class="cds-field-row"><label>' +
+      t('designStudioPatternSpacingX', 'Horizontal spacing') +
+      '</label>' +
+      '<input type="number" id="cds-pattern-sx" min="0.05" max="10" step="0.05" value="' +
+      (pat.spacing_x != null ? pat.spacing_x : 1) +
+      '"></div>' +
+      '<div class="cds-field-row"><label>' +
+      t('designStudioPatternSpacingY', 'Vertical spacing') +
+      '</label>' +
+      '<input type="number" id="cds-pattern-sy" min="0.05" max="10" step="0.05" value="' +
+      (pat.spacing_y != null ? pat.spacing_y : 1) +
+      '"></div>' +
+      '<div class="cds-field-row"><label>' +
+      t('designStudioPatternAngle', 'Angle') +
+      '</label>' +
+      '<input type="number" id="cds-pattern-angle" min="-45" max="45" step="1" value="' +
+      (pat.pattern_angle != null ? pat.pattern_angle : 0) +
+      '"></div>' +
+      '<div class="cds-field-row"><label>' +
+      t('designStudioPatternOffset', 'Horizontal offset') +
+      '</label>' +
+      '<input type="number" id="cds-pattern-offset" min="-1" max="1" step="0.05" value="' +
+      (pat.offset != null ? pat.offset : 0) +
+      '"></div>' +
+      '<div class="cds-field-row"><label>' +
+      t('designStudioPatternRotH', 'Rotation each horizontal step') +
+      '</label>' +
+      '<input type="number" id="cds-pattern-rh" min="-180" max="180" step="5" value="' +
+      snapRotate5(pat.rotation_step_horizontal) +
+      '"></div>' +
+      '<div class="cds-field-row"><label>' +
+      t('designStudioPatternRotV', 'Rotation each vertical step') +
+      '</label>' +
+      '<input type="number" id="cds-pattern-rv" min="-180" max="180" step="5" value="' +
+      snapRotate5(pat.rotation_step_vertical) +
+      '"></div>';
 
     panelDesignEl.innerHTML =
       assetsHtml +
-      collapseHtml('transform', t('designStudioSectionTransform', 'Scale, Rotate, Crop'), scaleBody + rotateBody + cropBody, true) +
+      collapseHtml(
+        'transform',
+        t('designStudioSectionTransform', 'Scale, Rotate, Crop'),
+        scaleBody + rotateBody + cropBody,
+        true
+      ) +
       collapseHtml('alignment', t('designStudioSectionAlignment', 'Alignment'), alignBody, false) +
       collapseHtml('pattern', t('designStudioSectionPattern', 'Pattern'), patternBody, false);
 
@@ -523,7 +898,7 @@
   }
 
   function syncTransformInputs() {
-    if (!panelDesignEl) return;
+    if (!panelDesignEl || !activeAssetKey) return;
     var tr = activeTransform();
     var scaleR = panelDesignEl.querySelector('#cds-scale-range');
     var scaleN = panelDesignEl.querySelector('#cds-scale-num');
@@ -531,8 +906,8 @@
     var rotN = panelDesignEl.querySelector('#cds-rotate-num');
     if (scaleR) scaleR.value = String(tr.scale != null ? tr.scale : 1);
     if (scaleN) scaleN.value = String(tr.scale != null ? tr.scale : 1);
-    if (rotR) rotR.value = String(tr.rotate != null ? tr.rotate : 0);
-    if (rotN) rotN.value = String(tr.rotate != null ? tr.rotate : 0);
+    if (rotR) rotR.value = String(snapRotate5(tr.rotate));
+    if (rotN) rotN.value = String(snapRotate5(tr.rotate));
   }
 
   function bindDesignSettingsPanel() {
@@ -540,51 +915,63 @@
 
     panelDesignEl.querySelectorAll('[data-cds-asset]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        activeAssetKey = btn.getAttribute('data-cds-asset') || 'primary';
-        renderDesignSettingsPanel();
-        renderViewer();
+        var key = btn.getAttribute('data-cds-asset') || 'primary';
+        openAssetActionsDialog(key);
       });
     });
 
     var addBtn = panelDesignEl.querySelector('[data-cds-open-add]');
     if (addBtn) addBtn.addEventListener('click', openAddMenu);
 
-    function bindRangePair(rangeId, numId, key, min, max) {
+    function bindRangePair(rangeId, numId, key) {
       var range = panelDesignEl.querySelector(rangeId);
       var num = panelDesignEl.querySelector(numId);
       function apply(val) {
+        if (!activeAssetKey) {
+          activeAssetKey = 'primary';
+          setAssetSelected(true);
+        }
         var tr = activeTransform();
         var n = Number(val);
         if (!Number.isFinite(n)) return;
-        n = Math.max(min, Math.min(max, n));
+        if (key === 'scale') n = clampScaleToContain(n);
+        else if (key === 'rotate') n = snapRotate5(n);
         tr[key] = n;
         markDirtyUi();
         applyTransformToDesignImg();
         syncTransformInputs();
       }
-      if (range) {
-        range.addEventListener('input', function () { apply(range.value); });
-      }
-      if (num) {
-        num.addEventListener('input', function () { apply(num.value); });
-      }
+      if (range) range.addEventListener('input', function () { apply(range.value); });
+      if (num) num.addEventListener('input', function () { apply(num.value); });
     }
 
-    bindRangePair('#cds-scale-range', '#cds-scale-num', 'scale', 0.15, 3);
-    bindRangePair('#cds-rotate-range', '#cds-rotate-num', 'rotate', -180, 180);
+    bindRangePair('#cds-scale-range', '#cds-scale-num', 'scale');
+    bindRangePair('#cds-rotate-range', '#cds-rotate-num', 'rotate');
+
+    var cropBtn = panelDesignEl.querySelector('#cds-crop-toggle');
+    if (cropBtn) {
+      cropBtn.addEventListener('click', function () {
+        if (!assetSelected || !activeAssetKey) {
+          setStatus(t('designStudioCropSelectFirst', 'Select a design first, then crop.'));
+          return;
+        }
+        if (cropping) exitCropMode(true);
+        else enterCropMode();
+      });
+    }
 
     panelDesignEl.querySelectorAll('[data-align-h]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var pa = ensurePrintArea();
-        pa.alignment = pa.alignment || { h: 'center', v: 'center' };
-        pa.alignment.h = btn.getAttribute('data-align-h');
-        pa.alignment.v = btn.getAttribute('data-align-v');
+        var bucket = currentBucket();
+        bucket.alignment = bucket.alignment || { h: 'center', v: 'center' };
+        bucket.alignment.h = btn.getAttribute('data-align-h');
+        bucket.alignment.v = btn.getAttribute('data-align-v');
         var tr = activeTransform();
-        if (pa.alignment.h === 'left') tr.x = 0.25;
-        else if (pa.alignment.h === 'right') tr.x = 0.75;
+        if (bucket.alignment.h === 'left') tr.x = 0.25;
+        else if (bucket.alignment.h === 'right') tr.x = 0.75;
         else tr.x = 0.5;
-        if (pa.alignment.v === 'top') tr.y = 0.25;
-        else if (pa.alignment.v === 'bottom') tr.y = 0.75;
+        if (bucket.alignment.v === 'top') tr.y = 0.25;
+        else if (bucket.alignment.v === 'bottom') tr.y = 0.75;
         else tr.y = 0.5;
         renderDesignSettingsPanel();
         applyTransformToDesignImg();
@@ -595,32 +982,37 @@
     var patEn = panelDesignEl.querySelector('#cds-pattern-enabled');
     if (patEn) {
       patEn.addEventListener('change', function () {
-        ensurePrintArea().pattern.enabled = patEn.checked;
+        currentBucket().pattern.enabled = patEn.checked;
         markDirtyUi();
+        redrawZonePatternOverlay();
       });
     }
     panelDesignEl.querySelectorAll('input[name="cds-pattern-mode"]').forEach(function (radio) {
       radio.addEventListener('change', function () {
         if (!radio.checked) return;
-        ensurePrintArea().pattern.mode = radio.value || 'grid';
+        currentBucket().pattern.mode = radio.value || 'grid';
         markDirtyUi();
+        redrawZonePatternOverlay();
       });
     });
-    function bindPatNum(sel, key, fallback) {
+    function bindPatNum(sel, key, fallback, snap5) {
       var el = panelDesignEl.querySelector(sel);
       if (!el) return;
       el.addEventListener('input', function () {
         var n = Number(el.value);
-        ensurePrintArea().pattern[key] = Number.isFinite(n) ? n : fallback;
+        if (!Number.isFinite(n)) n = fallback;
+        if (snap5) n = snapRotate5(n);
+        currentBucket().pattern[key] = n;
         markDirtyUi();
+        redrawZonePatternOverlay();
       });
     }
-    bindPatNum('#cds-pattern-sx', 'spacing_x', 1);
-    bindPatNum('#cds-pattern-sy', 'spacing_y', 1);
-    bindPatNum('#cds-pattern-angle', 'pattern_angle', 0);
-    bindPatNum('#cds-pattern-offset', 'offset', 0);
-    bindPatNum('#cds-pattern-rh', 'rotation_step_horizontal', 0);
-    bindPatNum('#cds-pattern-rv', 'rotation_step_vertical', 0);
+    bindPatNum('#cds-pattern-sx', 'spacing_x', 1, false);
+    bindPatNum('#cds-pattern-sy', 'spacing_y', 1, false);
+    bindPatNum('#cds-pattern-angle', 'pattern_angle', 0, false);
+    bindPatNum('#cds-pattern-offset', 'offset', 0, false);
+    bindPatNum('#cds-pattern-rh', 'rotation_step_horizontal', 0, true);
+    bindPatNum('#cds-pattern-rv', 'rotation_step_vertical', 0, true);
   }
 
   function colorDotStyle(itemOrName) {
@@ -629,10 +1021,26 @@
     }
     var n = String((itemOrName && itemOrName.color) || itemOrName || '').toLowerCase();
     var map = {
-      black: '#111111', white: '#f5f5f5', red: '#dc2626', blue: '#2563eb', navy: '#1e3a5f',
-      green: '#16a34a', grey: '#6b7280', gray: '#6b7280', pink: '#ec4899', orange: '#f97316',
-      yellow: '#eab308', purple: '#7c3aed', brown: '#92400e', beige: '#d6c6a8', cream: '#fffdd0',
-      charcoal: '#36454f', heather: '#9ca3af', forest: '#166534', maroon: '#7f1d1d', teal: '#0d9488',
+      black: '#111111',
+      white: '#f5f5f5',
+      red: '#dc2626',
+      blue: '#2563eb',
+      navy: '#1e3a5f',
+      green: '#16a34a',
+      grey: '#6b7280',
+      gray: '#6b7280',
+      pink: '#ec4899',
+      orange: '#f97316',
+      yellow: '#eab308',
+      purple: '#7c3aed',
+      brown: '#92400e',
+      beige: '#d6c6a8',
+      cream: '#fffdd0',
+      charcoal: '#36454f',
+      heather: '#9ca3af',
+      forest: '#166534',
+      maroon: '#7f1d1d',
+      teal: '#0d9488',
     };
     for (var k in map) {
       if (n.indexOf(k) !== -1) return 'background:' + map[k];
@@ -640,52 +1048,152 @@
     return 'background:#888';
   }
 
+  function resolveMockColorKeyForVariantColor(colorName) {
+    var cfg = studioConfig();
+    var mocks = cfg.mocks_by_color || {};
+    var want = String(colorName || '').trim().toLowerCase();
+    if (mocks[colorName] && mocks[colorName].length) return colorName;
+    var keys = Object.keys(mocks);
+    for (var i = 0; i < keys.length; i++) {
+      if (String(keys[i]).trim().toLowerCase() === want && mocks[keys[i]].length) return keys[i];
+    }
+    for (var j = 0; j < keys.length; j++) {
+      var k = String(keys[j]).toLowerCase();
+      if ((k.indexOf(want) !== -1 || want.indexOf(k) !== -1) && mocks[keys[j]].length) return keys[j];
+    }
+    return colorName;
+  }
+
+  function switchMockColor(colorName) {
+    var ck = resolveMockColorKeyForVariantColor(colorName);
+    ensurePrintArea().color_key = ck;
+    renderViewer();
+    markDirtyUi();
+  }
+
   function renderVariantSettingsPanel() {
     if (!panelVariantsEl || !ctxData) return;
     draft.variants = draft.variants || { selected_ids: [] };
     var selected = new Set((draft.variants.selected_ids || []).map(Number));
     var groups = ctxData.variant_groups || {};
-    var keys = Object.keys(groups).sort(function (a, b) {
+    var keys = Object.keys(groups).filter(function (color) {
+      var items = groups[color] || [];
+      return items.some(function (v) {
+        return v && v.in_admin_pool;
+      });
+    });
+
+    keys.sort(function (a, b) {
+      var aItems = (groups[a] || []).filter(function (v) {
+        return v && v.in_admin_pool;
+      });
+      var bItems = (groups[b] || []).filter(function (v) {
+        return v && v.in_admin_pool;
+      });
+      var aAvail = aItems.some(function (v) {
+        return v.unlocked;
+      });
+      var bAvail = bItems.some(function (v) {
+        return v.unlocked;
+      });
+      if (aAvail !== bAvail) return aAvail ? -1 : 1;
       return String(a).localeCompare(String(b));
     });
 
-    var html = '<p class="cds-skill-hint">' + t('designStudioVariantsSkillHint', 'Some variants must be unlocked in the skill tree before you can select them.') + '</p>';
+    var html =
+      '<p class="cds-skill-hint">' +
+      t(
+        'designStudioVariantsSkillHint',
+        'Some variants must be unlocked in the skill tree before you can select them.'
+      ) +
+      '</p>';
 
     if (!keys.length) {
-      html += '<p class="cds-muted">' + t('designStudioNoVariants', 'No variants in admin pool.') + '</p>';
+      html +=
+        '<p class="cds-muted">' + t('designStudioNoVariants', 'No variants in admin pool.') + '</p>';
     }
+
+    var activeColor = resolveColorKey();
 
     for (var g = 0; g < keys.length; g++) {
       var color = keys[g];
-      var items = groups[color] || [];
-      var unlockedItems = items.filter(function (v) { return v.unlocked && v.in_admin_pool; });
-      var selectedInColor = unlockedItems.filter(function (v) { return selected.has(Number(v.id)); });
+      var items = (groups[color] || []).filter(function (v) {
+        return v && v.in_admin_pool;
+      });
+      var unlockedItems = items.filter(function (v) {
+        return v.unlocked;
+      });
+      var selectedInColor = unlockedItems.filter(function (v) {
+        return selected.has(Number(v.id));
+      });
       var allChecked = unlockedItems.length > 0 && selectedInColor.length === unlockedItems.length;
       var someChecked = selectedInColor.length > 0;
       var sample = items[0] || { color: color };
+      var isActiveColor =
+        String(activeColor).toLowerCase() === String(color).toLowerCase() ||
+        String(resolveMockColorKeyForVariantColor(color)).toLowerCase() ===
+          String(activeColor).toLowerCase();
       var openByDefault = g === 0;
 
-      html += '<div class="cds-color-group' + (openByDefault ? ' is-open' : '') + '" data-color-group="' + encodeURIComponent(color) + '">';
+      html +=
+        '<div class="cds-color-group' +
+        (openByDefault ? ' is-open' : '') +
+        (isActiveColor ? ' is-preview-color' : '') +
+        '" data-color-group="' +
+        encodeURIComponent(color) +
+        '">';
       html += '<div class="cds-color-head">';
-      html += '<input type="checkbox" data-color-all="' + encodeURIComponent(color) + '"' +
+      html +=
+        '<input type="checkbox" data-color-all="' +
+        encodeURIComponent(color) +
+        '"' +
         (allChecked ? ' checked' : '') +
         (someChecked && !allChecked ? ' data-indeterminate="1"' : '') +
-        (unlockedItems.length ? '' : ' disabled') + '>';
-      html += '<span class="cds-color-dot" style="' + colorDotStyle(sample) + '"></span>';
-      html += '<span class="cds-color-name">' + color + ' <span class="cds-color-count">(' + selectedInColor.length + '/' + unlockedItems.length + ')</span></span>';
-      html += '<button type="button" class="cds-color-toggle" aria-label="Toggle sizes">▾</button>';
+        (unlockedItems.length ? '' : ' disabled') +
+        '>';
+      html +=
+        '<button type="button" class="cds-color-dot" style="' +
+        colorDotStyle(sample) +
+        '" data-cds-color-preview="' +
+        encodeURIComponent(color) +
+        '" title="' +
+        t('designStudioPreviewColor', 'Preview this color') +
+        '" aria-label="' +
+        t('designStudioPreviewColor', 'Preview this color') +
+        '"></button>';
+      html +=
+        '<button type="button" class="cds-color-name" data-cds-color-toggle>' +
+        color +
+        ' <span class="cds-color-count">(' +
+        selectedInColor.length +
+        '/' +
+        unlockedItems.length +
+        ')</span></button>';
+      html +=
+        '<button type="button" class="cds-color-toggle" data-cds-color-toggle aria-label="Toggle sizes">▾</button>';
       html += '</div><div class="cds-color-body"><div class="cds-size-list">';
 
       for (var i = 0; i < items.length; i++) {
         var v = items[i];
-        var locked = !v.unlocked || !v.in_admin_pool;
+        var locked = !v.unlocked;
         var id = Number(v.id);
         var checked = selected.has(id);
         html +=
-          '<label class="cds-size-row' + (locked ? ' is-locked' : '') + '">' +
-          '<input type="checkbox" data-variant-id="' + id + '"' + (checked ? ' checked' : '') + (locked ? ' disabled' : '') + '>' +
-          '<span class="cds-size-label">' + v.size + '</span>' +
-          (locked ? '<span class="cds-size-lock">' + t('designStudioLocked', 'Locked') + '</span>' : '') +
+          '<label class="cds-size-row' +
+          (locked ? ' is-locked' : '') +
+          '">' +
+          '<input type="checkbox" data-variant-id="' +
+          id +
+          '"' +
+          (checked ? ' checked' : '') +
+          (locked ? ' disabled' : '') +
+          '>' +
+          '<span class="cds-size-label">' +
+          v.size +
+          '</span>' +
+          (locked
+            ? '<span class="cds-size-lock">' + t('designStudioLocked', 'Locked') + '</span>'
+            : '') +
           '</label>';
       }
       html += '</div></div></div>';
@@ -697,7 +1205,17 @@
       cb.indeterminate = true;
     });
 
-    panelVariantsEl.querySelectorAll('.cds-color-toggle, .cds-color-name, .cds-color-dot').forEach(function (el) {
+    panelVariantsEl.querySelectorAll('[data-cds-color-preview]').forEach(function (dot) {
+      dot.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var colorKey = decodeURIComponent(dot.getAttribute('data-cds-color-preview') || '');
+        switchMockColor(colorKey);
+        renderVariantSettingsPanel();
+      });
+    });
+
+    panelVariantsEl.querySelectorAll('[data-cds-color-toggle]').forEach(function (el) {
       el.addEventListener('click', function (e) {
         e.preventDefault();
         var group = el.closest('.cds-color-group');
@@ -708,11 +1226,13 @@
     panelVariantsEl.querySelectorAll('[data-color-all]').forEach(function (cb) {
       cb.addEventListener('change', function () {
         var colorKey = decodeURIComponent(cb.getAttribute('data-color-all') || '');
-        var items = groups[colorKey] || [];
+        var items = (groups[colorKey] || []).filter(function (v) {
+          return v && v.in_admin_pool;
+        });
         var ids = new Set((draft.variants.selected_ids || []).map(Number));
         for (var j = 0; j < items.length; j++) {
           var v = items[j];
-          if (!v.unlocked || !v.in_admin_pool) continue;
+          if (!v.unlocked) continue;
           if (cb.checked) ids.add(Number(v.id));
           else ids.delete(Number(v.id));
         }
@@ -756,12 +1276,170 @@
     renderVariantSettingsPanel();
   }
 
+  function clampCropFrac(f) {
+    var x = clamp(Number(f.x) || 0, 0, 0.98);
+    var y = clamp(Number(f.y) || 0, 0, 0.98);
+    var w = clamp(Number(f.w) || 1, 0.02, 1 - x);
+    var h = clamp(Number(f.h) || 1, 0.02, 1 - y);
+    return { x: x, y: y, w: w, h: h };
+  }
+
+  function syncCropUiFromFrac() {
+    if (!cropBoxEl || !cropFrac) return;
+    var f = cropFrac;
+    cropBoxEl.style.left = 100 * f.x + '%';
+    cropBoxEl.style.top = 100 * f.y + '%';
+    cropBoxEl.style.width = 100 * f.w + '%';
+    cropBoxEl.style.height = 100 * f.h + '%';
+  }
+
+  function enterCropMode() {
+    if (!designWrapEl || !cropLayerEl || !cropBoxEl || !activeAssetKey) return;
+    cropping = true;
+    cropFrac = clampCropFrac(cropFrac || { x: 0, y: 0, w: 1, h: 1 });
+    cropFracAtEnter = Object.assign({}, cropFrac);
+    cropLayerEl.hidden = false;
+    if (printZoneEl) printZoneEl.classList.add('is-cropping');
+    syncSelectionChrome();
+    teardownZonePatternOverlay();
+    syncCropUiFromFrac();
+    layoutPrintZone();
+  }
+
+  function exitCropMode(restore) {
+    if (restore && cropFracAtEnter) cropFrac = Object.assign({}, cropFracAtEnter);
+    cropping = false;
+    cropDrag = null;
+    cropFracAtEnter = null;
+    if (cropLayerEl) cropLayerEl.hidden = true;
+    if (printZoneEl) printZoneEl.classList.remove('is-cropping');
+    syncSelectionChrome();
+    layoutPrintZone();
+  }
+
+  function applyCropClient() {
+    if (!designImgEl || !designImgEl.naturalWidth || !cropFrac || cropApplying) return;
+    cropApplying = true;
+    setStatus(t('designStudioCropApplying', 'Applying crop…'));
+    var nw = designImgEl.naturalWidth;
+    var nh = designImgEl.naturalHeight;
+    var f = clampCropFrac(cropFrac);
+    var sx = Math.round(f.x * nw);
+    var sy = Math.round(f.y * nh);
+    var sw = Math.max(1, Math.round(f.w * nw));
+    var sh = Math.max(1, Math.round(f.h * nh));
+    var c = document.createElement('canvas');
+    c.width = sw;
+    c.height = sh;
+    var cx = c.getContext('2d');
+    cx.drawImage(designImgEl, sx, sy, sw, sh, 0, 0, sw, sh);
+    c.toBlob(
+      function (blob) {
+        cropApplying = false;
+        if (!blob) {
+          setStatus(t('designStudioCropError', 'Could not apply crop.'));
+          return;
+        }
+        var url = URL.createObjectURL(blob);
+        var bucket = currentBucket();
+        var asset = findAsset(activeAssetKey, currentPosition());
+        if (asset && asset.kind === 'primary') {
+          if (!bucket.primary_original_url) {
+            bucket.primary_original_url =
+              bucket.primary_url ||
+              (ctxData && ctxData.design_preview_url) ||
+              (ctxDesign && ctxDesign.preview_url) ||
+              '';
+          }
+          bucket.primary_url = url;
+        } else if (asset && asset.slot) {
+          if (!asset.slot.original_url) asset.slot.original_url = asset.slot.preview_url || '';
+          asset.slot.preview_url = url;
+        }
+        cropFrac = null;
+        exitCropMode(false);
+        designImgEl.onload = function () {
+          layoutPrintZone();
+          setStatus('');
+        };
+        designImgEl.src = url;
+        markDirtyUi();
+        renderDesignSettingsPanel();
+      },
+      'image/png',
+      0.94
+    );
+  }
+
+  function bindCropInteractions() {
+    if (!cropLayerEl || cropLayerEl.__cdsCropBound) return;
+    cropLayerEl.__cdsCropBound = true;
+
+    var cancelBtn = root.querySelector('#cds-crop-cancel');
+    var applyBtn = root.querySelector('#cds-crop-apply');
+    if (cancelBtn) cancelBtn.addEventListener('click', function () { exitCropMode(true); });
+    if (applyBtn) applyBtn.addEventListener('click', applyCropClient);
+
+    function onMove(e) {
+      if (!cropDrag || !cropFrac) return;
+      var rect = designWrapEl.getBoundingClientRect();
+      var dw = Math.max(1, rect.width);
+      var dh = Math.max(1, rect.height);
+      var dx = (e.clientX - cropDrag.sx) / dw;
+      var dy = (e.clientY - cropDrag.sy) / dh;
+      var f = Object.assign({}, cropDrag.fr);
+      var kind = cropDrag.kind;
+      if (kind === 'move') {
+        f.x = clamp(cropDrag.fr.x + dx, 0, 1 - cropDrag.fr.w);
+        f.y = clamp(cropDrag.fr.y + dy, 0, 1 - cropDrag.fr.h);
+      } else {
+        if (kind.indexOf('e') !== -1) f.w = clamp(cropDrag.fr.w + dx, 0.02, 1 - cropDrag.fr.x);
+        if (kind.indexOf('s') !== -1) f.h = clamp(cropDrag.fr.h + dy, 0.02, 1 - cropDrag.fr.y);
+        if (kind.indexOf('w') !== -1) {
+          var nx = clamp(cropDrag.fr.x + dx, 0, cropDrag.fr.x + cropDrag.fr.w - 0.02);
+          f.w = cropDrag.fr.w - (nx - cropDrag.fr.x);
+          f.x = nx;
+        }
+        if (kind.indexOf('n') !== -1) {
+          var ny = clamp(cropDrag.fr.y + dy, 0, cropDrag.fr.y + cropDrag.fr.h - 0.02);
+          f.h = cropDrag.fr.h - (ny - cropDrag.fr.y);
+          f.y = ny;
+        }
+      }
+      cropFrac = clampCropFrac(f);
+      syncCropUiFromFrac();
+    }
+
+    function onUp() {
+      cropDrag = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    }
+
+    cropBoxEl.addEventListener('pointerdown', function (e) {
+      if (!cropping || cropApplying) return;
+      var rz = e.target && e.target.getAttribute ? e.target.getAttribute('data-cds-crop-rz') : null;
+      cropDrag = {
+        kind: rz || 'move',
+        sx: e.clientX,
+        sy: e.clientY,
+        fr: Object.assign({}, cropFrac),
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  }
+
   function bindViewerTransform() {
     if (!designWrapEl || designWrapEl.__cdsTransformBound) return;
     designWrapEl.__cdsTransformBound = true;
 
     function onPointerMove(e) {
-      if (!transformDrag) return;
+      if (!transformDrag || cropping) return;
       var tr = activeTransform();
       var zoneW = printZoneEl ? printZoneEl.offsetWidth || 1 : 1;
       var zoneH = printZoneEl ? printZoneEl.offsetHeight || 1 : 1;
@@ -775,12 +1453,20 @@
         var c = transformDrag.center;
         var ang = Math.atan2(e.clientY - c.cy, e.clientX - c.cx);
         var ang0 = Math.atan2(transformDrag.startY - c.cy, transformDrag.startX - c.cx);
-        tr.rotate = clamp(transformDrag.startTr.rotate + ((ang - ang0) * 180) / Math.PI, -180, 180);
+        tr.rotate = snapRotate5(
+          transformDrag.startTr.rotate + ((ang - ang0) * 180) / Math.PI
+        );
       } else if (transformDrag.mode === 'scale') {
-        var startDist = Math.hypot(transformDrag.startX - transformDrag.center.cx, transformDrag.startY - transformDrag.center.cy);
-        var curDist = Math.hypot(e.clientX - transformDrag.center.cx, e.clientY - transformDrag.center.cy);
+        var startDist = Math.hypot(
+          transformDrag.startX - transformDrag.center.cx,
+          transformDrag.startY - transformDrag.center.cy
+        );
+        var curDist = Math.hypot(
+          e.clientX - transformDrag.center.cx,
+          e.clientY - transformDrag.center.cy
+        );
         var ratio = startDist > 1 ? curDist / startDist : 1;
-        tr.scale = clamp(transformDrag.startTr.scale * ratio, 0.15, 2.5);
+        tr.scale = clampScaleToContain(transformDrag.startTr.scale * ratio);
       }
       applyTransformToDesignImg();
       syncTransformInputs();
@@ -796,6 +1482,8 @@
 
     function startDrag(mode, e, rz) {
       if (e.button != null && e.button !== 0) return;
+      if (cropping) return;
+      setAssetSelected(true);
       var rect = designWrapEl.getBoundingClientRect();
       transformDrag = {
         mode: mode,
@@ -817,6 +1505,9 @@
 
     designWrapEl.addEventListener('pointerdown', function (e) {
       if (e.target && e.target.closest && e.target.closest('[data-cds-rz]')) return;
+      if (e.target && e.target.closest && e.target.closest('#cds-crop-layer')) return;
+      if (!activeAssetKey) activeAssetKey = 'primary';
+      setAssetSelected(true);
       startDrag('move', e);
     });
 
@@ -830,9 +1521,208 @@
       });
     }
 
+    if (viewerEl && !viewerEl.__cdsDeselectBound) {
+      viewerEl.__cdsDeselectBound = true;
+      viewerEl.addEventListener('pointerdown', function (e) {
+        if (!isOpen) return;
+        if (cropping) return;
+        if (e.target && e.target.closest) {
+          if (e.target.closest('#cds-design-wrap')) return;
+          if (e.target.closest('#cds-design-chrome')) return;
+          if (e.target.closest('#cds-crop-layer')) return;
+          if (e.target.closest('#cds-pos-bar')) return;
+        }
+        activeAssetKey = null;
+        setAssetSelected(false);
+        renderDesignSettingsPanel();
+        renderViewer();
+      });
+    }
+
     window.addEventListener('resize', function () {
       if (isOpen) layoutPrintZone();
     });
+  }
+
+  function closeAssetDialogs() {
+    if (assetActionsEl) {
+      assetActionsEl.hidden = true;
+      assetActionsEl.setAttribute('aria-hidden', 'true');
+    }
+    if (assetPlacementEl) {
+      assetPlacementEl.hidden = true;
+      assetPlacementEl.setAttribute('aria-hidden', 'true');
+    }
+    pendingAssetKey = null;
+    pendingAssetAction = null;
+  }
+
+  function openAssetActionsDialog(assetKey) {
+    if (!assetActionsEl || !assetKey) return;
+    pendingAssetKey = assetKey;
+    pendingAssetSourcePos = currentPosition();
+    activeAssetKey = assetKey;
+    setAssetSelected(true);
+    renderViewer();
+    renderDesignSettingsPanel();
+
+    var asset = findAsset(assetKey, pendingAssetSourcePos);
+    if (assetActionsPreviewEl) {
+      assetActionsPreviewEl.src = (asset && asset.preview_url) || '';
+    }
+    var others = enabledPositions().filter(function (p) {
+      return p !== pendingAssetSourcePos;
+    });
+    root.querySelectorAll('[data-cds-asset-action]').forEach(function (btn) {
+      var action = btn.getAttribute('data-cds-asset-action');
+      if (action === 'copy' || action === 'move') btn.disabled = others.length === 0;
+      else if (action === 'reset') {
+        btn.disabled = !(asset && asset.original_url && asset.preview_url !== asset.original_url);
+      } else if (action === 'remove') {
+        btn.disabled = asset && asset.kind === 'primary';
+      } else btn.disabled = false;
+    });
+    assetActionsEl.hidden = false;
+    assetActionsEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function openPlacementPicker(action) {
+    pendingAssetAction = action;
+    if (!assetPlacementEl || !assetPlacementListEl) return;
+    var source = pendingAssetSourcePos || currentPosition();
+    var others = enabledPositions().filter(function (p) {
+      return p !== source;
+    });
+    assetPlacementListEl.innerHTML = '';
+    for (var i = 0; i < others.length; i++) {
+      (function (pk) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cds-btn-secondary cds-placement-pick';
+        btn.textContent = formatPlacementLabel(pk);
+        btn.addEventListener('click', function () {
+          executeAssetAction(action, pk);
+        });
+        assetPlacementListEl.appendChild(btn);
+      })(others[i]);
+    }
+    if (assetActionsEl) {
+      assetActionsEl.hidden = true;
+      assetActionsEl.setAttribute('aria-hidden', 'true');
+    }
+    assetPlacementEl.hidden = false;
+    assetPlacementEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function cloneAssetSlot(asset) {
+    if (!asset) return null;
+    if (asset.kind === 'primary') {
+      return {
+        design_id: ctxDesign && ctxDesign.id,
+        preview_url: asset.preview_url,
+        original_url: asset.original_url || asset.preview_url,
+        label: 'Primary',
+        transform: cloneTransform(asset.transform),
+      };
+    }
+    var slot = asset.slot || {};
+    return {
+      design_id: slot.design_id,
+      preview_url: slot.preview_url || asset.preview_url,
+      original_url: slot.original_url || asset.original_url || slot.preview_url,
+      label: slot.label || 'Design',
+      owner_id: slot.owner_id || null,
+      transform: cloneTransform(slot.transform || asset.transform),
+    };
+  }
+
+  function executeAssetAction(action, targetPos) {
+    var sourcePos = pendingAssetSourcePos || currentPosition();
+    var assetKey = pendingAssetKey;
+    var asset = findAsset(assetKey, sourcePos);
+    if (!asset) {
+      closeAssetDialogs();
+      return;
+    }
+    var sourceBucket = ensurePositionBucket(sourcePos);
+
+    if (action === 'duplicate') {
+      if (asset.kind === 'primary') {
+        if ((sourceBucket.additional || []).length >= MAX_OWN_ADDITIONAL) {
+          setStatus(t('designStudioAddLimit', 'Additional design limit reached.'));
+        } else {
+          sourceBucket.additional.push(cloneAssetSlot(asset));
+          activeAssetKey = 'own-' + (sourceBucket.additional.length - 1);
+        }
+      } else if (asset.kind === 'own') {
+        if ((sourceBucket.additional || []).length >= MAX_OWN_ADDITIONAL) {
+          setStatus(t('designStudioAddLimit', 'Additional design limit reached.'));
+        } else {
+          sourceBucket.additional.push(cloneAssetSlot(asset));
+          activeAssetKey = 'own-' + (sourceBucket.additional.length - 1);
+        }
+      } else if (asset.kind === 'public' && !sourceBucket.public_additional) {
+        sourceBucket.public_additional = cloneAssetSlot(asset);
+        activeAssetKey = 'public';
+      }
+      setStatus(
+        t('designStudioAssetDuplicated', 'Duplicate created on {{placement}}.').replace(
+          '{{placement}}',
+          formatPlacementLabel(sourcePos)
+        )
+      );
+    } else if (action === 'reset') {
+      if (asset.kind === 'primary' && sourceBucket.primary_original_url) {
+        sourceBucket.primary_url = sourceBucket.primary_original_url;
+      } else if (asset.slot && asset.slot.original_url) {
+        asset.slot.preview_url = asset.slot.original_url;
+      }
+      setStatus(t('designStudioAssetReset', 'Design reset to original.'));
+    } else if ((action === 'copy' || action === 'move') && targetPos) {
+      var targetBucket = ensurePositionBucket(targetPos);
+      var cloned = cloneAssetSlot(asset);
+      if (cloned) {
+        if ((targetBucket.additional || []).length >= MAX_OWN_ADDITIONAL) {
+          setStatus(t('designStudioAddLimit', 'Additional design limit reached.'));
+        } else {
+          targetBucket.additional.push(cloned);
+          if (action === 'move') {
+            if (asset.kind === 'own') {
+              sourceBucket.additional.splice(asset.index, 1);
+            } else if (asset.kind === 'public') {
+              sourceBucket.public_additional = null;
+            } else if (asset.kind === 'primary') {
+              // Keep primary on source; move means copy of primary as additional on target.
+            }
+          }
+          setStatus(
+            t(
+              action === 'copy' ? 'designStudioAssetCopied' : 'designStudioAssetMoved',
+              action === 'copy'
+                ? 'Design copied to {{placement}}.'
+                : 'Design moved to {{placement}}.'
+            ).replace('{{placement}}', formatPlacementLabel(targetPos))
+          );
+        }
+      }
+    } else if (action === 'remove') {
+      if (asset.kind === 'own') {
+        sourceBucket.additional.splice(asset.index, 1);
+        activeAssetKey = null;
+        setAssetSelected(false);
+        setStatus(t('designStudioAssetRemoved', 'Asset removed.'));
+      } else if (asset.kind === 'public') {
+        sourceBucket.public_additional = null;
+        activeAssetKey = null;
+        setAssetSelected(false);
+        setStatus(t('designStudioAssetRemoved', 'Asset removed.'));
+      }
+    }
+
+    closeAssetDialogs();
+    setAssetSelected(!!activeAssetKey);
+    renderStudioUi();
+    markDirtyUi();
   }
 
   function openAddMenu() {
@@ -850,6 +1740,7 @@
       pickerEl.hidden = true;
       pickerEl.setAttribute('aria-hidden', 'true');
     }
+    closeAssetDialogs();
   }
 
   function openDesignPicker(mode) {
@@ -874,11 +1765,18 @@
     var owner = getOwnerId();
     if (!owner) return;
 
-    var url = apiBase() + '?op=' + (pickerMode === 'public' ? 'list-public' : 'list') +
-      '&owner_id=' + encodeURIComponent(owner) + '&limit=60';
+    var url =
+      apiBase() +
+      '?op=' +
+      (pickerMode === 'public' ? 'list-public' : 'list') +
+      '&owner_id=' +
+      encodeURIComponent(owner) +
+      '&limit=60';
     try {
       var res = await fetch(url, { credentials: 'include' });
-      var data = await res.json().catch(function () { return {}; });
+      var data = await res.json().catch(function () {
+        return {};
+      });
       var items = data.items || data.designs || data.results || [];
       if (!Array.isArray(items)) items = [];
       items = items.filter(function (d) {
@@ -919,23 +1817,24 @@
 
   function applyPickedDesign(design) {
     if (!design || design.id == null) return;
-    ensurePrintArea();
-    var pa = draft.print_area;
+    var bucket = currentBucket();
     var slot = {
       design_id: design.id,
       preview_url: design.preview_url || design.thumb_url || '',
-      label: design.title || ('Design ' + design.id),
-      transform: { x: 0.5, y: 0.5, scale: 0.5, rotate: 0 },
+      original_url: design.preview_url || design.thumb_url || '',
+      label: design.title || 'Design ' + design.id,
+      transform: cloneTransform({ scale: 0.5 }),
     };
     if (pickerMode === 'public') {
-      if (pa.public_additional) return;
-      pa.public_additional = Object.assign({}, slot, { owner_id: design.owner_id || null });
+      if (bucket.public_additional) return;
+      bucket.public_additional = Object.assign({}, slot, { owner_id: design.owner_id || null });
       activeAssetKey = 'public';
     } else {
-      if ((pa.additional || []).length >= MAX_OWN_ADDITIONAL) return;
-      pa.additional.push(slot);
-      activeAssetKey = 'own-' + (pa.additional.length - 1);
+      if ((bucket.additional || []).length >= MAX_OWN_ADDITIONAL) return;
+      bucket.additional.push(slot);
+      activeAssetKey = 'own-' + (bucket.additional.length - 1);
     }
+    setAssetSelected(true);
     closeSubmodals();
     renderStudioUi();
     markDirtyUi();
@@ -958,6 +1857,27 @@
     root.querySelectorAll('[data-cds-sub-close]').forEach(function (el) {
       el.addEventListener('click', closeSubmodals);
     });
+    root.querySelectorAll('[data-cds-asset-close]').forEach(function (el) {
+      el.addEventListener('click', closeAssetDialogs);
+    });
+    root.querySelectorAll('[data-cds-placement-close]').forEach(function (el) {
+      el.addEventListener('click', closeAssetDialogs);
+    });
+
+    root.querySelectorAll('[data-cds-asset-action]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var action = btn.getAttribute('data-cds-asset-action');
+        if (action === 'copy' || action === 'move') openPlacementPicker(action);
+        else executeAssetAction(action, null);
+      });
+    });
+
+    root.querySelectorAll('[data-cds-unsaved]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        handleUnsavedAction(el.getAttribute('data-cds-unsaved') || 'cancel');
+      });
+    });
 
     if (addMenuEl) {
       var myBtn = addMenuEl.querySelector('[data-cds-add-my-designs]');
@@ -966,15 +1886,19 @@
       var phoneBtn = addMenuEl.querySelector('[data-cds-add-upload="phone"]');
       if (myBtn) myBtn.addEventListener('click', function () { openDesignPicker('mine'); });
       if (pubBtn) pubBtn.addEventListener('click', function () { openDesignPicker('public'); });
-      if (devBtn) devBtn.addEventListener('click', function () {
-        closeSubmodals();
-        if (uploadInputEl) uploadInputEl.click();
-      });
-      if (phoneBtn) phoneBtn.addEventListener('click', function () {
-        closeSubmodals();
-        if (window.openCreatorPhoneUploadModal) window.openCreatorPhoneUploadModal();
-        else if (uploadInputEl) uploadInputEl.click();
-      });
+      if (devBtn) {
+        devBtn.addEventListener('click', function () {
+          closeSubmodals();
+          if (uploadInputEl) uploadInputEl.click();
+        });
+      }
+      if (phoneBtn) {
+        phoneBtn.addEventListener('click', function () {
+          closeSubmodals();
+          if (window.openCreatorPhoneUploadModal) window.openCreatorPhoneUploadModal();
+          else if (uploadInputEl) uploadInputEl.click();
+        });
+      }
     }
 
     if (uploadInputEl) {
@@ -989,7 +1913,22 @@
     document.addEventListener('keydown', function (ev) {
       if (!isOpen) return;
       if (ev.key === 'Escape') {
-        if ((addMenuEl && !addMenuEl.hidden) || (pickerEl && !pickerEl.hidden)) {
+        if (unsavedDialogEl && !unsavedDialogEl.hidden) {
+          handleUnsavedAction('cancel');
+          ev.preventDefault();
+          return;
+        }
+        if (cropping) {
+          exitCropMode(true);
+          ev.preventDefault();
+          return;
+        }
+        if (
+          (addMenuEl && !addMenuEl.hidden) ||
+          (pickerEl && !pickerEl.hidden) ||
+          (assetActionsEl && !assetActionsEl.hidden) ||
+          (assetPlacementEl && !assetPlacementEl.hidden)
+        ) {
           closeSubmodals();
           ev.preventDefault();
           return;
@@ -1000,22 +1939,33 @@
     });
 
     bindViewerTransform();
+    bindCropInteractions();
   }
 
   function resetToDefaults() {
     var cfg = studioConfig();
-    var positions = cfg.enabled_positions || ['front'];
+    var positions = enabledPositions();
     var colors = cfg.mocks_by_color ? Object.keys(cfg.mocks_by_color) : ['default'];
+    var byPos = {};
+    for (var i = 0; i < positions.length; i++) {
+      byPos[positions[i]] = {
+        primary: cloneTransform(DEFAULT_TRANSFORM),
+        primary_url: null,
+        primary_original_url: null,
+        additional: [],
+        public_additional: null,
+        alignment: { h: 'center', v: 'center' },
+        pattern: defaultPattern(),
+      };
+    }
     draft.print_area = {
-      position: positions[0] || 'front',
+      position: 'front',
       color_key: resolveColorKey() || colors[0] || 'default',
-      primary: { x: 0.5, y: 0.5, scale: 0.95, rotate: 0 },
-      additional: [],
-      public_additional: null,
-      alignment: { h: 'center', v: 'center' },
-      pattern: { enabled: false, mode: 'grid', spacing_x: 1, spacing_y: 1, pattern_angle: 0, offset: 0, rotation_step_horizontal: 0, rotation_step_vertical: 0 },
+      by_position: byPos,
+      __cdsMigrated: true,
     };
-    activeAssetKey = 'primary';
+    activeAssetKey = null;
+    setAssetSelected(false);
     renderStudioUi();
     markDirtyUi();
   }
@@ -1024,35 +1974,92 @@
     var owner = getOwnerId();
     if (!owner) throw new Error('missing_owner');
     var region = catalogRegion();
-    var shop = window.Shopify && window.Shopify.shop ? window.Shopify.shop : window.__SHOPIFY_SHOP_DOMAIN || '';
+    var shop =
+      window.Shopify && window.Shopify.shop
+        ? window.Shopify.shop
+        : window.__SHOPIFY_SHOP_DOMAIN || '';
     var url =
       apiBase() +
-      '?op=get-studio-context&design_id=' + encodeURIComponent(String(design.id)) +
-      '&product_key=' + encodeURIComponent(productKey) +
-      '&owner_id=' + encodeURIComponent(owner) +
-      '&region=' + encodeURIComponent(region);
+      '?op=get-studio-context&design_id=' +
+      encodeURIComponent(String(design.id)) +
+      '&product_key=' +
+      encodeURIComponent(productKey) +
+      '&owner_id=' +
+      encodeURIComponent(owner) +
+      '&region=' +
+      encodeURIComponent(region);
     if (shop) url += '&shop=' + encodeURIComponent(shop);
     var res = await fetch(url, { credentials: 'include' });
-    var data = await res.json().catch(function () { return {}; });
+    var data = await res.json().catch(function () {
+      return {};
+    });
     if (!data.ok) throw new Error(data.error || 'load_failed');
     return data;
   }
 
+  function closeUnsavedDialog() {
+    pendingUnsavedDiscard = null;
+    if (!unsavedDialogEl) return;
+    unsavedDialogEl.hidden = true;
+    unsavedDialogEl.setAttribute('aria-hidden', 'true');
+  }
+
   function showUnsavedDialog(onDiscard) {
-    var msg = t('designStudioUnsaved', 'You have unsaved changes. Save before closing?');
-    if (window.confirm(msg + '\n\n' + t('designStudioUnsavedOk', 'OK = Save, Cancel = Discard'))) {
+    pendingUnsavedDiscard = typeof onDiscard === 'function' ? onDiscard : doClose;
+    if (!unsavedDialogEl) {
+      // Last-resort fallback only if markup failed to load
+      pendingUnsavedDiscard();
+      return;
+    }
+    var titleEl = unsavedDialogEl.querySelector('#cds-unsaved-title');
+    var msgEl = unsavedDialogEl.querySelector('#cds-unsaved-message');
+    if (titleEl) {
+      titleEl.textContent = t('design_studio_unsaved_title', 'Unsaved changes');
+    }
+    if (msgEl) {
+      msgEl.textContent = t(
+        'design_studio_unsaved_body',
+        'You have unsaved changes. Save them, discard them, or cancel to keep editing.'
+      );
+    }
+    unsavedDialogEl.hidden = false;
+    unsavedDialogEl.setAttribute('aria-hidden', 'false');
+    var saveBtn = unsavedDialogEl.querySelector('[data-cds-unsaved="save"]');
+    if (saveBtn && typeof saveBtn.focus === 'function') {
+      try {
+        saveBtn.focus();
+      } catch (eFocus) {}
+    }
+  }
+
+  function handleUnsavedAction(action) {
+    if (action === 'cancel') {
+      closeUnsavedDialog();
+      return;
+    }
+    if (action === 'discard') {
+      var discardFn = pendingUnsavedDiscard || doClose;
+      closeUnsavedDialog();
+      discardFn();
+      return;
+    }
+    if (action === 'save') {
       onSave().then(function (ok) {
-        if (ok) doClose();
+        if (!ok) return;
+        var after = pendingUnsavedDiscard || doClose;
+        closeUnsavedDialog();
+        after();
       });
-    } else {
-      onDiscard();
     }
   }
 
   function doClose() {
     isOpen = false;
     isLoading = false;
+    exitCropMode(true);
+    closeUnsavedDialog();
     closeSubmodals();
+    teardownZonePatternOverlay();
     if (root) {
       root.hidden = true;
       root.setAttribute('aria-hidden', 'true');
@@ -1065,7 +2072,8 @@
     ctxData = null;
     draft = null;
     savedDraftJson = '';
-    activeAssetKey = 'primary';
+    activeAssetKey = null;
+    assetSelected = false;
     setStatus('');
   }
 
@@ -1099,7 +2107,9 @@
           draft: draft,
         }),
       });
-      var data = await res.json().catch(function () { return {}; });
+      var data = await res.json().catch(function () {
+        return {};
+      });
       if (!data.ok) throw new Error(data.error || 'save_failed');
       savedDraftJson = draftJson();
       setStatus(
@@ -1131,12 +2141,42 @@
     document.head.appendChild(link);
   }
 
+  function ensurePatternMath() {
+    if (window.eazPfsPatternMath && typeof window.eazPfsPatternMath.drawStudioPatternTiles === 'function') {
+      return Promise.resolve();
+    }
+    return new Promise(function (resolve) {
+      var existing = document.querySelector('script[src*="eaz-shop-printify-studio-pattern.js"]');
+      if (existing) {
+        existing.addEventListener('load', function () {
+          resolve();
+        });
+        setTimeout(resolve, 300);
+        return;
+      }
+      var url = '/vendor/theme/eaz-shop-printify-studio-pattern.js';
+      if (window.CreatorPortalThemeBridge && typeof window.CreatorPortalThemeBridge.assetUrl === 'function') {
+        url = window.CreatorPortalThemeBridge.assetUrl('eaz-shop-printify-studio-pattern.js') || url;
+      }
+      var s = document.createElement('script');
+      s.src = String(url).split('?')[0] + '?v=' + Date.now();
+      s.onload = function () {
+        resolve();
+      };
+      s.onerror = function () {
+        resolve();
+      };
+      document.head.appendChild(s);
+    });
+  }
+
   async function open(design, productKey, productMeta) {
     if (!cacheDom()) {
       console.warn('[creator-design-studio] modal root missing');
       return;
     }
     ensureStudioStyles();
+    await ensurePatternMath();
     bindOnce();
 
     var nextProductKey = String(productKey || '').trim();
@@ -1160,6 +2200,7 @@
     ctxProductKey = nextProductKey;
     ctxProductMeta = productMeta || null;
     activeAssetKey = 'primary';
+    assetSelected = true;
     activeSettingsTab = 'design';
 
     if (subtitleEl) {
@@ -1180,7 +2221,10 @@
       if (!isOpen || ctxProductKey !== nextProductKey) return;
       draft = ctxData.draft || { product_key: ctxProductKey };
       ensurePrintArea();
+      draft.print_area.position = 'front';
       if (!draft.print_area.color_key) draft.print_area.color_key = resolveColorKey();
+      activeAssetKey = 'primary';
+      setAssetSelected(true);
       switchSettingsTab('design');
       renderStudioUi();
       savedDraftJson = draftJson();
@@ -1197,6 +2241,8 @@
   window.CreatorDesignStudioModal = {
     open: open,
     close: close,
-    isOpen: function () { return isOpen; },
+    isOpen: function () {
+      return isOpen;
+    },
   };
 })();
