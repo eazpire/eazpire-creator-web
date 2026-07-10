@@ -676,8 +676,15 @@
 }
 
 .cj-tree-card.is-level-locked {
-  filter: grayscale(0.85);
-  opacity: 0.42;
+  filter: grayscale(0.7);
+  opacity: 0.58;
+}
+
+.cj-tree-card.is-level-locked .cj-tree-card__level-badge {
+  background: rgba(148, 163, 184, 0.28);
+  color: #f1f5f9;
+  border-color: rgba(226, 232, 240, 0.45);
+  letter-spacing: 0.03em;
 }
 
 .cj-tree-card.is-unlocked .cj-tree-card__frame {

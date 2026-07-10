@@ -747,6 +747,15 @@
       escapeHtml(btnLabel) + '</button>';
   }
 
+  function levelRequiredLabel(node, opts) {
+    opts = opts || {};
+    var n = opts.requiredLevel != null
+      ? Number(opts.requiredLevel)
+      : (Number(node && node.min_level) || 2);
+    if (!Number.isFinite(n) || n < 1) n = 2;
+    return tpl('creator.journey.level_required_n', 'Level {{ n }} required', { n: String(n) });
+  }
+
   function renderTreeCardFrame(node, opts) {
     opts = opts || {};
     var title = nodeTitle(node);
@@ -754,6 +763,7 @@
     var committed = Number(node.eaz_committed) || 0;
     var freePick = !!node.free_pick_eligible;
     var cost = nodeEffectiveCost(node);
+    var levelLocked = !!opts.levelLocked;
     // Unlock-ready (free pick or fully funded): Unlock button is enough — no FREE / progress badge.
     var unlockReady = freePick || (cost > 0 && committed + 1e-9 >= cost);
     var hasAction = !!opts.hasAction;
@@ -781,6 +791,10 @@
     var badgeHtml = '';
     if (node.unlocked) {
       badgeHtml = renderUnlockedBadgeHtml(node);
+    } else if (levelLocked) {
+      // Level gate: show required level instead of misleading EAZV progress (e.g. 0/200).
+      badgeHtml = '<span class="cj-tree-card__eaz-badge cj-tree-card__level-badge">' +
+        escapeHtml(levelRequiredLabel(node, opts)) + '</span>';
     } else if (!freePick && !unlockReady) {
       // Partial commits keep the EAZV progress badge (e.g. 0/80).
       badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
@@ -835,9 +849,14 @@
       ? ' data-cj-expand-product="' + escapeHtml(node.product_key || '') + '"'
       : '';
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
+      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node, { requiredLevel: opts.requiredLevel })) + '"' : '') + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction }) +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        levelLocked: levelLocked,
+        requiredLevel: opts.requiredLevel
+      }) +
       act.actionHtml + '</div></article>';
   }
 
@@ -879,9 +898,10 @@
       ? ' data-cj-expand-color="' + escapeHtml(node.node_key) + '"'
       : '';
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
+      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction }) +
+      renderTreeCardFrame(node, { hasAction: act.hasAction, levelLocked: levelLocked }) +
       act.actionHtml + '</div></article>';
   }
 
@@ -896,9 +916,15 @@
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction, sizeLabel: sizeLabel, hideTitle: true }) +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        sizeLabel: sizeLabel,
+        hideTitle: true,
+        levelLocked: levelLocked
+      }) +
       act.actionHtml + '</div></article>';
   }
 
@@ -974,7 +1000,11 @@
     var expandHtml = '';
     nodes.forEach(function (n) {
       var expandable = n.product_key === SOFTSTYLE_PRODUCT_KEY;
-      cardsHtml += renderProductTreeCard(n, { sectionLocked: sectionLocked, expandable: expandable });
+      cardsHtml += renderProductTreeCard(n, {
+        sectionLocked: sectionLocked,
+        expandable: expandable,
+        requiredLevel: opts.requiredLevel
+      });
       if (expandable && n.unlocked && expandedProductKeys[n.product_key]) {
         expandHtml += renderSoftstyleExpandPanel(n);
       }
@@ -1016,13 +1046,15 @@
       tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(secs.preview) }),
       '',
       lockedPreview,
-      dispLv < secs.preview
+      dispLv < secs.preview,
+      { requiredLevel: secs.preview }
     );
     html += renderCarouselSection(
       tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(secs.premium) }),
       t('creator.journey.product_premium_hint', 'Premium products available at this level'),
       lockedOffline,
-      dispLv < secs.premium
+      dispLv < secs.premium,
+      { requiredLevel: secs.premium }
     );
     html += '</div>';
     if (!unlocked.length && !lockedStarter.length && !lockedPreview.length && !lockedOffline.length) {
@@ -1055,12 +1087,14 @@
         (expanded ? 'true' : 'false') + '"'
       : '';
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
+      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         flagMedia: !isContinent,
-        continentMedia: isContinent
+        continentMedia: isContinent,
+        levelLocked: levelLocked
       }) +
       act.actionHtml + '</div></article>';
   }
@@ -1260,9 +1294,10 @@
         (expanded ? 'true' : 'false') + '"'
       : '';
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
+      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction }) +
+      renderTreeCardFrame(node, { hasAction: act.hasAction, levelLocked: levelLocked }) +
       act.actionHtml + '</div></article>';
   }
 
@@ -1382,9 +1417,10 @@
       : '';
 
     var actionHtml = seqBlocked ? '' : act.actionHtml;
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
+      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: !!actionHtml }) +
+      renderTreeCardFrame(node, { hasAction: !!actionHtml, levelLocked: levelLocked }) +
       actionHtml + '</div></article>';
   }
 
@@ -1473,9 +1509,10 @@
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      (levelLocked ? ' title="' + escapeHtml(levelRequiredLabel(node)) + '"' : '') + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: act.hasAction }) +
+      renderTreeCardFrame(node, { hasAction: act.hasAction, levelLocked: levelLocked }) +
       act.actionHtml + '</div></article>';
   }
 
