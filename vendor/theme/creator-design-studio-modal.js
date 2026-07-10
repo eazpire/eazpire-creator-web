@@ -27,10 +27,21 @@
   var panelDesignEl = null;
   var panelVariantsEl = null;
   var addMenuEl = null;
+  var addMenuTitleEl = null;
+  var addMenuBackEl = null;
+  var addMenuViewMenuEl = null;
+  var addMenuViewPhoneEl = null;
+  var phoneErrorEl = null;
+  var phoneLoadingEl = null;
+  var phoneMainEl = null;
+  var phoneQrImgEl = null;
+  var phonePollTimer = null;
+  var phonePollSession = null;
   var pickerEl = null;
   var pickerGridEl = null;
   var pickerTitleEl = null;
   var pickerEmptyEl = null;
+  var pickerBackEl = null;
   var uploadInputEl = null;
   var assetActionsEl = null;
   var assetActionsPreviewEl = null;
@@ -111,6 +122,13 @@
   function t(key, fallback) {
     var M = Mi();
     if (M[key]) return M[key];
+    var I = window.CreatorI18n || {};
+    if (I[key]) return I[key];
+    if (key.indexOf('design_studio_') === 0) {
+      var dotted = 'creator.design_studio.' + key.replace(/^design_studio_/, '');
+      if (I[dotted]) return I[dotted];
+      if (M[dotted]) return M[dotted];
+    }
     return fallback;
   }
 
@@ -740,10 +758,19 @@
     panelDesignEl = root.querySelector('#cds-panel-design');
     panelVariantsEl = root.querySelector('#cds-panel-variants');
     addMenuEl = root.querySelector('#cds-add-menu');
+    addMenuTitleEl = root.querySelector('#cds-add-menu-title');
+    addMenuBackEl = root.querySelector('#cds-add-menu-back');
+    addMenuViewMenuEl = root.querySelector('[data-cds-add-view="menu"]');
+    addMenuViewPhoneEl = root.querySelector('[data-cds-add-view="phone"]');
+    phoneErrorEl = root.querySelector('#cds-phone-error');
+    phoneLoadingEl = root.querySelector('#cds-phone-loading');
+    phoneMainEl = root.querySelector('#cds-phone-main');
+    phoneQrImgEl = root.querySelector('#cds-phone-qr-img');
     pickerEl = root.querySelector('#cds-design-picker');
     pickerGridEl = root.querySelector('#cds-picker-grid');
     pickerTitleEl = root.querySelector('#cds-picker-title');
     pickerEmptyEl = root.querySelector('#cds-picker-empty');
+    pickerBackEl = root.querySelector('#cds-picker-back');
     uploadInputEl = root.querySelector('#cds-upload-input');
     assetActionsEl = root.querySelector('#cds-asset-actions');
     assetActionsPreviewEl = root.querySelector('#cds-asset-actions-preview');
@@ -1515,7 +1542,7 @@
       assetsHtml +=
         '<button type="button" class="cds-asset-tile cds-asset-tile--add" data-cds-open-add>' +
         '<span>+</span><span>' +
-        t('designStudioAddDesigns', 'Add Designs') +
+        t('design_studio_add_design', 'Add Design') +
         '</span></button>';
     }
     assetsHtml += '</div>';
@@ -2710,16 +2737,79 @@
     markDirtyUi();
   }
 
+  function phoneApiBase() {
+    if (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) {
+      return String(window.CREATOR_API_CONFIG.BASE_URL).replace(/\/+$/, '');
+    }
+    if (window.CreatorWidgetConfig) {
+      var k = Object.keys(window.CreatorWidgetConfig)[0];
+      var c = k && window.CreatorWidgetConfig[k];
+      if (c && c.api_root) return String(c.api_root).replace(/\/+$/, '');
+    }
+    return 'https://creator-engine.eazpire.workers.dev';
+  }
+
+  function stopPhonePoll() {
+    if (phonePollTimer) {
+      clearInterval(phonePollTimer);
+      phonePollTimer = null;
+    }
+    phonePollSession = null;
+    if (phoneQrImgEl) {
+      phoneQrImgEl.removeAttribute('src');
+      phoneQrImgEl.onerror = null;
+    }
+  }
+
+  function setPhoneError(msg) {
+    if (!phoneErrorEl) return;
+    if (msg) {
+      phoneErrorEl.hidden = false;
+      phoneErrorEl.textContent = msg;
+    } else {
+      phoneErrorEl.hidden = true;
+      phoneErrorEl.textContent = '';
+    }
+  }
+
+  function qrCodeUrlForScan(scanUrl) {
+    return (
+      'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=1&qzone=1&data=' +
+      encodeURIComponent(scanUrl)
+    );
+  }
+
+  function setAddMenuView(view) {
+    var isPhone = view === 'phone';
+    if (addMenuViewMenuEl) addMenuViewMenuEl.hidden = isPhone;
+    if (addMenuViewPhoneEl) addMenuViewPhoneEl.hidden = !isPhone;
+    if (addMenuBackEl) addMenuBackEl.hidden = !isPhone;
+    if (addMenuTitleEl) {
+      addMenuTitleEl.textContent = isPhone
+        ? t('design_studio_upload_phone', 'Phone')
+        : t('design_studio_add_design', 'Add Design');
+    }
+    if (!isPhone) {
+      stopPhonePoll();
+      setPhoneError('');
+      if (phoneLoadingEl) phoneLoadingEl.style.display = '';
+      if (phoneMainEl) phoneMainEl.hidden = true;
+    }
+  }
+
   function openAddMenu() {
     if (!addMenuEl) return;
+    setAddMenuView('menu');
     addMenuEl.hidden = false;
     addMenuEl.setAttribute('aria-hidden', 'false');
   }
 
   function closeSubmodals() {
+    stopPhonePoll();
     if (addMenuEl) {
       addMenuEl.hidden = true;
       addMenuEl.setAttribute('aria-hidden', 'true');
+      setAddMenuView('menu');
     }
     if (pickerEl) {
       pickerEl.hidden = true;
@@ -2728,8 +2818,21 @@
     closeAssetDialogs();
   }
 
+  function backToAddMenu() {
+    stopPhonePoll();
+    if (pickerEl) {
+      pickerEl.hidden = true;
+      pickerEl.setAttribute('aria-hidden', 'true');
+    }
+    openAddMenu();
+  }
+
   function openDesignPicker(mode) {
-    closeSubmodals();
+    if (addMenuEl) {
+      addMenuEl.hidden = true;
+      addMenuEl.setAttribute('aria-hidden', 'true');
+    }
+    stopPhonePoll();
     pickerMode = mode === 'public' ? 'public' : 'mine';
     if (!pickerEl) return;
     pickerEl.hidden = false;
@@ -2737,10 +2840,140 @@
     if (pickerTitleEl) {
       pickerTitleEl.textContent =
         pickerMode === 'public'
-          ? t('designStudioPublicDesigns', 'Public Designs')
-          : t('designStudioMyDesigns', 'My Designs');
+          ? t('design_studio_public_designs', 'Public Designs')
+          : t('design_studio_my_designs', 'My Designs');
     }
     loadDesignPickerGrid();
+  }
+
+  function applyUploadedImageUrl(imageUrl) {
+    if (!imageUrl) return false;
+    var bucket = currentBucket();
+    if ((bucket.additional || []).length >= MAX_OWN_ADDITIONAL) {
+      setStatus(t('design_studio_add_limit', 'Additional design limit reached.'));
+      return false;
+    }
+    bucket.additional.push({
+      design_id: null,
+      preview_url: imageUrl,
+      original_url: imageUrl,
+      label: t('design_studio_upload_phone', 'Phone'),
+      transform: cloneTransform({ scale: 0.5 }),
+    });
+    activeAssetKey = 'own-' + (bucket.additional.length - 1);
+    setAssetSelected(true);
+    closeSubmodals();
+    renderStudioUi();
+    markDirtyUi();
+    return true;
+  }
+
+  function startPhonePoll(sessionId, ownerId) {
+    stopPhonePoll();
+    phonePollSession = sessionId;
+    var base = phoneApiBase();
+    var tick = function () {
+      if (!phonePollSession || phonePollSession !== sessionId) return;
+      var u =
+        base +
+        '/api/creator-phone-upload/session?id=' +
+        encodeURIComponent(sessionId) +
+        '&owner_id=' +
+        encodeURIComponent(ownerId);
+      fetch(u, { credentials: 'omit' })
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (data) {
+          if (!data || !data.ok) return;
+          if (data.status === 'completed' && data.image_url) {
+            stopPhonePoll();
+            applyUploadedImageUrl(data.image_url);
+          }
+        })
+        .catch(function () {});
+    };
+    tick();
+    phonePollTimer = setInterval(tick, 2000);
+  }
+
+  function openPhoneUploadView() {
+    setAddMenuView('phone');
+    var ownerId = getOwnerId();
+    if (!ownerId) {
+      if (phoneLoadingEl) phoneLoadingEl.style.display = 'none';
+      if (phoneMainEl) phoneMainEl.hidden = true;
+      setPhoneError(t('design_studio_phone_login_required', 'Please sign in to upload from your phone.'));
+      return;
+    }
+
+    setPhoneError('');
+    if (phoneLoadingEl) phoneLoadingEl.style.display = '';
+    if (phoneMainEl) phoneMainEl.hidden = true;
+
+    var base = phoneApiBase();
+    fetch(base + '/api/creator-phone-upload/config', { credentials: 'omit' })
+      .then(function (r) {
+        return r.json().then(function (cfg) {
+          return { httpOk: r.ok, cfg: cfg };
+        });
+      })
+      .then(function (res) {
+        var cfg = res.cfg;
+        if (!cfg || !cfg.ok) {
+          var err = new Error((cfg && cfg.message) || (cfg && cfg.error) || 'not_configured');
+          err.code = cfg && cfg.error;
+          throw err;
+        }
+        return fetch(base + '/api/creator-phone-upload/session', {
+          method: 'POST',
+          credentials: 'omit',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ owner_id: ownerId }),
+        }).then(function (r2) {
+          return r2.json().then(function (data) {
+            return { httpOk: r2.ok, data: data };
+          });
+        });
+      })
+      .then(function (res) {
+        var data = res.data;
+        if (!data || !data.ok || !data.scan_url || !data.session_id) {
+          var err2 = new Error((data && data.message) || (data && data.error) || 'session_failed');
+          err2.code = data && data.error;
+          throw err2;
+        }
+        if (phoneQrImgEl) {
+          var styled =
+            base +
+            '/api/creator-phone-upload/qr-image?session=' +
+            encodeURIComponent(data.session_id);
+          phoneQrImgEl.onerror = function () {
+            phoneQrImgEl.onerror = null;
+            phoneQrImgEl.src = qrCodeUrlForScan(data.scan_url);
+          };
+          phoneQrImgEl.src = styled;
+        }
+        if (phoneLoadingEl) phoneLoadingEl.style.display = 'none';
+        if (phoneMainEl) phoneMainEl.hidden = false;
+        startPhonePoll(data.session_id, ownerId);
+      })
+      .catch(function (err) {
+        console.warn('[creator-design-studio] phone upload', err);
+        if (phoneLoadingEl) phoneLoadingEl.style.display = 'none';
+        if (phoneMainEl) phoneMainEl.hidden = true;
+        var detail = err && String(err.message || '');
+        if (detail && detail.length > 0 && detail.length < 500 && detail !== 'session_failed') {
+          setPhoneError(detail);
+        } else {
+          setPhoneError(
+            t(
+              'design_studio_phone_config_error',
+              'Phone upload is not available yet. Ask an admin to set up phone upload.'
+            )
+          );
+        }
+      });
   }
 
   async function loadDesignPickerGrid() {
@@ -2869,6 +3102,7 @@
       var pubBtn = addMenuEl.querySelector('[data-cds-add-public-designs]');
       var devBtn = addMenuEl.querySelector('[data-cds-add-upload="device"]');
       var phoneBtn = addMenuEl.querySelector('[data-cds-add-upload="phone"]');
+      var addBackBtn = addMenuEl.querySelector('[data-cds-add-back]');
       if (myBtn) myBtn.addEventListener('click', function () { openDesignPicker('mine'); });
       if (pubBtn) pubBtn.addEventListener('click', function () { openDesignPicker('public'); });
       if (devBtn) {
@@ -2879,12 +3113,26 @@
       }
       if (phoneBtn) {
         phoneBtn.addEventListener('click', function () {
-          closeSubmodals();
-          if (window.openCreatorPhoneUploadModal) window.openCreatorPhoneUploadModal();
-          else if (uploadInputEl) uploadInputEl.click();
+          openPhoneUploadView();
+        });
+      }
+      if (addBackBtn) {
+        addBackBtn.addEventListener('click', function () {
+          setAddMenuView('menu');
         });
       }
     }
+
+    if (pickerBackEl) {
+      pickerBackEl.addEventListener('click', function () {
+        backToAddMenu();
+      });
+    }
+
+    window.__cdsDesignStudioPhoneApply = function (imageUrl) {
+      if (!isOpen || !imageUrl) return false;
+      return applyUploadedImageUrl(imageUrl);
+    };
 
     if (uploadInputEl) {
       uploadInputEl.addEventListener('change', function () {
@@ -2918,7 +3166,18 @@
           (assetActionsEl && !assetActionsEl.hidden) ||
           (assetPlacementEl && !assetPlacementEl.hidden)
         ) {
-          closeSubmodals();
+          if (
+            addMenuEl &&
+            !addMenuEl.hidden &&
+            addMenuViewPhoneEl &&
+            !addMenuViewPhoneEl.hidden
+          ) {
+            setAddMenuView('menu');
+          } else if (pickerEl && !pickerEl.hidden) {
+            backToAddMenu();
+          } else {
+            closeSubmodals();
+          }
           ev.preventDefault();
           return;
         }

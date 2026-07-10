@@ -130,18 +130,58 @@
 
   <div class="cds-submodal" id="cds-add-menu" hidden aria-hidden="true">
     <div class="cds-submodal__backdrop" data-cds-sub-close></div>
-    <div class="cds-submodal__sheet" role="dialog" aria-labelledby="cds-add-menu-title">
-      <h3 id="cds-add-menu-title" class="cds-submodal__title" data-t="creator.design_studio.add_designs">Add Designs</h3>
-      <div class="cds-submodal__actions">
-        <div class="cds-submodal__group">
-          <span class="cds-submodal__label" data-t="creator.design_studio.upload">Upload</span>
-          <button type="button" class="cds-btn-secondary" data-cds-add-upload="device" data-t="creator.design_studio.upload_device">Device</button>
-          <button type="button" class="cds-btn-secondary" data-cds-add-upload="phone" data-t="creator.design_studio.upload_phone">Phone</button>
+    <div class="cds-submodal__sheet cds-add-menu-sheet" role="dialog" aria-labelledby="cds-add-menu-title">
+      <header class="cds-submodal__head cds-add-menu__head">
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon cds-add-menu__back" id="cds-add-menu-back" data-cds-add-back hidden aria-label="Back">
+          <span aria-hidden="true">‹</span>
+        </button>
+        <h3 id="cds-add-menu-title" class="cds-submodal__title" data-t="creator.design_studio.add_design">Add Design</h3>
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-sub-close aria-label="Close">&times;</button>
+      </header>
+
+      <div class="cds-add-menu__view" data-cds-add-view="menu">
+        <div class="cds-add-grid" role="list">
+          <button type="button" class="cds-add-tile" data-cds-add-upload="device" role="listitem">
+            <span class="cds-add-tile__icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 4v10M8 8l4-4 4 4M5 20h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="cds-add-tile__label" data-t="creator.design_studio.upload_device">Device</span>
+          </button>
+          <button type="button" class="cds-add-tile" data-cds-add-upload="phone" role="listitem">
+            <span class="cds-add-tile__icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M10 18h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            <span class="cds-add-tile__label" data-t="creator.design_studio.upload_phone">Phone</span>
+          </button>
+          <button type="button" class="cds-add-tile" data-cds-add-my-designs role="listitem">
+            <span class="cds-add-tile__icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+            </span>
+            <span class="cds-add-tile__label" data-t="creator.design_studio.my_designs">My Designs</span>
+          </button>
+          <button type="button" class="cds-add-tile" data-cds-add-public-designs role="listitem">
+            <span class="cds-add-tile__icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M3 12h18M12 3c2.5 2.8 3.8 5.8 3.8 9S14.5 18.2 12 21c-2.5-2.8-3.8-5.8-3.8-9S9.5 5.8 12 3z" stroke="currentColor" stroke-width="1.8"/></svg>
+            </span>
+            <span class="cds-add-tile__label" data-t="creator.design_studio.public_designs">Public Designs</span>
+          </button>
         </div>
-        <button type="button" class="cds-btn-secondary" data-cds-add-my-designs data-t="creator.design_studio.my_designs">My Designs</button>
-        <button type="button" class="cds-btn-secondary" data-cds-add-public-designs data-t="creator.design_studio.public_designs">Public Designs</button>
       </div>
-      <button type="button" class="cds-btn-secondary cds-submodal__cancel" data-cds-sub-close data-t="creator.common.cancel">Cancel</button>
+
+      <div class="cds-add-menu__view cds-add-menu__view--phone" data-cds-add-view="phone" hidden>
+        <div id="cds-phone-error" class="cds-phone-error" hidden></div>
+        <div id="cds-phone-loading" class="cds-phone-loading" data-t="creator.design_studio.loading">Loading…</div>
+        <div id="cds-phone-main" class="cds-phone-main" hidden>
+          <p class="cds-phone-scan-title" data-t="creator.design_studio.phone_scan_hint">Scan the QR code</p>
+          <div class="cds-phone-qr-wrap">
+            <img id="cds-phone-qr-img" alt="" width="220" height="220" decoding="async">
+          </div>
+          <details class="cds-phone-help">
+            <summary data-t="creator.design_studio.phone_help_link">How do I upload from my phone?</summary>
+            <p data-t="creator.design_studio.phone_help_text">Open your phone camera, scan the code, then pick or take a photo. Your computer will receive the image automatically.</p>
+          </details>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -149,6 +189,9 @@
     <div class="cds-submodal__backdrop" data-cds-sub-close></div>
     <div class="cds-submodal__sheet cds-submodal__sheet--wide" role="dialog" aria-labelledby="cds-picker-title">
       <header class="cds-submodal__head">
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon cds-picker__back" id="cds-picker-back" data-cds-picker-back aria-label="Back">
+          <span aria-hidden="true">‹</span>
+        </button>
         <h3 id="cds-picker-title" class="cds-submodal__title"></h3>
         <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-sub-close aria-label="Close">&times;</button>
       </header>
