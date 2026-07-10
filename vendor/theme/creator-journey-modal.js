@@ -16,7 +16,7 @@
   var treeFilter = 'royalty';
   var eazEconomyData = null;
   var eazEconomyLoadPromise = null;
-  var eazEconomyAxisFilter = 'cost';
+  var eazEconomyExpandedAxis = '';
   var isMobileSidebarOpen = false;
   var closeTimer = null;
   var CJ_MOBILE_MAX = 991;
@@ -130,8 +130,13 @@
     'eaz_economy',
     'product', 'design_type', 'market', 'channel',
     'automation', 'promotion', 'hero', 'social',
-    'variant', 'design_slot', 'creator_name'
+    'design_slot', 'creator_name'
   ];
+
+  var SOFTSTYLE_PRODUCT_KEY = 'unisex-softstyle-cotton-tee';
+  var FLAG_CDN = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.2/flags/4x3/';
+  var expandedProductKeys = {};
+  var expandedColorKeys = {};
 
   var CATEGORY_ICON_SVG = {
     royalty: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
@@ -150,7 +155,7 @@
   };
 
   var EAZ_AXIS_LABELS = { cost: 'Cost', daily: 'Daily', cap: 'Cap', kickstarter: 'Kickstarter' };
-  var EAZ_AXIS_TAB_ORDER = ['cost', 'daily', 'cap', 'kickstarter'];
+  var EAZ_CATEGORY_ORDER = ['cost', 'daily', 'cap', 'kickstarter'];
 
   function escapeHtml(text) {
     var div = document.createElement('div');
@@ -261,7 +266,11 @@
         pct: String(node.metadata.royalty_percent)
       });
     }
+    if (node.metadata && node.metadata.country_name) return String(node.metadata.country_name);
     if (node.metadata && node.metadata.title) return String(node.metadata.title);
+    if (node.category === 'market' && node.region_code) {
+      return marketCountryName(node.region_code);
+    }
     if (node.product_key) return node.product_key;
     if (node.design_type) return node.design_type;
     if (node.region_code) return node.region_code;
@@ -273,6 +282,32 @@
     if (node.promo_slot) return 'Promotion ' + node.promo_slot;
     if (node.hero_slot) return 'Hero slot ' + node.hero_slot;
     return node.node_key;
+  }
+
+  function marketCountryName(code) {
+    var c = String(code || '').toUpperCase();
+    if (c === 'GB') c = 'UK';
+    var names = {
+      EU: 'Europe', US: 'United States', UK: 'United Kingdom', CH: 'Switzerland',
+      CA: 'Canada', AU: 'Australia', DE: 'Germany', AT: 'Austria', FR: 'France',
+      NL: 'Netherlands', IT: 'Italy', ES: 'Spain', BE: 'Belgium', PL: 'Poland',
+      SE: 'Sweden', NO: 'Norway', DK: 'Denmark', FI: 'Finland', IE: 'Ireland',
+      PT: 'Portugal', NZ: 'New Zealand', JP: 'Japan', KR: 'South Korea',
+      CN: 'China', MX: 'Mexico', BR: 'Brazil'
+    };
+    return names[c] || c;
+  }
+
+  function marketFlagCode(node) {
+    if (node.metadata && node.metadata.flag_code) return String(node.metadata.flag_code).toLowerCase();
+    var c = String(node.region_code || '').toLowerCase();
+    if (c === 'uk') return 'gb';
+    return c || 'un';
+  }
+
+  function marketFlagHtml(node) {
+    var code = marketFlagCode(node);
+    return '<img class="cj-tree-card__flag" src="' + FLAG_CDN + escapeHtml(code) + '.svg" alt="" loading="lazy" width="48" height="36">';
   }
 
   function nodeImageUrl(node) {
@@ -389,17 +424,20 @@
     var hasAction = !!opts.hasAction;
     var frameCls = 'cj-tree-card__frame' + (hasAction ? ' cj-tree-card__frame--attached' : '');
     var statusHtml = node.unlocked ? '<span class="cj-tree-card__status" aria-hidden="true">✓</span>' : '';
+    var mediaHtml = opts.flagMedia
+      ? marketFlagHtml(node)
+      : (opts.sizeLabel
+        ? '<div class="cj-tree-card__size-label">' + escapeHtml(opts.sizeLabel) + '</div>'
+        : renderTreeCardMedia(imgUrl));
     return '<div class="' + frameCls + '">' +
       '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>' +
-      '<div class="cj-tree-card__media">' + renderTreeCardMedia(imgUrl) + '</div>' +
+      '<div class="cj-tree-card__media' + (opts.flagMedia ? ' cj-tree-card__media--flag' : '') +
+      (opts.sizeLabel ? ' cj-tree-card__media--size' : '') + '">' + mediaHtml + '</div>' +
       '<span class="cj-tree-card__eaz-badge">' + escapeHtml(badge) + '</span>' +
       statusHtml + '</div>';
   }
 
-  function renderProductTreeCard(node, opts) {
-    opts = opts || {};
-    var sectionLocked = !!opts.sectionLocked;
-    var levelLocked = sectionLocked || isLevelLocked(node);
+  function cardActionState(node, levelLocked) {
     var cost = Number(node.cost_eaz) || 0;
     var title = nodeTitle(node);
     var isCreator = journeyData && journeyData.is_creator;
@@ -407,76 +445,178 @@
     var committed = Number(node.eaz_committed) || 0;
     var unlockReady = canAct && cost > 0 && committed + 1e-9 >= cost;
     var hasAction = canAct && cost > 0;
-    var actionHtml = renderTreeCardAction(node, title, canAct, cost, unlockReady);
+    return {
+      title: title,
+      canAct: canAct,
+      cost: cost,
+      unlockReady: unlockReady,
+      hasAction: hasAction,
+      actionHtml: renderTreeCardAction(node, title, canAct, cost, unlockReady)
+    };
+  }
+
+  function renderProductTreeCard(node, opts) {
+    opts = opts || {};
+    var sectionLocked = !!opts.sectionLocked;
+    var levelLocked = sectionLocked || isLevelLocked(node);
+    var act = cardActionState(node, levelLocked);
+    var expandable = !!opts.expandable && !!node.unlocked;
+    var expanded = expandable && !!expandedProductKeys[node.product_key || node.node_key];
 
     var cls = 'cj-tree-card cj-tree-card--product';
     if (levelLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
-    if (unlockReady) cls += ' is-ready';
-    if (hasAction) cls += ' has-action';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
+    if (expandable) cls += ' is-expandable';
+    if (expanded) cls += ' is-expanded';
+
+    var expandAttr = expandable
+      ? ' data-cj-expand-product="' + escapeHtml(node.product_key || '') + '"'
+      : '';
+
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
+      '<div class="cj-tree-card__stack">' +
+      renderTreeCardFrame(node, { hasAction: act.hasAction }) +
+      act.actionHtml + '</div></article>';
+  }
+
+  function variantNodesForProduct(productKey) {
+    return (journeyData && journeyData.nodes || []).filter(function (n) {
+      return n.category === 'variant' && n.product_key === productKey;
+    });
+  }
+
+  function variantColorNodes(productKey) {
+    return variantNodesForProduct(productKey).filter(function (n) {
+      return n.metadata && n.metadata.variant_kind === 'color';
+    });
+  }
+
+  function variantSizeNodes(colorNodeKey) {
+    return (journeyData && journeyData.nodes || []).filter(function (n) {
+      return n.category === 'variant' && n.parent_key === colorNodeKey &&
+        n.metadata && n.metadata.variant_kind === 'size';
+    });
+  }
+
+  function renderVariantColorCard(node) {
+    var levelLocked = isLevelLocked(node);
+    var act = cardActionState(node, levelLocked);
+    var expandable = !!node.unlocked;
+    var expanded = expandable && !!expandedColorKeys[node.node_key];
+    var cls = 'cj-tree-card cj-tree-card--variant-color';
+    if (levelLocked) cls += ' is-level-locked';
+    if (node.unlocked) cls += ' is-unlocked';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
+    if (expandable) cls += ' is-expandable';
+    if (expanded) cls += ' is-expanded';
+    if (!node.unlocked) cls += ' is-locked-expand';
+
+    var expandAttr = expandable
+      ? ' data-cj-expand-color="' + escapeHtml(node.node_key) + '"'
+      : '';
+
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
+      '<div class="cj-tree-card__stack">' +
+      renderTreeCardFrame(node, { hasAction: act.hasAction }) +
+      act.actionHtml + '</div></article>';
+  }
+
+  function renderVariantSizeCard(node) {
+    var levelLocked = isLevelLocked(node);
+    var act = cardActionState(node, levelLocked);
+    var sizeLabel = (node.metadata && node.metadata.size) || nodeTitle(node);
+    var cls = 'cj-tree-card cj-tree-card--variant-size';
+    if (levelLocked) cls += ' is-level-locked';
+    if (node.unlocked) cls += ' is-unlocked';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: hasAction }) +
-      actionHtml + '</div></article>';
+      renderTreeCardFrame(node, { hasAction: act.hasAction, sizeLabel: sizeLabel }) +
+      act.actionHtml + '</div></article>';
   }
 
-  function renderProductSection(title, subtitle, nodes, sectionLocked) {
+  function renderSoftstyleExpandPanel(productNode) {
+    if (!productNode || !productNode.unlocked) return '';
+    if (productNode.product_key !== SOFTSTYLE_PRODUCT_KEY) return '';
+    if (!expandedProductKeys[productNode.product_key]) return '';
+
+    var colors = variantColorNodes(productNode.product_key);
+    if (!colors.length) {
+      return '<div class="cj-variant-panel">' +
+        '<p class="cj-muted">' + escapeHtml(t('creator.journey.variants_empty', 'No color variants available yet.')) + '</p></div>';
+    }
+
+    var html = '<div class="cj-variant-panel" data-cj-variant-panel="' + escapeHtml(productNode.product_key) + '">' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(t('creator.journey.color_variants', 'Color variants')) + '</h4>' +
+      '<div class="cj-variant-panel__grid">';
+
+    colors.forEach(function (colorNode) {
+      html += '<div class="cj-variant-color-block">';
+      html += renderVariantColorCard(colorNode);
+      if (colorNode.unlocked && expandedColorKeys[colorNode.node_key]) {
+        var sizes = variantSizeNodes(colorNode.node_key);
+        html += '<div class="cj-variant-size-panel">' +
+          '<h5 class="cj-variant-size-panel__title">' + escapeHtml(t('creator.journey.size_variants', 'Sizes')) + '</h5>' +
+          '<div class="cj-variant-size-panel__grid">' +
+          sizes.map(renderVariantSizeCard).join('') +
+          '</div></div>';
+      }
+      html += '</div>';
+    });
+
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderCarouselSection(title, subtitle, nodes, sectionLocked) {
     if (!nodes.length) return '';
     var sub = subtitle ? '<p class="cj-product-section__sub">' + escapeHtml(subtitle) + '</p>' : '';
+    var cardsHtml = '';
+    var expandHtml = '';
+    nodes.forEach(function (n) {
+      var expandable = n.product_key === SOFTSTYLE_PRODUCT_KEY;
+      cardsHtml += renderProductTreeCard(n, { sectionLocked: sectionLocked, expandable: expandable });
+      if (expandable && n.unlocked && expandedProductKeys[n.product_key]) {
+        expandHtml += renderSoftstyleExpandPanel(n);
+      }
+    });
     return '<section class="cj-product-section' + (sectionLocked ? ' is-locked' : '') + '">' +
+      '<div class="cj-product-section__head">' +
       '<h3 class="cj-product-section__title">' + escapeHtml(title) + '</h3>' + sub +
-      '<div class="cj-product-section__cards">' +
-      nodes.map(function (n) { return renderProductTreeCard(n, { sectionLocked: sectionLocked }); }).join('') +
-      '</div></section>';
-  }
-
-  function renderStarterSetupHtml() {
-    var sel = journeyData && journeyData.starter && journeyData.starter.selection;
-    if (sel) return '';
-    return '<div class="cj-starter cj-starter--banner cj-starter--tree" id="cjStarterSection">' +
-      '<div class="cj-starter-banner__head">' +
-      '<h4 class="cj-section-title">' + escapeHtml(t('creator.journey.starter_title', 'Starter setup')) + '</h4>' +
-      '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_hint', 'Choose your first product and region before publishing.')) + '</p>' +
       '</div>' +
-      '<div class="cj-starter-form" id="cjStarterForm">' +
-      '<label class="cj-label">' + escapeHtml(t('creator.journey.starter_product', 'Starter product')) +
-      '<select id="cjStarterProduct" class="cj-select"></select></label>' +
-      '<label class="cj-label">' + escapeHtml(t('creator.journey.starter_region', 'Starter region')) +
-      '<select id="cjStarterRegion" class="cj-select"></select></label>' +
-      '<button type="button" class="cj-btn cj-btn--primary" id="cjStarterSave">' +
-      escapeHtml(t('creator.journey.starter_save', 'Save starter selection')) + '</button>' +
-      '</div></div>';
-  }
-
-  function wireStarterSetupForm() {
-    var saveBtn = document.getElementById('cjStarterSave');
-    if (!saveBtn || saveBtn.dataset.wired) return;
-    saveBtn.dataset.wired = '1';
-    saveBtn.addEventListener('click', function () { saveStarter().catch(console.warn); });
-    populateStarterForm();
+      '<div class="cj-product-carousel" data-cj-carousel>' +
+      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--prev" data-cj-carousel-prev aria-label="' +
+      escapeHtml(t('creator.journey.carousel_prev', 'Previous')) + '">‹</button>' +
+      '<div class="cj-product-carousel__track" data-cj-carousel-track>' + cardsHtml + '</div>' +
+      '<button type="button" class="cj-product-carousel__nav cj-product-carousel__nav--next" data-cj-carousel-next aria-label="' +
+      escapeHtml(t('creator.journey.carousel_next', 'Next')) + '">›</button>' +
+      '</div>' + expandHtml + '</section>';
   }
 
   function renderProductTree(nodes) {
     var split = splitProductNodes(nodes);
     var secs = productSections();
     var dispLv = displayLevel();
-    var html = renderStarterSetupHtml();
-    html += renderUnlockedStrip(nodes);
+    var html = renderUnlockedStrip(nodes);
     html += '<div class="cj-product-sections">';
-    html += renderProductSection(
+    html += renderCarouselSection(
       t('creator.journey.starter_products', 'Starter Products'),
       '',
       split.starter,
       false
     );
-    html += renderProductSection(
+    html += renderCarouselSection(
       tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(secs.preview) }),
       '',
       split.preview,
       dispLv < secs.preview
     );
-    html += renderProductSection(
+    html += renderCarouselSection(
       tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(secs.premium) }),
       t('creator.journey.product_premium_hint', 'Premium products available at this level'),
       split.offline,
@@ -484,33 +624,53 @@
     );
     html += '</div>';
     if (!split.starter.length && !split.preview.length && !split.offline.length) {
-      html = renderStarterSetupHtml() +
-        '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+      html = '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
     }
     return html;
   }
 
-  function renderTreeCard(node) {
+  function renderMarketCard(node) {
     var levelLocked = isLevelLocked(node);
-    var committed = Number(node.eaz_committed) || 0;
-    var cost = Number(node.cost_eaz) || 0;
-    var title = nodeTitle(node);
-    var isCreator = journeyData && journeyData.is_creator;
-    var canAct = !node.unlocked && isCreator && !node.locked_reason && !levelLocked;
-    var unlockReady = canAct && cost > 0 && committed + 1e-9 >= cost;
-    var hasAction = canAct && cost > 0;
-    var actionHtml = renderTreeCardAction(node, title, canAct, cost, unlockReady);
+    var act = cardActionState(node, levelLocked);
+    var cls = 'cj-tree-card cj-tree-card--market';
+    if (levelLocked) cls += ' is-level-locked';
+    if (node.unlocked) cls += ' is-unlocked';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
+
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
+      '<div class="cj-tree-card__stack">' +
+      renderTreeCardFrame(node, { hasAction: act.hasAction, flagMedia: true }) +
+      act.actionHtml + '</div></article>';
+  }
+
+  function renderMarketTree(nodes) {
+    var html = renderUnlockedStrip(nodes);
+    if (!nodes.length) {
+      return html + '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+    }
+    html += '<p class="cj-market-hint">' +
+      escapeHtml(t('creator.journey.market_hint', 'Unlock countries to sell in that market. Same EAZV cost for every country.')) +
+      '</p>';
+    html += '<div class="cj-market-grid">' + nodes.map(renderMarketCard).join('') + '</div>';
+    return html;
+  }
+
+  function renderTreeCard(node) {
+    if (node.category === 'market') return renderMarketCard(node);
+    var levelLocked = isLevelLocked(node);
+    var act = cardActionState(node, levelLocked);
 
     var cls = 'cj-tree-card';
     if (levelLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
-    if (unlockReady) cls += ' is-ready';
-    if (hasAction) cls += ' has-action';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, { hasAction: hasAction }) +
-      actionHtml + '</div></article>';
+      renderTreeCardFrame(node, { hasAction: act.hasAction }) +
+      act.actionHtml + '</div></article>';
   }
 
   function eazEconomyI18n(key, fallback) {
@@ -616,7 +776,11 @@
 
     var badge = meta;
     if (isActive) badge = eazEconomyI18n('active', 'Active');
-    else if (status === 'kickstarter_locked') badge = eazEconomyI18n('kickstarter_locked', 'Kickstarter');
+    else if (status === 'kickstarter_locked') {
+      badge = meta
+        ? meta + ' · ' + eazEconomyI18n('kickstarter_locked', 'Kickstarter')
+        : eazEconomyI18n('kickstarter_locked', 'Kickstarter');
+    }
     else if (status === 'axis_locked') badge = eazEconomyI18n('axis_locked', 'Unlock category first');
     else if (status === 'locked') badge = eazEconomyI18n('locked', 'Locked');
 
@@ -642,13 +806,24 @@
   }
 
   function renderEazEconomyKickstarterSection(data) {
-    var html = '<section class="cj-eaz-economy__kickstarter">' +
-      '<p class="cj-eaz-economy__kickstarter-hint">' + escapeHtml(t('creator.eaz_economy.kickstarter_hint', 'Redeem a Kickstarter code to unlock bonus nodes.')) + '</p>' +
-      '<form class="cj-eaz-economy__kickstarter-form" id="cjEazKickstarterForm">' +
-      '<input type="text" id="cjEazKickstarterCode" placeholder="' + escapeHtml(t('creator.eaz_economy.kickstarter_code_placeholder', 'KS-…')) + '" autocomplete="off">' +
-      '<button type="submit" class="cj-eaz-economy__btn">' + escapeHtml(t('creator.eaz_economy.kickstarter_redeem', 'Redeem')) + '</button></form>';
+    var redeemed = !!data.kickstarter_redeemed;
+    var html = '<section class="cj-eaz-economy__kickstarter">';
+    if (redeemed) {
+      html += '<p class="cj-eaz-economy__kickstarter-hint cj-eaz-economy__kickstarter-hint--ok">' +
+        escapeHtml(t('creator.eaz_economy.kickstarter_redeemed', 'Kickstarter bonus unlocked.')) + '</p>';
+    } else {
+      html += '<p class="cj-eaz-economy__kickstarter-hint">' +
+        escapeHtml(t('creator.eaz_economy.kickstarter_hint', 'Redeem a Kickstarter code to unlock bonus nodes.')) + '</p>' +
+        '<form class="cj-eaz-economy__kickstarter-form" id="cjEazKickstarterForm">' +
+        '<input type="text" id="cjEazKickstarterCode" placeholder="' +
+        escapeHtml(t('creator.eaz_economy.kickstarter_code_placeholder', 'KS-…')) +
+        '" autocomplete="off">' +
+        '<button type="submit" class="cj-eaz-economy__btn">' +
+        escapeHtml(t('creator.eaz_economy.kickstarter_redeem', 'Redeem')) + '</button></form>';
+    }
     if (data.kickstarter_campaign_url) {
-      html += '<a class="cj-eaz-economy__campaign-link" href="' + escapeHtml(data.kickstarter_campaign_url) + '" target="_blank" rel="noopener">' +
+      html += '<a class="cj-eaz-economy__campaign-link" href="' + escapeHtml(data.kickstarter_campaign_url) +
+        '" target="_blank" rel="noopener">' +
         escapeHtml(t('creator.eaz_economy.kickstarter_campaign', 'View Kickstarter campaign')) + '</a>';
     }
     html += '</section>';
@@ -662,17 +837,115 @@
     return '<div class="cj-eaz-economy__skill-grid">' + nodes.map(renderEazEconomySkillCard).join('') + '</div>';
   }
 
-  function renderEazEconomyUnlockedStrip(nodes) {
-    var active = (nodes || []).filter(function (n) {
-      return n.status === 'active' || n.status === 'grandfathered';
-    });
-    if (!active.length) return '';
-    return '<div class="cj-tree-unlocked-strip" role="list" aria-label="' + escapeHtml(t('creator.journey.unlocked', 'Unlocked')) + '">' +
-      active.map(function (n) {
-        return '<div class="cj-tree-unlocked-chip" role="listitem">' +
-          '<span class="cj-tree-unlocked-chip__img cj-tree-unlocked-chip__img--ph cj-tree-unlocked-chip__img--eaz" aria-hidden="true"></span>' +
-          '<span class="cj-tree-unlocked-chip__label">' + escapeHtml(eazSkillLabel(n.skill_key, n.is_axis_gate)) + '</span></div>';
-      }).join('') + '</div>';
+  function renderEazEconomySubSkillList(nodes) {
+    if (!nodes || !nodes.length) {
+      return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+    }
+    return '<ul class="cj-eaz-economy__subskill-list">' + nodes.map(function (node) {
+      var status = node.status || 'locked';
+      var title = eazSkillLabel(node.skill_key, false);
+      var bonus = eazBonusLabel(node.axis, node.bonus_pct);
+      var lv = Number(node.mascot_min_level) || 1;
+      var isActive = status === 'active' || status === 'grandfathered';
+      var canActivate = status === 'unlocked';
+      var isLocked = status === 'locked' || status === 'axis_locked' || status === 'kickstarter_locked';
+      var cls = 'cj-eaz-economy__subskill';
+      if (isLocked) cls += ' is-locked';
+      if (isActive) cls += ' is-active';
+      if (canActivate) cls += ' is-ready';
+      var metaParts = [];
+      metaParts.push(tpl('creator.journey.level_short', 'Lv. {{ n }}', { n: String(lv) }));
+      if (bonus) metaParts.push(bonus);
+      if (node.activation_cost_eaz > 0 && !isActive) metaParts.push(node.activation_cost_eaz + ' EAZV');
+      var actionHtml = '';
+      if (canActivate) {
+        actionHtml = '<button type="button" class="cj-eaz-economy__subskill-action cj-btn is-unlock-ready" data-cj-eaz-skill="' +
+          escapeHtml(node.skill_key) + '">' + escapeHtml(eazEconomyI18n('activate', 'Activate')) + '</button>';
+      } else if (isActive) {
+        actionHtml = '<span class="cj-eaz-economy__subskill-status" aria-hidden="true">✓</span>';
+      } else if (status === 'kickstarter_locked') {
+        actionHtml = '<span class="cj-eaz-economy__subskill-lock">' +
+          escapeHtml(eazEconomyI18n('kickstarter_locked', 'Kickstarter')) + '</span>';
+      }
+      return '<li class="' + cls + '" data-eaz-skill="' + escapeHtml(node.skill_key) + '">' +
+        '<div class="cj-eaz-economy__subskill-main">' +
+        '<span class="cj-eaz-economy__subskill-title">' + escapeHtml(title) + '</span>' +
+        '<span class="cj-eaz-economy__subskill-meta">' + escapeHtml(metaParts.join(' · ')) + '</span>' +
+        '</div>' + actionHtml + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  function renderEazEconomyCategoryCard(axis, axisNode, data) {
+    var label = t('creator.eaz_economy.tab_' + axis, EAZ_AXIS_LABELS[axis] || axis);
+    var expanded = eazEconomyExpandedAxis === axis;
+    var isKs = axis === 'kickstarter';
+    var redeemed = !!data.kickstarter_redeemed;
+    var status = axisNode ? (axisNode.status || 'locked') : (isKs && !redeemed ? 'kickstarter_locked' : 'locked');
+    if (isKs) status = redeemed ? 'active' : 'kickstarter_locked';
+    var isActive = status === 'active' || status === 'grandfathered';
+    var canActivate = !isKs && status === 'unlocked';
+    var isLocked = status === 'locked' || status === 'axis_locked' || status === 'kickstarter_locked';
+
+    var cls = 'cj-eaz-economy__cat-card';
+    if (expanded) cls += ' is-expanded';
+    if (isLocked) cls += ' is-locked';
+    if (isActive) cls += ' is-active';
+    if (canActivate) cls += ' is-ready';
+
+    var badge = '';
+    if (isKs) {
+      badge = redeemed
+        ? eazEconomyI18n('active', 'Active')
+        : eazEconomyI18n('kickstarter_locked', 'Kickstarter');
+    } else if (axisNode) {
+      badge = eazSkillMeta(axisNode) || eazEconomyI18n('locked', 'Locked');
+      if (isActive) badge = eazEconomyI18n('active', 'Active');
+      else if (status === 'locked') badge = eazEconomyI18n('locked', 'Locked');
+    }
+
+    var actionHtml = '';
+    if (canActivate && axisNode) {
+      actionHtml = '<button type="button" class="cj-eaz-economy__cat-action cj-btn is-unlock-ready" data-cj-eaz-skill="' +
+        escapeHtml(axisNode.skill_key) + '">' + escapeHtml(eazEconomyI18n('activate', 'Activate')) + '</button>';
+    }
+
+    return '<article class="' + cls + '" data-cj-expand-eaz-axis="' + escapeHtml(axis) + '" role="button" tabindex="0" aria-expanded="' +
+      (expanded ? 'true' : 'false') + '">' +
+      '<div class="cj-eaz-economy__cat-card-inner">' +
+      '<h4 class="cj-eaz-economy__cat-title">' + escapeHtml(label) + '</h4>' +
+      '<div class="cj-eaz-economy__cat-media" aria-hidden="true"></div>' +
+      (badge ? '<span class="cj-eaz-economy__cat-badge">' + escapeHtml(badge) + '</span>' : '') +
+      (isActive ? '<span class="cj-eaz-economy__cat-check" aria-hidden="true">✓</span>' : '') +
+      '</div>' + actionHtml + '</article>';
+  }
+
+  function renderEazEconomyExpandedPanel(data, axis, axisNode, tabNodes) {
+    var html = '<div class="cj-eaz-economy__expand-panel" data-expanded-axis="' + escapeHtml(axis) + '">';
+    if (axis === 'kickstarter') {
+      html += renderEazEconomyKickstarterSection(data);
+      html += '<p class="cj-eaz-economy__expand-label">' +
+        escapeHtml(t('creator.eaz_economy.kickstarter_bonuses', 'Kickstarter bonus skills')) + '</p>';
+      html += renderEazEconomySkillGrid(tabNodes);
+      html += '</div>';
+      return html;
+    }
+
+    var axisOpen = axisNode && (axisNode.status === 'active' || axisNode.status === 'grandfathered');
+    if (!axisOpen) {
+      if (axisNode) {
+        html += '<div class="cj-eaz-economy__axis-gate">' + renderEazEconomySkillCard(axisNode) + '</div>';
+      }
+      html += '<p class="cj-eaz-economy__axis-hint">' +
+        escapeHtml(t('creator.eaz_economy.axis_unlock_hint', 'Unlock this category with EAZV to access its skills.')) +
+        '</p></div>';
+      return html;
+    }
+
+    html += '<p class="cj-eaz-economy__expand-label">' +
+      escapeHtml(t('creator.eaz_economy.subskills_label', 'Skills in this category')) + '</p>';
+    html += renderEazEconomySubSkillList(tabNodes);
+    html += '</div>';
+    return html;
   }
 
   function renderEazEconomyTreeHtml(data) {
@@ -680,77 +953,44 @@
       return '<p class="cj-muted">' + escapeHtml(t('creator.eaz_economy.loading', 'Could not load skill tree.')) + '</p>';
     }
 
-    var tab = eazEconomyAxisFilter;
-    if (EAZ_AXIS_TAB_ORDER.indexOf(tab) < 0) tab = 'cost';
-
-    var axisNode = null;
-    var tabNodes = [];
+    var byTab = {};
+    var axisByTab = {};
+    EAZ_CATEGORY_ORDER.forEach(function (ax) {
+      byTab[ax] = [];
+      axisByTab[ax] = null;
+    });
     data.nodes.forEach(function (n) {
       var nTab = n.tab || n.axis || 'cost';
-      if (n.is_axis_gate && nTab === tab) axisNode = n;
-      else if (!n.is_axis_gate && nTab === tab) tabNodes.push(n);
+      if (!byTab[nTab]) byTab[nTab] = [];
+      if (n.is_axis_gate) axisByTab[nTab] = n;
+      else byTab[nTab].push(n);
     });
 
-    var axisOpen = axisNode && (axisNode.status === 'active' || axisNode.status === 'grandfathered');
-    var kickstarterRedeemed = !!data.kickstarter_redeemed;
+    var expanded = eazEconomyExpandedAxis;
+    if (expanded && EAZ_CATEGORY_ORDER.indexOf(expanded) < 0) expanded = '';
+
     var html = '<div class="cj-eaz-economy">';
-
-    html += '<nav class="cj-eaz-economy__axis-tabs" id="cjEazAxisTabs" role="tablist" aria-label="' +
+    html += '<div class="cj-eaz-economy__cat-row" role="group" aria-label="' +
       escapeHtml(t('creator.eaz_economy.axis_tabs_aria', 'EAZV economy categories')) + '">';
-    EAZ_AXIS_TAB_ORDER.forEach(function (ax) {
-      html += '<button type="button" role="tab" class="cj-eaz-economy__axis-tab' + (ax === tab ? ' is-active' : '') +
-        '" data-cj-eaz-axis="' + ax + '" aria-selected="' + (ax === tab ? 'true' : 'false') + '">' +
-        escapeHtml(t('creator.eaz_economy.tab_' + ax, EAZ_AXIS_LABELS[ax] || ax)) + '</button>';
+    EAZ_CATEGORY_ORDER.forEach(function (ax) {
+      html += renderEazEconomyCategoryCard(ax, axisByTab[ax], data);
     });
-    html += '</nav>';
+    html += '</div>';
 
-    if (tab === 'kickstarter') {
-      html += renderEazEconomyKickstarterSection(data);
-      if (!kickstarterRedeemed) {
-        html += '</div>';
-        return html;
-      }
+    if (expanded) {
+      html += '<div class="cj-eaz-economy__connector" aria-hidden="true"></div>';
+      html += renderEazEconomyExpandedPanel(data, expanded, axisByTab[expanded], byTab[expanded] || []);
     }
 
-    html += '<div class="cj-eaz-economy__body">';
-    html += renderEazEconomyAxisGate(axisNode);
-
-    if (!axisOpen) {
-      html += '<p class="cj-eaz-economy__axis-hint">' +
-        escapeHtml(t('creator.eaz_economy.axis_unlock_hint', 'Unlock this category with EAZV to access its skills.')) + '</p>';
-      html += '</div></div>';
-      return html;
-    }
-
-    html += '<div class="cj-eaz-economy__connector" aria-hidden="true"></div>';
-    html += '<div class="cj-eaz-economy__skill-tree">';
-    html += renderEazEconomyUnlockedStrip(tabNodes);
-
-    if (tab === 'kickstarter') {
-      html += renderEazEconomySkillGrid(tabNodes);
-    } else {
-      var rows = groupEazNodesByLevel(tabNodes);
-      if (!rows.length) {
-        html += '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
-      } else {
-        var mascotLv = Number(data.mascot_level) || 1;
-        html += '<div class="cj-tree-levels">' + rows.map(function (row) {
-          var rowLocked = row.level > mascotLv;
-          return '<section class="cj-level-row' + (rowLocked ? ' is-locked' : '') + '" data-level="' + row.level + '">' +
-            '<div class="cj-level-row__label">' + escapeHtml(tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(row.level) })) + '</div>' +
-            '<div class="cj-level-row__cards">' + row.nodes.map(renderEazEconomySkillCard).join('') + '</div></section>';
-        }).join('') + '</div>';
-      }
-    }
-
-    html += '</div></div></div>';
+    html += '</div>';
     return html;
   }
 
   function wireEazEconomyTree(list) {
     if (!list) return;
     list.querySelectorAll('[data-cj-eaz-skill]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
         var key = btn.getAttribute('data-cj-eaz-skill');
         var oid = ownerId();
         if (!oid || !key) return;
@@ -765,16 +1005,23 @@
         });
       });
     });
-    var axisTabs = list.querySelector('#cjEazAxisTabs');
-    if (axisTabs && !axisTabs.dataset.wired) {
-      axisTabs.dataset.wired = '1';
-      axisTabs.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-cj-eaz-axis]');
-        if (!btn) return;
-        eazEconomyAxisFilter = btn.getAttribute('data-cj-eaz-axis') || 'cost';
+    list.querySelectorAll('[data-cj-expand-eaz-axis]').forEach(function (card) {
+      function toggle() {
+        var ax = card.getAttribute('data-cj-expand-eaz-axis') || '';
+        eazEconomyExpandedAxis = eazEconomyExpandedAxis === ax ? '' : ax;
         renderTree();
+      }
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('[data-cj-eaz-skill]')) return;
+        toggle();
       });
-    }
+      card.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('[data-cj-eaz-skill]')) return;
+        e.preventDefault();
+        toggle();
+      });
+    });
     var ksForm = list.querySelector('#cjEazKickstarterForm');
     if (ksForm && !ksForm.dataset.wired) {
       ksForm.dataset.wired = '1';
@@ -789,6 +1036,7 @@
           if (codeEl) codeEl.value = '';
           alert(eazEconomyI18n('kickstarter_success', 'Kickstarter bonus unlocked'));
           eazEconomyData = null;
+          eazEconomyExpandedAxis = 'kickstarter';
           return loadEazEconomyTree().then(function () { renderTree(); });
         }).catch(function () {
           alert(eazEconomyI18n('activate_fail', 'Redeem failed'));
@@ -887,6 +1135,8 @@
 
     if (treeFilter === 'product') {
       html = renderProductTree(filtered);
+    } else if (treeFilter === 'market') {
+      html = renderMarketTree(filtered);
     } else {
       html = renderUnlockedStrip(filtered);
       var rows = groupNodesByLevel(filtered);
@@ -905,17 +1155,62 @@
     list.innerHTML = html;
 
     if (treeFilter === 'product') {
-      wireStarterSetupForm();
+      wireProductCarousel(list);
+      wireProductExpand(list);
     }
 
     list.querySelectorAll('[data-cj-tree-action]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
         if (btn.disabled) return;
         if (btn.getAttribute('data-cj-action') === 'unlock') {
           unlockNode(btn.getAttribute('data-cj-unlock'));
           return;
         }
         openCommitModal(btn.getAttribute('data-cj-commit'), btn.getAttribute('data-cj-commit-title'));
+      });
+    });
+  }
+
+  function wireProductCarousel(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-cj-carousel]').forEach(function (carousel) {
+      var track = carousel.querySelector('[data-cj-carousel-track]');
+      var prev = carousel.querySelector('[data-cj-carousel-prev]');
+      var next = carousel.querySelector('[data-cj-carousel-next]');
+      if (!track) return;
+      function scrollBy(dir) {
+        var amount = Math.max(160, Math.floor(track.clientWidth * 0.7));
+        track.scrollBy({ left: dir * amount, behavior: 'smooth' });
+      }
+      if (prev) prev.addEventListener('click', function () { scrollBy(-1); });
+      if (next) next.addEventListener('click', function () { scrollBy(1); });
+    });
+  }
+
+  function wireProductExpand(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-cj-expand-product]').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('[data-cj-tree-action]')) return;
+        var pk = card.getAttribute('data-cj-expand-product');
+        if (!pk) return;
+        expandedProductKeys[pk] = !expandedProductKeys[pk];
+        if (!expandedProductKeys[pk]) {
+          Object.keys(expandedColorKeys).forEach(function (k) {
+            if (k.indexOf('variant_color:' + pk + ':') === 0) delete expandedColorKeys[k];
+          });
+        }
+        renderTree();
+      });
+    });
+    root.querySelectorAll('[data-cj-expand-color]').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('[data-cj-tree-action]')) return;
+        var key = card.getAttribute('data-cj-expand-color');
+        if (!key) return;
+        expandedColorKeys[key] = !expandedColorKeys[key];
+        renderTree();
       });
     });
   }
@@ -1477,37 +1772,6 @@
     }
   }
 
-  function populateStarterForm() {
-    var prodSel = document.getElementById('cjStarterProduct');
-    if (!prodSel || !journeyData) return;
-    var keys = (journeyData.starter && journeyData.starter.product_keys) || [];
-    prodSel.innerHTML = keys.map(function (k) {
-      return '<option value="' + k + '">' + k + '</option>';
-    }).join('');
-    if (!keys.length) {
-      prodSel.innerHTML = '<option value="">' + t('creator.journey.starter_empty', 'No starter products configured') + '</option>';
-    }
-    updateRegionOptions();
-    prodSel.onchange = updateRegionOptions;
-  }
-
-  function updateRegionOptions() {
-    var regSel = document.getElementById('cjStarterRegion');
-    var prodSel = document.getElementById('cjStarterProduct');
-    if (!regSel || !prodSel) return;
-    var pk = prodSel.value;
-    var markets = (journeyData.nodes || []).filter(function (n) {
-      return n.category === 'market' && n.product_key === pk;
-    });
-    if (!markets.length) {
-      regSel.innerHTML = '<option value="EU">EU</option>';
-      return;
-    }
-    regSel.innerHTML = markets.map(function (m) {
-      return '<option value="' + m.region_code + '">' + m.region_code + '</option>';
-    }).join('');
-  }
-
   async function loadLevelData() {
     var oid = ownerId();
     if (!oid) return;
@@ -1738,18 +2002,6 @@
   async function unlockNode(nodeKey) {
     var oid = ownerId();
     await apiFetch('unlock-creator-node', { owner_id: oid }, 'POST', { node_key: nodeKey });
-    await loadJourney();
-  }
-
-  async function saveStarter() {
-    var oid = ownerId();
-    var pk = document.getElementById('cjStarterProduct');
-    var rc = document.getElementById('cjStarterRegion');
-    if (!pk || !rc || !pk.value || !rc.value) return;
-    await apiFetch('set-starter-selection', { owner_id: oid }, 'POST', {
-      product_key: pk.value,
-      region_code: rc.value,
-    });
     await loadJourney();
   }
 
