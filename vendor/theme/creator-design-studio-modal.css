@@ -200,6 +200,8 @@
 
 .cds-modal-root.is-busy .cds-settings-column,
 .cds-modal-root.is-busy .cds-viewer-pos-bar,
+.cds-modal-root.is-busy .cds-grid-switch,
+.cds-modal-root.is-busy .cds-color-grid,
 .cds-modal-root.is-busy .cds-crop-actions {
   pointer-events: none;
   opacity: 0.55;
@@ -242,9 +244,77 @@
   flex-wrap: wrap;
   gap: 8px;
   width: auto;
-  max-width: calc(100% - 24px);
+  max-width: calc(100% - 120px);
   margin: 0;
   pointer-events: auto;
+}
+
+.cds-grid-switch {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 13;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  pointer-events: auto;
+}
+
+.cds-viewer--variant-preview .cds-grid-switch {
+  display: flex;
+}
+
+.cds-grid-switch__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(15, 23, 42, 0.65);
+  cursor: pointer;
+}
+
+.cds-grid-switch__btn:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.cds-grid-switch__btn.is-active {
+  background: rgba(249, 115, 22, 0.92);
+  color: #fff;
+}
+
+.cds-grid-switch__icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  opacity: 0.95;
+}
+
+.cds-grid-switch__icon--1 {
+  border-radius: 2px;
+  clip-path: none;
+  mask: none;
+  /* single square */
+  box-shadow: inset 0 0 0 1.5px currentColor;
+  background: transparent;
+}
+
+.cds-grid-switch__icon--4 {
+  background:
+    linear-gradient(currentColor, currentColor) 0 0 / 6px 6px no-repeat,
+    linear-gradient(currentColor, currentColor) 10px 0 / 6px 6px no-repeat,
+    linear-gradient(currentColor, currentColor) 0 10px / 6px 6px no-repeat,
+    linear-gradient(currentColor, currentColor) 10px 10px / 6px 6px no-repeat;
 }
 
 .cds-pos-tab {
@@ -291,6 +361,13 @@
   overflow: visible;
 }
 
+.cds-viewer--grid-4 .cds-viewer__stage {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
 .cds-viewer__mock {
   display: block;
   width: 100%;
@@ -298,6 +375,110 @@
   object-fit: contain;
   user-select: none;
   pointer-events: none;
+}
+
+.cds-viewer--grid-4 .cds-viewer__mock,
+.cds-viewer--grid-4 .cds-print-zone,
+.cds-viewer--grid-4 .cds-design-chrome {
+  display: none !important;
+}
+
+.cds-color-grid {
+  display: none;
+  position: absolute;
+  inset: 52px 12px 12px;
+  z-index: 5;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  align-content: start;
+  overflow: auto;
+  padding: 4px;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.cds-viewer--grid-4 .cds-color-grid {
+  display: grid;
+}
+
+.cds-color-grid__tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.cds-color-grid__tile:hover {
+  border-color: rgba(249, 115, 22, 0.45);
+}
+
+.cds-color-grid__tile.is-active {
+  border-color: rgba(249, 115, 22, 0.9);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+}
+
+.cds-color-grid__frame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.cds-color-grid__mock {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.cds-color-grid__label {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Variant Settings: clean product preview (no dashed print frame / no edit chrome) */
+.cds-viewer--variant-preview .cds-print-zone {
+  border-color: transparent;
+  background: transparent;
+  pointer-events: none;
+}
+
+.cds-viewer--variant-preview .cds-viewer__design-wrap {
+  pointer-events: none;
+  cursor: default;
+}
+
+.cds-viewer--variant-preview .cds-design-chrome {
+  display: none !important;
 }
 
 .cds-viewer__empty {

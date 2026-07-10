@@ -40,6 +40,8 @@
   var pendingUnsavedDiscard = null;
   var viewerBusyEl = null;
   var viewerBusyTextEl = null;
+  var gridSwitchEl = null;
+  var colorGridEl = null;
 
   var ctxDesign = null;
   var ctxProductKey = null;
@@ -48,6 +50,8 @@
   var draft = null;
   var savedDraftJson = '';
   var activeSettingsTab = 'design';
+  /** Variant Settings mock layout: 'single' | 'grid' */
+  var variantGridMode = 'single';
   var activeAssetKey = null;
   var assetSelected = false;
   var isOpen = false;
@@ -731,6 +735,8 @@
     cropLayerEl = root.querySelector('#cds-crop-layer');
     cropBoxEl = root.querySelector('#cds-crop-box');
     posBarEl = root.querySelector('#cds-pos-bar');
+    gridSwitchEl = root.querySelector('#cds-grid-switch');
+    colorGridEl = root.querySelector('#cds-color-grid');
     panelDesignEl = root.querySelector('#cds-panel-design');
     panelVariantsEl = root.querySelector('#cds-panel-variants');
     addMenuEl = root.querySelector('#cds-add-menu');
@@ -1001,6 +1007,110 @@
     syncSelectionChrome();
   }
 
+  function isVariantPreviewMode() {
+    return activeSettingsTab === 'variants';
+  }
+
+  function isVariantColorGrid() {
+    return isVariantPreviewMode() && variantGridMode === 'grid';
+  }
+
+  function applyViewerModeClasses() {
+    if (!viewerEl) return;
+    viewerEl.classList.toggle('cds-viewer--variant-preview', isVariantPreviewMode());
+    viewerEl.classList.toggle('cds-viewer--grid-4', isVariantColorGrid());
+    if (gridSwitchEl) {
+      gridSwitchEl.hidden = !isVariantPreviewMode();
+      gridSwitchEl.querySelectorAll('[data-cds-grid-mode]').forEach(function (btn) {
+        var mode = btn.getAttribute('data-cds-grid-mode');
+        var on = mode === variantGridMode;
+        btn.classList.toggle('is-active', on);
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+    if (colorGridEl) {
+      colorGridEl.hidden = !isVariantColorGrid();
+    }
+  }
+
+  function listPreviewColorEntries(pos) {
+    var cfg = studioConfig();
+    var mocks = cfg.mocks_by_color || {};
+    var want = normPos(pos || currentPosition());
+    var groups = (ctxData && ctxData.variant_groups) || {};
+    var labels = Object.keys(groups).filter(function (color) {
+      var items = groups[color] || [];
+      return items.some(function (v) {
+        return v && v.in_admin_pool;
+      });
+    });
+    if (!labels.length) labels = Object.keys(mocks);
+    var seen = {};
+    var out = [];
+    for (var i = 0; i < labels.length; i++) {
+      var label = labels[i];
+      var ck = findMocksColorKey(label);
+      if (!ck || seen[ck]) continue;
+      var list = mocks[ck] || [];
+      var entry = null;
+      for (var m = 0; m < list.length; m++) {
+        if (normPos(list[m].position) === want && mockHasUrl(list[m])) {
+          entry = list[m];
+          break;
+        }
+      }
+      if (!entry) continue;
+      seen[ck] = true;
+      out.push({ color_key: ck, label: label, mock: entry, url: mockCanvasUrl(entry) });
+    }
+    return out;
+  }
+
+  function renderColorGrid() {
+    if (!colorGridEl) return;
+    if (!isVariantColorGrid()) {
+      colorGridEl.innerHTML = '';
+      colorGridEl.hidden = true;
+      return;
+    }
+    var entries = listPreviewColorEntries(currentPosition());
+    var active = resolveColorKey();
+    var activeNorm = normColorKey(active);
+    var html = '';
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      var isActive = normColorKey(e.color_key) === activeNorm;
+      html +=
+        '<button type="button" class="cds-color-grid__tile' +
+        (isActive ? ' is-active' : '') +
+        '" data-cds-grid-color="' +
+        encodeURIComponent(e.color_key) +
+        '" title="' +
+        String(e.label).replace(/"/g, '&quot;') +
+        '">' +
+        '<span class="cds-color-grid__frame">' +
+        '<img class="cds-color-grid__mock" src="' +
+        String(e.url).replace(/"/g, '&quot;') +
+        '" alt="" decoding="async" draggable="false">' +
+        '</span>' +
+        '<span class="cds-color-grid__label">' +
+        String(e.label).replace(/</g, '&lt;') +
+        '</span>' +
+        '</button>';
+    }
+    colorGridEl.innerHTML = html;
+    colorGridEl.hidden = false;
+    colorGridEl.querySelectorAll('[data-cds-grid-color]').forEach(function (tile) {
+      tile.addEventListener('click', function () {
+        var ck = decodeURIComponent(tile.getAttribute('data-cds-grid-color') || '');
+        if (!ck) return;
+        switchMockColor(ck);
+        renderVariantSettingsPanel();
+        renderColorGrid();
+      });
+    });
+  }
+
   function syncSelectionChrome() {
     if (!designChromeEl || !viewerStageEl) return;
     var show =
@@ -1009,7 +1119,8 @@
       !cropping &&
       !!activeAssetKey &&
       designWrapEl &&
-      !designWrapEl.hidden;
+      !designWrapEl.hidden &&
+      !isVariantPreviewMode();
     if (!show) {
       designChromeEl.hidden = true;
       designChromeEl.classList.remove('is-visible');
@@ -1231,10 +1342,35 @@
     ensurePrintArea();
     if (!draft.print_area.color_key) draft.print_area.color_key = resolveColorKey();
 
+    applyViewerModeClasses();
     renderPositionBar();
     var pos = currentPosition();
     var mock = mockEntryForPosition(pos);
     var mockUrl = mockCanvasUrl(mock);
+
+    if (isVariantColorGrid()) {
+      if (mockImgEl) mockImgEl.hidden = true;
+      if (printZoneEl) printZoneEl.hidden = true;
+      if (designChromeEl) {
+        designChromeEl.hidden = true;
+        designChromeEl.classList.remove('is-visible');
+      }
+      teardownZonePatternOverlay();
+      if (viewerEmptyEl) viewerEmptyEl.hidden = true;
+      renderColorGrid();
+      // Stage fills viewer for the grid; no single-mock fit needed.
+      if (viewerStageEl) {
+        viewerStageEl.style.width = '100%';
+        viewerStageEl.style.height = '100%';
+      }
+      setLayoutReady(true);
+      return;
+    }
+
+    if (colorGridEl) {
+      colorGridEl.innerHTML = '';
+      colorGridEl.hidden = true;
+    }
 
     setLayoutReady(false);
 
@@ -1279,6 +1415,14 @@
       if (designChromeEl) designChromeEl.hidden = true;
       teardownZonePatternOverlay();
       scheduleLayoutPrintZone();
+    }
+
+    if (isVariantPreviewMode()) {
+      setAssetSelected(false);
+      if (designChromeEl) {
+        designChromeEl.hidden = true;
+        designChromeEl.classList.remove('is-visible');
+      }
     }
   }
 
@@ -1703,6 +1847,7 @@
    * Preview color = color swatch/dot (and selecting sizes for a color).
    * Expand/collapse = name / chevron only — not the swatch.
    * Color-all checkbox selects sizes for publish AND previews that color when checked on.
+   * Variant Settings tab: viewer is product-preview (no edit chrome); grid switch toggles 1 vs all colors.
    */
 
   function renderVariantSettingsPanel() {
@@ -1906,7 +2051,12 @@
 
   function switchSettingsTab(tab) {
     if (isStudioBusy() && tab !== activeSettingsTab) return;
-    activeSettingsTab = tab === 'variants' ? 'variants' : 'design';
+    var next = tab === 'variants' ? 'variants' : 'design';
+    if (next === activeSettingsTab) {
+      if (activeSettingsTab === 'variants') renderVariantSettingsPanel();
+      return;
+    }
+    activeSettingsTab = next;
     root.querySelectorAll('[data-cds-settings-tab]').forEach(function (btn) {
       var on = btn.getAttribute('data-cds-settings-tab') === activeSettingsTab;
       btn.classList.toggle('is-active', on);
@@ -1917,7 +2067,12 @@
       panel.classList.toggle('is-active', on);
       panel.hidden = !on;
     });
-    if (activeSettingsTab === 'variants') renderVariantSettingsPanel();
+    if (activeSettingsTab === 'variants') {
+      if (cropping) exitCropMode(true);
+      setAssetSelected(false);
+      renderVariantSettingsPanel();
+    }
+    renderViewer();
   }
 
   function renderStudioUi() {
@@ -1944,7 +2099,7 @@
   }
 
   function enterCropMode() {
-    if (isStudioBusy()) return;
+    if (isStudioBusy() || isVariantPreviewMode()) return;
     if (!designWrapEl || !cropLayerEl || !cropBoxEl || !activeAssetKey) return;
     if (activeAssetKey !== 'primary') {
       setStatus(t('designStudioCropPrimaryOnly', 'Crop is available for the main design. Open Edit Design for other assets.'));
@@ -2290,7 +2445,7 @@
 
     function startDrag(mode, e, rz) {
       if (e.button != null && e.button !== 0) return;
-      if (cropping || isStudioBusy()) return;
+      if (cropping || isStudioBusy() || isVariantPreviewMode()) return;
       setAssetSelected(true);
       var rect = designWrapEl.getBoundingClientRect();
       transformDrag = {
@@ -2312,6 +2467,7 @@
     }
 
     designWrapEl.addEventListener('pointerdown', function (e) {
+      if (isVariantPreviewMode()) return;
       if (e.target && e.target.closest && e.target.closest('[data-cds-rz]')) return;
       if (e.target && e.target.closest && e.target.closest('#cds-crop-layer')) return;
       if (!activeAssetKey) activeAssetKey = 'primary';
@@ -2323,6 +2479,7 @@
       designChromeEl.__cdsChromeBound = true;
       designChromeEl.querySelectorAll('[data-cds-rz]').forEach(function (handle) {
         handle.addEventListener('pointerdown', function (e) {
+          if (isVariantPreviewMode()) return;
           var mode = handle.getAttribute('data-cds-rz');
           startDrag(mode === 'rotate' ? 'rotate' : 'scale', e, mode);
         });
@@ -2334,11 +2491,14 @@
       viewerEl.addEventListener('pointerdown', function (e) {
         if (!isOpen) return;
         if (cropping) return;
+        if (isVariantPreviewMode()) return;
         if (e.target && e.target.closest) {
           if (e.target.closest('#cds-design-wrap')) return;
           if (e.target.closest('#cds-design-chrome')) return;
           if (e.target.closest('#cds-crop-layer')) return;
           if (e.target.closest('#cds-pos-bar')) return;
+          if (e.target.closest('#cds-grid-switch')) return;
+          if (e.target.closest('#cds-color-grid')) return;
         }
         activeAssetKey = null;
         setAssetSelected(false);
@@ -2347,8 +2507,24 @@
       });
     }
 
+    if (gridSwitchEl && !gridSwitchEl.__cdsGridBound) {
+      gridSwitchEl.__cdsGridBound = true;
+      gridSwitchEl.querySelectorAll('[data-cds-grid-mode]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (isStudioBusy() || !isVariantPreviewMode()) return;
+          var mode = btn.getAttribute('data-cds-grid-mode') === 'grid' ? 'grid' : 'single';
+          if (mode === variantGridMode) return;
+          variantGridMode = mode;
+          renderViewer();
+        });
+      });
+    }
+
     window.addEventListener('resize', function () {
-      if (isOpen) scheduleLayoutPrintZone();
+      if (isOpen) {
+        if (isVariantColorGrid()) renderColorGrid();
+        else scheduleLayoutPrintZone();
+      }
     });
     ensureStageResizeObserver();
   }
@@ -3033,6 +3209,7 @@
     activeAssetKey = 'primary';
     assetSelected = true;
     activeSettingsTab = 'design';
+    variantGridMode = 'single';
 
     if (subtitleEl) {
       subtitleEl.textContent = (productMeta && productMeta.title) || ctxProductKey;

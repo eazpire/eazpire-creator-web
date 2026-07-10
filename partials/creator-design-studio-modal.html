@@ -27,7 +27,36 @@
         <div class="cds-viewer" id="cds-viewer">
           <div class="cds-viewer__stage" id="cds-viewer-stage">
             <div class="cds-viewer-pos-bar" id="cds-pos-bar" role="tablist" aria-label="Print position"></div>
+            <div
+              class="cds-grid-switch"
+              id="cds-grid-switch"
+              role="group"
+              hidden
+              aria-label="Mock preview layout"
+            >
+              <button
+                type="button"
+                class="cds-grid-switch__btn is-active"
+                data-cds-grid-mode="single"
+                aria-pressed="true"
+                aria-label="Single color preview"
+                title="Single color preview"
+              >
+                <span class="cds-grid-switch__icon cds-grid-switch__icon--1" aria-hidden="true"></span>
+              </button>
+              <button
+                type="button"
+                class="cds-grid-switch__btn"
+                data-cds-grid-mode="grid"
+                aria-pressed="false"
+                aria-label="All colors grid preview"
+                title="All colors grid preview"
+              >
+                <span class="cds-grid-switch__icon cds-grid-switch__icon--4" aria-hidden="true"></span>
+              </button>
+            </div>
             <img class="cds-viewer__mock" id="cds-mock-img" alt="" hidden decoding="async">
+            <div class="cds-color-grid" id="cds-color-grid" hidden></div>
             <p class="cds-viewer__empty" id="cds-viewer-empty" hidden data-t="creator.design_studio.no_mock">No mock available for this view.</p>
             <div class="cds-print-zone" id="cds-print-zone" hidden>
               <div class="cds-print-zone__clip" id="cds-print-zone-clip">
