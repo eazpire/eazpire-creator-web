@@ -1343,6 +1343,27 @@
   padding-top: 16px;
 }
 
+.cj-channel-branch {
+  margin-top: 0;
+  padding-top: 16px;
+}
+
+.cj-tree-card--channel-group {
+  width: 132px;
+}
+
+.cj-tree-card.is-expanded.cj-tree-card--channel-group {
+  position: relative;
+  z-index: 1;
+  width: 168px;
+  transition: width 0.2s ease, transform 0.15s ease;
+}
+
+.cj-tree-card.is-expanded.cj-tree-card--channel-group .cj-tree-card__frame {
+  border-width: 2px;
+  transform: translateY(-2px);
+}
+
 .cj-tree-card__actions .cj-btn {
   width: 100%;
   padding: 6px 8px;

@@ -191,6 +191,7 @@
   var expandedProductKeys = {};
   var expandedColorKeys = {};
   var expandedContinentKeys = {};
+  var expandedChannelKeys = {};
 
   var CATEGORY_ICON_SVG = {
     royalty: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
@@ -640,7 +641,7 @@
 
   /**
    * Child nodes used for unlock-progress % on parent cards (only when parent is unlocked).
-   * Product → colors; color → sizes; continent → countries.
+   * Product → colors; color → sizes; continent → countries; channel group → regions.
    */
   function unlockProgressChildren(node) {
     if (!node || !node.unlocked) return null;
@@ -656,6 +657,10 @@
       var all = (journeyData && journeyData.nodes) || [];
       var countries = marketCountryNodesForContinent(all, node);
       return countries.length ? countries : null;
+    }
+    if (isChannelGroupNode(node)) {
+      var regions = channelChildNodes(node.node_key);
+      return regions.length ? regions : null;
     }
     return null;
   }
@@ -1022,6 +1027,7 @@
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
+    if (act.freePick) cls += ' is-free-pick';
     if (expandable) cls += ' is-expandable';
     if (expanded) cls += ' is-expanded';
 
@@ -1166,7 +1172,9 @@
   }
 
   function renderGenericSkillTree(nodes) {
-    var split = splitUnlockedLocked(nodes);
+    // Nested channel regions are rendered under their parent expand panel only.
+    var topLevel = (nodes || []).filter(function (n) { return !n.parent_key; });
+    var split = splitUnlockedLocked(topLevel);
     var dispLv = displayLevel();
     var html = '';
 
@@ -1194,8 +1202,115 @@
     return html;
   }
 
+  function isChannelGroupNode(node) {
+    if (!node || node.category !== 'channel') return false;
+    if (node.metadata && node.metadata.channel_kind === 'group') return true;
+    return String(node.node_key || '') === 'channel:amazon' && !node.parent_key;
+  }
+
+  function channelChildNodes(parentKey) {
+    var all = (journeyData && journeyData.nodes) || [];
+    return all.filter(function (n) {
+      return n.category === 'channel' && n.parent_key === parentKey;
+    }).sort(function (a, b) {
+      return (Number(a.min_level) || 0) - (Number(b.min_level) || 0) ||
+        nodeTitle(a).localeCompare(nodeTitle(b), undefined, { sensitivity: 'base' });
+    });
+  }
+
+  function renderChannelCard(node, opts) {
+    opts = opts || {};
+    var levelLocked = isLevelLocked(node);
+    var act = cardActionState(node, levelLocked);
+    var isGroup = isChannelGroupNode(node);
+    var children = isGroup ? channelChildNodes(node.node_key) : [];
+    var expandable = isGroup && !!node.unlocked && children.length > 0;
+    var expanded = expandable && !!expandedChannelKeys[node.node_key];
+    var cls = 'cj-tree-card cj-tree-card--channel';
+    if (isGroup) cls += ' cj-tree-card--channel-group';
+    if (levelLocked) cls += ' is-level-locked';
+    if (node.unlocked) cls += ' is-unlocked';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
+    if (act.freePick) cls += ' is-free-pick';
+    if (expandable) cls += ' is-expandable';
+    if (expanded) cls += ' is-expanded';
+
+    var expandAttr = expandable
+      ? ' data-cj-expand-channel="' + escapeHtml(node.node_key) + '" role="button" tabindex="0" aria-expanded="' +
+        (expanded ? 'true' : 'false') + '"'
+      : '';
+
+    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr + '>' +
+      '<div class="cj-tree-card__stack">' +
+      renderTreeCardFrame(node, { hasAction: act.hasAction }) +
+      act.actionHtml + '</div></article>';
+  }
+
+  function renderChannelExpandPanel(parentNode) {
+    if (!parentNode || !parentNode.unlocked) return '';
+    if (!expandedChannelKeys[parentNode.node_key]) return '';
+    var children = channelChildNodes(parentNode.node_key);
+    if (!children.length) {
+      return '<div class="cj-variant-branch cj-channel-branch">' +
+        '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+        '<div class="cj-variant-panel">' +
+        '<p class="cj-muted">' + escapeHtml(t('creator.journey.channel_regions_empty', 'No regional channels yet.')) +
+        '</p></div></div>';
+    }
+    return '<div class="cj-variant-branch cj-channel-branch" data-cj-channel-branch="' +
+      escapeHtml(parentNode.node_key) + '">' +
+      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+      '<div class="cj-variant-panel" data-cj-channel-panel="' + escapeHtml(parentNode.node_key) + '">' +
+      '<h4 class="cj-variant-panel__title">' +
+      escapeHtml(t('creator.journey.channel_regions_title', 'Regions')) +
+      ' · ' + escapeHtml(nodeTitle(parentNode)) + '</h4>' +
+      renderCarouselShell(children.map(function (n) { return renderChannelCard(n); }).join('')) +
+      '</div></div>';
+  }
+
+  function renderChannelRow(title, nodes, opts) {
+    opts = opts || {};
+    if (!nodes.length) return '';
+    var cardsHtml = '';
+    var expandHtml = '';
+    nodes.forEach(function (n) {
+      cardsHtml += renderChannelCard(n);
+      if (isChannelGroupNode(n) && n.unlocked && expandedChannelKeys[n.node_key]) {
+        expandHtml += renderChannelExpandPanel(n);
+      }
+    });
+    var sectionCls = 'cj-product-section' + (opts.unlockedRow ? ' cj-unlocked-skills' : '');
+    return '<section class="' + sectionCls + '">' +
+      renderSectionHead(title, '', '') +
+      renderCarouselShell(cardsHtml) +
+      expandHtml + '</section>';
+  }
+
+  function renderChannelTree(nodes) {
+    var topLevel = (nodes || []).filter(function (n) { return !n.parent_key; });
+    var split = splitUnlockedLocked(topLevel);
+    if (!topLevel.length) {
+      return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+    }
+    var html = '<div class="cj-product-sections">';
+    html += renderChannelRow(
+      t('creator.journey.unlocked_skills', 'Unlocked'),
+      split.unlocked,
+      { unlockedRow: true }
+    );
+    html += renderChannelRow(
+      t('creator.journey.available_skills', 'Available'),
+      split.locked,
+      {}
+    );
+    html += '</div>';
+    return html;
+  }
+
   function renderTreeCard(node) {
     if (node.category === 'market') return renderMarketCard(node);
+    if (node.category === 'channel') return renderChannelCard(node);
     var levelLocked = isLevelLocked(node);
     var act = cardActionState(node, levelLocked);
 
@@ -1204,6 +1319,7 @@
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
+    if (act.freePick) cls += ' is-free-pick';
 
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '">' +
       '<div class="cj-tree-card__stack">' +
@@ -1749,15 +1865,17 @@
       html = renderProductTree(filtered);
     } else if (treeFilter === 'market') {
       html = renderMarketTree(filtered);
+    } else if (treeFilter === 'channel') {
+      html = renderChannelTree(filtered);
     } else {
       html = renderGenericSkillTree(filtered);
     }
 
     list.innerHTML = html;
 
-    // Carousels on unlocked/locked rows; expand panels for product + markets.
+    // Carousels on unlocked/locked rows; expand panels for product + markets + channels.
     wireProductCarousel(list);
-    if (treeFilter === 'product' || treeFilter === 'market') {
+    if (treeFilter === 'product' || treeFilter === 'market' || treeFilter === 'channel') {
       wireProductExpand(list);
     }
 
@@ -1876,6 +1994,15 @@
       var frame = cardEl && (cardEl.querySelector('.cj-eaz-economy__cat-card-inner') || cardEl);
       anchorConnectorToCard(connector, panel, frame, branch);
     });
+
+    list.querySelectorAll('[data-cj-channel-branch]').forEach(function (branch) {
+      var key = branch.getAttribute('data-cj-channel-branch');
+      var connector = branch.querySelector(':scope > .cj-variant-connector');
+      var panel = branch.querySelector(':scope > .cj-variant-panel');
+      if (!connector || !key) return;
+      var card = list.querySelector('.cj-tree-card--channel-group.is-expanded[data-cj-expand-channel="' + key + '"]');
+      anchorConnectorToCard(connector, panel, card, branch);
+    });
   }
 
   function wireProductExpand(root) {
@@ -1917,6 +2044,21 @@
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault();
         toggleContinent(e);
+      });
+    });
+    root.querySelectorAll('[data-cj-expand-channel]').forEach(function (card) {
+      function toggleChannel(e) {
+        if (e.target.closest('[data-cj-tree-action]')) return;
+        var key = card.getAttribute('data-cj-expand-channel');
+        if (!key) return;
+        expandedChannelKeys[key] = !expandedChannelKeys[key];
+        renderTree();
+      }
+      card.addEventListener('click', toggleChannel);
+      card.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        toggleChannel(e);
       });
     });
     positionVariantConnectors(root);
