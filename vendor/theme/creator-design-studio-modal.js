@@ -129,7 +129,9 @@
   /** Hide design until mock natural size + stage fit are ready (avoids loading offset flash). */
   var layoutReady = false;
   var stageResizeObserver = null;
+  var colorGridResizeObserver = null;
   var layoutRaf = 0;
+  var colorGridLayoutRaf = 0;
 
   function Mi() {
     return window.CreatorMobileI18n || {};
@@ -1078,7 +1080,19 @@
     layoutRaf = requestAnimationFrame(function () {
       layoutRaf = requestAnimationFrame(function () {
         layoutRaf = 0;
-        if (isOpen) layoutPrintZone();
+        if (!isOpen) return;
+        if (isVariantColorGrid()) layoutColorGridTiles();
+        else layoutPrintZone();
+      });
+    });
+  }
+
+  function scheduleLayoutColorGrid() {
+    if (colorGridLayoutRaf) cancelAnimationFrame(colorGridLayoutRaf);
+    colorGridLayoutRaf = requestAnimationFrame(function () {
+      colorGridLayoutRaf = requestAnimationFrame(function () {
+        colorGridLayoutRaf = 0;
+        if (isOpen && isVariantColorGrid()) layoutColorGridTiles();
       });
     });
   }
@@ -1092,6 +1106,16 @@
     });
     stageResizeObserver.observe(viewerEl);
     if (viewerStageEl) stageResizeObserver.observe(viewerStageEl);
+  }
+
+  function ensureColorGridResizeObserver() {
+    if (!colorGridEl || typeof ResizeObserver === 'undefined') return;
+    if (colorGridResizeObserver) return;
+    colorGridResizeObserver = new ResizeObserver(function () {
+      if (!isOpen || !isVariantColorGrid()) return;
+      scheduleLayoutColorGrid();
+    });
+    colorGridResizeObserver.observe(colorGridEl);
   }
 
   /** Fit-in-zone scale (informational). Manual scale may exceed this; overflow is clipped. */
@@ -1201,6 +1225,107 @@
     return out;
   }
 
+  /**
+   * Fit a color-grid stage to the mock the same way single-view fitViewerStage works:
+   * stage box = contain-fit of mock natural size inside the tile frame (no letterboxing inside stage).
+   * Zone % then matches single-view print_area_frac on the mock.
+   */
+  function fitColorGridStage(stageEl, mockImg, frameEl) {
+    if (!stageEl || !mockImg || !frameEl) return false;
+    var nw = mockImg.naturalWidth;
+    var nh = mockImg.naturalHeight;
+    if (!nw || !nh) return false;
+    var boxW = Math.max(1, frameEl.clientWidth);
+    var boxH = Math.max(1, frameEl.clientHeight);
+    if (boxW < 4 || boxH < 4) return false;
+    var fit = Math.min(boxW / nw, boxH / nh);
+    var w = Math.max(1, nw * fit);
+    var h = Math.max(1, nh * fit);
+    stageEl.style.width = w + 'px';
+    stageEl.style.height = h + 'px';
+    stageEl.style.aspectRatio = 'auto';
+    mockImg.style.width = '100%';
+    mockImg.style.height = '100%';
+    mockImg.style.objectFit = 'fill';
+    return true;
+  }
+
+  /** Same placement math as applyTransformToDesignImg, applied to a grid tile design img. */
+  function applyTransformToGridDesignImg(designImg, zoneEl, tr) {
+    if (!designImg || !zoneEl) return;
+    var x = Number(tr && tr.x);
+    var y = Number(tr && tr.y);
+    var scale = Number(tr && tr.scale);
+    var rot = Number(tr && tr.rotate);
+    if (!Number.isFinite(x)) x = 0.5;
+    if (!Number.isFinite(y)) y = 0.5;
+    if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
+    if (!Number.isFinite(rot)) rot = 0;
+    rot = snapRotate5(rot);
+    var visualScale = visualScaleForTransform({
+      x: x,
+      y: y,
+      scale: scale,
+      rotate: rot,
+      flipX: !!(tr && tr.flipX),
+      flipY: !!(tr && tr.flipY),
+    });
+    var flipSx = tr && tr.flipX ? -1 : 1;
+    var flipSy = tr && tr.flipY ? -1 : 1;
+    var zoneW = zoneEl.offsetWidth || 1;
+    var zoneH = zoneEl.offsetHeight || 1;
+    designImg.style.width = Math.max(8, zoneW * visualScale) + 'px';
+    designImg.style.height = 'auto';
+    designImg.style.maxWidth = 'none';
+    designImg.style.maxHeight = 'none';
+    designImg.style.left = '50%';
+    designImg.style.top = '50%';
+    var dx = (x - 0.5) * zoneW;
+    var dy = (y - 0.5) * zoneH;
+    designImg.style.transform =
+      'translate(-50%, -50%) translate(' +
+      dx +
+      'px,' +
+      dy +
+      'px) rotate(' +
+      rot +
+      'deg) scale(' +
+      flipSx +
+      ',' +
+      flipSy +
+      ')';
+    designImg.classList.add('is-laid-out');
+  }
+
+  function layoutColorGridTiles() {
+    if (!colorGridEl || !isVariantColorGrid()) return;
+    var tr = activeTransform();
+    colorGridEl.querySelectorAll('.cds-color-grid__tile').forEach(function (tile) {
+      var frame = tile.querySelector('.cds-color-grid__frame');
+      var stage = tile.querySelector('.cds-color-grid__stage');
+      var mock = tile.querySelector('.cds-color-grid__mock');
+      var zone = tile.querySelector('.cds-color-grid__zone');
+      var design = tile.querySelector('.cds-color-grid__design');
+      if (!frame || !stage || !mock) return;
+      if (!mock.complete || !mock.naturalWidth || !mock.naturalHeight) return;
+      if (!fitColorGridStage(stage, mock, frame)) return;
+      if (zone && design) {
+        if (design.complete && design.naturalWidth) {
+          applyTransformToGridDesignImg(design, zone, tr);
+        } else if (!design.__cdsGridLayoutBound) {
+          design.__cdsGridLayoutBound = true;
+          design.addEventListener(
+            'load',
+            function () {
+              if (isOpen && isVariantColorGrid()) scheduleLayoutColorGrid();
+            },
+            { once: true }
+          );
+        }
+      }
+    });
+  }
+
   function renderColorGrid() {
     if (!colorGridEl) return;
     if (!isVariantColorGrid()) {
@@ -1212,31 +1337,6 @@
     var active = resolveColorKey();
     var activeNorm = normColorKey(active);
     var designUrl = currentPrimaryDesignUrl() || designUrlForAsset('primary') || '';
-    var tr = activeTransform();
-    var x = Number(tr.x);
-    var y = Number(tr.y);
-    var scale = Number(tr.scale);
-    var rot = Number(tr.rotate);
-    if (!Number.isFinite(x)) x = 0.5;
-    if (!Number.isFinite(y)) y = 0.5;
-    if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
-    if (!Number.isFinite(rot)) rot = 0;
-    var flipSx = tr.flipX ? -1 : 1;
-    var flipSy = tr.flipY ? -1 : 1;
-    var designStyle =
-      'width:' +
-      Math.max(8, scale * 100) +
-      '%;height:auto;left:' +
-      x * 100 +
-      '%;top:' +
-      y * 100 +
-      '%;transform:translate(-50%,-50%) rotate(' +
-      rot +
-      'deg) scale(' +
-      flipSx +
-      ',' +
-      flipSy +
-      ');';
 
     var html = '';
     for (var i = 0; i < entries.length; i++) {
@@ -1272,9 +1372,7 @@
             '">' +
             '<img class="cds-color-grid__design" src="' +
             String(designUrl).replace(/"/g, '&quot;') +
-            '" alt="" decoding="async" draggable="false" style="' +
-            designStyle +
-            '">' +
+            '" alt="" decoding="async" draggable="false">' +
             '</span>'
           : '') +
         '</span>' +
@@ -1286,14 +1384,13 @@
     }
     colorGridEl.innerHTML = html;
     colorGridEl.hidden = false;
+    ensureColorGridResizeObserver();
     colorGridEl.querySelectorAll('.cds-color-grid__mock').forEach(function (img) {
-      function syncStageAr() {
-        var stage = img.closest('.cds-color-grid__stage');
-        if (!stage || !img.naturalWidth || !img.naturalHeight) return;
-        stage.style.aspectRatio = img.naturalWidth + ' / ' + img.naturalHeight;
+      function onMockReady() {
+        scheduleLayoutColorGrid();
       }
-      if (img.complete && img.naturalWidth) syncStageAr();
-      else img.addEventListener('load', syncStageAr, { once: true });
+      if (img.complete && img.naturalWidth) onMockReady();
+      else img.addEventListener('load', onMockReady, { once: true });
     });
     colorGridEl.querySelectorAll('[data-cds-grid-color]').forEach(function (tile) {
       tile.addEventListener('click', function () {
@@ -1304,6 +1401,7 @@
         renderColorGrid();
       });
     });
+    scheduleLayoutColorGrid();
   }
 
   function syncSelectionChrome() {
@@ -2914,11 +3012,12 @@
 
     window.addEventListener('resize', function () {
       if (isOpen) {
-        if (isVariantColorGrid()) renderColorGrid();
+        if (isVariantColorGrid()) scheduleLayoutColorGrid();
         else scheduleLayoutPrintZone();
       }
     });
     ensureStageResizeObserver();
+    ensureColorGridResizeObserver();
   }
 
   function closeAssetDialogs() {
@@ -3512,7 +3611,7 @@
     if (previewContentEl) previewContentEl.hidden = true;
     if (previewFooterEl) previewFooterEl.hidden = true;
     setPreviewError('');
-    setPreviewLoading(true, t('designStudioPreviewLoading', 'Creating Printify preview…'));
+    setPreviewLoading(true, t('designStudioPreviewLoading', 'Loading Preview'));
 
     try {
       var designUrl = currentPrimaryDesignUrl();
@@ -4451,6 +4550,10 @@
     if (layoutRaf) {
       cancelAnimationFrame(layoutRaf);
       layoutRaf = 0;
+    }
+    if (colorGridLayoutRaf) {
+      cancelAnimationFrame(colorGridLayoutRaf);
+      colorGridLayoutRaf = 0;
     }
     // Force-exit crop even if apply was mid-flight (state already cleared above).
     cropping = false;

@@ -283,7 +283,17 @@
   }
 
   function categoryLabel(cat) {
-    return tpl('creator.journey.cat_' + cat, cat.replace(/_/g, ' '));
+    var fallbacks = {
+      creation_limit: 'Creation Limits',
+      listing_limit: 'Listing Limits',
+      design_type: 'Design types',
+      eaz_economy: 'EAZV Economy'
+    };
+    var fb = fallbacks[cat];
+    if (!fb) {
+      fb = cat.replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    }
+    return tpl('creator.journey.cat_' + cat, fb);
   }
 
   function t(key, fallback) {
@@ -507,7 +517,61 @@
     /* Level widget lives in sidebar — visibility handled in renderFloatLevel */
   }
 
+  function highestUnlockedTierNode(tierNodes) {
+    var active = null;
+    for (var i = tierNodes.length - 1; i >= 0; i--) {
+      if (tierNodes[i].unlocked) {
+        active = tierNodes[i];
+        break;
+      }
+    }
+    return active;
+  }
+
+  function creationLimitParentTitle(node) {
+    var axis = node.metadata && node.metadata.creation_limit_axis;
+    var base = axis === 'upload' ? 'Upload' : 'Generate';
+    var active = highestUnlockedTierNode(creationLimitTierNodes(node));
+    if (!active || !active.metadata) return base;
+    var val = active.metadata.limit_value;
+    var mode = active.metadata.limit_mode;
+    if (mode === 'lifetime') {
+      return tpl('creator.journey.creation_limit_parent_total', '{{ axis }} {{ n }} Total', {
+        axis: base,
+        n: String(val)
+      });
+    }
+    return tpl('creator.journey.creation_limit_parent_daily', '{{ axis }} {{ n }} Daily', {
+      axis: base,
+      n: String(val)
+    });
+  }
+
+  function listingLimitChannelTitle(node) {
+    var ch = (node.metadata && node.metadata.title) || node.channel_id || '';
+    var active = highestUnlockedTierNode(listingLimitTierNodes(node));
+    if (!active || !active.metadata) {
+      if (node.unlocked && node.channel_id === 'shopify') {
+        return tpl('creator.journey.listing_limit_channel_daily', '{{ channel }} {{ n }} Daily', {
+          channel: ch,
+          n: '10'
+        });
+      }
+      return ch;
+    }
+    return tpl('creator.journey.listing_limit_channel_daily', '{{ channel }} {{ n }} Daily', {
+      channel: ch,
+      n: String(active.metadata.listings_per_day || '')
+    });
+  }
+
   function nodeTitle(node) {
+    if (node.metadata && node.metadata.creation_limit_kind === 'parent') {
+      return creationLimitParentTitle(node);
+    }
+    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
+      return listingLimitChannelTitle(node);
+    }
     if (node.metadata && node.metadata.royalty_percent != null) {
       return tpl('creator.journey.royalty_tier_title', '{{ pct }}% royalty', {
         pct: String(node.metadata.royalty_percent)
@@ -906,7 +970,11 @@
       ? ''
       : '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>';
     var badgeHtml = '';
-    if (node.unlocked) {
+    var skipUnlockedBadge = node.metadata && (
+      node.metadata.creation_limit_kind === 'parent' ||
+      node.metadata.listing_limit_kind === 'channel'
+    );
+    if (node.unlocked && !skipUnlockedBadge) {
       badgeHtml = renderUnlockedBadgeHtml(node);
     } else if (levelLocked || lockReason) {
       // Locked: clear reason instead of misleading EAZV progress (e.g. 0/200).
@@ -933,16 +1001,19 @@
 
   function cardActionState(node, levelLocked) {
     if (node.category === 'creation_limit') {
-      return {
-        title: nodeTitle(node),
-        canAct: false,
-        cost: 0,
-        catalogCost: 0,
-        freePick: false,
-        unlockReady: false,
-        hasAction: false,
-        actionHtml: ''
-      };
+      var isParent = node.metadata && node.metadata.creation_limit_kind === 'parent';
+      if (isParent) {
+        return {
+          title: nodeTitle(node),
+          canAct: false,
+          cost: 0,
+          catalogCost: 0,
+          freePick: false,
+          unlockReady: false,
+          hasAction: false,
+          actionHtml: ''
+        };
+      }
     }
     var freePick = !!node.free_pick_eligible;
     var cost = nodeEffectiveCost(node);
@@ -1710,12 +1781,15 @@
     var act = cardActionState(node, lock.levelLocked);
     var isParent = isCreationLimitParent(node);
     var tiers = isParent ? creationLimitTierNodes(node) : [];
-    var expandable = isParent && tiers.length > 0;
+    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
+    var expandable = isParent && lockedTiers.length > 0;
     var expanded = expandable && !!expandedCreationLimitKeys[node.node_key];
     var cls = 'cj-tree-card cj-tree-card--creation-limit';
     if (isParent) cls += ' cj-tree-card--creation-limit-parent';
     if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
     if (expandable) cls += ' is-expandable';
     if (expanded) cls += ' is-expanded';
     var expandAttr = expandable
@@ -1725,33 +1799,29 @@
     var iconSvg = node.metadata && node.metadata.creation_limit_axis === 'upload'
       ? '<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 21h8"/></svg>'
       : '<svg viewBox="0 0 24 24"><path d="M12 3l2 4h5l-4 3 2 4-5-3-5 3 2-4-4-3h5z"/></svg>';
-    var economyLink = '';
-    if (lock.lockReason === 'eaz_economy_daily_required') {
-      economyLink = '<button type="button" class="cj-tree-card__economy-link" data-cj-goto-eaz-daily>' +
-        escapeHtml(t('creator.journey.open_eaz_daily', 'Open EAZV Economy → Daily')) + '</button>';
-    }
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
       lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
-        hasAction: false,
+        hasAction: act.hasAction,
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason,
         iconSvg: isParent ? iconSvg : null
       }) +
-      economyLink + act.actionHtml + '</div></article>';
+      act.actionHtml + '</div></article>';
   }
 
   function renderCreationLimitExpandPanel(parentNode) {
     if (!parentNode || !expandedCreationLimitKeys[parentNode.node_key]) return '';
     var tiers = creationLimitTierNodes(parentNode);
-    if (!tiers.length) return '';
+    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
+    if (!lockedTiers.length) return '';
     return '<div class="cj-variant-branch cj-creation-limit-branch" data-cj-creation-limit-branch="' +
       escapeHtml(parentNode.node_key) + '">' +
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
       '<div class="cj-variant-panel" data-cj-creation-limit-panel="' + escapeHtml(parentNode.node_key) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(parentNode)) + '</h4>' +
-      renderCarouselShell(tiers.map(renderCreationLimitCard).join('')) +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(creationLimitParentTitle(parentNode)) + '</h4>' +
+      renderCarouselShell(lockedTiers.map(renderCreationLimitCard).join('')) +
       '</div></div>';
   }
 
@@ -1780,7 +1850,8 @@
     var act = cardActionState(node, lock.levelLocked);
     var isChannel = isListingLimitChannel(node);
     var tiers = isChannel ? listingLimitTierNodes(node) : [];
-    var expandable = isChannel && !!node.unlocked && tiers.length > 0;
+    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
+    var expandable = isChannel && !!node.unlocked && lockedTiers.length > 0;
     var expanded = expandable && !!expandedListingLimitKeys[node.node_key];
     var cls = 'cj-tree-card cj-tree-card--listing-limit';
     if (isChannel) cls += ' cj-tree-card--listing-channel';
@@ -1809,13 +1880,13 @@
     if (!channelNode || !channelNode.unlocked || !expandedListingLimitKeys[channelNode.node_key]) return '';
     var tiers = listingLimitTierNodes(channelNode);
     var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
-    if (!tiers.length) return '';
+    if (!lockedTiers.length) return '';
     return '<div class="cj-variant-branch cj-listing-limit-branch" data-cj-listing-limit-branch="' +
       escapeHtml(channelNode.node_key) + '">' +
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
       '<div class="cj-variant-panel" data-cj-listing-limit-panel="' + escapeHtml(channelNode.node_key) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(channelNode)) + '</h4>' +
-      renderCarouselShell((lockedTiers.length ? lockedTiers : tiers).map(renderListingLimitCard).join('')) +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(listingLimitChannelTitle(channelNode)) + '</h4>' +
+      renderCarouselShell(lockedTiers.map(renderListingLimitCard).join('')) +
       '</div></div>';
   }
 
