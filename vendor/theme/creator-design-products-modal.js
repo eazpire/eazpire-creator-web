@@ -121,6 +121,400 @@
   var rotationTimers = new Map();
   /** @type {Set<string>} product_keys where user manually changed slide (auto-rotate paused) */
   var rotationPausedKeys = new Set();
+  /** @type {WeakMap<Element, IntersectionObserver>} lazy card media observers */
+  var cardMediaObservers = new WeakMap();
+
+  var DEFAULT_CARD_PLACEMENT = { x: 0.5, y: 0.5, scale: 0.95, rotate: 0, flipX: false, flipY: false };
+  var CARD_UI_SCALE_MAX = 4;
+
+  function designPreviewUrl() {
+    if (!ctxDesign) return '';
+    return (
+      ctxDesign.preview_url ||
+      ctxDesign.image_url ||
+      ctxDesign.original_url ||
+      ''
+    );
+  }
+
+  function parseZoneFrac(f) {
+    var def = { l: 0.28, t: 0.22, w: 0.44, h: 0.48 };
+    if (!f || typeof f !== 'object') return def;
+    var l = Number(f.l != null ? f.l : f.left);
+    var t = Number(f.t != null ? f.t : f.top);
+    var w = Number(f.w != null ? f.w : f.width);
+    var h = Number(f.h != null ? f.h : f.height);
+    if (![l, t, w, h].every(function (x) {
+      return Number.isFinite(x);
+    })) {
+      return def;
+    }
+    return { l: l, t: t, w: w, h: h };
+  }
+
+  function normalizeCardPlacement(raw) {
+    if (!raw || typeof raw !== 'object') return Object.assign({}, DEFAULT_CARD_PLACEMENT);
+    var x = Number(raw.x);
+    var y = Number(raw.y);
+    var scale = Number(raw.scale);
+    var rot = Number(raw.rotate != null ? raw.rotate : raw.angle);
+    return {
+      x: Number.isFinite(x) ? x : DEFAULT_CARD_PLACEMENT.x,
+      y: Number.isFinite(y) ? y : DEFAULT_CARD_PLACEMENT.y,
+      scale: Number.isFinite(scale) && scale > 0 ? scale : DEFAULT_CARD_PLACEMENT.scale,
+      rotate: Number.isFinite(rot) ? rot : 0,
+      flipX: !!raw.flipX,
+      flipY: !!raw.flipY,
+    };
+  }
+
+  function clampCardScale(raw) {
+    var v = Number(raw);
+    if (!Number.isFinite(v) || v <= 0) v = DEFAULT_CARD_PLACEMENT.scale;
+    return Math.min(Math.max(v, 0.08), CARD_UI_SCALE_MAX);
+  }
+
+  function visualScaleForCardPlacement(tr) {
+    return clampCardScale(tr && tr.scale);
+  }
+
+  function maxContainScaleInCardZone(zoneEl, designImg) {
+    if (!zoneEl) return CARD_UI_SCALE_MAX;
+    var zw = zoneEl.offsetWidth || 1;
+    var zh = zoneEl.offsetHeight || 1;
+    if (zw < 1 || zh < 1) return CARD_UI_SCALE_MAX;
+    var nw = designImg && designImg.naturalWidth ? designImg.naturalWidth : 0;
+    var nh = designImg && designImg.naturalHeight ? designImg.naturalHeight : 0;
+    if (nw > 0 && nh > 0) {
+      return Math.min(Math.max(1, (zh * nw) / (zw * nh)), CARD_UI_SCALE_MAX);
+    }
+    return CARD_UI_SCALE_MAX;
+  }
+
+  function containClampCardPlacement(placement, zoneEl, designImg) {
+    var tr = normalizeCardPlacement(placement);
+    var maxContain = maxContainScaleInCardZone(zoneEl, designImg);
+    if (!(maxContain > 0) || !Number.isFinite(maxContain)) return tr;
+    var seedScale = Number(tr.scale);
+    if (!Number.isFinite(seedScale) || seedScale <= 0) seedScale = DEFAULT_CARD_PLACEMENT.scale;
+    tr.scale = Math.round(Math.min(seedScale, maxContain) * 100) / 100;
+    return tr;
+  }
+
+  function fitCardPreviewStage(stageEl, mockImg, frameEl) {
+    if (!stageEl || !mockImg || !frameEl) return false;
+    var nw = mockImg.naturalWidth;
+    var nh = mockImg.naturalHeight;
+    if (!nw || !nh) return false;
+    var boxW = Math.max(1, frameEl.clientWidth);
+    var boxH = Math.max(1, frameEl.clientHeight);
+    if (boxW < 4 || boxH < 4) return false;
+    var fit = Math.min(boxW / nw, boxH / nh);
+    var w = Math.max(1, nw * fit);
+    var h = Math.max(1, nh * fit);
+    stageEl.style.width = w + 'px';
+    stageEl.style.height = h + 'px';
+    stageEl.style.aspectRatio = 'auto';
+    mockImg.style.width = '100%';
+    mockImg.style.height = '100%';
+    mockImg.style.objectFit = 'fill';
+    return true;
+  }
+
+  function applyTransformToCardDesignImg(designImg, zoneEl, tr) {
+    if (!designImg || !zoneEl) return;
+    var x = Number(tr && tr.x);
+    var y = Number(tr && tr.y);
+    var scale = Number(tr && tr.scale);
+    var rot = Number(tr && tr.rotate);
+    if (!Number.isFinite(x)) x = 0.5;
+    if (!Number.isFinite(y)) y = 0.5;
+    if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
+    if (!Number.isFinite(rot)) rot = 0;
+    var visualScale = visualScaleForCardPlacement({ scale: scale });
+    var flipSx = tr && tr.flipX ? -1 : 1;
+    var flipSy = tr && tr.flipY ? -1 : 1;
+    var zoneW = zoneEl.offsetWidth || 1;
+    var zoneH = zoneEl.offsetHeight || 1;
+    designImg.style.width = Math.max(8, zoneW * visualScale) + 'px';
+    designImg.style.height = 'auto';
+    designImg.style.maxWidth = 'none';
+    designImg.style.maxHeight = 'none';
+    designImg.style.left = '50%';
+    designImg.style.top = '50%';
+    var dx = (x - 0.5) * zoneW;
+    var dy = (y - 0.5) * zoneH;
+    designImg.style.transform =
+      'translate(-50%, -50%) translate(' +
+      dx +
+      'px,' +
+      dy +
+      'px) rotate(' +
+      rot +
+      'deg) scale(' +
+      flipSx +
+      ',' +
+      flipSy +
+      ')';
+    designImg.classList.add('is-laid-out');
+  }
+
+  function layoutCardPreviewStack(stackEl) {
+    if (!stackEl) return;
+    var frame = stackEl.querySelector('.creator-design-products-modal__card-frame');
+    var stage = stackEl.querySelector('.creator-design-products-modal__card-stage');
+    var mock = stackEl.querySelector('.creator-design-products-modal__card-mock');
+    var zone = stackEl.querySelector('.creator-design-products-modal__card-zone');
+    var design = stackEl.querySelector('.creator-design-products-modal__card-design');
+    if (!frame || !stage || !mock) return;
+    if (!mock.complete || !mock.naturalWidth || !mock.naturalHeight) return;
+    if (!fitCardPreviewStage(stage, mock, frame)) return;
+    if (!zone || !design) return;
+    if (!design.complete || !design.naturalWidth) return;
+    var placement = null;
+    try {
+      placement = JSON.parse(stackEl.getAttribute('data-card-placement') || '{}');
+    } catch (_) {
+      placement = null;
+    }
+    var tr = containClampCardPlacement(placement, zone, design);
+    applyTransformToCardDesignImg(design, zone, tr);
+  }
+
+  function bindCardPreviewResize(stackEl) {
+    if (!stackEl || stackEl.__cdpPreviewResizeBound) return;
+    stackEl.__cdpPreviewResizeBound = true;
+    var frame = stackEl.querySelector('.creator-design-products-modal__card-frame');
+    if (!frame || typeof ResizeObserver !== 'function') return;
+    var ro = new ResizeObserver(function () {
+      layoutCardPreviewStack(stackEl);
+    });
+    ro.observe(frame);
+    stackEl.__cdpPreviewResizeObserver = ro;
+  }
+
+  function observeCardMediaWhenVisible(mediaEl, mountFn) {
+    if (!mediaEl || typeof mountFn !== 'function') return;
+    var prev = cardMediaObservers.get(mediaEl);
+    if (prev) {
+      try {
+        prev.disconnect();
+      } catch (_) {}
+    }
+    if (!('IntersectionObserver' in window)) {
+      mountFn();
+      return;
+    }
+    var obs = new IntersectionObserver(
+      function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            obs.disconnect();
+            cardMediaObservers.delete(mediaEl);
+            mountFn();
+            break;
+          }
+        }
+      },
+      { rootMargin: '120px 0px', threshold: 0.01 }
+    );
+    cardMediaObservers.set(mediaEl, obs);
+    obs.observe(mediaEl);
+  }
+
+  function buildCardPreviewStack(slide, designUrl) {
+    var z = parseZoneFrac(slide && slide.print_area_frac);
+    var zoneStyle =
+      'left:' +
+      z.l * 100 +
+      '%;top:' +
+      z.t * 100 +
+      '%;width:' +
+      z.w * 100 +
+      '%;height:' +
+      z.h * 100 +
+      '%;';
+    var placement = normalizeCardPlacement(slide && slide.placement);
+
+    var stack = document.createElement('div');
+    stack.className = 'creator-design-products-modal__card-slide creator-design-products-modal__card-slide--composed';
+    stack.setAttribute('data-card-placement', JSON.stringify(placement));
+
+    var frame = document.createElement('div');
+    frame.className = 'creator-design-products-modal__card-frame';
+
+    var stage = document.createElement('div');
+    stage.className = 'creator-design-products-modal__card-stage';
+
+    var mock = document.createElement('img');
+    mock.className = 'creator-design-products-modal__card-mock';
+    mock.alt = '';
+    mock.decoding = 'async';
+    mock.draggable = false;
+    mock.src = slide.mock_url;
+
+    var zone = document.createElement('span');
+    zone.className = 'creator-design-products-modal__card-zone';
+    zone.setAttribute('style', zoneStyle);
+
+    var design = document.createElement('img');
+    design.className = 'creator-design-products-modal__card-design';
+    design.alt = '';
+    design.decoding = 'async';
+    design.draggable = false;
+    design.src = designUrl;
+
+    zone.appendChild(design);
+    stage.appendChild(mock);
+    stage.appendChild(zone);
+    frame.appendChild(stage);
+    stack.appendChild(frame);
+
+    function afterImagesReady() {
+      layoutCardPreviewStack(stack);
+      bindCardPreviewResize(stack);
+    }
+
+    function bindLoad(img) {
+      if (img.complete && img.naturalWidth) return true;
+      img.addEventListener('load', afterImagesReady, { once: true });
+      return false;
+    }
+
+    var mockReady = bindLoad(mock);
+    var designReady = bindLoad(design);
+    if (mockReady && designReady) afterImagesReady();
+
+    return stack;
+  }
+
+  function mountCardMediaComposited(mediaEl, productKey, previewConfig, designUrl) {
+    if (!mediaEl) return;
+    mediaEl.innerHTML = '';
+    var slides = (previewConfig && previewConfig.slides) || [];
+    if (!slides.length || !designUrl) {
+      mountCardMediaCarouselPlain(mediaEl, productKey, normalizeMockUrls({ mock_urls: [] }));
+      return;
+    }
+
+    mediaEl.classList.add(
+      'creator-design-products-modal__card-media--composed',
+      slides.length >= 2 ? 'creator-design-products-modal__card-media--carousel' : ''
+    );
+
+    if (slides.length >= 2) {
+      var stageWrap = document.createElement('div');
+      stageWrap.className = 'creator-design-products-modal__card-stage';
+      stageWrap.setAttribute('data-product-key', productKey);
+
+      var stackA = buildCardPreviewStack(slides[0], designUrl);
+      stackA.classList.add('is-active');
+      var stackB = buildCardPreviewStack(slides[1] || slides[0], designUrl);
+      stageWrap.appendChild(stackA);
+      stageWrap.appendChild(stackB);
+      stageWrap.dataset.slideIndex = '0';
+      mediaEl.appendChild(stageWrap);
+
+      var navPrev = document.createElement('button');
+      navPrev.type = 'button';
+      navPrev.className = 'creator-design-products-modal__card-nav creator-design-products-modal__card-nav--prev';
+      navPrev.setAttribute('aria-label', Mi().designProductsPrevMock || 'Previous mock');
+      navPrev.innerHTML = '&#8249;';
+      var navNext = document.createElement('button');
+      navNext.type = 'button';
+      navNext.className = 'creator-design-products-modal__card-nav creator-design-products-modal__card-nav--next';
+      navNext.setAttribute('aria-label', Mi().designProductsNextMock || 'Next mock');
+      navNext.innerHTML = '&#8250;';
+
+      function advanceComposedSlide(delta) {
+        var idx = parseInt(stageWrap.dataset.slideIndex || '0', 10);
+        var nextIdx = (idx + delta + slides.length * 100) % slides.length;
+        stageWrap.dataset.slideIndex = String(nextIdx);
+        var active = stageWrap.querySelector('.creator-design-products-modal__card-slide.is-active');
+        var inactive = stageWrap.querySelector('.creator-design-products-modal__card-slide:not(.is-active)');
+        if (!inactive) {
+          inactive = buildCardPreviewStack(slides[nextIdx], designUrl);
+          stageWrap.appendChild(inactive);
+        } else {
+          var existing = inactive.querySelector('.creator-design-products-modal__card-mock');
+          var targetUrl = slides[nextIdx].mock_url;
+          if (existing && existing.src !== targetUrl) {
+            inactive.parentNode.removeChild(inactive);
+            inactive = buildCardPreviewStack(slides[nextIdx], designUrl);
+            stageWrap.appendChild(inactive);
+          } else {
+            inactive.setAttribute('data-card-placement', JSON.stringify(normalizeCardPlacement(slides[nextIdx].placement)));
+            layoutCardPreviewStack(inactive);
+          }
+        }
+        if (active && inactive) {
+          inactive.classList.add('is-active');
+          active.classList.remove('is-active');
+          if (active !== inactive && active.parentNode) active.parentNode.removeChild(active);
+        }
+      }
+
+      navPrev.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        rotationPausedKeys.add(productKey);
+        stopCardRotation(productKey);
+        advanceComposedSlide(-1);
+      });
+      navNext.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        rotationPausedKeys.add(productKey);
+        stopCardRotation(productKey);
+        advanceComposedSlide(1);
+      });
+
+      mediaEl.appendChild(navPrev);
+      mediaEl.appendChild(navNext);
+      startCardComposedRotation(productKey, stageWrap, slides, designUrl);
+      return;
+    }
+
+    mediaEl.classList.remove('creator-design-products-modal__card-media--carousel');
+    var singleStage = document.createElement('div');
+    singleStage.className = 'creator-design-products-modal__card-stage';
+    singleStage.setAttribute('data-product-key', productKey);
+    singleStage.appendChild(buildCardPreviewStack(slides[0], designUrl));
+    mediaEl.appendChild(singleStage);
+  }
+
+  function startCardComposedRotation(productKey, stageWrap, slides, designUrl) {
+    if (!slides || slides.length < 2 || rotationPausedKeys.has(productKey)) return;
+    stopCardRotation(productKey);
+    var id = setInterval(function () {
+      if (rotationPausedKeys.has(productKey)) {
+        stopCardRotation(productKey);
+        return;
+      }
+      var idx = parseInt(stageWrap.dataset.slideIndex || '0', 10);
+      var nextIdx = (idx + 1) % slides.length;
+      stageWrap.dataset.slideIndex = String(nextIdx);
+      var active = stageWrap.querySelector('.creator-design-products-modal__card-slide.is-active');
+      var inactive = stageWrap.querySelector('.creator-design-products-modal__card-slide:not(.is-active)');
+      if (!inactive) {
+        inactive = buildCardPreviewStack(slides[nextIdx], designUrl);
+        stageWrap.appendChild(inactive);
+      } else {
+        var mockImg = inactive.querySelector('.creator-design-products-modal__card-mock');
+        if (mockImg && mockImg.src !== slides[nextIdx].mock_url) {
+          if (inactive.parentNode) inactive.parentNode.removeChild(inactive);
+          inactive = buildCardPreviewStack(slides[nextIdx], designUrl);
+          stageWrap.appendChild(inactive);
+        }
+      }
+      if (active && inactive) {
+        inactive.classList.add('is-active');
+        active.classList.remove('is-active');
+        if (active !== inactive && active.parentNode) active.parentNode.removeChild(active);
+      }
+    }, ROTATION_MS);
+    rotationTimers.set(productKey, id);
+  }
 
   function clearAllRotations() {
     rotationTimers.forEach(function (id) {
@@ -193,7 +587,20 @@
     });
   }
 
-  function mountCardMediaCarousel(mediaEl, productKey, urls) {
+  function mountCardMediaCarousel(mediaEl, productKey, urls, previewConfig, designUrl) {
+    if (!mediaEl) return;
+    if (previewConfig && previewConfig.slides && previewConfig.slides.length && designUrl) {
+      observeCardMediaWhenVisible(mediaEl, function () {
+        mountCardMediaComposited(mediaEl, productKey, previewConfig, designUrl);
+      });
+      return;
+    }
+    observeCardMediaWhenVisible(mediaEl, function () {
+      mountCardMediaCarouselPlain(mediaEl, productKey, urls);
+    });
+  }
+
+  function mountCardMediaCarouselPlain(mediaEl, productKey, urls) {
     if (!mediaEl) return;
     mediaEl.innerHTML = '';
     mediaEl.classList.add('creator-design-products-modal__card-media--carousel');
@@ -668,7 +1075,9 @@
 
     var media = document.createElement('div');
     media.className = 'creator-design-products-modal__card-media';
-    mountCardMediaCarousel(media, pk, normalizeMockUrls(p));
+    var previewConfig = p.studio_card_preview || null;
+    var designUrl = designPreviewUrl();
+    mountCardMediaCarousel(media, pk, normalizeMockUrls(p), previewConfig, designUrl);
     var ttl = document.createElement('div');
     ttl.className = 'creator-design-products-modal__card-title';
     ttl.textContent = p.title || pk;
