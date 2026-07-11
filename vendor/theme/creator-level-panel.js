@@ -31,6 +31,43 @@
   let listenersBound = false;
   let inflightPromise = null;
 
+  /** Same auth chain as journey modal / balance bar — not only Liquid data-owner-id. */
+  function resolveOwnerId() {
+    if (panelElement) {
+      var fromData = panelElement.dataset.ownerId;
+      if (fromData && String(fromData).trim() &&
+          fromData !== 'null' && fromData !== 'undefined') {
+        return String(fromData).trim();
+      }
+    }
+    if (typeof window._resolveEazOwnerId === 'function') {
+      var resolved = window._resolveEazOwnerId();
+      if (resolved) return String(resolved).trim();
+    }
+    if (window.__EAZ_OWNER_ID) return String(window.__EAZ_OWNER_ID).trim();
+    if (window.Shopify && window.Shopify.customerId) {
+      return String(window.Shopify.customerId);
+    }
+    return null;
+  }
+
+  function syncOwnerIdToPanel(id) {
+    if (!panelElement || !id) return;
+    panelElement.dataset.ownerId = id;
+  }
+
+  function getSharedLevelData() {
+    return window.__EAZ_JOURNEY_LEVEL_DATA__ || null;
+  }
+
+  async function waitForSharedLevelLoad() {
+    if (!window.__EAZ_JOURNEY_LEVEL_LOAD_PROMISE__) return null;
+    try {
+      await window.__EAZ_JOURNEY_LEVEL_LOAD_PROMISE__;
+    } catch (_e) { /* own fetch below */ }
+    return getSharedLevelData();
+  }
+
   function tpl(str, map) {
     var out = String(str || '');
     Object.keys(map).forEach(function (k) {
@@ -206,6 +243,12 @@
       }
     });
 
+    document.addEventListener('creator-journey-level-data', function(event) {
+      if (!isLevelTabActive()) return;
+      var data = event.detail || getSharedLevelData();
+      if (data && data.ok) renderLevelData(data);
+    });
+
     // XP-Updates (z.B. nach Aktionen)
     document.addEventListener('xp-updated', function() {
       setTimeout(loadLevelData, 300);
@@ -230,10 +273,17 @@
       return;
     }
 
-    const ownerId = panelElement.dataset.ownerId;
+    const ownerId = resolveOwnerId();
+    syncOwnerIdToPanel(ownerId);
 
     if (!ownerId) {
       showError(window.CreatorI18n?.pleaseLogin || 'Bitte einloggen');
+      return;
+    }
+
+    var shared = getSharedLevelData();
+    if (shared && shared.ok) {
+      renderLevelData(shared);
       return;
     }
 
@@ -243,34 +293,38 @@
     showLoading();
 
     try {
-      const url = '/apps/creator-dispatch?path_prefix=/apps/creator-dispatch&op=get-level&owner_id=' + encodeURIComponent(ownerId);
-
-      inflightPromise = fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-
-      const response = await inflightPromise;
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      var data = await waitForSharedLevelLoad();
+      if (data && data.ok) {
+        renderLevelData(data);
+        return;
       }
 
-      // Sicherer JSON Parse: falls mal HTML kommt, zeigen wir eine verständliche Fehlermeldung
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        throw new Error('Antwort ist kein JSON (erste 120 Zeichen): ' + text.slice(0, 120));
+      if (typeof window.creatorApiFetch === 'function') {
+        inflightPromise = window.creatorApiFetch('get-level', { owner_id: ownerId });
+        data = await inflightPromise;
+      } else {
+        const url = '/apps/creator-dispatch?path_prefix=/apps/creator-dispatch&op=get-level&owner_id=' + encodeURIComponent(ownerId);
+        inflightPromise = fetch(url, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        const response = await inflightPromise;
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new Error('Antwort ist kein JSON (erste 120 Zeichen): ' + text.slice(0, 120));
+        }
       }
 
       if (!data || !data.ok) {
         throw new Error((data && data.error) || 'Unbekannter Fehler');
       }
 
+      window.__EAZ_JOURNEY_LEVEL_DATA__ = data;
       renderLevelData(data);
     } catch (error) {
       console.error('[Creator Level Panel] Fehler beim Laden der Level-Daten:', error);

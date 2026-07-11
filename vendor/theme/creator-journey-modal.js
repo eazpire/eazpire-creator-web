@@ -27,6 +27,7 @@
   var toastTimer = null;
   var bgAppliedKey = '';
   var journeyLoadPromise = null;
+  var levelLoadPromise = null;
   var onboardingData = null;
   var questsLoadPromise = null;
   var questType = 'main';
@@ -100,15 +101,31 @@
       if (overviewShell) overviewShell.hidden = true;
       if (balanceWrap) {
         balanceWrap.hidden = false;
+        var cachedBal = readCachedBalanceEaz();
         if (balanceVal) {
-          balanceVal.textContent = '—';
-          balanceVal.classList.add('is-loading');
+          if (cachedBal != null) {
+            balanceVal.textContent = formatSidebarBalanceValue(cachedBal);
+            balanceVal.classList.remove('is-loading');
+          } else {
+            balanceVal.textContent = '—';
+            balanceVal.classList.add('is-loading');
+          }
         }
       }
       if (levelWrap) levelWrap.hidden = false;
       if (xpEl) {
-        xpEl.textContent = t('creator.journey.loading', 'Loading…');
-        xpEl.classList.add('is-loading');
+        if (levelData && levelData.ok) {
+          renderFloatLevel();
+        } else if (journeyData && journeyData.display_level) {
+          var fbLv = Number(journeyData.display_level) || 1;
+          var numEl = document.getElementById('cjFloatLevelNum');
+          if (numEl) numEl.textContent = String(fbLv);
+          xpEl.textContent = t('creator.journey.loading', 'Loading…');
+          xpEl.classList.add('is-loading');
+        } else {
+          xpEl.textContent = t('creator.journey.loading', 'Loading…');
+          xpEl.classList.add('is-loading');
+        }
       }
     } else {
       if (balanceVal) balanceVal.classList.remove('is-loading');
@@ -391,6 +408,29 @@
     }
     var n = Number(s);
     return Number.isFinite(n) ? n : NaN;
+  }
+
+  /** Balance from journey payload, global cache, or already-painted page widgets. */
+  function readCachedBalanceEaz() {
+    if (journeyData && journeyData.balance_eaz != null) {
+      return Number(journeyData.balance_eaz);
+    }
+    var cache = window.__eazBalanceCache;
+    if (cache && cache.value != null && Number.isFinite(Number(cache.value))) {
+      return Number(cache.value);
+    }
+    if (typeof window._getGlobalEazSource === 'function') {
+      var src = window._getGlobalEazSource();
+      if (src && src.dataset && src.dataset.eazLoaded === '1') {
+        var fromDom = parseLocaleAmount(src.textContent);
+        if (Number.isFinite(fromDom)) return fromDom;
+      }
+    }
+    return null;
+  }
+
+  function formatSidebarBalanceValue(n) {
+    return String(Math.round(Number(n) * 10) / 10) + ' EAZV';
   }
 
   function formatEazAmount(n) {
@@ -3584,12 +3624,18 @@
       coin.src = eazvCoinUrl();
       if (window.EazCoinBrand && window.EazCoinBrand.hydrate) window.EazCoinBrand.hydrate(wrap);
     }
-    if (!journeyData || !journeyData.is_creator || journeyData.balance_eaz == null) {
+    if (journeyData && journeyData.is_creator === false) {
+      wrap.hidden = true;
+      return;
+    }
+    var bal = readCachedBalanceEaz();
+    if (bal == null) {
       wrap.hidden = true;
       return;
     }
     wrap.hidden = false;
-    val.textContent = String(Math.round(Number(journeyData.balance_eaz) * 10) / 10) + ' EAZV';
+    val.textContent = formatSidebarBalanceValue(bal);
+    val.classList.remove('is-loading');
   }
 
   function clearContentBg() {
@@ -4270,6 +4316,10 @@
     overviewLoadPromise = null;
     eazEconomyData = null;
     eazEconomyLoadPromise = null;
+    levelData = null;
+    levelLoadPromise = null;
+    window.__EAZ_JOURNEY_LEVEL_DATA__ = null;
+    window.__EAZ_JOURNEY_LEVEL_LOAD_PROMISE__ = null;
   }
 
   async function loadOverviewStats(opts) {
@@ -4321,16 +4371,38 @@
     }
   }
 
-  async function loadLevelData() {
+  async function loadLevelData(opts) {
+    opts = opts || {};
+    var force = !!opts.force;
     var oid = ownerId();
     if (!oid) return;
-    try {
-      levelData = await apiFetch('get-level', { owner_id: oid });
-    } catch (e) {
-      levelData = null;
-      console.warn('[CreatorJourney] level', e);
+    if (!force && levelData && levelData.ok) {
+      window.__EAZ_JOURNEY_LEVEL_DATA__ = levelData;
+      renderFloatLevel();
+      return levelData;
     }
-    renderFloatLevel();
+    if (levelLoadPromise) return levelLoadPromise;
+
+    levelLoadPromise = (async function () {
+      try {
+        levelData = await apiFetch('get-level', { owner_id: oid });
+        window.__EAZ_JOURNEY_LEVEL_DATA__ = levelData;
+        document.dispatchEvent(new CustomEvent('creator-journey-level-data', { detail: levelData }));
+        renderFloatLevel();
+        return levelData;
+      } catch (e) {
+        levelData = null;
+        window.__EAZ_JOURNEY_LEVEL_DATA__ = null;
+        console.warn('[CreatorJourney] level', e);
+        renderFloatLevel();
+        return null;
+      } finally {
+        levelLoadPromise = null;
+        window.__EAZ_JOURNEY_LEVEL_LOAD_PROMISE__ = null;
+      }
+    })();
+    window.__EAZ_JOURNEY_LEVEL_LOAD_PROMISE__ = levelLoadPromise;
+    return levelLoadPromise;
   }
 
   async function loadJourney(opts) {
@@ -4352,11 +4424,16 @@
     if (journeyLoadPromise) return journeyLoadPromise;
 
     setPanelLoading(true);
+    renderSidebarBalance();
     journeyLoadPromise = (async function () {
       try {
         // Journey first — paint shell ASAP. Overview is independent and must not block the tree.
         journeyData = await apiFetch('get-creator-journey', { owner_id: oid });
         journeyFetchedAt = Date.now();
+        if (journeyData && journeyData.balance_eaz == null) {
+          var seededBal = readCachedBalanceEaz();
+          if (seededBal != null) journeyData.balance_eaz = seededBal;
+        }
         renderSidebarBalance();
         renderTree();
         setPanelLoading(false);
@@ -4660,6 +4737,7 @@
     overlay.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     loadJourneyBackground();
+    renderSidebarBalance();
     var section = opts.section || opts.tab || 'overview';
     if (section === 'unlock-tree' || opts.nodeId) section = 'unlock-tree';
     setTab(section);
@@ -4803,7 +4881,17 @@
     });
 
     document.addEventListener('xp-updated', function () {
-      if (isOpen()) loadLevelData();
+      if (isOpen()) loadLevelData({ force: true });
+    });
+
+    document.addEventListener('eazBalanceUpdated', function (e) {
+      if (!isOpen()) return;
+      var detail = e && e.detail ? e.detail : {};
+      if (detail.inactive) return;
+      if (detail.balance != null && journeyData) {
+        journeyData.balance_eaz = Number(detail.balance);
+      }
+      renderSidebarBalance();
     });
   }
 
@@ -4811,9 +4899,14 @@
     open: open,
     close: close,
     isOpen: isOpen,
+    getCachedLevelData: function () {
+      return levelData && levelData.ok ? levelData : (window.__EAZ_JOURNEY_LEVEL_DATA__ || null);
+    },
     reload: function () {
       invalidateJourneyCaches();
-      return Promise.all([loadJourney({ force: true }), loadLevelData()]);
+      levelData = null;
+      window.__EAZ_JOURNEY_LEVEL_DATA__ = null;
+      return Promise.all([loadJourney({ force: true }), loadLevelData({ force: true })]);
     },
   };
 
