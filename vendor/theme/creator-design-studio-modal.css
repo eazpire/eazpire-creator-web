@@ -2245,10 +2245,11 @@
 }
 
 .cds-price-input-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
+  max-width: 200px;
 }
 
 .cds-price-currency,
@@ -2256,19 +2257,37 @@
   font-size: 0.82rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
 }
 
 .cds-price-input {
-  flex: 1;
+  flex: 0 0 96px;
+  width: 96px;
   min-width: 0;
   height: 36px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.25);
   color: #fff;
-  padding: 0 10px;
+  padding: 0 8px;
   font-size: 0.95rem;
   font-weight: 600;
+  color-scheme: dark;
+  -moz-appearance: textfield;
+}
+
+.cds-price-input::-webkit-outer-spin-button,
+.cds-price-input::-webkit-inner-spin-button {
+  opacity: 1;
+  height: 28px;
+  margin-right: 2px;
+  cursor: pointer;
+  filter: invert(0.85) sepia(0.35) saturate(4) hue-rotate(350deg);
+}
+
+.cds-price-input:hover::-webkit-outer-spin-button,
+.cds-price-input:hover::-webkit-inner-spin-button {
+  filter: invert(0.7) sepia(1) saturate(6) hue-rotate(350deg);
 }
 
 .cds-price-input:focus {
@@ -2304,6 +2323,10 @@
 
 .cds-price-row__value--accent {
   color: #f97316;
+}
+
+.cds-price-row__value--fixed {
+  font-variant-numeric: tabular-nums;
 }
 
 .cds-price-breakdown {
@@ -2366,8 +2389,22 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.cds-price-eazc__amount-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cds-price-eazc__coin {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
 .cds-price-eazc__amount {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 1rem;
   font-weight: 700;
   color: #f97316;

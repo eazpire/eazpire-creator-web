@@ -149,6 +149,20 @@
     return '~' + formatUsdCents(cents);
   }
 
+  function formatCustomerPriceRange(minCents, maxCents) {
+    var min = Math.round(Number(minCents) || 0);
+    var max = Math.round(Number(maxCents) || 0);
+    if (max <= min) return formatUsdCents(min);
+    return formatUsdCents(min) + ' – ' + formatUsdCents(max);
+  }
+
+  function eazcCoinUrl() {
+    if (window.EazCoinBrand && typeof window.EazCoinBrand.urlEazc === 'function') {
+      return window.EazCoinBrand.urlEazc();
+    }
+    return 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo';
+  }
+
   function tpl(key, fallback, vars) {
     var s = t(key, fallback);
     if (!vars) return s;
@@ -2705,19 +2719,16 @@
 
     html += '<div class="cds-price-section">';
     html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceRangeLabel', 'Customer price range') + '</span>';
-    html += '<span class="cds-price-row__value">' + formatApproxUsdCents(calc.sell_price_min_cents);
-    if (calc.sell_price_max_cents > calc.sell_price_min_cents) {
-      html += ' – ' + formatUsdCents(calc.sell_price_max_cents).replace('~', '');
-    }
+    html += '<span class="cds-price-row__value cds-price-row__value--fixed">' + formatCustomerPriceRange(calc.sell_price_min_cents, calc.sell_price_max_cents);
     html += '</span></div></div>';
 
     html += '<div class="cds-price-section">';
     html += '<h4 class="cds-price-heading">' + t('designStudioPriceBreakdownTitle', 'Net profit split') + '</h4>';
     html += '<div class="cds-price-breakdown">';
-    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownNet', 'Net profit (margin)') + '</span><span class="cds-price-row__value">' + formatApproxUsdCents(calc.net_profit_cents) + '</span></div>';
+    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownNet', 'Net profit (margin)') + '</span><span class="cds-price-row__value">' + formatUsdCents(calc.net_profit_cents) + '</span></div>';
     html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownCreator', 'Your share') + '</span><span class="cds-price-row__value cds-price-row__value--accent">' + formatApproxUsdCents(calc.breakdown.creator_profit_cents) + '</span></div>';
-    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownCommunity', 'Community pool') + '</span><span class="cds-price-row__value">' + formatApproxUsdCents(calc.breakdown.community_cents) + '</span></div>';
-    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownEazpire', 'Eazpire share') + '</span><span class="cds-price-row__value">' + formatApproxUsdCents(calc.breakdown.eazpire_cents) + '</span></div>';
+    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownCommunity', 'Community pool') + '</span><span class="cds-price-row__value">' + formatUsdCents(calc.breakdown.community_cents) + '</span></div>';
+    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownEazpire', 'Eazpire share') + '</span><span class="cds-price-row__value">' + formatUsdCents(calc.breakdown.eazpire_cents) + '</span></div>';
     html += '</div></div>';
 
     html += '<div class="cds-price-section">';
@@ -2744,16 +2755,18 @@
 
     html += '<div class="cds-price-section cds-price-eazc">';
     html += '<h4 class="cds-price-heading">' + t('designStudioPriceEazcTitle', 'EAZC earnings') + '</h4>';
-    html += '<p class="cds-price-eazc__amount">' + tpl('design_studio_price_eazc_amount', '~{{ amount }} EAZC per sale', {
+    html += '<div class="cds-price-eazc__amount-row">';
+    html += '<img class="cds-price-eazc__coin" src="' + eazcCoinUrl() + '" alt="" width="28" height="28" loading="lazy" data-eaz-coin="eazc">';
+    html += '<p class="cds-price-eazc__amount">' + tpl('design_studio_price_eazc_amount', '{{ amount }} EAZC per sale', {
       amount: String(calc.eazc_amount.toFixed(2)),
     }) + '</p>';
+    html += '</div>';
     html += '<p class="cds-muted">' + t('designStudioPriceEazcHint', 'You earn EAZC from sales. Convert EAZC to shop credit or cash out later in Creator Settings.') + '</p>';
     html += '<p class="cds-muted">' + t('designStudioPriceEazcConvert', 'EAZC can be converted to fiat after it becomes available.') + '</p>';
     html += '</div>';
 
     html += '<div class="cds-price-section">';
     html += '<h4 class="cds-price-heading">' + t('designStudioPriceVariantsTitle', 'Variant prices') + '</h4>';
-    html += '<p class="cds-muted">' + t('designStudioPriceVariantReadonly', 'Final price (read-only)') + '</p>';
 
     var groups = (ctxData.variant_groups) || {};
     var colorKeys = Object.keys(groups).filter(function (color) {
@@ -2791,13 +2804,17 @@
         var vv = items[si];
         var sell = priceById[Number(vv.id)];
         html += '<div class="cds-size-row cds-size-row--readonly"><span class="cds-size-label">' + vv.size + '</span>';
-        html += '<span class="cds-size-price">' + (sell != null ? formatApproxUsdCents(sell) : '—') + '</span></div>';
+        html += '<span class="cds-size-price">' + (sell != null ? formatUsdCents(sell) : '—') + '</span></div>';
       }
       html += '</div></div></div>';
     }
     html += '</div>';
 
     panelPriceEl.innerHTML = html;
+
+    if (window.EazCoinBrand && typeof window.EazCoinBrand.applyCoinImages === 'function') {
+      window.EazCoinBrand.applyCoinImages(panelPriceEl);
+    }
 
     panelPriceEl.querySelectorAll('[data-cds-color-toggle]').forEach(function (el) {
       el.addEventListener('click', function () {
