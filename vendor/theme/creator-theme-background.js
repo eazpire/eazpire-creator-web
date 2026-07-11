@@ -7,6 +7,8 @@
 
   var MOBILE_QUERY = window.matchMedia("(max-width: 991px)");
   var appliedKey = "";
+  var autoplayUnlockBound = false;
+  var bgWatchdogTimer = null;
 
   function defaults() {
     return (
@@ -66,6 +68,7 @@
     var vid = layer.querySelector("video");
     if (vid) {
       try {
+        vid.__creatorBgPauseAllowed = true;
         vid.pause();
         vid.removeAttribute("src");
         vid.load();
@@ -75,16 +78,50 @@
     layer.classList.remove("creator-theme-bg-layer--video", "creator-theme-bg-layer--image");
   }
 
+  function eazAnim(scope, key) {
+    try {
+      if (window.EazAnim && typeof window.EazAnim.isEnabled === "function") {
+        return window.EazAnim.isEnabled(scope, key);
+      }
+    } catch (_e) {}
+    return true;
+  }
+
   function playThemeBgVideo(video) {
     if (!video || !eazAnim("creator", "theme_bg_video")) return;
     if (document.hidden) return;
+    if (video.__creatorBgPauseAllowed) return;
+
     if (video.preload === "none") {
       video.preload = "auto";
       try {
         video.load();
       } catch (_) {}
     }
-    video.play().catch(function () {});
+
+    var playAttempt = video.play();
+    if (playAttempt && typeof playAttempt.catch === "function") {
+      playAttempt.catch(function () {
+        bindAutoplayUnlock();
+      });
+    }
+  }
+
+  function bindAutoplayUnlock() {
+    if (autoplayUnlockBound) return;
+    autoplayUnlockBound = true;
+    function unlock() {
+      document.querySelectorAll(".creator-theme-bg-video").forEach(function (video) {
+        video.__creatorBgPauseAllowed = false;
+      });
+      resumeAllThemeBgVideos();
+      document.removeEventListener("pointerdown", unlock, true);
+      document.removeEventListener("keydown", unlock, true);
+      document.removeEventListener("touchstart", unlock, true);
+    }
+    document.addEventListener("pointerdown", unlock, true);
+    document.addEventListener("keydown", unlock, true);
+    document.addEventListener("touchstart", unlock, true);
   }
 
   function bindThemeBgVideoLoop(video) {
@@ -93,20 +130,46 @@
 
     video.addEventListener("ended", function () {
       try {
-        video.currentTime = 0;
+        video.currentTime = 0.001;
       } catch (_) {}
       playThemeBgVideo(video);
     });
 
-    video.addEventListener("stalled", function () {
-      if (!document.hidden) playThemeBgVideo(video);
+    video.addEventListener("timeupdate", function () {
+      var duration = video.duration;
+      if (!duration || !isFinite(duration)) return;
+      if (duration - video.currentTime < 0.12) {
+        try {
+          video.currentTime = 0.001;
+        } catch (_) {}
+      }
+    });
+
+    ["stalled", "waiting", "suspend"].forEach(function (evt) {
+      video.addEventListener(evt, function () {
+        if (!document.hidden && !video.__creatorBgPauseAllowed) {
+          playThemeBgVideo(video);
+        }
+      });
+    });
+
+    video.addEventListener("error", function () {
+      if (video.__creatorBgRetryCount >= 4) return;
+      video.__creatorBgRetryCount = (video.__creatorBgRetryCount || 0) + 1;
+      setTimeout(function () {
+        if (!video.__creatorBgSrc) return;
+        try {
+          video.load();
+        } catch (_) {}
+        playThemeBgVideo(video);
+      }, 400 * video.__creatorBgRetryCount);
     });
   }
 
   function ensureThemeBgVideoPlaying(video) {
     if (!video || document.hidden || !eazAnim("creator", "theme_bg_video")) return;
     if (video.__creatorBgPauseAllowed) return;
-    if (video.paused || video.ended) {
+    if (video.paused || video.ended || video.readyState < 2) {
       playThemeBgVideo(video);
     }
   }
@@ -119,52 +182,34 @@
     });
   }
 
-  /** Ambient shell video — start when attached; do not pause on IO (screen switches kept it paused). */
-  function startVideoWhenVisible(video) {
+  function startThemeBgVideo(video) {
     if (!video) return;
-    playThemeBgVideo(video);
-    if (!("IntersectionObserver" in window)) return;
-    var obs = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) playThemeBgVideo(video);
-        });
-      },
-      { root: null, threshold: 0.01 }
-    );
-    obs.observe(video);
-  }
+    bindThemeBgVideoLoop(video);
+    bindAutoplayUnlock();
 
-  function applyImageLayer(layer, url) {
-    clearLayer(layer);
-    if (!url) return;
-    layer.classList.add("creator-theme-bg-layer--image");
-    layer.style.backgroundImage =
-      "linear-gradient(180deg, rgba(10, 5, 20, 0.4) 0%, rgba(5, 2, 15, 0.6) 100%), url('" +
-      String(url).replace(/'/g, "\\'") +
-      "')";
-  }
-
-  function eazAnim(scope, key) {
-    try {
-      if (window.EazAnim && typeof window.EazAnim.isEnabled === "function") {
-        return window.EazAnim.isEnabled(scope, key);
-      }
-    } catch (_e) {}
-    return true;
-  }
-
-  function applyVideoLayer(layer, url, posterUrl) {
-    if (!eazAnim("creator", "theme_bg_video")) {
-      applyImageLayer(layer, posterUrl || url);
-      return;
+    function tryPlay() {
+      playThemeBgVideo(video);
     }
-    clearLayer(layer);
-    if (!url) return;
-    layer.classList.add("creator-theme-bg-layer--video");
+
+    if (video.readyState >= 2) {
+      tryPlay();
+    } else {
+      video.addEventListener("loadeddata", tryPlay, { once: true });
+      video.addEventListener("canplay", tryPlay, { once: true });
+      video.addEventListener("canplaythrough", tryPlay, { once: true });
+    }
+
+    try {
+      video.load();
+    } catch (_) {}
+    tryPlay();
+  }
+
+  function createThemeBgVideo(url, posterUrl) {
     var video = document.createElement("video");
     video.className = "creator-theme-bg-video";
     video.muted = true;
+    video.defaultMuted = true;
     video.loop = true;
     video.playsInline = true;
     video.autoplay = true;
@@ -174,11 +219,55 @@
     video.setAttribute("playsinline", "");
     video.setAttribute("autoplay", "");
     video.setAttribute("disablepictureinpicture", "");
+    video.setAttribute("webkit-playsinline", "");
     if (posterUrl) video.poster = posterUrl;
+    video.__creatorBgSrc = url;
+    video.__creatorBgRetryCount = 0;
     video.src = url;
+    return video;
+  }
+
+  function applyImageLayer(layer, url) {
+    var existingVideo = layer.querySelector("video.creator-theme-bg-video");
+    if (existingVideo) clearLayer(layer);
+    if (!url) {
+      clearLayer(layer);
+      return;
+    }
+    layer.classList.remove("creator-theme-bg-layer--video");
+    layer.classList.add("creator-theme-bg-layer--image");
+    layer.style.backgroundImage =
+      "linear-gradient(180deg, rgba(10, 5, 20, 0.4) 0%, rgba(5, 2, 15, 0.6) 100%), url('" +
+      String(url).replace(/'/g, "\\'") +
+      "')";
+  }
+
+  function applyVideoLayer(layer, url, posterUrl) {
+    if (!eazAnim("creator", "theme_bg_video")) {
+      applyImageLayer(layer, posterUrl || url);
+      return;
+    }
+    if (!url) {
+      clearLayer(layer);
+      return;
+    }
+
+    var existing = layer.querySelector("video.creator-theme-bg-video");
+    if (existing && existing.__creatorBgSrc === url) {
+      layer.classList.remove("creator-theme-bg-layer--image");
+      layer.classList.add("creator-theme-bg-layer--video");
+      layer.style.backgroundImage = "";
+      if (posterUrl && existing.poster !== posterUrl) existing.poster = posterUrl;
+      startThemeBgVideo(existing);
+      return;
+    }
+
+    clearLayer(layer);
+    layer.classList.add("creator-theme-bg-layer--video");
+    layer.style.backgroundImage = "";
+    var video = createThemeBgVideo(url, posterUrl);
     layer.appendChild(video);
-    bindThemeBgVideoLoop(video);
-    startVideoWhenVisible(video);
+    startThemeBgVideo(video);
   }
 
   function applyMobile(bg) {
@@ -238,7 +327,10 @@
     var mobile = resolveBg(bgs.mobile, "mobile");
     var desktop = resolveBg(bgs.desktop, "desktop");
     var key = JSON.stringify({ mobile: mobile, desktop: desktop });
-    if (key === appliedKey) return;
+    if (key === appliedKey) {
+      resumeAllThemeBgVideos();
+      return;
+    }
     appliedKey = key;
 
     if (MOBILE_QUERY.matches) {
@@ -255,14 +347,39 @@
     }
   }
 
+  function readCachedPayload() {
+    var cacheKey = "creator_theme_bg_v1";
+    try {
+      var cached = sessionStorage.getItem(cacheKey);
+      if (!cached) return null;
+      var parsed = JSON.parse(cached);
+      if (parsed && parsed.expires > Date.now() && parsed.data) {
+        return parsed.data;
+      }
+    } catch (_cacheRead) {}
+    return null;
+  }
+
+  function writeCachedPayload(data) {
+    var cacheKey = "creator_theme_bg_v1";
+    try {
+      sessionStorage.setItem(
+        cacheKey,
+        JSON.stringify({ expires: Date.now() + 120000, data: data })
+      );
+    } catch (_cacheWrite) {}
+  }
+
+  function hasShellTargets() {
+    return (
+      !!document.querySelector(".creator-mobile-app") ||
+      !!document.getElementById("creatorDesktopApp") ||
+      !!document.getElementById("creatorDesktopHero")
+    );
+  }
+
   async function loadAndApply() {
-    if (
-      !document.querySelector(".creator-mobile-app") &&
-      !document.getElementById("creatorDesktopApp") &&
-      !document.getElementById("creatorDesktopHero")
-    ) {
-      return;
-    }
+    if (!hasShellTargets()) return;
 
     var fallbackPayload = {
       backgrounds: {
@@ -270,53 +387,49 @@
         desktop: resolveBg(null, "desktop"),
       },
     };
-    applyAll(fallbackPayload);
 
-    var cacheKey = "creator_theme_bg_v1";
-    try {
-      var cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        var parsed = JSON.parse(cached);
-        if (parsed && parsed.expires > Date.now() && parsed.data) {
-          window.__CREATOR_THEME_LAST_PAYLOAD__ = parsed.data;
-          applyAll(parsed.data);
-        }
-      }
-    } catch (_cacheRead) {}
+    var cachedPayload = readCachedPayload();
+    if (cachedPayload) {
+      window.__CREATOR_THEME_LAST_PAYLOAD__ = cachedPayload;
+      applyAll(cachedPayload);
+    }
 
-    var fetchPromise = (async function () {
-      if (window.EazAnim && typeof window.EazAnim.whenReady === "function") {
-        try {
-          await Promise.race([
-            window.EazAnim.whenReady(),
-            new Promise(function (resolve) {
-              setTimeout(resolve, 400);
-            }),
-          ]);
-        } catch (_e) {}
-      }
+    if (window.EazAnim && typeof window.EazAnim.whenReady === "function") {
       try {
-        var u = new URL(apiBase(), window.location.origin);
-        u.searchParams.set("op", "get-creator-area-backgrounds");
-        var res = await fetch(u.toString(), { credentials: "omit", cache: "default" });
-        var data = await res.json().catch(function () {
-          return {};
-        });
-        if (!data.ok) throw new Error(data.error || "load_failed");
-        window.__CREATOR_THEME_LAST_PAYLOAD__ = data;
-        applyAll(data);
-        try {
-          sessionStorage.setItem(
-            cacheKey,
-            JSON.stringify({ expires: Date.now() + 120000, data: data })
-          );
-        } catch (_cacheWrite) {}
-      } catch (err) {
-        console.warn("[creator-theme-background]", err);
-      }
-    })();
+        await Promise.race([
+          window.EazAnim.whenReady(),
+          new Promise(function (resolve) {
+            setTimeout(resolve, 400);
+          }),
+        ]);
+      } catch (_e) {}
+    }
 
-    return fetchPromise;
+    try {
+      var u = new URL(apiBase(), window.location.origin);
+      u.searchParams.set("op", "get-creator-area-backgrounds");
+      var res = await fetch(u.toString(), { credentials: "omit", cache: "default" });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!data.ok) throw new Error(data.error || "load_failed");
+      window.__CREATOR_THEME_LAST_PAYLOAD__ = data;
+      applyAll(data);
+      writeCachedPayload(data);
+    } catch (err) {
+      console.warn("[creator-theme-background]", err);
+      if (!cachedPayload) {
+        applyAll(fallbackPayload);
+      }
+    }
+  }
+
+  function startBgWatchdog() {
+    if (bgWatchdogTimer) return;
+    bgWatchdogTimer = setInterval(function () {
+      if (document.hidden) return;
+      document.querySelectorAll(".creator-theme-bg-video").forEach(ensureThemeBgVideoPlaying);
+    }, 2500);
   }
 
   if (typeof MOBILE_QUERY.addEventListener === "function") {
@@ -325,10 +438,16 @@
     MOBILE_QUERY.addListener(onViewportChange);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", loadAndApply);
-  } else {
+  function boot() {
     loadAndApply();
+    startBgWatchdog();
+    bindAutoplayUnlock();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
   }
 
   document.addEventListener("visibilitychange", function () {
@@ -348,17 +467,20 @@
     resumeAllThemeBgVideos();
   });
 
-  window.addEventListener("pageshow", function (ev) {
-    if (!ev.persisted) return;
+  window.addEventListener("pageshow", function () {
     resumeAllThemeBgVideos();
   });
 
-  setInterval(function () {
-    if (document.hidden) return;
-    document.querySelectorAll(".creator-theme-bg-video").forEach(ensureThemeBgVideoPlaying);
-  }, 12000);
+  document.addEventListener("eazCreatorContextReady", function () {
+    if (hasShellTargets()) {
+      loadAndApply();
+    } else {
+      resumeAllThemeBgVideos();
+    }
+  });
 
   window.__CreatorThemeBackground = {
     resumeAllThemeBgVideos: resumeAllThemeBgVideos,
+    loadAndApply: loadAndApply,
   };
 })();

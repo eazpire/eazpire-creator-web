@@ -2802,8 +2802,19 @@
     connector.style.removeProperty('--cj-connector-x');
     connector.style.removeProperty('--cj-connector-top');
     connector.style.removeProperty('--cj-connector-h');
-    connector.classList.remove('is-anchored');
+    connector.style.removeProperty('width');
+    connector.style.removeProperty('height');
+    connector.classList.remove('is-anchored', 'is-orthogonal');
+    var svg = connector.querySelector('svg');
+    if (svg) svg.remove();
     if (panel) panel.style.removeProperty('--cj-connector-x');
+  }
+
+  function connectorFrameEl(card) {
+    if (!card) return null;
+    if (card.classList && card.classList.contains('cj-tree-card__frame')) return card;
+    var frame = card.querySelector && card.querySelector('.cj-tree-card__frame');
+    return frame || card;
   }
 
   function anchorConnectorToCard(connector, panel, card, branch) {
@@ -2813,19 +2824,49 @@
       return;
     }
     var branchRect = branch.getBoundingClientRect();
-    var cardRect = card.getBoundingClientRect();
+    var frameEl = connectorFrameEl(card);
+    var cardRect = frameEl.getBoundingClientRect();
     var panelRect = panel.getBoundingClientRect();
-    var x = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
+    var parentX = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
+    var panelX = Math.round(panelRect.left + panelRect.width / 2 - branchRect.left);
     // Overlap 3px into both frames so the stem merges with the gold borders.
     var overlap = 3;
     var top = Math.round(cardRect.bottom - branchRect.top - overlap);
     var bottom = Math.round(panelRect.top - branchRect.top + overlap);
     var h = Math.max(10, bottom - top);
-    connector.style.setProperty('--cj-connector-x', x + 'px');
+    connector.classList.add('is-anchored');
     connector.style.setProperty('--cj-connector-top', top + 'px');
     connector.style.setProperty('--cj-connector-h', h + 'px');
-    connector.classList.add('is-anchored');
-    panel.style.setProperty('--cj-connector-x', x + 'px');
+    panel.style.setProperty('--cj-connector-x', panelX + 'px');
+
+    var svg = connector.querySelector('svg');
+    if (Math.abs(parentX - panelX) > 4) {
+      connector.classList.add('is-orthogonal');
+      connector.style.removeProperty('--cj-connector-x');
+      connector.style.width = Math.round(branchRect.width) + 'px';
+      connector.style.height = h + 'px';
+      var elbowY = Math.round(h * 0.42);
+      var pathD = 'M' + parentX + ',0 L' + parentX + ',' + elbowY + ' L' + panelX + ',' + elbowY +
+        ' L' + panelX + ',' + h;
+      if (!svg) {
+        svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('aria-hidden', 'true');
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'cj-variant-connector__path');
+        svg.appendChild(path);
+        connector.appendChild(svg);
+      }
+      svg.setAttribute('viewBox', '0 0 ' + Math.round(branchRect.width) + ' ' + h);
+      svg.querySelector('.cj-variant-connector__path').setAttribute('d', pathD);
+      return;
+    }
+
+    connector.classList.remove('is-orthogonal');
+    connector.style.removeProperty('width');
+    connector.style.removeProperty('height');
+    if (svg) svg.remove();
+    connector.style.setProperty('--cj-connector-x', parentX + 'px');
+    panel.style.setProperty('--cj-connector-x', parentX + 'px');
   }
 
   function positionVariantConnectors(root) {
@@ -2892,6 +2933,30 @@
       var panel = branch.querySelector(':scope > .cj-variant-panel');
       if (!connector || !key) return;
       var card = list.querySelector('.cj-tree-card--design-slot-level.is-expanded[data-cj-expand-slot-level="' + key + '"]');
+      anchorConnectorToCard(connector, panel, card, branch);
+    });
+
+    list.querySelectorAll('[data-cj-creation-limit-branch]').forEach(function (branch) {
+      var key = branch.getAttribute('data-cj-creation-limit-branch');
+      var connector = branch.querySelector(':scope > .cj-variant-connector');
+      var panel = branch.querySelector(':scope > .cj-variant-panel');
+      if (!connector || !key) return;
+      var section = branch.closest('.cj-creation-limit-row') || branch.closest('.cj-product-section') || list;
+      var card = section.querySelector(
+        '.cj-tree-card--creation-limit-parent.is-expanded[data-cj-expand-creation-limit="' + key + '"]'
+      );
+      anchorConnectorToCard(connector, panel, card, branch);
+    });
+
+    list.querySelectorAll('[data-cj-listing-limit-branch]').forEach(function (branch) {
+      var key = branch.getAttribute('data-cj-listing-limit-branch');
+      var connector = branch.querySelector(':scope > .cj-variant-connector');
+      var panel = branch.querySelector(':scope > .cj-variant-panel');
+      if (!connector || !key) return;
+      var section = branch.closest('.cj-product-section') || list;
+      var card = section.querySelector(
+        '.cj-tree-card--listing-channel.is-expanded[data-cj-expand-listing-limit="' + key + '"]'
+      );
       anchorConnectorToCard(connector, panel, card, branch);
     });
   }

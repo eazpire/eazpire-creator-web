@@ -1215,6 +1215,34 @@
   transform: translateX(-50%);
 }
 
+.cj-variant-connector.is-orthogonal {
+  left: 0;
+  top: var(--cj-connector-top, 0px);
+  width: 100%;
+  height: var(--cj-connector-h, 16px);
+  transform: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.cj-variant-connector.is-orthogonal svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cj-variant-connector__path {
+  fill: none;
+  stroke: rgba(255, 200, 60, 0.95);
+  stroke-width: 3;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  filter: drop-shadow(0 0 10px rgba(255, 157, 0, 0.45));
+}
+
 .cj-variant-connector--size {
   height: 14px;
 }
@@ -3283,6 +3311,24 @@
 .cj-creation-limit-parents [data-cj-carousel] {
   flex: 1 1 280px;
   min-width: 0;
+}
+
+.cj-creation-limit-branch,
+.cj-listing-limit-branch {
+  margin-top: 0;
+  padding-top: 16px;
+}
+
+.cj-tree-card.is-expanded.cj-tree-card--creation-limit-parent,
+.cj-tree-card.is-expanded.cj-tree-card--listing-channel {
+  position: relative;
+  z-index: 1;
+}
+
+.cj-tree-card.is-expanded.cj-tree-card--creation-limit-parent .cj-tree-card__frame,
+.cj-tree-card.is-expanded.cj-tree-card--listing-channel .cj-tree-card__frame {
+  border-width: 2px;
+  transform: translateY(-2px);
 }
 
 .cj-tree-card__economy-link {
