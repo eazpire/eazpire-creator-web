@@ -27,6 +27,7 @@
   var posBarEl = null;
   var panelDesignEl = null;
   var panelVariantsEl = null;
+  var panelPriceEl = null;
   var addMenuEl = null;
   var addMenuTitleEl = null;
   var addMenuBackEl = null;
@@ -119,6 +120,8 @@
 
   var MAX_OWN_ADDITIONAL = 5;
   var MAX_PUBLIC_ADDITIONAL = 1;
+  var STUDIO_MIN_PROFIT_USD_CENTS = 100;
+  var COMMUNITY_SHARE_PERCENT = 50;
   /** Manual scale ceiling (zone-width fraction). Overflow is clipped by the print-zone, not capped to contain. */
   var UI_SCALE_MAX = 2.5;
   var DEFAULT_TRANSFORM = { x: 0.5, y: 0.5, scale: 0.95, rotate: 0, flipX: false, flipY: false };
@@ -135,6 +138,145 @@
 
   function Mi() {
     return window.CreatorMobileI18n || {};
+  }
+
+  function formatUsdCents(cents) {
+    var n = (Number(cents) || 0) / 100;
+    return '$' + n.toFixed(2);
+  }
+
+  function formatApproxUsdCents(cents) {
+    return '~' + formatUsdCents(cents);
+  }
+
+  function tpl(key, fallback, vars) {
+    var s = t(key, fallback);
+    if (!vars) return s;
+    for (var k in vars) {
+      if (Object.prototype.hasOwnProperty.call(vars, k)) {
+        s = s.split('{{ ' + k + ' }}').join(String(vars[k]));
+      }
+    }
+    return s;
+  }
+
+  function netProfitFromCreatorProfitJs(creatorProfitCents, royaltyPercent) {
+    var profit = Math.max(0, Math.round(Number(creatorProfitCents) || 0));
+    var pct = Math.max(0, Number(royaltyPercent) || 0);
+    if (profit <= 0 || pct <= 0) return 0;
+    return Math.round((profit * (COMMUNITY_SHARE_PERCENT + pct)) / pct);
+  }
+
+  function creatorEarnAtTierJs(netProfitCents, royaltyPercent) {
+    var net = Math.max(0, Math.round(Number(netProfitCents) || 0));
+    var pct = Math.max(0, Number(royaltyPercent) || 0);
+    var denom = COMMUNITY_SHARE_PERCENT + pct;
+    if (net <= 0 || denom <= 0) return 0;
+    return Math.round((net * pct) / denom);
+  }
+
+  function sellPriceFromCostsJs(baseCostCents, netProfitCents) {
+    return Math.max(0, Math.round(Number(baseCostCents) || 0) + Math.round(Number(netProfitCents) || 0));
+  }
+
+  function profitCentsToEazcJs(creatorProfitCents, eazCentsPerEaz) {
+    var cents = Number(creatorProfitCents) || 0;
+    var rate = Number(eazCentsPerEaz) || 10;
+    if (cents <= 0 || rate <= 0) return 0;
+    return Math.round((cents / rate) * 100) / 100;
+  }
+
+  function royaltyCtx() {
+    return (ctxData && ctxData.royalty) || { tier: 0, percent: 0, tiers: [] };
+  }
+
+  function pricingCtx() {
+    return (ctxData && ctxData.pricing) || null;
+  }
+
+  function getCreatorProfitCents() {
+    draft.prices = draft.prices || { creator_profit_cents: null, by_variant_id: {} };
+    var stored = draft.prices.creator_profit_cents;
+    if (stored != null && Number.isFinite(Number(stored))) {
+      return Math.max(STUDIO_MIN_PROFIT_USD_CENTS, Math.round(Number(stored)));
+    }
+    var p = pricingCtx();
+    if (p && p.creator_profit_cents != null) return Math.max(STUDIO_MIN_PROFIT_USD_CENTS, Number(p.creator_profit_cents));
+    return STUDIO_MIN_PROFIT_USD_CENTS;
+  }
+
+  function computeLocalPricing(creatorProfitCents) {
+    var roy = royaltyCtx();
+    var pct = Number(roy.percent) || 0;
+    var profit = Math.max(STUDIO_MIN_PROFIT_USD_CENTS, Math.round(Number(creatorProfitCents) || 0));
+    var netProfit = netProfitFromCreatorProfitJs(profit, pct);
+    var community = COMMUNITY_SHARE_PERCENT + pct > 0
+      ? Math.round((netProfit * COMMUNITY_SHARE_PERCENT) / (COMMUNITY_SHARE_PERCENT + pct))
+      : 0;
+    var creatorShare = COMMUNITY_SHARE_PERCENT + pct > 0
+      ? Math.round((netProfit * pct) / (COMMUNITY_SHARE_PERCENT + pct))
+      : 0;
+    var eazpire = Math.max(0, Math.round((netProfit * (COMMUNITY_SHARE_PERCENT - pct)) / 100));
+    var tiers = Array.isArray(roy.tiers) ? roy.tiers : [];
+    var tierComparison = tiers.map(function (row) {
+      return {
+        tier: row.tier,
+        percent: row.percent,
+        unlocked: !!row.unlocked,
+        is_current: !!row.is_current,
+        creator_profit_cents: creatorEarnAtTierJs(netProfit, row.percent),
+      };
+    });
+    var variantPrices = [];
+    var groups = (ctxData && ctxData.variant_groups) || {};
+    var keys = Object.keys(groups);
+    var sellMin = null;
+    var sellMax = null;
+    for (var g = 0; g < keys.length; g++) {
+      var items = groups[keys[g]] || [];
+      for (var i = 0; i < items.length; i++) {
+        var v = items[i];
+        if (!v || !v.in_admin_pool) continue;
+        var cost = Math.max(0, Math.round(Number(v.cost_cents) || 0));
+        var sell = sellPriceFromCostsJs(cost, netProfit);
+        variantPrices.push({ id: Number(v.id), color: keys[g], size: v.size, sell_price_cents: sell });
+        if (sellMin == null || sell < sellMin) sellMin = sell;
+        if (sellMax == null || sell > sellMax) sellMax = sell;
+      }
+    }
+    if (sellMin == null) {
+      var p = pricingCtx();
+      sellMin = p && p.sell_price_min_cents != null ? Number(p.sell_price_min_cents) : 0;
+      sellMax = p && p.sell_price_max_cents != null ? Number(p.sell_price_max_cents) : sellMin;
+    }
+    var eazRate = (pricingCtx() && pricingCtx().eaz_cents_per_eaz) || 10;
+    return {
+      creator_profit_cents: profit,
+      net_profit_cents: netProfit,
+      breakdown: {
+        community_cents: community,
+        creator_profit_cents: creatorShare,
+        eazpire_cents: eazpire,
+      },
+      tier_comparison: tierComparison,
+      sell_price_min_cents: sellMin,
+      sell_price_max_cents: sellMax,
+      variant_prices: variantPrices,
+      eazc_amount: profitCentsToEazcJs(creatorShare, eazRate),
+    };
+  }
+
+  function syncDraftPricesFromProfit(creatorProfitCents) {
+    var calc = computeLocalPricing(creatorProfitCents);
+    draft.prices = draft.prices || { creator_profit_cents: null, by_variant_id: {} };
+    draft.prices.creator_profit_cents = calc.creator_profit_cents;
+    var byId = {};
+    for (var i = 0; i < calc.variant_prices.length; i++) {
+      var vp = calc.variant_prices[i];
+      byId[String(vp.id)] = { sell_price_cents: vp.sell_price_cents };
+    }
+    draft.prices.by_variant_id = byId;
+    return calc;
   }
 
   function apiBase() {
@@ -828,6 +970,7 @@
     colorGridEl = root.querySelector('#cds-color-grid');
     panelDesignEl = root.querySelector('#cds-panel-design');
     panelVariantsEl = root.querySelector('#cds-panel-variants');
+    panelPriceEl = root.querySelector('#cds-panel-price');
     addMenuEl = root.querySelector('#cds-add-menu');
     addMenuTitleEl = root.querySelector('#cds-add-menu-title');
     addMenuBackEl = root.querySelector('#cds-add-menu-back');
@@ -2537,11 +2680,166 @@
     });
   }
 
+  function renderPriceSettingsPanel() {
+    if (!panelPriceEl || !ctxData) return;
+    var roy = royaltyCtx();
+    var profitCents = getCreatorProfitCents();
+    var calc = computeLocalPricing(profitCents);
+    var profitUsd = (profitCents / 100).toFixed(2);
+
+    var html = '';
+    html += '<div class="cds-price-section">';
+    html += '<label class="cds-price-label" for="cds-profit-input">' + t('designStudioPriceProfitLabel', 'Your profit per sale') + '</label>';
+    html += '<p class="cds-muted cds-price-hint">' + tpl('design_studio_price_profit_hint', 'Based on your current Royalty tier (Tier {{ tier }} · {{ pct }}%).', {
+      tier: String(roy.tier || 0),
+      pct: String(roy.percent || 0),
+    }) + '</p>';
+    html += '<div class="cds-price-input-row">';
+    html += '<span class="cds-price-currency" aria-hidden="true">$</span>';
+    html += '<input type="number" class="cds-price-input" id="cds-profit-input" min="1" step="0.01" value="' + profitUsd + '" inputmode="decimal">';
+    html += '<span class="cds-price-currency-suffix">USD</span>';
+    html += '</div>';
+    html += '<p class="cds-price-error" id="cds-profit-error" hidden></p>';
+    html += '<p class="cds-muted cds-price-disclaimer">' + t('designStudioPriceProfitDisclaimer', 'Approximate — actual profit may vary with discounts and promotions.') + '</p>';
+    html += '</div>';
+
+    html += '<div class="cds-price-section">';
+    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceRangeLabel', 'Customer price range') + '</span>';
+    html += '<span class="cds-price-row__value">' + formatApproxUsdCents(calc.sell_price_min_cents);
+    if (calc.sell_price_max_cents > calc.sell_price_min_cents) {
+      html += ' – ' + formatUsdCents(calc.sell_price_max_cents).replace('~', '');
+    }
+    html += '</span></div></div>';
+
+    html += '<div class="cds-price-section">';
+    html += '<h4 class="cds-price-heading">' + t('designStudioPriceBreakdownTitle', 'Net profit split') + '</h4>';
+    html += '<div class="cds-price-breakdown">';
+    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownNet', 'Net profit (margin)') + '</span><span class="cds-price-row__value">' + formatApproxUsdCents(calc.net_profit_cents) + '</span></div>';
+    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownCreator', 'Your share') + '</span><span class="cds-price-row__value cds-price-row__value--accent">' + formatApproxUsdCents(calc.breakdown.creator_profit_cents) + '</span></div>';
+    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownCommunity', 'Community pool') + '</span><span class="cds-price-row__value">' + formatApproxUsdCents(calc.breakdown.community_cents) + '</span></div>';
+    html += '<div class="cds-price-row"><span class="cds-price-row__label">' + t('designStudioPriceBreakdownEazpire', 'Eazpire share') + '</span><span class="cds-price-row__value">' + formatApproxUsdCents(calc.breakdown.eazpire_cents) + '</span></div>';
+    html += '</div></div>';
+
+    html += '<div class="cds-price-section">';
+    html += '<h4 class="cds-price-heading">' + t('designStudioPriceRoyaltyTitle', 'Royalty tier comparison') + '</h4>';
+    html += '<div class="cds-price-tier-list">';
+    for (var ti = 0; ti < calc.tier_comparison.length; ti++) {
+      var row = calc.tier_comparison[ti];
+      var cls = 'cds-price-tier' + (row.is_current ? ' is-current' : '') + (!row.unlocked ? ' is-locked' : '');
+      html += '<div class="' + cls + '">';
+      html += '<span class="cds-price-tier__name">' + tpl('design_studio_price_royalty_tier_row', 'Tier {{ tier }} · {{ pct }}%', {
+        tier: String(row.tier),
+        pct: String(row.percent),
+      });
+      if (row.is_current) {
+        html += ' <span class="cds-price-tier__badge">' + t('designStudioPriceRoyaltyCurrent', 'Current tier') + '</span>';
+      } else if (!row.unlocked) {
+        html += ' <span class="cds-price-tier__badge cds-price-tier__badge--locked">' + t('designStudioPriceRoyaltyLocked', 'Locked') + '</span>';
+      }
+      html += '</span>';
+      html += '<span class="cds-price-tier__earn">' + formatApproxUsdCents(row.creator_profit_cents) + '</span>';
+      html += '</div>';
+    }
+    html += '</div></div>';
+
+    html += '<div class="cds-price-section cds-price-eazc">';
+    html += '<h4 class="cds-price-heading">' + t('designStudioPriceEazcTitle', 'EAZC earnings') + '</h4>';
+    html += '<p class="cds-price-eazc__amount">' + tpl('design_studio_price_eazc_amount', '~{{ amount }} EAZC per sale', {
+      amount: String(calc.eazc_amount.toFixed(2)),
+    }) + '</p>';
+    html += '<p class="cds-muted">' + t('designStudioPriceEazcHint', 'You earn EAZC from sales. Convert EAZC to shop credit or cash out later in Creator Settings.') + '</p>';
+    html += '<p class="cds-muted">' + t('designStudioPriceEazcConvert', 'EAZC can be converted to fiat after it becomes available.') + '</p>';
+    html += '</div>';
+
+    html += '<div class="cds-price-section">';
+    html += '<h4 class="cds-price-heading">' + t('designStudioPriceVariantsTitle', 'Variant prices') + '</h4>';
+    html += '<p class="cds-muted">' + t('designStudioPriceVariantReadonly', 'Final price (read-only)') + '</p>';
+
+    var groups = (ctxData.variant_groups) || {};
+    var colorKeys = Object.keys(groups).filter(function (color) {
+      return (groups[color] || []).some(function (v) { return v && v.in_admin_pool; });
+    });
+    colorKeys.sort(function (a, b) { return String(a).localeCompare(String(b)); });
+
+    var priceById = {};
+    for (var pi = 0; pi < calc.variant_prices.length; pi++) {
+      priceById[calc.variant_prices[pi].id] = calc.variant_prices[pi].sell_price_cents;
+    }
+
+    var openColors = {};
+    panelPriceEl.querySelectorAll('.cds-color-group.is-open').forEach(function (el) {
+      var ck = decodeURIComponent(el.getAttribute('data-color-group') || '');
+      if (ck) openColors[ck] = true;
+    });
+
+    if (!colorKeys.length) {
+      html += '<p class="cds-muted">' + t('designStudioNoVariants', 'No variants in admin pool.') + '</p>';
+    }
+
+    for (var g = 0; g < colorKeys.length; g++) {
+      var color = colorKeys[g];
+      var items = (groups[color] || []).filter(function (v) { return v && v.in_admin_pool; });
+      var sample = items[0] || { color: color };
+      var openByDefault = openColors[color] || g === 0;
+      html += '<div class="cds-color-group' + (openByDefault ? ' is-open' : '') + '" data-color-group="' + encodeURIComponent(color) + '">';
+      html += '<div class="cds-color-head cds-color-head--readonly">';
+      html += '<button type="button" class="cds-color-dot" style="' + colorDotStyle(sample) + '" tabindex="-1" aria-hidden="true"></button>';
+      html += '<button type="button" class="cds-color-name" data-cds-color-toggle>' + color + '</button>';
+      html += '<button type="button" class="cds-color-toggle" data-cds-color-toggle aria-label="Toggle sizes">▾</button>';
+      html += '</div><div class="cds-color-body"><div class="cds-size-list">';
+      for (var si = 0; si < items.length; si++) {
+        var vv = items[si];
+        var sell = priceById[Number(vv.id)];
+        html += '<div class="cds-size-row cds-size-row--readonly"><span class="cds-size-label">' + vv.size + '</span>';
+        html += '<span class="cds-size-price">' + (sell != null ? formatApproxUsdCents(sell) : '—') + '</span></div>';
+      }
+      html += '</div></div></div>';
+    }
+    html += '</div>';
+
+    panelPriceEl.innerHTML = html;
+
+    panelPriceEl.querySelectorAll('[data-cds-color-toggle]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var grp = el.closest('.cds-color-group');
+        if (grp) grp.classList.toggle('is-open');
+      });
+    });
+
+    var profitInput = panelPriceEl.querySelector('#cds-profit-input');
+    var profitError = panelPriceEl.querySelector('#cds-profit-error');
+    if (profitInput) {
+      profitInput.addEventListener('input', function () {
+        var val = parseFloat(profitInput.value);
+        if (isNaN(val) || val < 0) {
+          if (profitError) {
+            profitError.hidden = false;
+            profitError.textContent = t('designStudioPriceMinError', 'Minimum profit is $1.00 USD.');
+          }
+          return;
+        }
+        var cents = Math.round(val * 100);
+        if (cents < STUDIO_MIN_PROFIT_USD_CENTS) {
+          if (profitError) {
+            profitError.hidden = false;
+            profitError.textContent = t('designStudioPriceMinError', 'Minimum profit is $1.00 USD.');
+          }
+          return;
+        }
+        if (profitError) profitError.hidden = true;
+        syncDraftPricesFromProfit(cents);
+        renderPriceSettingsPanel();
+        markDirtyUi();
+      });
+    }
+  }
+
   function switchSettingsTab(tab) {
     if (isStudioBusy() && tab !== activeSettingsTab) return;
-    var next = tab === 'variants' ? 'variants' : 'design';
+    var next = tab === 'variants' ? 'variants' : tab === 'price' ? 'price' : 'design';
     if (next === activeSettingsTab) {
       if (activeSettingsTab === 'variants') renderVariantSettingsPanel();
+      if (activeSettingsTab === 'price') renderPriceSettingsPanel();
       return;
     }
     activeSettingsTab = next;
@@ -2560,6 +2858,10 @@
       setAssetSelected(false);
       renderVariantSettingsPanel();
     }
+    if (activeSettingsTab === 'price') {
+      if (cropping) exitCropMode(true);
+      renderPriceSettingsPanel();
+    }
     renderViewer();
   }
 
@@ -2567,6 +2869,7 @@
     renderViewer();
     renderDesignSettingsPanel();
     renderVariantSettingsPanel();
+    renderPriceSettingsPanel();
   }
 
   function clampCropFrac(f) {

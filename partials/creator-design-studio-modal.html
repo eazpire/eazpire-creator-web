@@ -125,12 +125,23 @@
 
       <aside class="cds-settings-column">
         <div class="cds-settings-tabs" role="tablist">
-          <button type="button" class="cds-settings-tab is-active" data-cds-settings-tab="design" role="tab" aria-selected="true" data-t="creator.design_studio.tab_design_settings">Design Settings</button>
-          <button type="button" class="cds-settings-tab" data-cds-settings-tab="variants" role="tab" aria-selected="false" data-t="creator.design_studio.tab_variant_settings">Variant Settings</button>
+          <button type="button" class="cds-settings-tab is-active" data-cds-settings-tab="design" role="tab" aria-selected="true">
+            <span class="cds-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4z" stroke="currentColor" stroke-width="1.8"/></svg></span>
+            <span class="cds-tab-label" data-t="creator.design_studio.tab_design">Design</span>
+          </button>
+          <button type="button" class="cds-settings-tab" data-cds-settings-tab="variants" role="tab" aria-selected="false">
+            <span class="cds-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="cds-tab-label" data-t="creator.design_studio.tab_variants">Variants</span>
+          </button>
+          <button type="button" class="cds-settings-tab" data-cds-settings-tab="price" role="tab" aria-selected="false">
+            <span class="cds-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+            <span class="cds-tab-label" data-t="creator.design_studio.tab_price">Price</span>
+          </button>
         </div>
         <div class="cds-settings-scroll" id="cds-settings-scroll">
           <div class="cds-settings-panel is-active" data-cds-settings-panel="design" id="cds-panel-design"></div>
           <div class="cds-settings-panel" data-cds-settings-panel="variants" id="cds-panel-variants" hidden></div>
+          <div class="cds-settings-panel" data-cds-settings-panel="price" id="cds-panel-price" hidden></div>
         </div>
         <footer class="cds-settings-footer">
           <div class="cds-settings-footer__left">
