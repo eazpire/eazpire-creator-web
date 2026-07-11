@@ -1648,7 +1648,7 @@ html.creator-design-products-modal-open {
   justify-content: center;
   margin-top: 8px;
 }
-.creator-design-products-modal__card-media img {
+.creator-design-products-modal__card-media:not(.creator-design-products-modal__card-media--composed) img {
   width: 100%;
   height: 100%;
   object-fit: contain;

@@ -129,12 +129,16 @@
 
   function designPreviewUrl() {
     if (!ctxDesign) return '';
-    return (
-      ctxDesign.preview_url ||
-      ctxDesign.image_url ||
-      ctxDesign.original_url ||
-      ''
-    );
+    var d = ctxDesign;
+    var result = d.result;
+    if (result && typeof result === 'object') {
+      var fromResult = result.preview_url || result.image_url || result.original_url || '';
+      if (fromResult) return String(fromResult).trim();
+    }
+    if (typeof result === 'string' && result.indexOf('http') === 0) {
+      return String(result).trim();
+    }
+    return String(d.preview_url || d.image_url || d.original_url || '').trim();
   }
 
   function parseZoneFrac(f) {
@@ -259,8 +263,9 @@
     designImg.classList.add('is-laid-out');
   }
 
-  function layoutCardPreviewStack(stackEl) {
+  function layoutCardPreviewStack(stackEl, attempt) {
     if (!stackEl) return;
+    var tries = typeof attempt === 'number' ? attempt : 0;
     var frame = stackEl.querySelector('.creator-design-products-modal__card-frame');
     var stage = stackEl.querySelector('.creator-design-products-modal__card-stage');
     var mock = stackEl.querySelector('.creator-design-products-modal__card-mock');
@@ -268,7 +273,14 @@
     var design = stackEl.querySelector('.creator-design-products-modal__card-design');
     if (!frame || !stage || !mock) return;
     if (!mock.complete || !mock.naturalWidth || !mock.naturalHeight) return;
-    if (!fitCardPreviewStage(stage, mock, frame)) return;
+    if (!fitCardPreviewStage(stage, mock, frame)) {
+      if (tries < 10) {
+        requestAnimationFrame(function () {
+          layoutCardPreviewStack(stackEl, tries + 1);
+        });
+      }
+      return;
+    }
     if (!zone || !design) return;
     if (!design.complete || !design.naturalWidth) return;
     var placement = null;
@@ -378,6 +390,7 @@
     function bindLoad(img) {
       if (img.complete && img.naturalWidth) return true;
       img.addEventListener('load', afterImagesReady, { once: true });
+      img.addEventListener('error', afterImagesReady, { once: true });
       return false;
     }
 
@@ -479,7 +492,9 @@
     var singleStage = document.createElement('div');
     singleStage.className = 'creator-design-products-modal__card-stage';
     singleStage.setAttribute('data-product-key', productKey);
-    singleStage.appendChild(buildCardPreviewStack(slides[0], designUrl));
+    var singleStack = buildCardPreviewStack(slides[0], designUrl);
+    singleStack.classList.add('is-active');
+    singleStage.appendChild(singleStack);
     mediaEl.appendChild(singleStage);
   }
 
@@ -589,14 +604,21 @@
 
   function mountCardMediaCarousel(mediaEl, productKey, urls, previewConfig, designUrl) {
     if (!mediaEl) return;
-    if (previewConfig && previewConfig.slides && previewConfig.slides.length && designUrl) {
-      observeCardMediaWhenVisible(mediaEl, function () {
+    var mountFn = function () {
+      if (previewConfig && previewConfig.slides && previewConfig.slides.length && designUrl) {
         mountCardMediaComposited(mediaEl, productKey, previewConfig, designUrl);
-      });
-      return;
-    }
-    observeCardMediaWhenVisible(mediaEl, function () {
+        return;
+      }
       mountCardMediaCarouselPlain(mediaEl, productKey, urls);
+    };
+    // Mount immediately so cards in the Design Preview products panel always composite
+    // (lazy IO skipped when panel/tab was hidden during first paint).
+    mountFn();
+    requestAnimationFrame(function () {
+      if (previewConfig && previewConfig.slides && previewConfig.slides.length && designUrl) {
+        var stack = mediaEl.querySelector('.creator-design-products-modal__card-slide--composed.is-active');
+        if (stack) layoutCardPreviewStack(stack);
+      }
     });
   }
 
