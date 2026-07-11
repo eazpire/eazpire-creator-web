@@ -1769,11 +1769,12 @@
 .cds-preview-content {
   flex: 1 1 auto;
   display: grid;
-  /* Two 1:1 view thumbs side-by-side + main preview */
-  grid-template-columns: minmax(168px, 200px) 1fr;
-  gap: 10px;
+  /* Larger 1:1 view thumbs + main preview hugging mock aspect */
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
   min-height: 0;
-  padding: 8px 12px 6px;
+  padding: 6px 10px 4px;
   overflow: hidden;
 }
 
@@ -1784,7 +1785,7 @@
 .cds-preview-views {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
   align-content: start;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1802,7 +1803,7 @@
 .cds-preview-view {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   padding: 0;
   border: 2px solid transparent;
   border-radius: 10px;
@@ -1831,7 +1832,7 @@
 }
 
 .cds-preview-view__label {
-  padding: 0 4px 6px;
+  padding: 0 3px 4px;
   font-size: 0.65rem;
   font-weight: 600;
   line-height: 1.2;
@@ -1840,21 +1841,30 @@
   text-overflow: ellipsis;
 }
 
+/* Hug the mock image — no large empty letterbox frame around a smaller square */
 .cds-preview-main {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 260px;
+  justify-self: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 0;
+  margin: 0 auto;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  overflow: hidden;
+  background: transparent;
+  overflow: visible;
 }
 
 .cds-preview-main__img {
+  display: block;
+  width: auto;
+  height: auto;
   max-width: 100%;
   max-height: min(62dvh, 560px);
   object-fit: contain;
+  border-radius: 12px;
 }
 
 .cds-preview-main__img[hidden],
@@ -1971,9 +1981,13 @@
 
 @media (max-width: 720px) {
   .cds-preview-content {
-    grid-template-columns: minmax(132px, 152px) 1fr;
-    padding: 6px 10px 4px;
-    gap: 8px;
+    grid-template-columns: minmax(156px, 180px) minmax(0, 1fr);
+    padding: 4px 8px 4px;
+    gap: 4px;
+  }
+
+  .cds-preview-views {
+    gap: 4px;
   }
 
   .cds-preview-main__img {
