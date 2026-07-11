@@ -371,6 +371,14 @@ body.creator-mobile-page .creator-toggle__thumb {
   cursor: pointer;
 }
 
+body.creator-mobile-page .creator-toggle.creator-toggle--creator .creator-toggle__thumb {
+  left: calc(50% + 1px);
+}
+
+body.creator-mobile-page .creator-toggle:not(.creator-toggle--creator) .creator-toggle__thumb {
+  left: 2px;
+}
+
 body.creator-mobile-page .creator-toggle__thumb-label {
   display: none;
   position: relative;

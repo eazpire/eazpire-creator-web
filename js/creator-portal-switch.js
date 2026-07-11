@@ -49,6 +49,15 @@
     return value || "/";
   }
 
+  var PORTAL_CREATOR_PATHS = [
+    "/",
+    "/dashboard",
+    "/generator",
+    "/creations",
+    "/marketing",
+    "/automations",
+  ];
+
   function navigateWithTransition(targetUrl, transitionDir) {
     var url = targetUrl;
     if (url && typeof url.then === "function") {
@@ -116,6 +125,12 @@
 
     function snapThumb(mode, animate) {
       calcBounds();
+      var rt = track.getBoundingClientRect();
+      if (rt.width < 8) {
+        thumb.style.left = "";
+        thumb.style.transition = "";
+        return;
+      }
       thumb.style.transition = animate === false ? "none" : "left 0.2s ease";
       thumb.style.left = (mode === "creator" ? maxLeft : minLeft) + "px";
       if (animate === false) {
@@ -128,10 +143,20 @@
     function applyMode(mode, animate) {
       var targetMode = mode === "creator" ? "creator" : "shop";
       root.classList.toggle("creator-toggle--creator", targetMode === "creator");
-      snapThumb(targetMode, animate);
+      if (dragging) {
+        snapThumb(targetMode, animate);
+        return;
+      }
+      thumb.style.transition = animate === false ? "none" : "";
+      thumb.style.left = "";
+      raf(function () {
+        snapThumb(targetMode, animate);
+      });
     }
 
     function modeFromPath() {
+      if (global.__CREATOR_PORTAL_HOST__) return "creator";
+
       var currentPath = normalizePath(global.location.pathname || "/");
       var onCreatorPage = false;
 
@@ -141,8 +166,7 @@
           if (path === "/") return currentPath === "/";
           return (
             currentPath === path ||
-            currentPath.indexOf(path + "/") === 0 ||
-            currentPath.indexOf(path) > -1
+            currentPath.indexOf(path + "/") === 0
           );
         });
       }
@@ -156,16 +180,24 @@
         });
       }
 
-      if (global.__CREATOR_PORTAL_HOST__ && (currentPath === "/" || currentPath === "/dashboard" || creatorPaths.indexOf(currentPath) >= 0)) {
-        onCreatorPage = true;
+      if (!onCreatorPage && global.__CREATOR_PORTAL_HOST__) {
+        onCreatorPage = PORTAL_CREATOR_PATHS.indexOf(currentPath) >= 0;
       }
 
       return onCreatorPage ? "creator" : "shop";
     }
 
-    applyMode(currentMode() || "creator", false);
-    var pathMode = modeFromPath();
-    if (pathMode) applyMode(pathMode, false);
+    function syncToggleFromRoute() {
+      var pathMode = modeFromPath();
+      applyMode(pathMode, false);
+    }
+
+    syncToggleFromRoute();
+    raf(function () {
+      raf(syncToggleFromRoute);
+    });
+
+    root.__syncCreatorPortalToggle = syncToggleFromRoute;
 
     function onDown(e) {
       e.preventDefault();
@@ -261,4 +293,24 @@
       });
     });
   });
+
+  function syncAllPortalToggles() {
+    document.querySelectorAll(".creator-toggle, .creator-drawer-toggle").forEach(function (root) {
+      if (typeof root.__syncCreatorPortalToggle === "function") {
+        root.__syncCreatorPortalToggle();
+      }
+    });
+  }
+
+  global.CreatorPortalSwitch = { syncAll: syncAllPortalToggles };
+
+  raf(function () {
+    raf(syncAllPortalToggles);
+  });
+
+  global.addEventListener("pageshow", function (ev) {
+    if (ev.persisted) syncAllPortalToggles();
+  });
+
+  global.addEventListener("popstate", syncAllPortalToggles);
 })(typeof window !== "undefined" ? window : globalThis);

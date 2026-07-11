@@ -104,6 +104,14 @@
           }
         }
 
+        if (global.CreatorPortalSwitch && typeof global.CreatorPortalSwitch.syncAll === "function") {
+          global.CreatorPortalSwitch.syncAll();
+        }
+
+        if (global.__CreatorThemeBackground && typeof global.__CreatorThemeBackground.resumeAllThemeBgVideos === "function") {
+          global.__CreatorThemeBackground.resumeAllThemeBgVideos();
+        }
+
         await afterAuth();
 
         if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {

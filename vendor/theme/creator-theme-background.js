@@ -87,9 +87,34 @@
     video.play().catch(function () {});
   }
 
+  function bindThemeBgVideoLoop(video) {
+    if (!video || video.__creatorBgLoopBound) return;
+    video.__creatorBgLoopBound = true;
+
+    video.addEventListener("ended", function () {
+      try {
+        video.currentTime = 0;
+      } catch (_) {}
+      playThemeBgVideo(video);
+    });
+
+    video.addEventListener("stalled", function () {
+      if (!document.hidden) playThemeBgVideo(video);
+    });
+  }
+
+  function ensureThemeBgVideoPlaying(video) {
+    if (!video || document.hidden || !eazAnim("creator", "theme_bg_video")) return;
+    if (video.__creatorBgPauseAllowed) return;
+    if (video.paused || video.ended) {
+      playThemeBgVideo(video);
+    }
+  }
+
   function resumeAllThemeBgVideos() {
     if (!eazAnim("creator", "theme_bg_video")) return;
     document.querySelectorAll(".creator-theme-bg-video").forEach(function (video) {
+      video.__creatorBgPauseAllowed = false;
       playThemeBgVideo(video);
     });
   }
@@ -142,12 +167,17 @@
     video.muted = true;
     video.loop = true;
     video.playsInline = true;
-    video.autoplay = false;
-    video.preload = "none";
+    video.autoplay = true;
+    video.preload = "auto";
+    video.setAttribute("loop", "");
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("autoplay", "");
     video.setAttribute("disablepictureinpicture", "");
     if (posterUrl) video.poster = posterUrl;
     video.src = url;
     layer.appendChild(video);
+    bindThemeBgVideoLoop(video);
     startVideoWhenVisible(video);
   }
 
@@ -304,6 +334,7 @@
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) {
       document.querySelectorAll(".creator-theme-bg-video").forEach(function (video) {
+        video.__creatorBgPauseAllowed = true;
         try {
           video.pause();
         } catch (_) {}
@@ -316,6 +347,16 @@
   document.addEventListener("creator:shell-screen-change", function () {
     resumeAllThemeBgVideos();
   });
+
+  window.addEventListener("pageshow", function (ev) {
+    if (!ev.persisted) return;
+    resumeAllThemeBgVideos();
+  });
+
+  setInterval(function () {
+    if (document.hidden) return;
+    document.querySelectorAll(".creator-theme-bg-video").forEach(ensureThemeBgVideoPlaying);
+  }, 12000);
 
   window.__CreatorThemeBackground = {
     resumeAllThemeBgVideos: resumeAllThemeBgVideos,
