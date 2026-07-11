@@ -99,6 +99,11 @@
   var draft = null;
   var savedDraftJson = '';
   var activeSettingsTab = 'design';
+  var eazyBtnEl = null;
+  var eazyTipEl = null;
+  var eazyTipTextEl = null;
+  var eazyTipOpen = false;
+  var eazyOutsideBound = false;
   /** Variant Settings mock layout: 'single' | 'grid' */
   var variantGridMode = 'single';
   var activeAssetKey = null;
@@ -1032,6 +1037,9 @@
     previewColorCarouselEl = root.querySelector('#cds-preview-color-carousel');
     previewColorPrevEl = root.querySelector('#cds-preview-color-prev');
     previewColorNextEl = root.querySelector('#cds-preview-color-next');
+    eazyBtnEl = root.querySelector('#cds-eazy-btn');
+    eazyTipEl = root.querySelector('#cds-eazy-tip');
+    eazyTipTextEl = root.querySelector('#cds-eazy-tip-text');
     return true;
   }
 
@@ -2851,6 +2859,75 @@
     }
   }
 
+  function eazyTipTextForTab(tab) {
+    if (tab === 'variants') {
+      return t(
+        'designStudioEazyTipVariants',
+        'Choose which colors and sizes go live. Locked variants stay visible but cannot be selected until you unlock them in the Skill Tree.'
+      );
+    }
+    if (tab === 'price') {
+      return t(
+        'designStudioEazyTipPrice',
+        'Set your profit per sale — minimum $1.00 USD. Customer prices update automatically. Compare royalty tiers to see how upgrades affect your share and EAZC earnings.'
+      );
+    }
+    return t(
+      'designStudioEazyTipDesign',
+      'Drag your design on the mock to position it. Use Fit or Fill for quick placement, crop for fine-tuning, and Add Design for extra layers (up to 5 of your own + 1 public).'
+    );
+  }
+
+  function hideEazyTip() {
+    eazyTipOpen = false;
+    if (eazyBtnEl) eazyBtnEl.setAttribute('aria-expanded', 'false');
+    if (eazyTipEl) {
+      eazyTipEl.classList.remove('is-visible');
+      eazyTipEl.hidden = true;
+      eazyTipEl.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function showEazyTip() {
+    if (!eazyTipEl || !eazyTipTextEl) return;
+    eazyTipTextEl.textContent = eazyTipTextForTab(activeSettingsTab);
+    eazyTipOpen = true;
+    if (eazyBtnEl) eazyBtnEl.setAttribute('aria-expanded', 'true');
+    eazyTipEl.hidden = false;
+    eazyTipEl.setAttribute('aria-hidden', 'false');
+    eazyTipEl.classList.add('is-visible');
+  }
+
+  function toggleEazyTip() {
+    if (eazyTipOpen) hideEazyTip();
+    else showEazyTip();
+  }
+
+  function updateEazyTipContent() {
+    if (!eazyTipOpen || !eazyTipTextEl) return;
+    eazyTipTextEl.textContent = eazyTipTextForTab(activeSettingsTab);
+  }
+
+  function onEazyOutsideClick(e) {
+    if (!eazyTipOpen || !root) return;
+    var wrap = root.querySelector('#cds-eazy-wrap');
+    if (!wrap || wrap.contains(e.target)) return;
+    hideEazyTip();
+  }
+
+  function bindEazyTip() {
+    if (!eazyBtnEl || eazyBtnEl.dataset.cdsEazyBound) return;
+    eazyBtnEl.dataset.cdsEazyBound = '1';
+    eazyBtnEl.addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggleEazyTip();
+    });
+    if (!eazyOutsideBound) {
+      eazyOutsideBound = true;
+      document.addEventListener('pointerdown', onEazyOutsideClick, true);
+    }
+  }
+
   function switchSettingsTab(tab) {
     if (isStudioBusy() && tab !== activeSettingsTab) return;
     var next = tab === 'variants' ? 'variants' : tab === 'price' ? 'price' : 'design';
@@ -2880,6 +2957,7 @@
       renderPriceSettingsPanel();
     }
     renderViewer();
+    updateEazyTipContent();
   }
 
   function renderStudioUi() {
@@ -4595,6 +4673,8 @@
       });
     });
 
+    bindEazyTip();
+
     root.querySelectorAll('[data-cds-sub-close]').forEach(function (el) {
       el.addEventListener('click', closeSubmodals);
     });
@@ -4885,6 +4965,7 @@
     closeUnsavedDialog();
     closePreviewModal();
     closeSubmodals();
+    hideEazyTip();
     teardownZonePatternOverlay();
     if (root) {
       root.classList.remove('is-busy');
@@ -5011,6 +5092,7 @@
     ensureStudioStyles();
     await ensurePatternMath();
     bindOnce();
+    hideEazyTip();
 
     var nextProductKey = String(productKey || '').trim();
     if (!nextProductKey) return;

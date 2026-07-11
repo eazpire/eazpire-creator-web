@@ -14,6 +14,41 @@
         <p class="cds-modal__subtitle" id="cds-modal-subtitle"></p>
       </div>
       <div class="cds-modal__header-actions">
+        <div class="cds-eazy-wrap" id="cds-eazy-wrap">
+          <div
+            class="cds-eazy-tip"
+            id="cds-eazy-tip"
+            role="tooltip"
+            hidden
+            aria-hidden="true"
+          >
+            <p class="cds-eazy-tip__text" id="cds-eazy-tip-text"></p>
+          </div>
+          <button
+            type="button"
+            class="cds-eazy-btn"
+            id="cds-eazy-btn"
+            aria-label="Tips from Eazy"
+            aria-expanded="false"
+            aria-controls="cds-eazy-tip"
+          >
+            <span class="cds-eazy-mascot" aria-hidden="true">
+              <svg width="36" height="36" viewBox="0 0 128 128" focusable="false">
+                <defs>
+                  <linearGradient id="cds-eazy-grad" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+                    <stop offset="0" stop-color="#ff9a2a"/><stop offset="1" stop-color="#f97316"/>
+                  </linearGradient>
+                </defs>
+                <path fill="url(#cds-eazy-grad)" d="M30,62c0,-26 20,-44 44,-44 22,0 38,16 38,38 0,25 -19,44 -44,44 -5,0 -10,-0.8 -14.5,-2.2l-16.5,9.2 5.8,-16.8C35.7,83 30,73.2 30,62z"/>
+                <path fill="#FFFFFF" d="M56,39c-15,6 -24,20 -24,35 0,19 16,34 36,34 20,0 36,-16 36,-36 0,-21 -17,-38 -38,-38 -4.3,0 -8.4,0.7 -10,0.9z"/>
+                <circle cx="72" cy="52.5" r="5.5" fill="#F97316"/>
+                <circle cx="90" cy="45.5" r="4.5" fill="#F97316"/>
+                <ellipse cx="79" cy="72" rx="6" ry="4.5" fill="#F97316"/>
+                <circle cx="50" cy="21" r="7" fill="#FF9A2A"/>
+              </svg>
+            </span>
+          </button>
+        </div>
         <button type="button" class="cds-modal__btn cds-modal__btn--icon" id="cds-btn-close" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
