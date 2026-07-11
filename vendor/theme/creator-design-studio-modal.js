@@ -91,6 +91,13 @@
   var previewActiveColor = null;
   var previewActiveView = null;
   var previewUnloadBound = false;
+  var historyToolbarEl = null;
+  var btnUndoEl = null;
+  var btnRedoEl = null;
+  var btnHistoryEl = null;
+  var historyModalEl = null;
+  var historyGridEl = null;
+  var historyEmptyEl = null;
 
   var ctxDesign = null;
   var ctxProductKey = null;
@@ -140,6 +147,11 @@
   var colorGridResizeObserver = null;
   var layoutRaf = 0;
   var colorGridLayoutRaf = 0;
+
+  var HISTORY_MAX = 20;
+  var historyPast = [];
+  var historyFuture = [];
+  var historyApplying = false;
 
   function Mi() {
     return window.CreatorMobileI18n || {};
@@ -494,6 +506,7 @@
     if (btnSetVersion) btnSetVersion.disabled = busy;
     if (btnSaveVersion) btnSaveVersion.disabled = busy;
     if (btnClose) btnClose.disabled = !!cropApplying;
+    syncHistoryToolbar();
   }
 
   function blurFocusInside(el) {
@@ -1040,11 +1053,360 @@
     eazyBtnEl = root.querySelector('#cds-eazy-btn');
     eazyTipEl = root.querySelector('#cds-eazy-tip');
     eazyTipTextEl = root.querySelector('#cds-eazy-tip-text');
+    historyToolbarEl = root.querySelector('#cds-viewer-top-left');
+    btnUndoEl = root.querySelector('#cds-btn-undo');
+    btnRedoEl = root.querySelector('#cds-btn-redo');
+    btnHistoryEl = root.querySelector('#cds-btn-history');
+    historyModalEl = root.querySelector('#cds-history-modal');
+    historyGridEl = root.querySelector('#cds-history-grid');
+    historyEmptyEl = root.querySelector('#cds-history-empty');
     return true;
   }
 
   function markDirtyUi() {
     if (btnSave) btnSave.disabled = isSaving || isLoading || cropApplying || !isDirty();
+  }
+
+  function escapeHtmlAttr(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;');
+  }
+
+  function capturePrintAreaSnapshot() {
+    ensurePrintArea();
+    var positions = enabledPositions();
+    var byPos = {};
+    for (var i = 0; i < positions.length; i++) {
+      var pos = positions[i];
+      var bucket = ensurePositionBucket(pos);
+      byPos[pos] = {
+        primary: cloneTransform(bucket.primary),
+        primary_url: bucket.primary_url || null,
+        primary_original_url: bucket.primary_original_url || null,
+        additional: JSON.parse(JSON.stringify(bucket.additional || [])),
+        public_additional: bucket.public_additional
+          ? JSON.parse(JSON.stringify(bucket.public_additional))
+          : null,
+        alignment: JSON.parse(JSON.stringify(bucket.alignment || { h: 'center', v: 'center' })),
+        pattern: JSON.parse(JSON.stringify(bucket.pattern || defaultPattern())),
+      };
+    }
+    return {
+      print_area: {
+        position: draft.print_area.position,
+        color_key: draft.print_area.color_key,
+        by_position: byPos,
+        __cdsMigrated: true,
+      },
+      activeAssetKey: activeAssetKey,
+      assetSelected: assetSelected,
+      designCtx: {
+        preview_url: (ctxData && ctxData.design_preview_url) || (ctxDesign && ctxDesign.preview_url) || '',
+        original_url: (ctxData && ctxData.design_original_url) || (ctxDesign && ctxDesign.original_url) || '',
+      },
+    };
+  }
+
+  function historySnapshotJson(snap) {
+    return JSON.stringify(snap || {});
+  }
+
+  function commitHistoryAfterEdit() {
+    if (historyApplying || !draft || isLoading || cropping || cropApplying) return;
+    var snap = capturePrintAreaSnapshot();
+    if (historyPast.length && historySnapshotJson(historyPast[historyPast.length - 1]) === historySnapshotJson(snap)) {
+      syncHistoryToolbar();
+      return;
+    }
+    historyPast.push(snap);
+    if (historyPast.length > HISTORY_MAX) historyPast.shift();
+    historyFuture = [];
+    syncHistoryToolbar();
+  }
+
+  function resetHistoryBaseline() {
+    historyPast = [];
+    historyFuture = [];
+    if (draft) historyPast.push(capturePrintAreaSnapshot());
+    syncHistoryToolbar();
+  }
+
+  function restorePrintAreaSnapshot(snap) {
+    if (!snap || !snap.print_area || !draft) return;
+    historyApplying = true;
+    if (cropping) exitCropMode(true);
+    draft.print_area = JSON.parse(JSON.stringify(snap.print_area));
+    migrateLegacyPrintArea(draft.print_area);
+    activeAssetKey = snap.activeAssetKey != null ? snap.activeAssetKey : 'primary';
+    assetSelected = snap.assetSelected != null ? !!snap.assetSelected : true;
+    if (snap.designCtx) {
+      if (ctxData) {
+        if (snap.designCtx.preview_url) ctxData.design_preview_url = snap.designCtx.preview_url;
+        if (snap.designCtx.original_url) ctxData.design_original_url = snap.designCtx.original_url;
+      }
+      if (ctxDesign) {
+        if (snap.designCtx.preview_url) ctxDesign.preview_url = snap.designCtx.preview_url;
+        if (snap.designCtx.original_url) ctxDesign.original_url = snap.designCtx.original_url;
+      }
+    }
+    ensurePrintArea();
+    renderStudioUi();
+    markDirtyUi();
+    historyApplying = false;
+  }
+
+  function undoHistory() {
+    if (historyPast.length <= 1 || isStudioBusy()) return;
+    historyApplying = true;
+    historyFuture.unshift(historyPast.pop());
+    restorePrintAreaSnapshot(historyPast[historyPast.length - 1]);
+    syncHistoryToolbar();
+  }
+
+  function redoHistory() {
+    if (!historyFuture.length || isStudioBusy()) return;
+    historyApplying = true;
+    var snap = historyFuture.shift();
+    historyPast.push(snap);
+    if (historyPast.length > HISTORY_MAX) historyPast.shift();
+    restorePrintAreaSnapshot(snap);
+    syncHistoryToolbar();
+  }
+
+  function jumpToHistoryEntry(displayIndex) {
+    var pastLen = historyPast.length;
+    var pastIndex = pastLen - 1 - displayIndex;
+    if (pastIndex < 0 || pastIndex >= pastLen || isStudioBusy()) return;
+    if (pastIndex === pastLen - 1) {
+      closeHistoryModal();
+      return;
+    }
+    historyApplying = true;
+    var toRedo = historyPast.splice(pastIndex + 1);
+    historyFuture = toRedo.reverse().concat(historyFuture);
+    restorePrintAreaSnapshot(historyPast[pastIndex]);
+    syncHistoryToolbar();
+    closeHistoryModal();
+  }
+
+  function syncHistoryToolbar() {
+    var show = isOpen && activeSettingsTab === 'design' && !isVariantPreviewMode();
+    if (historyToolbarEl) historyToolbarEl.hidden = !show;
+    if (btnUndoEl) btnUndoEl.disabled = historyPast.length <= 1 || isStudioBusy();
+    if (btnRedoEl) btnRedoEl.disabled = !historyFuture.length || isStudioBusy();
+    if (btnHistoryEl) btnHistoryEl.disabled = isStudioBusy();
+  }
+
+  function mockEntryForPositionAndColor(pos, colorKey) {
+    var cfg = studioConfig();
+    var ck = colorKey || resolveColorKey();
+    var list = (cfg.mocks_by_color && cfg.mocks_by_color[ck]) || [];
+    var want = normPos(pos);
+    for (var i = 0; i < list.length; i++) {
+      if (normPos(list[i].position) === want && mockHasUrl(list[i])) return list[i];
+    }
+    return null;
+  }
+
+  function primaryUrlFromSnapshotBucket(snap, pos, bucket) {
+    var key = normPos(pos);
+    if (bucket && bucket.primary_url) return bucket.primary_url;
+    if (key === 'front' && snap && snap.designCtx) {
+      return snap.designCtx.preview_url || snap.designCtx.original_url || '';
+    }
+    return '';
+  }
+
+  function listAssetsFromSnapshot(snap, pos) {
+    var key = normPos(pos);
+    var bucket =
+      (snap &&
+        snap.print_area &&
+        snap.print_area.by_position &&
+        snap.print_area.by_position[key]) ||
+      {};
+    var assets = [];
+    var primaryUrl = primaryUrlFromSnapshotBucket(snap, key, bucket);
+    if (primaryUrl || key === 'front') {
+      assets.push({
+        preview_url: primaryUrl,
+        transform: cloneTransform(bucket.primary),
+      });
+    }
+    var own = bucket.additional || [];
+    for (var i = 0; i < own.length; i++) {
+      if (own[i] && own[i].preview_url) {
+        assets.push({
+          preview_url: own[i].preview_url,
+          transform: cloneTransform(own[i].transform || { scale: 0.5 }),
+        });
+      }
+    }
+    if (bucket.public_additional && bucket.public_additional.preview_url) {
+      assets.push({
+        preview_url: bucket.public_additional.preview_url,
+        transform: cloneTransform(bucket.public_additional.transform || { scale: 0.4 }),
+      });
+    }
+    return assets;
+  }
+
+  function buildHistoryThumbHtml(snap, pos, colorKey) {
+    var mock = mockEntryForPositionAndColor(pos, colorKey);
+    var mockUrl = mockCanvasUrl(mock);
+    if (!mockUrl) {
+      return '<div class="cds-history-thumb cds-history-thumb--empty" aria-hidden="true"></div>';
+    }
+    var z = parseZoneFrac(mock && mock.print_area_frac);
+    var zoneStyle =
+      'left:' +
+      z.l * 100 +
+      '%;top:' +
+      z.t * 100 +
+      '%;width:' +
+      z.w * 100 +
+      '%;height:' +
+      z.h * 100 +
+      '%;';
+    var assets = listAssetsFromSnapshot(snap, pos);
+    var designsHtml = '';
+    for (var i = 0; i < assets.length; i++) {
+      if (!assets[i].preview_url) continue;
+      designsHtml +=
+        '<img class="cds-history-thumb__design" src="' +
+        escapeHtmlAttr(assets[i].preview_url) +
+        '" alt="" decoding="async" draggable="false" data-cds-hist-tr="' +
+        escapeHtmlAttr(JSON.stringify(assets[i].transform)) +
+        '">';
+    }
+    return (
+      '<div class="cds-history-thumb">' +
+      '<span class="cds-history-thumb__stage">' +
+      '<img class="cds-history-thumb__mock" src="' +
+      escapeHtmlAttr(mockUrl) +
+      '" alt="" decoding="async" draggable="false">' +
+      (designsHtml
+        ? '<span class="cds-history-thumb__zone" style="' + zoneStyle + '">' + designsHtml + '</span>'
+        : '') +
+      '</span></div>'
+    );
+  }
+
+  function layoutHistoryThumbnails(scope) {
+    if (!scope) return;
+    scope.querySelectorAll('.cds-history-thumb').forEach(function (thumb) {
+      var stage = thumb.querySelector('.cds-history-thumb__stage');
+      var mock = thumb.querySelector('.cds-history-thumb__mock');
+      if (!stage || !mock) return;
+      function layout() {
+        if (!mock.complete || !mock.naturalWidth || !mock.naturalHeight) return;
+        var nw = mock.naturalWidth;
+        var nh = mock.naturalHeight;
+        var boxW = Math.max(1, thumb.clientWidth);
+        var boxH = Math.max(1, thumb.clientHeight);
+        var fit = Math.min(boxW / nw, boxH / nh);
+        var w = Math.max(1, nw * fit);
+        var h = Math.max(1, nh * fit);
+        stage.style.width = w + 'px';
+        stage.style.height = h + 'px';
+        mock.style.width = '100%';
+        mock.style.height = '100%';
+        thumb.querySelectorAll('.cds-history-thumb__design').forEach(function (designImg) {
+          var zone = designImg.closest('.cds-history-thumb__zone');
+          if (!zone) return;
+          var tr = DEFAULT_TRANSFORM;
+          try {
+            tr = cloneTransform(JSON.parse(designImg.getAttribute('data-cds-hist-tr') || ''));
+          } catch (_) {}
+          if (designImg.complete && designImg.naturalWidth) {
+            applyTransformToGridDesignImg(designImg, zone, tr);
+          }
+        });
+      }
+      if (mock.complete && mock.naturalWidth) layout();
+      else mock.addEventListener('load', layout, { once: true });
+      thumb.querySelectorAll('.cds-history-thumb__design').forEach(function (designImg) {
+        if (designImg.complete && designImg.naturalWidth) layout();
+        else designImg.addEventListener('load', layout, { once: true });
+      });
+    });
+  }
+
+  function renderHistoryModal() {
+    if (!historyGridEl) return;
+    historyGridEl.innerHTML = '';
+    var entries = historyPast.slice().reverse();
+    var colorKey = resolveColorKey();
+    var positions = enabledPositions();
+    if (entries.length <= 1) {
+      if (historyEmptyEl) historyEmptyEl.hidden = false;
+      return;
+    }
+    if (historyEmptyEl) historyEmptyEl.hidden = true;
+    for (var ei = 0; ei < entries.length; ei++) {
+      (function (displayIndex) {
+        var snap = entries[displayIndex];
+        var isCurrent = displayIndex === 0;
+        var entry = document.createElement('button');
+        entry.type = 'button';
+        entry.className = 'cds-history-entry' + (isCurrent ? ' is-current' : '');
+        entry.setAttribute('data-cds-history-idx', String(displayIndex));
+        var viewsHtml = '';
+        for (var pi = 0; pi < positions.length; pi++) {
+          var pos = positions[pi];
+          viewsHtml +=
+            '<div class="cds-history-view">' +
+            '<span class="cds-history-view-badge">' +
+            escapeHtmlAttr(formatPlacementLabel(pos)) +
+            '</span>' +
+            buildHistoryThumbHtml(snap, pos, colorKey) +
+            '</div>';
+        }
+        entry.innerHTML = '<div class="cds-history-entry__views">' + viewsHtml + '</div>';
+        entry.addEventListener('click', function () {
+          jumpToHistoryEntry(displayIndex);
+        });
+        historyGridEl.appendChild(entry);
+      })(ei);
+    }
+    requestAnimationFrame(function () {
+      layoutHistoryThumbnails(historyGridEl);
+    });
+  }
+
+  function openHistoryModal() {
+    if (!historyModalEl || isStudioBusy()) return;
+    renderHistoryModal();
+    historyModalEl.hidden = false;
+    historyModalEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeHistoryModal() {
+    if (!historyModalEl) return;
+    blurFocusInside(historyModalEl);
+    historyModalEl.hidden = true;
+    historyModalEl.setAttribute('aria-hidden', 'true');
+  }
+
+  function bindHistoryCommitOnRelease(el) {
+    if (!el || el.__cdsHistBound) return;
+    el.__cdsHistBound = true;
+    el.addEventListener('pointerup', commitHistoryAfterEdit);
+    el.addEventListener('change', commitHistoryAfterEdit);
+  }
+
+  function transformsEqual(a, b) {
+    if (!a || !b) return false;
+    return (
+      Math.abs(Number(a.x) - Number(b.x)) < 1e-5 &&
+      Math.abs(Number(a.y) - Number(b.y)) < 1e-5 &&
+      Math.abs(Number(a.scale) - Number(b.scale)) < 1e-5 &&
+      snapRotate5(a.rotate) === snapRotate5(b.rotate) &&
+      !!a.flipX === !!b.flipX &&
+      !!a.flipY === !!b.flipY
+    );
   }
 
   function studioConfig() {
@@ -2039,9 +2401,8 @@
     applyTransformToDesignImg();
     syncTransformInputs();
     renderDesignSettingsPanel();
+    commitHistoryAfterEdit();
   }
-
-  /** Fill = cover the print zone completely (overflow clipped). Keeps current center. */
   function fillActiveToPlaceholder() {
     if (!activeAssetKey) {
       activeAssetKey = 'primary';
@@ -2055,6 +2416,7 @@
     markDirtyUi();
     applyTransformToDesignImg();
     syncTransformInputs();
+    commitHistoryAfterEdit();
   }
 
   function toggleActiveFlip(axis) {
@@ -2068,6 +2430,7 @@
     markDirtyUi();
     applyTransformToDesignImg();
     renderDesignSettingsPanel();
+    commitHistoryAfterEdit();
   }
 
   function renderDesignSettingsPanel() {
@@ -2356,6 +2719,10 @@
 
     bindRangePair('#cds-scale-range', '#cds-scale-num', 'scale');
     bindRangePair('#cds-rotate-range', '#cds-rotate-num', 'rotate');
+    bindHistoryCommitOnRelease(panelDesignEl.querySelector('#cds-scale-range'));
+    bindHistoryCommitOnRelease(panelDesignEl.querySelector('#cds-scale-num'));
+    bindHistoryCommitOnRelease(panelDesignEl.querySelector('#cds-rotate-range'));
+    bindHistoryCommitOnRelease(panelDesignEl.querySelector('#cds-rotate-num'));
 
     var cropBtn = panelDesignEl.querySelector('#cds-crop-toggle');
     if (cropBtn) {
@@ -2386,6 +2753,7 @@
         renderDesignSettingsPanel();
         applyTransformToDesignImg();
         markDirtyUi();
+        commitHistoryAfterEdit();
       });
     });
 
@@ -2395,6 +2763,7 @@
         currentBucket().pattern.enabled = patEn.checked;
         markDirtyUi();
         redrawZonePatternOverlay();
+        commitHistoryAfterEdit();
       });
     }
     panelDesignEl.querySelectorAll('input[name="cds-pattern-mode"]').forEach(function (radio) {
@@ -2403,6 +2772,7 @@
         currentBucket().pattern.mode = radio.value || 'grid';
         markDirtyUi();
         redrawZonePatternOverlay();
+        commitHistoryAfterEdit();
       });
     });
     function bindPatSlider(id, key, fallback, snap5) {
@@ -2427,6 +2797,22 @@
     bindPatSlider('cds-pattern-offset', 'offset', 0, false);
     bindPatSlider('cds-pattern-rh', 'rotation_step_horizontal', 0, true);
     bindPatSlider('cds-pattern-rv', 'rotation_step_vertical', 0, true);
+    [
+      'cds-pattern-sx-range',
+      'cds-pattern-sx-num',
+      'cds-pattern-sy-range',
+      'cds-pattern-sy-num',
+      'cds-pattern-angle-range',
+      'cds-pattern-angle-num',
+      'cds-pattern-offset-range',
+      'cds-pattern-offset-num',
+      'cds-pattern-rh-range',
+      'cds-pattern-rh-num',
+      'cds-pattern-rv-range',
+      'cds-pattern-rv-num',
+    ].forEach(function (id) {
+      bindHistoryCommitOnRelease(panelDesignEl.querySelector('#' + id));
+    });
   }
 
   function colorDotStyle(itemOrName) {
@@ -2958,6 +3344,7 @@
     }
     renderViewer();
     updateEazyTipContent();
+    syncHistoryToolbar();
   }
 
   function renderStudioUi() {
@@ -3193,6 +3580,7 @@
       ensurePrimaryVisible();
       renderStudioUi();
       markDirtyUi();
+      commitHistoryAfterEdit();
 
       try {
         if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
@@ -3323,6 +3711,10 @@
     }
 
     function onPointerUp() {
+      if (transformDrag) {
+        var tr = activeTransform();
+        if (!transformsEqual(tr, transformDrag.startTr)) commitHistoryAfterEdit();
+      }
       transformDrag = null;
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
@@ -3384,6 +3776,7 @@
           if (e.target.closest('#cds-crop-layer')) return;
           if (e.target.closest('#cds-pos-bar')) return;
           if (e.target.closest('#cds-viewer-top-right')) return;
+          if (e.target.closest('#cds-viewer-top-left')) return;
           if (e.target.closest('#cds-viewer-bottom-center')) return;
           if (e.target.closest('#cds-btn-preview')) return;
           if (e.target.closest('#cds-grid-switch')) return;
@@ -3598,6 +3991,7 @@
     setAssetSelected(!!activeAssetKey);
     renderStudioUi();
     markDirtyUi();
+    commitHistoryAfterEdit();
   }
 
   function phoneApiBase() {
@@ -4149,6 +4543,7 @@
     ensurePrimaryVisible();
     renderStudioUi();
     markDirtyUi();
+    resetHistoryBaseline();
   }
 
   function resetToDefaults() {
@@ -4183,6 +4578,7 @@
     ensurePrimaryVisible();
     renderStudioUi();
     markDirtyUi();
+    resetHistoryBaseline();
   }
 
   function renderVersionsList(payload) {
@@ -4656,6 +5052,7 @@
     closeSubmodals();
     renderStudioUi();
     markDirtyUi();
+    commitHistoryAfterEdit();
   }
 
   function bindOnce() {
@@ -4694,6 +5091,24 @@
         openPreviewModal();
       });
     }
+    if (btnUndoEl) {
+      btnUndoEl.addEventListener('click', function () {
+        undoHistory();
+      });
+    }
+    if (btnRedoEl) {
+      btnRedoEl.addEventListener('click', function () {
+        redoHistory();
+      });
+    }
+    if (btnHistoryEl) {
+      btnHistoryEl.addEventListener('click', function () {
+        openHistoryModal();
+      });
+    }
+    root.querySelectorAll('[data-cds-history-close]').forEach(function (el) {
+      el.addEventListener('click', closeHistoryModal);
+    });
     if (previewColorPrevEl) {
       previewColorPrevEl.addEventListener('click', function () {
         if (!previewColorCarouselEl) return;
@@ -4797,7 +5212,37 @@
 
     document.addEventListener('keydown', function (ev) {
       if (!isOpen) return;
+      var mod = ev.ctrlKey || ev.metaKey;
+      if (mod && !ev.shiftKey && (ev.key === 'z' || ev.key === 'Z')) {
+        if (
+          activeSettingsTab === 'design' &&
+          !isVariantPreviewMode() &&
+          !cropping &&
+          !(historyModalEl && !historyModalEl.hidden)
+        ) {
+          ev.preventDefault();
+          undoHistory();
+          return;
+        }
+      }
+      if (mod && (ev.key === 'y' || ev.key === 'Y' || (ev.shiftKey && (ev.key === 'z' || ev.key === 'Z')))) {
+        if (
+          activeSettingsTab === 'design' &&
+          !isVariantPreviewMode() &&
+          !cropping &&
+          !(historyModalEl && !historyModalEl.hidden)
+        ) {
+          ev.preventDefault();
+          redoHistory();
+          return;
+        }
+      }
       if (ev.key === 'Escape') {
+        if (historyModalEl && !historyModalEl.hidden) {
+          closeHistoryModal();
+          ev.preventDefault();
+          return;
+        }
         if (unsavedDialogEl && !unsavedDialogEl.hidden) {
           handleUnsavedAction('cancel');
           ev.preventDefault();
@@ -4964,6 +5409,7 @@
     if (printZoneEl) printZoneEl.classList.remove('is-cropping');
     closeUnsavedDialog();
     closePreviewModal();
+    closeHistoryModal();
     closeSubmodals();
     hideEazyTip();
     teardownZonePatternOverlay();
@@ -4986,6 +5432,9 @@
     versionsCache = null;
     preferredVersionId = null;
     catalogProductName = '';
+    historyPast = [];
+    historyFuture = [];
+    historyApplying = false;
     setStatus('');
   }
 
@@ -5173,6 +5622,7 @@
       // Status text / settings panel can change viewer size — re-layout after chrome settles.
       scheduleLayoutPrintZone();
       markDirtyUi();
+      resetHistoryBaseline();
     } catch (e) {
       console.warn('[creator-design-studio]', e);
       setStatus(t('designStudioLoadError', 'Could not load studio.'));

@@ -62,6 +62,52 @@
         <div class="cds-viewer" id="cds-viewer">
           <div class="cds-viewer__stage" id="cds-viewer-stage">
             <div class="cds-viewer-pos-bar" id="cds-pos-bar" role="tablist" aria-label="Print position"></div>
+            <div class="cds-viewer-top-left" id="cds-viewer-top-left" hidden>
+              <div
+                class="cds-history-toolbar"
+                role="toolbar"
+                aria-label="Design edit history"
+              >
+                <button
+                  type="button"
+                  class="cds-history-btn"
+                  id="cds-btn-undo"
+                  aria-label="Undo"
+                  title="Undo"
+                  disabled
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M9 14L4 9l5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="cds-history-btn"
+                  id="cds-btn-redo"
+                  aria-label="Redo"
+                  title="Redo"
+                  disabled
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M15 14l5-5-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="cds-history-btn"
+                  id="cds-btn-history"
+                  aria-label="Edit history"
+                  title="Edit history"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
             <div class="cds-viewer-top-right" id="cds-viewer-top-right">
               <div
                 class="cds-grid-switch"
@@ -305,6 +351,18 @@
         <button type="button" class="cds-btn-secondary cds-unsaved-discard" data-cds-unsaved="discard" data-t="creator.design_studio.unsaved_discard">Discard</button>
         <button type="button" class="cds-modal__btn cds-modal__btn--save" data-cds-unsaved="save" data-t="creator.design_studio.unsaved_save">Save</button>
       </div>
+    </div>
+  </div>
+
+  <div class="cds-submodal" id="cds-history-modal" hidden aria-hidden="true">
+    <div class="cds-submodal__backdrop" data-cds-history-close></div>
+    <div class="cds-submodal__sheet cds-history-sheet" role="dialog" aria-modal="true" aria-labelledby="cds-history-title">
+      <header class="cds-submodal__head">
+        <h3 id="cds-history-title" class="cds-submodal__title" data-t="creator.design_studio.history_title">Edit History</h3>
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-history-close aria-label="Close">&times;</button>
+      </header>
+      <div class="cds-history-grid" id="cds-history-grid" role="list"></div>
+      <p class="cds-muted cds-history-empty" id="cds-history-empty" hidden data-t="creator.design_studio.history_empty">No edits yet. Changes to placement, scale, and designs will appear here.</p>
     </div>
   </div>
 
