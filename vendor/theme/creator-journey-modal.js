@@ -528,49 +528,84 @@
     return active;
   }
 
-  function creationLimitParentTitle(node) {
-    var axis = node.metadata && node.metadata.creation_limit_axis;
-    var base = axis === 'upload' ? 'Upload' : 'Generate';
-    var active = highestUnlockedTierNode(creationLimitTierNodes(node));
-    if (!active || !active.metadata) return base;
-    var val = active.metadata.limit_value;
-    var mode = active.metadata.limit_mode;
-    if (mode === 'lifetime') {
-      return tpl('creator.journey.creation_limit_parent_total', '{{ axis }} {{ n }} Total', {
-        axis: base,
-        n: String(val)
-      });
-    }
-    return tpl('creator.journey.creation_limit_parent_daily', '{{ axis }} {{ n }} Daily', {
-      axis: base,
-      n: String(val)
-    });
+  var LISTING_CHANNEL_ICONS = {
+    shopify: '<svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+    amazon: '<svg viewBox="0 0 24 24"><path d="M3 14c3.5-4.5 7.5-6.5 9-6.5s5.5 2 9 6.5"/><path d="M17 13l4 2.5-1.2 3.5"/></svg>',
+    ebay: '<svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1"/></svg>',
+    etsy: '<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></svg>'
+  };
+
+  var LISTING_CHANNEL_DEFAULT_ICON =
+    '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>';
+
+  function creationLimitAxisIconSvg(axis) {
+    return axis === 'upload'
+      ? '<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 21h8"/></svg>'
+      : '<svg viewBox="0 0 24 24"><path d="M12 3l2 4h5l-4 3 2 4-5-3-5 3 2-4-4-3h5z"/></svg>';
   }
 
-  function listingLimitChannelTitle(node) {
-    var ch = (node.metadata && node.metadata.title) || node.channel_id || '';
-    var active = highestUnlockedTierNode(listingLimitTierNodes(node));
-    if (!active || !active.metadata) {
-      if (node.unlocked && node.channel_id === 'shopify') {
-        return tpl('creator.journey.listing_limit_channel_daily', '{{ channel }} {{ n }} Daily', {
-          channel: ch,
-          n: '10'
-        });
-      }
-      return ch;
+  function listingLimitChannelIconSvg(channelId) {
+    var ch = String(channelId || '').toLowerCase();
+    return LISTING_CHANNEL_ICONS[ch] || LISTING_CHANNEL_DEFAULT_ICON;
+  }
+
+  function multiTierParentShortTitle(node) {
+    if (node.metadata && node.metadata.title) return String(node.metadata.title);
+    if (node.metadata && node.metadata.creation_limit_kind === 'parent') {
+      return node.metadata.creation_limit_axis === 'upload' ? 'Upload' : 'Generate';
     }
-    return tpl('creator.journey.listing_limit_channel_daily', '{{ channel }} {{ n }} Daily', {
-      channel: ch,
-      n: String(active.metadata.listings_per_day || '')
-    });
+    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
+      return String(node.channel_id || '');
+    }
+    return '';
+  }
+
+  function activeLimitLabelForParent(node) {
+    if (node.metadata && node.metadata.creation_limit_kind === 'parent') {
+      var activeCreation = highestUnlockedTierNode(creationLimitTierNodes(node));
+      if (!activeCreation || !activeCreation.metadata) return '';
+      var val = activeCreation.metadata.limit_value;
+      if (activeCreation.metadata.limit_mode === 'lifetime') {
+        return tpl('creator.journey.limit_total_label', '{{ n }} Total', { n: String(val) });
+      }
+      return tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(val) });
+    }
+    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
+      var activeListing = highestUnlockedTierNode(listingLimitTierNodes(node));
+      var dailyVal = null;
+      if (activeListing && activeListing.metadata) {
+        dailyVal = activeListing.metadata.listings_per_day;
+      } else if (node.unlocked && node.channel_id === 'shopify') {
+        dailyVal = 10;
+      }
+      if (dailyVal == null || dailyVal === '') return '';
+      return tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(dailyVal) });
+    }
+    return '';
+  }
+
+  function parentLimitMediaOpts(node) {
+    if (node.metadata && node.metadata.creation_limit_kind === 'parent') {
+      return {
+        iconSvg: creationLimitAxisIconSvg(node.metadata.creation_limit_axis),
+        limitLabel: activeLimitLabelForParent(node)
+      };
+    }
+    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
+      return {
+        iconSvg: listingLimitChannelIconSvg(node.channel_id),
+        limitLabel: activeLimitLabelForParent(node)
+      };
+    }
+    return null;
   }
 
   function nodeTitle(node) {
     if (node.metadata && node.metadata.creation_limit_kind === 'parent') {
-      return creationLimitParentTitle(node);
+      return multiTierParentShortTitle(node);
     }
     if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
-      return listingLimitChannelTitle(node);
+      return multiTierParentShortTitle(node);
     }
     if (node.metadata && node.metadata.royalty_percent != null) {
       return tpl('creator.journey.royalty_tier_title', '{{ pct }}% royalty', {
@@ -960,8 +995,14 @@
       mediaHtml = '<div class="cj-tree-card__size-label">' + escapeHtml(opts.sizeLabel) + '</div>';
       mediaExtraCls = ' cj-tree-card__media--size';
     } else if (opts.iconSvg) {
-      mediaHtml = '<div class="cj-tree-card__icon" aria-hidden="true">' + opts.iconSvg + '</div>';
+      var limitLabelHtml = opts.limitLabel
+        ? '<span class="cj-tree-card__limit-label">' + escapeHtml(opts.limitLabel) + '</span>'
+        : '';
+      mediaHtml = '<div class="cj-tree-card__icon-stack" aria-hidden="true">' +
+        '<div class="cj-tree-card__icon">' + opts.iconSvg + '</div>' +
+        limitLabelHtml + '</div>';
       mediaExtraCls = ' cj-tree-card__media--icon';
+      if (opts.limitLabel) mediaExtraCls += ' cj-tree-card__media--has-limit';
     } else {
       mediaHtml = renderTreeCardMedia(imgUrl);
     }
@@ -1796,9 +1837,7 @@
       ? ' data-cj-expand-creation-limit="' + escapeHtml(node.node_key) + '" role="button" tabindex="0" aria-expanded="' +
         (expanded ? 'true' : 'false') + '"'
       : '';
-    var iconSvg = node.metadata && node.metadata.creation_limit_axis === 'upload'
-      ? '<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 21h8"/></svg>'
-      : '<svg viewBox="0 0 24 24"><path d="M12 3l2 4h5l-4 3 2 4-5-3-5 3 2-4-4-3h5z"/></svg>';
+    var parentMedia = isParent ? parentLimitMediaOpts(node) : null;
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
       lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
@@ -1806,7 +1845,8 @@
         hasAction: act.hasAction,
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason,
-        iconSvg: isParent ? iconSvg : null
+        iconSvg: parentMedia ? parentMedia.iconSvg : null,
+        limitLabel: parentMedia ? parentMedia.limitLabel : ''
       }) +
       act.actionHtml + '</div></article>';
   }
@@ -1820,7 +1860,7 @@
       escapeHtml(parentNode.node_key) + '">' +
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
       '<div class="cj-variant-panel" data-cj-creation-limit-panel="' + escapeHtml(parentNode.node_key) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(creationLimitParentTitle(parentNode)) + '</h4>' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(parentNode)) + '</h4>' +
       renderCarouselShell(lockedTiers.map(renderCreationLimitCard).join('')) +
       '</div></div>';
   }
@@ -1865,13 +1905,16 @@
       ? ' data-cj-expand-listing-limit="' + escapeHtml(node.node_key) + '" role="button" tabindex="0" aria-expanded="' +
         (expanded ? 'true' : 'false') + '"'
       : '';
+    var channelMedia = isChannel ? parentLimitMediaOpts(node) : null;
     return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
       lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         levelLocked: lock.levelLocked,
-        lockReason: lock.lockReason
+        lockReason: lock.lockReason,
+        iconSvg: channelMedia ? channelMedia.iconSvg : null,
+        limitLabel: channelMedia ? channelMedia.limitLabel : ''
       }) +
       act.actionHtml + '</div></article>';
   }
@@ -1885,7 +1928,7 @@
       escapeHtml(channelNode.node_key) + '">' +
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
       '<div class="cj-variant-panel" data-cj-listing-limit-panel="' + escapeHtml(channelNode.node_key) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(listingLimitChannelTitle(channelNode)) + '</h4>' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(channelNode)) + '</h4>' +
       renderCarouselShell(lockedTiers.map(renderListingLimitCard).join('')) +
       '</div></div>';
   }
@@ -2929,7 +2972,9 @@
         if (e.target.closest('[data-cj-tree-action]') || e.target.closest('[data-cj-goto-eaz-daily]')) return;
         var key = card.getAttribute('data-cj-expand-creation-limit');
         if (!key) return;
-        expandedCreationLimitKeys[key] = !expandedCreationLimitKeys[key];
+        var wasOpen = !!expandedCreationLimitKeys[key];
+        expandedCreationLimitKeys = {};
+        if (!wasOpen) expandedCreationLimitKeys[key] = true;
         renderTree();
       }
       card.addEventListener('click', toggleCreation);
@@ -2944,7 +2989,9 @@
         if (e.target.closest('[data-cj-tree-action]')) return;
         var key = card.getAttribute('data-cj-expand-listing-limit');
         if (!key) return;
-        expandedListingLimitKeys[key] = !expandedListingLimitKeys[key];
+        var wasOpen = !!expandedListingLimitKeys[key];
+        expandedListingLimitKeys = {};
+        if (!wasOpen) expandedListingLimitKeys[key] = true;
         renderTree();
       }
       card.addEventListener('click', toggleListing);

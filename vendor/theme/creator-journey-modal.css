@@ -1999,6 +1999,54 @@
   justify-content: center;
 }
 
+.cj-tree-card__icon-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  padding: 6px 4px;
+  box-sizing: border-box;
+}
+
+.cj-tree-card__media--has-limit .cj-tree-card__icon {
+  width: 44%;
+  height: auto;
+  max-width: 46px;
+  max-height: 46px;
+}
+
+.cj-tree-card__limit-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  line-height: 1.15;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.cj-tree-card--creation-limit-parent .cj-tree-card__icon,
+.cj-tree-card--listing-channel .cj-tree-card__icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.25));
+}
+
+.cj-tree-card--creation-limit-parent.is-level-locked .cj-tree-card__icon,
+.cj-tree-card--listing-channel.is-level-locked .cj-tree-card__icon {
+  color: rgba(255, 255, 255, 0.42);
+  filter: none;
+}
+
+.cj-tree-card--creation-limit-parent.is-level-locked .cj-tree-card__limit-label,
+.cj-tree-card--listing-channel.is-level-locked .cj-tree-card__limit-label {
+  color: rgba(255, 255, 255, 0.45);
+  text-shadow: none;
+}
+
 .cj-tree-card__icon {
   width: 52%;
   height: 52%;
