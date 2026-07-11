@@ -2060,12 +2060,11 @@
 .cds-preview-content {
   flex: 1 1 auto;
   display: grid;
-  /* Larger 1:1 view thumbs + main preview hugging mock aspect */
-  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
-  gap: 6px;
-  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px;
+  align-items: stretch;
   min-height: 0;
-  padding: 6px 10px 4px;
+  padding: 5px;
   overflow: hidden;
 }
 
@@ -2076,8 +2075,13 @@
 .cds-preview-views {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  align-content: start;
+  grid-auto-rows: 1fr;
+  gap: 5px;
+  align-content: stretch;
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  width: min(200px, 38vw);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0;
@@ -2095,6 +2099,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
+  height: 100%;
   padding: 0;
   border: 2px solid transparent;
   border-radius: 10px;
@@ -2117,7 +2123,8 @@
 .cds-preview-view__img {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  flex: 1 1 auto;
+  min-height: 0;
   object-fit: contain;
   background: rgba(255, 255, 255, 0.06);
 }
@@ -2135,14 +2142,14 @@
 /* Hug the mock image — no large empty letterbox frame around a smaller square */
 .cds-preview-main {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  justify-self: center;
-  width: fit-content;
+  align-self: stretch;
+  width: 100%;
   max-width: 100%;
   min-height: 0;
-  margin: 0 auto;
+  margin: 0;
   border-radius: 12px;
   background: transparent;
   overflow: visible;
@@ -2174,7 +2181,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px 12px;
+  padding: 5px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -2272,13 +2279,14 @@
 
 @media (max-width: 720px) {
   .cds-preview-content {
-    grid-template-columns: minmax(156px, 180px) minmax(0, 1fr);
-    padding: 4px 8px 4px;
-    gap: 4px;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 5px;
+    gap: 5px;
   }
 
   .cds-preview-views {
-    gap: 4px;
+    width: min(156px, 34vw);
+    gap: 5px;
   }
 
   .cds-preview-main__img {

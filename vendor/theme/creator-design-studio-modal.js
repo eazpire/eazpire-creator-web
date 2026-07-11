@@ -4127,6 +4127,46 @@
     };
   }
 
+  function placementPayloadForPosition(pos, assetTransform) {
+    var mock = mockEntryForPosition(pos);
+    var tr = assetTransform || adminDefaultTransform(pos);
+    var paw = Number(mock && (mock.print_area_width_px || mock.printAreaWidthPx));
+    var pah = Number(mock && (mock.print_area_height_px || mock.printAreaHeightPx));
+    return {
+      x: tr.x,
+      y: tr.y,
+      scale: tr.scale,
+      angle: tr.rotate || 0,
+      design_width: (ctxDesign && ctxDesign.width) || (ctxData && ctxData.design_width) || null,
+      design_height: (ctxDesign && ctxDesign.height) || (ctxData && ctxData.design_height) || null,
+      print_area_width_px: Number.isFinite(paw) && paw > 0 ? paw : null,
+      print_area_height_px: Number.isFinite(pah) && pah > 0 ? pah : null,
+    };
+  }
+
+  /** All print positions that currently show a design — drives Printify preview PUT. */
+  function buildPreviewByPositionPayload() {
+    var out = {};
+    var positions = enabledPositions();
+    for (var i = 0; i < positions.length; i++) {
+      var pos = positions[i];
+      var assets = listAssetsForPosition(pos).filter(function (a) {
+        return !!(a && a.preview_url);
+      });
+      if (!assets.length) continue;
+      var main =
+        assets.find(function (a) {
+          return a.key === 'primary' && a.preview_url;
+        }) || assets[0];
+      if (!main || !main.transform) continue;
+      out[pos] = {
+        has_design: true,
+        placement: placementPayloadForPosition(pos, main.transform),
+      };
+    }
+    return out;
+  }
+
   function previewErrorMessage(data) {
     var code = data && data.error ? String(data.error) : '';
     if (code === 'printify_not_configured') {
@@ -4422,6 +4462,7 @@
             position: currentPosition(),
             color_key: resolveColorKey(),
             placement: currentPlacementPayload(),
+            by_position: buildPreviewByPositionPayload(),
           }),
         }
       );
