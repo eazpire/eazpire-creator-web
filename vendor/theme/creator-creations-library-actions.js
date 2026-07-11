@@ -27,8 +27,41 @@
   /** Same semantics as creator-design-products-modal (eligible catalog vs excluded keys). */
   var activateProdCtx = null;
 
+  /** 'direct_sell' | 'personalized_sample' — chosen in the Activate modal (fixed per design). */
+  var activateListingMode = 'direct_sell';
+
   function Mi() {
     return window.CreatorMobileI18n || {};
+  }
+
+  function getActivateListingMode() {
+    return activateListingMode === 'personalized_sample' ? 'personalized_sample' : 'direct_sell';
+  }
+
+  function setActivateListingMode(mode) {
+    activateListingMode = mode === 'personalized_sample' ? 'personalized_sample' : 'direct_sell';
+    syncListingModeUi();
+  }
+
+  /** Refresh the mode switch + hint text (called after toggle). */
+  function syncListingModeUi() {
+    var M = Mi();
+    var sample = getActivateListingMode() === 'personalized_sample';
+    var track = document.querySelector('[data-creator-listing-mode-track]');
+    if (track) {
+      track.setAttribute('aria-checked', sample ? 'true' : 'false');
+      track.classList.toggle('creator-library-action-modal__listing-track--sample', sample);
+    }
+    document.querySelectorAll('[data-creator-listing-mode-label]').forEach(function (el) {
+      var key = el.getAttribute('data-creator-listing-mode-label');
+      el.classList.toggle('is-active', (key === 'sample') === sample);
+    });
+    var hint = document.querySelector('[data-creator-listing-mode-hint]');
+    if (hint) {
+      hint.textContent = sample
+        ? M.listingModeHintSample || 'Only mockups are shown. Customers personalize before they buy.'
+        : M.listingModeHintDirect || 'Products are listed in the shop and can be bought directly.';
+    }
   }
 
   function apiBase() {
@@ -340,8 +373,117 @@
     }
   }
 
+  /** Open the detail overlay explaining Direct Sell vs Personalized Sample. */
+  function openListingModeInfoModal() {
+    var M = Mi();
+    var overlayEl = document.createElement('div');
+    overlayEl.className = 'creator-library-action-modal__info-overlay';
+    overlayEl.setAttribute('role', 'dialog');
+    overlayEl.setAttribute('aria-modal', 'true');
+
+    var panel = document.createElement('div');
+    panel.className = 'creator-library-action-modal__info-panel';
+
+    var h = document.createElement('h3');
+    h.className = 'creator-library-action-modal__info-title';
+    h.textContent = M.listingModeInfoTitle || 'Direct Sell vs. Personalized Sample';
+    panel.appendChild(h);
+
+    var pDirect = document.createElement('p');
+    pDirect.className = 'creator-library-action-modal__info-body';
+    pDirect.textContent = M.listingModeInfoDirectBody || '';
+    panel.appendChild(pDirect);
+
+    var pSample = document.createElement('p');
+    pSample.className = 'creator-library-action-modal__info-body';
+    pSample.textContent = M.listingModeInfoSampleBody || '';
+    panel.appendChild(pSample);
+
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'creator-library-action-modal__info-close';
+    close.textContent = M.listingModeInfoClose || 'Got it';
+    close.addEventListener('click', function () {
+      overlayEl.remove();
+    });
+    panel.appendChild(close);
+
+    overlayEl.appendChild(panel);
+    overlayEl.addEventListener('click', function (e) {
+      if (e.target === overlayEl) overlayEl.remove();
+    });
+    document.body.appendChild(overlayEl);
+  }
+
   /**
-   * Appends catalog hint, toolbar, and checkbox grid (same UX as product badge modal).
+   * Sub-header with the Direct Sell / Personalized Sample switch, short hint and info button.
+   * Rendered above the product grid in the Activate modal. Resets to Direct Sell each open.
+   */
+  function appendListingModeSwitch(parentEl) {
+    var M = Mi();
+    activateListingMode = 'direct_sell';
+
+    var wrap = document.createElement('div');
+    wrap.className = 'creator-library-action-modal__listing-mode';
+
+    var row = document.createElement('div');
+    row.className = 'creator-library-action-modal__listing-row';
+
+    var labelDirect = document.createElement('span');
+    labelDirect.className = 'creator-library-action-modal__listing-label is-active';
+    labelDirect.setAttribute('data-creator-listing-mode-label', 'direct');
+    labelDirect.textContent = M.listingModeDirectSell || 'Direct Sell';
+
+    var track = document.createElement('button');
+    track.type = 'button';
+    track.className = 'creator-library-action-modal__listing-track';
+    track.setAttribute('role', 'switch');
+    track.setAttribute('aria-checked', 'false');
+    track.setAttribute('data-creator-listing-mode-track', '1');
+    var knob = document.createElement('span');
+    knob.className = 'creator-library-action-modal__listing-knob';
+    knob.setAttribute('aria-hidden', 'true');
+    track.appendChild(knob);
+    track.addEventListener('click', function () {
+      setActivateListingMode(getActivateListingMode() === 'personalized_sample' ? 'direct_sell' : 'personalized_sample');
+    });
+
+    var labelSample = document.createElement('span');
+    labelSample.className = 'creator-library-action-modal__listing-label';
+    labelSample.setAttribute('data-creator-listing-mode-label', 'sample');
+    labelSample.textContent = M.listingModePersonalizedSample || 'Personalized Sample';
+
+    var info = document.createElement('button');
+    info.type = 'button';
+    info.className = 'creator-library-action-modal__listing-info';
+    info.setAttribute('aria-label', M.listingModeInfoAria || 'Learn more about listing modes');
+    info.textContent = 'i';
+    info.addEventListener('click', openListingModeInfoModal);
+
+    row.appendChild(labelDirect);
+    row.appendChild(track);
+    row.appendChild(labelSample);
+    row.appendChild(info);
+    wrap.appendChild(row);
+
+    var hint = document.createElement('p');
+    hint.className = 'creator-library-action-modal__listing-hint';
+    hint.setAttribute('data-creator-listing-mode-hint', '1');
+    hint.textContent = M.listingModeHintDirect || 'Products are listed in the shop and can be bought directly.';
+    wrap.appendChild(hint);
+
+    var notice = document.createElement('p');
+    notice.className = 'creator-library-action-modal__listing-notice';
+    notice.textContent = M.listingModeFixedNotice || 'This choice applies to this design until you deactivate it.';
+    wrap.appendChild(notice);
+
+    parentEl.appendChild(wrap);
+    syncListingModeUi();
+  }
+
+  /**
+   * Appends product checkbox grid (same UX as product badge modal). Product scope
+   * applies to both listing modes; the mode is chosen in the sub-header above.
    */
   function appendActivateCatalogBlock(parentEl, design, bundle) {
     var M = Mi();
@@ -368,40 +510,6 @@
       return;
     }
 
-    var hint = document.createElement('p');
-    hint.className = 'creator-design-products-modal__hint creator-library-action-modal__catalog-hint';
-    hint.textContent = M.designProductsEligibleHint || 'Eligible for auto-publish';
-
-    var toolbar = document.createElement('div');
-    toolbar.className = 'creator-design-products-modal__toolbar creator-library-action-modal__catalog-toolbar';
-
-    var btnSelAll = document.createElement('button');
-    btnSelAll.type = 'button';
-    btnSelAll.className = 'creator-design-products-modal__btn-secondary';
-    btnSelAll.textContent = M.designProductsSelectAll || 'Select all';
-    btnSelAll.addEventListener('click', function () {
-      if (!activateProdCtx) return;
-      for (var i = 0; i < activateProdCtx.eligibleKeys.length; i++) {
-        activateProdCtx.checked[activateProdCtx.eligibleKeys[i]] = true;
-      }
-      syncActivateGridCheckboxes();
-    });
-
-    var btnDeselAll = document.createElement('button');
-    btnDeselAll.type = 'button';
-    btnDeselAll.className = 'creator-design-products-modal__btn-secondary';
-    btnDeselAll.textContent = M.designProductsDeselectAll || 'Deselect all';
-    btnDeselAll.addEventListener('click', function () {
-      if (!activateProdCtx) return;
-      for (var j = 0; j < activateProdCtx.eligibleKeys.length; j++) {
-        activateProdCtx.checked[activateProdCtx.eligibleKeys[j]] = false;
-      }
-      syncActivateGridCheckboxes();
-    });
-
-    toolbar.appendChild(btnSelAll);
-    toolbar.appendChild(btnDeselAll);
-
     var statusEl = document.createElement('div');
     statusEl.className = 'creator-design-products-modal__status';
     if (!bundle.products.length) {
@@ -413,8 +521,6 @@
     gridEl.setAttribute('aria-label', M.designProductsGridAria || '');
     activateProdCtx.gridEl = gridEl;
 
-    wrap.appendChild(hint);
-    wrap.appendChild(toolbar);
     if (statusEl.textContent) wrap.appendChild(statusEl);
     wrap.appendChild(gridEl);
 
@@ -595,28 +701,6 @@
     var wrap = document.createElement('div');
     wrap.className =
       'creator-library-action-modal__catalog-block creator-library-action-modal__skeleton-block';
-
-    var hint = document.createElement('p');
-    hint.className = 'creator-design-products-modal__hint creator-library-action-modal__catalog-hint';
-    hint.textContent = M.designProductsEligibleHint || 'Eligible for auto-publish';
-    wrap.appendChild(hint);
-
-    var toolbar = document.createElement('div');
-    toolbar.className =
-      'creator-design-products-modal__toolbar creator-library-action-modal__catalog-toolbar';
-    var btnSelAll = document.createElement('button');
-    btnSelAll.type = 'button';
-    btnSelAll.className = 'creator-design-products-modal__btn-secondary';
-    btnSelAll.disabled = true;
-    btnSelAll.textContent = M.designProductsSelectAll || 'Select all';
-    var btnDeselAll = document.createElement('button');
-    btnDeselAll.type = 'button';
-    btnDeselAll.className = 'creator-design-products-modal__btn-secondary';
-    btnDeselAll.disabled = true;
-    btnDeselAll.textContent = M.designProductsDeselectAll || 'Deselect all';
-    toolbar.appendChild(btnSelAll);
-    toolbar.appendChild(btnDeselAll);
-    wrap.appendChild(toolbar);
 
     var grid = document.createElement('div');
     grid.className =
@@ -924,9 +1008,12 @@
     }
 
     var excludedPayload = opts && opts.publish_excluded_product_keys;
-    if (Array.isArray(excludedPayload)) {
-      body.metadata = { publish_excluded_product_keys: excludedPayload };
-    }
+    var listingMode = opts && opts.listing_mode === 'personalized_sample' ? 'personalized_sample' : 'direct_sell';
+    var metaOut = {};
+    if (Array.isArray(excludedPayload)) metaOut.publish_excluded_product_keys = excludedPayload;
+    metaOut.library_listing_mode = listingMode;
+    body.metadata = metaOut;
+    var isSampleMode = listingMode === 'personalized_sample';
 
     if (btnConfirm) btnConfirm.disabled = true;
     setModalBusy(true, M.libraryActivating || M.libraryLoading || 'Activating…');
@@ -960,7 +1047,9 @@
           CS.showDesignActivationSuccessToast({
             designTitle: (design.title || design.prompt || '').toString(),
             productCount: publishTargetCount,
-            showProductCountLine: showProductCountLine,
+            showProductCountLine: showProductCountLine && !isSampleMode,
+            listingMode: listingMode,
+            sampleSub: isSampleMode ? (M.libraryActivateSampleSuccessSub || '') : '',
           });
         }
         if (typeof CS.loadDesigns === 'function') {
@@ -1123,6 +1212,7 @@
     function pushExcluded(opts) {
       var ex = getActivateExcludedKeysFromCtx();
       if (ex !== null) opts.publish_excluded_product_keys = ex;
+      opts.listing_mode = getActivateListingMode();
       return opts;
     }
 
@@ -1133,6 +1223,7 @@
         '</p>';
       contentEl.appendChild(intro);
 
+      appendListingModeSwitch(contentEl);
       appendActivateCatalogBlock(contentEl, design, catalog);
 
       var visSw0 = renderVisibilitySwitch(true);
@@ -1161,6 +1252,7 @@
         '</p>';
       contentEl.appendChild(intro);
 
+      appendListingModeSwitch(contentEl);
       appendActivateCatalogBlock(contentEl, design, catalog);
 
       var visSw1 = renderVisibilitySwitch(true);
@@ -1187,6 +1279,7 @@
         '</p>';
       contentEl.appendChild(intro);
 
+      appendListingModeSwitch(contentEl);
       appendActivateCatalogBlock(contentEl, design, catalog);
 
       var lbl = document.createElement('label');
