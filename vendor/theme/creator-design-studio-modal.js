@@ -2986,6 +2986,7 @@
           if (e.target.closest('#cds-crop-layer')) return;
           if (e.target.closest('#cds-pos-bar')) return;
           if (e.target.closest('#cds-viewer-top-right')) return;
+          if (e.target.closest('#cds-viewer-bottom-center')) return;
           if (e.target.closest('#cds-btn-preview')) return;
           if (e.target.closest('#cds-grid-switch')) return;
           if (e.target.closest('#cds-color-grid')) return;

@@ -201,6 +201,7 @@
 .cds-modal-root.is-busy .cds-settings-column,
 .cds-modal-root.is-busy .cds-viewer-pos-bar,
 .cds-modal-root.is-busy .cds-viewer-top-right,
+.cds-modal-root.is-busy .cds-viewer-bottom-center,
 .cds-modal-root.is-busy .cds-grid-switch,
 .cds-modal-root.is-busy .cds-color-grid,
 .cds-modal-root.is-busy .cds-crop-actions {
@@ -245,7 +246,7 @@
   flex-wrap: wrap;
   gap: 8px;
   width: auto;
-  max-width: calc(100% - 200px);
+  max-width: calc(100% - 120px);
   margin: 0;
   pointer-events: auto;
 }
@@ -257,8 +258,25 @@
   z-index: 13;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   pointer-events: auto;
+}
+
+.cds-viewer-bottom-center {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 14;
+  display: flex;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+/* Lift preview when edit chrome is active so it clears the rotate handle */
+.cds-viewer__stage:has(.cds-design-chrome.is-visible) .cds-viewer-bottom-center {
+  bottom: 52px;
 }
 
 .cds-preview-btn {

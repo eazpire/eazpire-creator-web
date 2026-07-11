@@ -240,6 +240,20 @@
   var ROYALTY_INFO_ICON_SVG =
     '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
 
+  /** Progressive grid motifs — one distinct icon per design slot level (L1–L10). */
+  var DESIGN_SLOT_LEVEL_ICON_SVG = {
+    1: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>',
+    2: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7" width="7" height="10" rx="1"/><rect x="13" y="7" width="7" height="10" rx="1"/></svg>',
+    3: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="6" height="6" rx="1"/><rect x="13" y="5" width="6" height="6" rx="1"/><rect x="9" y="13" width="6" height="6" rx="1"/></svg>',
+    4: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>',
+    5: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="5" height="5" rx="0.8"/><rect x="9.5" y="6" width="5" height="5" rx="0.8"/><rect x="16" y="6" width="5" height="5" rx="0.8"/><rect x="3" y="13" width="5" height="5" rx="0.8"/><rect x="9.5" y="13" width="5" height="5" rx="0.8"/><rect x="16" y="13" width="5" height="5" rx="0.8"/></svg>',
+    6: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="4.5" height="4.5" rx="0.7"/><rect x="7.5" y="5" width="4.5" height="4.5" rx="0.7"/><rect x="13" y="5" width="4.5" height="4.5" rx="0.7"/><rect x="18.5" y="5" width="3.5" height="4.5" rx="0.7"/><rect x="2" y="11" width="4.5" height="4.5" rx="0.7"/><rect x="7.5" y="11" width="4.5" height="4.5" rx="0.7"/><rect x="13" y="11" width="4.5" height="4.5" rx="0.7"/><rect x="18.5" y="11" width="3.5" height="4.5" rx="0.7"/></svg>',
+    7: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="4.5" height="4.5" rx="0.7"/><rect x="9.75" y="4" width="4.5" height="4.5" rx="0.7"/><rect x="15.5" y="4" width="4.5" height="4.5" rx="0.7"/><rect x="4" y="9.75" width="4.5" height="4.5" rx="0.7"/><rect x="15.5" y="9.75" width="4.5" height="4.5" rx="0.7"/><rect x="4" y="15.5" width="4.5" height="4.5" rx="0.7"/><rect x="9.75" y="15.5" width="4.5" height="4.5" rx="0.7"/><rect x="15.5" y="15.5" width="4.5" height="4.5" rx="0.7"/></svg>',
+    8: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="4.5" height="4.5" rx="0.7"/><rect x="9.75" y="4" width="4.5" height="4.5" rx="0.7"/><rect x="15.5" y="4" width="4.5" height="4.5" rx="0.7"/><rect x="4" y="9.75" width="4.5" height="4.5" rx="0.7"/><rect x="9.75" y="9.75" width="4.5" height="4.5" rx="0.7"/><rect x="15.5" y="9.75" width="4.5" height="4.5" rx="0.7"/><rect x="4" y="15.5" width="4.5" height="4.5" rx="0.7"/><rect x="9.75" y="15.5" width="4.5" height="4.5" rx="0.7"/><rect x="15.5" y="15.5" width="4.5" height="4.5" rx="0.7"/></svg>',
+    9: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="3.5" height="3.5" rx="0.5"/><rect x="6.5" y="5" width="3.5" height="3.5" rx="0.5"/><rect x="11" y="5" width="3.5" height="3.5" rx="0.5"/><rect x="15.5" y="5" width="3.5" height="3.5" rx="0.5"/><rect x="19" y="5" width="3" height="3.5" rx="0.5"/><rect x="2" y="10" width="3.5" height="3.5" rx="0.5"/><rect x="6.5" y="10" width="3.5" height="3.5" rx="0.5"/><rect x="11" y="10" width="3.5" height="3.5" rx="0.5"/><rect x="15.5" y="10" width="3.5" height="3.5" rx="0.5"/><rect x="19" y="10" width="3" height="3.5" rx="0.5"/><rect x="2" y="15" width="3.5" height="3.5" rx="0.5"/><rect x="6.5" y="15" width="3.5" height="3.5" rx="0.5"/><rect x="11" y="15" width="3.5" height="3.5" rx="0.5"/><rect x="15.5" y="15" width="3.5" height="3.5" rx="0.5"/><rect x="19" y="15" width="3" height="3.5" rx="0.5"/></svg>',
+    10: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M7 7h3v3H7zM14 7h3v3h-3zM7 14h3v3H7zM14 14h3v3h-3z"/><path d="M10.5 7h3v10h-3z"/><path d="M12 2l1.2 2.2L16 5l-2.2 1.2L12 8.5 10.2 6.2 8 5l2.8-.8L12 2z"/></svg>'
+  };
+
   function royaltyTierFromNode(node) {
     if (!node) return 0;
     if (node.metadata && node.metadata.royalty_tier != null) {
@@ -261,6 +275,51 @@
 
   function royaltyTierIconSvg(tier) {
     return ROYALTY_TIER_ICON_SVG[tier] || ROYALTY_TIER_ICON_SVG[1] || CATEGORY_ICON_SVG.royalty;
+  }
+
+  function designSlotLevelFromNode(node) {
+    if (!node) return 0;
+    if (node.metadata && node.metadata.slot_level != null) {
+      return Math.floor(Number(node.metadata.slot_level)) || 0;
+    }
+    var key = String(node.node_key || '');
+    if (key.indexOf('design_slot_level:') === 0) {
+      return Math.floor(Number(key.slice('design_slot_level:'.length))) || 0;
+    }
+    return Math.floor(Number(node.min_level)) || 0;
+  }
+
+  function designSlotLevelIconSvg(level) {
+    var lv = Math.max(1, Math.min(10, Math.floor(Number(level)) || 1));
+    return DESIGN_SLOT_LEVEL_ICON_SVG[lv] || DESIGN_SLOT_LEVEL_ICON_SVG[1] || CATEGORY_ICON_SVG.design_slot;
+  }
+
+  function designSlotLevelShortTitle(node) {
+    return tpl('creator.journey.design_slot_level_short', 'Level {{ n }}', {
+      n: String(designSlotLevelFromNode(node) || '')
+    });
+  }
+
+  function designSlotCountLabel(node) {
+    var cap = node && node.metadata && node.metadata.slot_cap;
+    if (cap == null || cap === '') return '';
+    return tpl('creator.journey.design_slot_count_label', '{{ n }}', { n: String(cap) });
+  }
+
+  function highestUnlockedDesignSlotLevelIcon(nodes) {
+    var unlocked = (nodes || []).filter(function (n) {
+      return isDesignSlotLevelNode(n) && n.unlocked;
+    });
+    if (!unlocked.length) return CATEGORY_ICON_SVG.design_slot;
+    unlocked.sort(function (a, b) {
+      return designSlotLevelFromNode(b) - designSlotLevelFromNode(a);
+    });
+    return designSlotLevelIconSvg(designSlotLevelFromNode(unlocked[0]));
+  }
+
+  function categoryTabIconSvg(cat, nodes) {
+    if (cat === 'design_slot') return highestUnlockedDesignSlotLevelIcon(nodes);
+    return CATEGORY_ICON_SVG[cat] || CATEGORY_ICON_SVG.product;
   }
 
   var EAZ_AXIS_LABELS = { cost: 'Cost', daily: 'Daily', cap: 'Cap', kickstarter: 'Kickstarter' };
@@ -597,7 +656,289 @@
         limitLabel: activeLimitLabelForParent(node)
       };
     }
+    if (isDesignSlotLevelNode(node)) {
+      return {
+        iconSvg: designSlotLevelIconSvg(designSlotLevelFromNode(node)),
+        limitLabel: designSlotCountLabel(node)
+      };
+    }
     return null;
+  }
+
+  function creationLimitCardMediaOpts(node) {
+    if (isCreationLimitParent(node)) return parentLimitMediaOpts(node);
+    if (node.metadata && node.metadata.creation_limit_kind === 'tier') {
+      return {
+        iconSvg: creationLimitAxisIconSvg(node.metadata.creation_limit_axis)
+      };
+    }
+    return null;
+  }
+
+  function listingLimitCardMediaOpts(node) {
+    if (isListingLimitChannel(node)) return parentLimitMediaOpts(node);
+    if (node.metadata && node.metadata.listing_limit_kind === 'tier') {
+      return {
+        iconSvg: listingLimitChannelIconSvg(node.channel_id)
+      };
+    }
+    return null;
+  }
+
+  var SKILL_INFO_ICON_SVG = ROYALTY_INFO_ICON_SVG;
+
+  var PRODUCT_KEY_ICON_SVG = {
+    'unisex-softstyle-cotton-tee': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3 3 7v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-3-4"/><path d="M6 3h12l1.5 4H4.5L6 3z"/><path d="M9 11v6M15 11v6"/></svg>'
+  };
+
+  var DESIGN_TYPE_ICON_SVG = {
+    classic: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
+    pattern: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+    'all-over': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M4 14h16M9 4v16M14 4v16"/></svg>',
+    'full-coverage': '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20M8 4v16M16 4v16"/></svg>',
+    panorama: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg>'
+  };
+
+  var CHANNEL_ICON_SVG = {
+    shopify: LISTING_CHANNEL_ICONS.shopify,
+    amazon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 14c3.5-4.5 7.5-6.5 9-6.5s5.5 2 9 6.5"/><path d="M17 13l4 2.5-1.2 3.5"/></svg>',
+    amazon_eu: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>',
+    amazon_us: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/></svg>',
+    amazon_uk: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/><path d="M12 22V12"/></svg>',
+    ebay: LISTING_CHANNEL_ICONS.ebay,
+    etsy: LISTING_CHANNEL_ICONS.etsy
+  };
+
+  var SOCIAL_PLATFORM_ICON_SVG = {
+    instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>',
+    tiktok: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>',
+    youtube: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 8.5a2.5 2.5 0 0 0-1.76-1.77C18.2 6.2 12 6.2 12 6.2s-6.2 0-8.24.53A2.5 2.5 0 0 0 2 8.5 26 26 0 0 0 1.5 12 26 26 0 0 0 2 15.5a2.5 2.5 0 0 0 1.76 1.77C5.8 17.8 12 17.8 12 17.8s6.2 0 8.24-.53A2.5 2.5 0 0 0 22 15.5 26 26 0 0 0 22.5 12 26 26 0 0 0 22 8.5z"/><path d="M10 9.5v7l6-3.5-6-3.5z"/></svg>'
+  };
+
+  var EAZ_AXIS_ICON_SVG = {
+    cost: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10h4.5a2 2 0 0 1 0 4H9"/></svg>',
+    daily: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    cap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10l8-5 8 5v10"/><path d="M9 20v-6h6v6"/></svg>',
+    kickstarter: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/><path d="M12 22V12"/></svg>'
+  };
+
+  function productIconSvg(productKey) {
+    return PRODUCT_KEY_ICON_SVG[productKey] || CATEGORY_ICON_SVG.product;
+  }
+
+  function designTypeIconSvg(designType) {
+    return DESIGN_TYPE_ICON_SVG[designType] || CATEGORY_ICON_SVG.design_type;
+  }
+
+  function channelIconSvg(channelId, node) {
+    if (isChannelGroupNode(node)) return CHANNEL_ICON_SVG.amazon || CATEGORY_ICON_SVG.channel;
+    var ch = String(channelId || '').toLowerCase();
+    return CHANNEL_ICON_SVG[ch] || LISTING_CHANNEL_ICONS[ch] || CATEGORY_ICON_SVG.channel;
+  }
+
+  function socialPlatformIconSvg(platform) {
+    return SOCIAL_PLATFORM_ICON_SVG[String(platform || '').toLowerCase()] || CATEGORY_ICON_SVG.social;
+  }
+
+  function automationSlotIconSvg(slot) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 11-12h-9l1-8z"/></svg>';
+  }
+
+  function promotionSlotIconSvg(slot) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11v2a4 4 0 0 0 4 4h10"/><path d="m7 15 4-9 4 9"/></svg>';
+  }
+
+  function heroSlotIconSvg(slot) {
+    return CATEGORY_ICON_SVG.hero;
+  }
+
+  function creatorNameSlotIconSvg(slot) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 3h2v4M18 5h-4"/></svg>';
+  }
+
+  function designSlotChildIconSvg(slotIndex) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>';
+  }
+
+  function variantColorIconSvg(node) {
+    var hex = node && node.metadata && node.metadata.color_hex;
+    if (hex && /^#[0-9a-f]{3,8}$/i.test(hex)) {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="' +
+        escapeHtml(hex) + '" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5C14.5 8.5 12 3 12 3S9.5 8.5 8 9.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>';
+  }
+
+  function eazEconomySkillIconSvg(node) {
+    if (!node) return CATEGORY_ICON_SVG.eaz_economy;
+    if (node.is_axis_gate) return EAZ_AXIS_ICON_SVG[node.axis] || CATEGORY_ICON_SVG.eaz_economy;
+    var axis = node.axis || 'cost';
+    return EAZ_AXIS_ICON_SVG[axis] || CATEGORY_ICON_SVG.eaz_economy;
+  }
+
+  /**
+   * Inline SVG for tree cards when no product image / flag / size label is shown.
+   * Returns empty string when an image URL should be used instead.
+   */
+  function skillIconSvgForNode(node, opts) {
+    opts = opts || {};
+    if (!node) return '';
+    if (opts.type === 'eaz_economy') return eazEconomySkillIconSvg(node);
+    if (nodeImageUrl(node)) return '';
+    if (node.category === 'market') return '';
+    if (node.category === 'variant' && node.metadata && node.metadata.variant_kind === 'size') return '';
+    if (node.category === 'royalty') return royaltyTierIconSvg(royaltyTierFromNode(node));
+    if (node.category === 'creation_limit') {
+      var cm = creationLimitCardMediaOpts(node);
+      if (cm && cm.iconSvg) return cm.iconSvg;
+    }
+    if (node.category === 'listing_limit') {
+      var lm = listingLimitCardMediaOpts(node);
+      if (lm && lm.iconSvg) return lm.iconSvg;
+    }
+    if (isDesignSlotLevelNode(node)) return designSlotLevelIconSvg(designSlotLevelFromNode(node));
+    if (isDesignSlotChildNode(node)) return designSlotChildIconSvg(node.slot_index);
+    if (node.category === 'product') return productIconSvg(node.product_key);
+    if (node.category === 'design_type') return designTypeIconSvg(node.design_type);
+    if (node.category === 'channel') return channelIconSvg(node.channel_id, node);
+    if (node.category === 'automation') return automationSlotIconSvg(node.automation_slot);
+    if (node.category === 'promotion') return promotionSlotIconSvg(node.promo_slot);
+    if (node.category === 'hero') return heroSlotIconSvg(node.hero_slot);
+    if (node.category === 'social') return socialPlatformIconSvg(node.social_platform);
+    if (node.category === 'creator_name') return creatorNameSlotIconSvg(node.name_slot);
+    if (node.category === 'variant') return variantColorIconSvg(node);
+    return CATEGORY_ICON_SVG[node.category] || CATEGORY_ICON_SVG.product;
+  }
+
+  function skillInfoSlug(node, opts) {
+    opts = opts || {};
+    if (opts.type === 'eaz_economy') return String(node.skill_key || '').replace(/_/g, '-');
+    if (node.product_key) return String(node.product_key);
+    if (node.design_type) return String(node.design_type);
+    if (isDesignSlotLevelNode(node)) return 'level-' + designSlotLevelFromNode(node);
+    if (isDesignSlotChildNode(node)) return 'slot-' + (node.slot_index || '');
+    if (isMarketContinentNode(node)) return 'continent-' + marketContinentCode(node).toLowerCase();
+    if (isMarketCountryNode(node)) return 'country-' + marketFlagCode(node);
+    if (node.category === 'royalty') return 'tier-' + royaltyTierFromNode(node);
+    if (isCreationLimitParent(node)) return 'parent-' + (node.metadata && node.metadata.creation_limit_axis || 'axis');
+    if (node.metadata && node.metadata.creation_limit_kind === 'tier') {
+      return (node.metadata.creation_limit_axis || 'axis') + '-tier-' +
+        (node.metadata.creation_limit_tier || '');
+    }
+    if (isListingLimitChannel(node)) return 'channel-' + (node.channel_id || 'channel');
+    if (node.metadata && node.metadata.listing_limit_kind === 'tier') {
+      return (node.channel_id || 'channel') + '-tier-' + (node.metadata.listing_tier_level || '');
+    }
+    if (isChannelGroupNode(node)) return 'group-' + String(node.node_key || '').replace(/:/g, '-');
+    if (node.channel_id) return String(node.channel_id);
+    if (node.social_platform) return String(node.social_platform);
+    if (node.name_slot != null) return 'slot-' + node.name_slot;
+    if (node.automation_slot != null) return 'slot-' + node.automation_slot;
+    if (node.promo_slot != null) return 'slot-' + node.promo_slot;
+    if (node.hero_slot != null) return 'slot-' + node.hero_slot;
+    if (node.category === 'variant' && node.metadata) {
+      if (node.metadata.variant_kind === 'color') {
+        return 'color-' + (node.metadata.color_slug || node.metadata.color || 'color');
+      }
+      return 'size-' + (node.metadata.size || 'size');
+    }
+    return String(node.node_key || 'skill').replace(/:/g, '-').replace(/_/g, '-');
+  }
+
+  function skillInfoCategory(node, opts) {
+    if (opts && opts.type === 'eaz_economy') return 'eaz_economy';
+    return node && node.category ? node.category : 'product';
+  }
+
+  function skillInfoField(node, field, opts) {
+    var cat = skillInfoCategory(node, opts);
+    var slug = skillInfoSlug(node, opts);
+    var specificKey = 'creator.journey.info.' + cat + '.' + slug + '.' + field;
+    var genericKey = 'creator.journey.info.' + cat + '._generic.' + field;
+    var specific = t(specificKey, '');
+    if (specific && specific !== specificKey) return specific;
+    var generic = t(genericKey, '');
+    if (generic && generic !== genericKey) return generic;
+    return skillInfoInlineFallback(node, field, opts);
+  }
+
+  function skillInfoInlineFallback(node, field, opts) {
+    if (node && node.category === 'royalty' && field === 'body') {
+      return royaltyInfoBenefitText(royaltyTierFromNode(node), royaltyPercentFromNode(node));
+    }
+    if (opts && opts.type === 'eaz_economy') {
+      var sk = node && node.skill_key;
+      if (field === 'title') return eazSkillLabel(sk, node && node.is_axis_gate);
+      if (field === 'body') {
+        return t('creator.journey.info.eaz_economy._generic.body',
+          'EAZV Economy skills reduce costs, raise daily allowances, or increase caps once activated.');
+      }
+    }
+    if (field === 'title') return nodeTitle(node);
+    return t('creator.journey.info._fallback.body',
+      'Unlock this skill in your Creator Journey to expand what you can create, publish, and earn.');
+  }
+
+  function skillInfoAriaLabel(node, opts) {
+    return tpl('creator.journey.info_aria', 'About {{ name }}', {
+      name: skillInfoField(node, 'title', opts)
+    });
+  }
+
+  /**
+   * Expandable parents: card click/tap expands accordion; info (i) opens modal.
+   * Leaf / non-expandable skills: card click opens info modal (unless action button).
+   * Locked cards still show info — preview what the skill does before unlocking.
+   */
+  function isExpandableNode(node) {
+    if (!node) return false;
+    if (node.category === 'product' && node.product_key === SOFTSTYLE_PRODUCT_KEY && node.unlocked) return true;
+    if (node.category === 'variant' && node.metadata && node.metadata.variant_kind === 'color' && node.unlocked) {
+      return true;
+    }
+    if (isMarketContinentNode(node) && node.unlocked) return true;
+    if (isChannelGroupNode(node)) {
+      return !!node.unlocked && channelChildNodes(node.node_key).length > 0;
+    }
+    if (isDesignSlotLevelNode(node)) {
+      return !!node.unlocked && designSlotChildren(node).some(function (s) { return !s.unlocked; });
+    }
+    if (isCreationLimitParent(node)) {
+      return creationLimitTierNodes(node).some(function (tier) { return !tier.unlocked; });
+    }
+    if (isListingLimitChannel(node)) {
+      return !!node.unlocked && listingLimitTierNodes(node).some(function (tier) { return !tier.unlocked; });
+    }
+    return false;
+  }
+
+  function renderSkillInfoButton(nodeKey, label, opts) {
+    opts = opts || {};
+    var typeAttr = opts.type === 'eaz_economy' ? ' data-cj-skill-info-type="eaz_economy"' : '';
+    return '<button type="button" class="cj-tree-card__info-btn" data-cj-skill-info-btn="' +
+      escapeHtml(nodeKey) + '"' + typeAttr + ' aria-label="' + escapeHtml(label) + '">' +
+      SKILL_INFO_ICON_SVG + '</button>';
+  }
+
+  function skillCardInfoChrome(node, expandableOverride, opts) {
+    opts = opts || {};
+    var expandable = expandableOverride != null ? expandableOverride : isExpandableNode(node);
+    var label = skillInfoAriaLabel(node, opts);
+    var key = opts.infoKey || (node && node.node_key) || '';
+    var typeAttr = opts.type === 'eaz_economy' ? ' data-cj-skill-info-type="eaz_economy"' : '';
+    if (expandable) {
+      return {
+        extraCls: ' has-info-btn',
+        infoBtn: renderSkillInfoButton(key, label, opts),
+        cardAttrs: ''
+      };
+    }
+    return {
+      extraCls: ' is-info-card',
+      infoBtn: '',
+      cardAttrs: ' data-cj-skill-info="' + escapeHtml(key) + '"' + typeAttr +
+        ' role="button" tabindex="0" aria-label="' + escapeHtml(label) + '"'
+    };
   }
 
   function nodeTitle(node) {
@@ -607,6 +948,9 @@
     if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
       return multiTierParentShortTitle(node);
     }
+    if (isDesignSlotLevelNode(node)) {
+      return designSlotLevelShortTitle(node);
+    }
     if (node.metadata && node.metadata.royalty_percent != null) {
       return tpl('creator.journey.royalty_tier_title', '{{ pct }}% royalty', {
         pct: String(node.metadata.royalty_percent)
@@ -615,12 +959,6 @@
     if (node.metadata && node.metadata.continent_name) return String(node.metadata.continent_name);
     if (node.metadata && node.metadata.country_name) return String(node.metadata.country_name);
     if (node.metadata && node.metadata.title) {
-      if (node.metadata.design_slot_kind === 'level' && node.metadata.slot_cap != null) {
-        return tpl('creator.journey.design_slot_level_title', 'Level {{ n }} · {{ slots }} slots', {
-          n: String(node.metadata.slot_level || node.min_level || ''),
-          slots: String(node.metadata.slot_cap)
-        });
-      }
       return String(node.metadata.title);
     }
     if (node.category === 'market' && isMarketContinentNode(node)) {
@@ -994,12 +1332,13 @@
     } else if (opts.sizeLabel) {
       mediaHtml = '<div class="cj-tree-card__size-label">' + escapeHtml(opts.sizeLabel) + '</div>';
       mediaExtraCls = ' cj-tree-card__media--size';
-    } else if (opts.iconSvg) {
+    } else if (opts.iconSvg || skillIconSvgForNode(node)) {
+      var iconSvgResolved = opts.iconSvg || skillIconSvgForNode(node);
       var limitLabelHtml = opts.limitLabel
         ? '<span class="cj-tree-card__limit-label">' + escapeHtml(opts.limitLabel) + '</span>'
         : '';
       mediaHtml = '<div class="cj-tree-card__icon-stack" aria-hidden="true">' +
-        '<div class="cj-tree-card__icon">' + opts.iconSvg + '</div>' +
+        '<div class="cj-tree-card__icon">' + iconSvgResolved + '</div>' +
         limitLabelHtml + '</div>';
       mediaExtraCls = ' cj-tree-card__media--icon';
       if (opts.limitLabel) mediaExtraCls += ' cj-tree-card__media--has-limit';
@@ -1099,9 +1438,10 @@
     var expandAttr = expandable
       ? ' data-cj-expand-product="' + escapeHtml(node.product_key || '') + '"'
       : '';
+    var infoChrome = skillCardInfoChrome(node, expandable);
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      lock.titleAttr + '>' +
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
@@ -1109,6 +1449,7 @@
         lockReason: lock.lockReason,
         requiredLevel: opts.requiredLevel
       }) +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -1149,15 +1490,17 @@
     var expandAttr = expandable
       ? ' data-cj-expand-color="' + escapeHtml(node.node_key) + '"'
       : '';
+    var infoChrome = skillCardInfoChrome(node, expandable);
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      lock.titleAttr + '>' +
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason
       }) +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -1171,9 +1514,10 @@
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
+    var infoChrome = skillCardInfoChrome(node, false);
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' +
-      lock.titleAttr + '>' +
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
@@ -1182,6 +1526,7 @@
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason
       }) +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -1343,9 +1688,10 @@
       ? ' data-cj-expand-continent="' + escapeHtml(contCode) + '" role="button" tabindex="0" aria-expanded="' +
         (expanded ? 'true' : 'false') + '"'
       : '';
+    var infoChrome = skillCardInfoChrome(node, expandable);
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      lock.titleAttr + '>' +
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
@@ -1354,6 +1700,7 @@
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason
       }) +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -1571,15 +1918,17 @@
       ? ' data-cj-expand-channel="' + escapeHtml(node.node_key) + '" role="button" tabindex="0" aria-expanded="' +
         (expanded ? 'true' : 'false') + '"'
       : '';
+    var infoChrome = skillCardInfoChrome(node, expandable);
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      lock.titleAttr + '>' +
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason
       }) +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -1699,14 +2048,19 @@
       : '';
 
     var actionHtml = seqBlocked ? '' : act.actionHtml;
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      lock.titleAttr + '>' +
+    var levelMedia = isLevel ? parentLimitMediaOpts(node) : null;
+    var infoChrome = skillCardInfoChrome(node, expandable);
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: !!actionHtml,
         levelLocked: lock.levelLocked,
-        lockReason: lock.lockReason
+        lockReason: lock.lockReason,
+        iconSvg: levelMedia ? levelMedia.iconSvg : null,
+        limitLabel: levelMedia ? levelMedia.limitLabel : ''
       }) +
+      infoChrome.infoBtn +
       actionHtml + '</div></article>';
   }
 
@@ -1758,14 +2112,20 @@
       expandHtml + '</section>';
   }
 
-  function renderDesignSlotTree(nodes) {
-    var levels = (nodes || []).filter(isDesignSlotLevelNode).sort(function (a, b) {
-      return (Number(a.min_level) || 0) - (Number(b.min_level) || 0);
+  function sortDesignSlotLevels(nodes, descending) {
+    return (nodes || []).slice().sort(function (a, b) {
+      var diff = designSlotLevelFromNode(a) - designSlotLevelFromNode(b);
+      return descending ? -diff : diff;
     });
+  }
+
+  function renderDesignSlotTree(nodes) {
+    var levels = sortDesignSlotLevels((nodes || []).filter(isDesignSlotLevelNode), false);
     if (!levels.length) {
       return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
     }
     var split = splitUnlockedLocked(levels);
+    split.unlocked = sortDesignSlotLevels(split.unlocked, true);
     var html = '<div class="cj-product-sections">';
     html += renderDesignSlotRow(
       t('creator.journey.unlocked_skills', 'Unlocked'),
@@ -1825,8 +2185,10 @@
     var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
     var expandable = isParent && lockedTiers.length > 0;
     var expanded = expandable && !!expandedCreationLimitKeys[node.node_key];
+    var isTier = node.metadata && node.metadata.creation_limit_kind === 'tier';
     var cls = 'cj-tree-card cj-tree-card--creation-limit';
     if (isParent) cls += ' cj-tree-card--creation-limit-parent';
+    if (isTier) cls += ' cj-tree-card--creation-limit-tier';
     if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
@@ -1837,17 +2199,19 @@
       ? ' data-cj-expand-creation-limit="' + escapeHtml(node.node_key) + '" role="button" tabindex="0" aria-expanded="' +
         (expanded ? 'true' : 'false') + '"'
       : '';
-    var parentMedia = isParent ? parentLimitMediaOpts(node) : null;
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      lock.titleAttr + '>' +
+    var cardMedia = creationLimitCardMediaOpts(node);
+    var infoChrome = skillCardInfoChrome(node, expandable);
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason,
-        iconSvg: parentMedia ? parentMedia.iconSvg : null,
-        limitLabel: parentMedia ? parentMedia.limitLabel : ''
+        iconSvg: cardMedia ? cardMedia.iconSvg : null,
+        limitLabel: cardMedia ? cardMedia.limitLabel : ''
       }) +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -1893,8 +2257,10 @@
     var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
     var expandable = isChannel && !!node.unlocked && lockedTiers.length > 0;
     var expanded = expandable && !!expandedListingLimitKeys[node.node_key];
+    var isTier = node.metadata && node.metadata.listing_limit_kind === 'tier';
     var cls = 'cj-tree-card cj-tree-card--listing-limit';
     if (isChannel) cls += ' cj-tree-card--listing-channel';
+    if (isTier) cls += ' cj-tree-card--listing-limit-tier';
     if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
@@ -1905,17 +2271,19 @@
       ? ' data-cj-expand-listing-limit="' + escapeHtml(node.node_key) + '" role="button" tabindex="0" aria-expanded="' +
         (expanded ? 'true' : 'false') + '"'
       : '';
-    var channelMedia = isChannel ? parentLimitMediaOpts(node) : null;
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' + expandAttr +
-      lock.titleAttr + '>' +
+    var cardMedia = listingLimitCardMediaOpts(node);
+    var infoChrome = skillCardInfoChrome(node, expandable);
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason,
-        iconSvg: channelMedia ? channelMedia.iconSvg : null,
-        limitLabel: channelMedia ? channelMedia.limitLabel : ''
+        iconSvg: cardMedia ? cardMedia.iconSvg : null,
+        limitLabel: cardMedia ? cardMedia.limitLabel : ''
       }) +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -1967,10 +2335,7 @@
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
     var tier = royaltyTierFromNode(node);
-    var pct = royaltyPercentFromNode(node);
-    var infoLabel = tpl('creator.journey.royalty_info_aria', 'About {{ pct }}% royalty', {
-      pct: String(pct || '')
-    });
+    var infoChrome = skillCardInfoChrome(node, false);
 
     var cls = 'cj-tree-card cj-tree-card--royalty';
     if (lock.visuallyLocked) cls += ' is-level-locked';
@@ -1979,11 +2344,8 @@
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' +
-      ' data-cj-royalty-info="' + escapeHtml(node.node_key) + '"' +
-      ' role="button" tabindex="0"' +
-      ' aria-label="' + escapeHtml(infoLabel) + '"' +
-      lock.titleAttr + '>' +
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
@@ -1991,9 +2353,7 @@
         lockReason: lock.lockReason,
         iconSvg: royaltyTierIconSvg(tier)
       }) +
-      '<button type="button" class="cj-tree-card__info-btn" data-cj-royalty-info-btn="' +
-      escapeHtml(node.node_key) + '" aria-label="' + escapeHtml(infoLabel) + '">' +
-      ROYALTY_INFO_ICON_SVG + '</button>' +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -2007,21 +2367,23 @@
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
 
-    var cls = 'cj-tree-card';
+    var cls = 'cj-tree-card cj-tree-card--' + String(node.category || 'skill').replace(/_/g, '-');
     if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
+    var infoChrome = skillCardInfoChrome(node, false);
 
-    return '<article class="' + cls + '" data-node="' + escapeHtml(node.node_key) + '"' +
-      lock.titleAttr + '>' +
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       renderTreeCardFrame(node, {
         hasAction: act.hasAction,
         levelLocked: lock.levelLocked,
         lockReason: lock.lockReason
       }) +
+      infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
 
@@ -2218,15 +2580,22 @@
 
     var actionHtml = renderEazEconomyActionButton(node, 'cj-tree-card__action cj-btn');
     var titleAttr = (isLocked && badge) ? ' title="' + escapeHtml(badge) + '"' : '';
+    var iconSvg = eazEconomySkillIconSvg(node);
+    var infoChrome = skillCardInfoChrome(node, false, { type: 'eaz_economy', infoKey: node.skill_key });
 
     var statusHtml = isActive ? '<span class="cj-tree-card__status" aria-hidden="true">✓</span>' : '';
-    return '<article class="' + cls + '" data-eaz-skill="' + escapeHtml(node.skill_key) + '"' + titleAttr + '>' +
+    return '<article class="' + cls + infoChrome.extraCls + '" data-eaz-skill="' + escapeHtml(node.skill_key) + '"' +
+      infoChrome.cardAttrs + titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
       '<div class="cj-tree-card__frame' + (canAct ? ' cj-tree-card__frame--attached' : '') + '">' +
       '<h4 class="cj-tree-card__title-in">' + escapeHtml(title) + '</h4>' +
-      '<div class="cj-tree-card__media"><div class="cj-tree-card__img cj-tree-card__img--placeholder cj-tree-card__img--eaz" aria-hidden="true"></div></div>' +
+      '<div class="cj-tree-card__media cj-tree-card__media--icon">' +
+      '<div class="cj-tree-card__icon-stack" aria-hidden="true">' +
+      '<div class="cj-tree-card__icon">' + iconSvg + '</div></div></div>' +
       '<span class="cj-tree-card__eaz-badge' + (isLocked ? ' cj-tree-card__level-badge' : '') + '">' + escapeHtml(badge) + '</span>' +
-      statusHtml + '</div>' + actionHtml + '</div></article>';
+      statusHtml + '</div>' +
+      infoChrome.infoBtn +
+      actionHtml + '</div></article>';
   }
 
   function renderEazEconomyAxisGate(axisNode) {
@@ -2364,12 +2733,25 @@
         (expanded ? 'true' : 'false') + '"'
       : '';
 
-    return '<article class="' + cls + '"' + expandAttr + '>' +
+    var pseudoNode = axisNode || { skill_key: 'axis_' + axis, axis: axis, is_axis_gate: true };
+    var infoChrome = skillCardInfoChrome(pseudoNode, canExpand, {
+      type: 'eaz_economy',
+      infoKey: pseudoNode.skill_key
+    });
+    if (!canExpand) cls += infoChrome.extraCls;
+    else cls += infoChrome.extraCls;
+
+    var axisIcon = EAZ_AXIS_ICON_SVG[axis] || CATEGORY_ICON_SVG.eaz_economy;
+    var cardAttrs = canExpand ? '' : infoChrome.cardAttrs;
+
+    return '<article class="' + cls + '"' + expandAttr + cardAttrs + '>' +
       '<div class="cj-eaz-economy__cat-card-inner">' +
       '<h4 class="cj-eaz-economy__cat-title">' + escapeHtml(label) + '</h4>' +
-      '<div class="cj-eaz-economy__cat-media" aria-hidden="true"></div>' +
+      '<div class="cj-eaz-economy__cat-media cj-eaz-economy__cat-media--icon" aria-hidden="true">' +
+      axisIcon + '</div>' +
       (badge ? '<span class="cj-eaz-economy__cat-badge">' + escapeHtml(badge) + '</span>' : '') +
       (isActive ? '<span class="cj-eaz-economy__cat-check" aria-hidden="true">✓</span>' : '') +
+      infoChrome.infoBtn +
       '</div>' + actionHtml + '</article>';
   }
 
@@ -2535,12 +2917,12 @@
         renderTree();
       }
       card.addEventListener('click', function (e) {
-        if (e.target.closest('[data-cj-eaz-skill]')) return;
+        if (e.target.closest('[data-cj-eaz-skill], [data-cj-eaz-action], [data-cj-skill-info-btn]')) return;
         toggle();
       });
       card.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
-        if (e.target.closest('[data-cj-eaz-skill]')) return;
+        if (e.target.closest('[data-cj-eaz-skill], [data-cj-eaz-action], [data-cj-skill-info-btn]')) return;
         e.preventDefault();
         toggle();
       });
@@ -2585,7 +2967,7 @@
 
     if (filters) {
       filters.innerHTML = availCats.map(function (c) {
-        var icon = CATEGORY_ICON_SVG[c] || CATEGORY_ICON_SVG.product;
+        var icon = categoryTabIconSvg(c, nodes);
         var pinDef = PINNABLE_UNLOCK_STATS.find(function (p) { return p.treeTab === c; });
         var pinHtml = '';
         if (pinDef) {
@@ -2694,25 +3076,32 @@
       });
     });
 
-    list.querySelectorAll('[data-cj-royalty-info]').forEach(function (card) {
+    list.querySelectorAll('[data-cj-skill-info]').forEach(function (card) {
       function openInfo(e) {
         if (e.target.closest('[data-cj-tree-action]')) return;
-        var key = card.getAttribute('data-cj-royalty-info');
-        if (key) openRoyaltyInfoModal(key);
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
+        if (e.target.closest('[data-cj-eaz-action]')) return;
+        var key = card.getAttribute('data-cj-skill-info');
+        if (!key) return;
+        var infoType = card.getAttribute('data-cj-skill-info-type');
+        openSkillInfoModal(key, infoType === 'eaz_economy' ? { type: 'eaz_economy' } : null);
       }
       card.addEventListener('click', openInfo);
       card.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
         e.preventDefault();
         openInfo(e);
       });
     });
-    list.querySelectorAll('[data-cj-royalty-info-btn]').forEach(function (btn) {
+    list.querySelectorAll('[data-cj-skill-info-btn]').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
-        var key = btn.getAttribute('data-cj-royalty-info-btn');
-        if (key) openRoyaltyInfoModal(key);
+        var key = btn.getAttribute('data-cj-skill-info-btn');
+        if (!key) return;
+        var infoType = btn.getAttribute('data-cj-skill-info-type');
+        openSkillInfoModal(key, infoType === 'eaz_economy' ? { type: 'eaz_economy' } : null);
       });
     });
   }
@@ -2810,6 +3199,9 @@
     if (panel) panel.style.removeProperty('--cj-connector-x');
   }
 
+  var CONNECTOR_STROKE_PX = 3;
+  var CONNECTOR_STROKE_HALF = CONNECTOR_STROKE_PX / 2;
+
   function connectorFrameEl(card) {
     if (!card) return null;
     if (card.classList && card.classList.contains('cj-tree-card__frame')) return card;
@@ -2829,11 +3221,10 @@
     var panelRect = panel.getBoundingClientRect();
     var parentX = Math.round(cardRect.left + cardRect.width / 2 - branchRect.left);
     var panelX = Math.round(panelRect.left + panelRect.width / 2 - branchRect.left);
-    // Overlap 3px into both frames so the stem merges with the gold borders.
-    var overlap = 3;
-    var top = Math.round(cardRect.bottom - branchRect.top - overlap);
-    var bottom = Math.round(panelRect.top - branchRect.top + overlap);
-    var h = Math.max(10, bottom - top);
+    // Terminate exactly at outer border edges (no overlap into parent/child frames).
+    var top = Math.round(cardRect.bottom - branchRect.top);
+    var bottom = Math.round(panelRect.top - branchRect.top);
+    var h = Math.max(CONNECTOR_STROKE_PX, bottom - top);
     connector.classList.add('is-anchored');
     connector.style.setProperty('--cj-connector-top', top + 'px');
     connector.style.setProperty('--cj-connector-h', h + 'px');
@@ -2845,9 +3236,11 @@
       connector.style.removeProperty('--cj-connector-x');
       connector.style.width = Math.round(branchRect.width) + 'px';
       connector.style.height = h + 'px';
-      var elbowY = Math.round(h * 0.42);
-      var pathD = 'M' + parentX + ',0 L' + parentX + ',' + elbowY + ' L' + panelX + ',' + elbowY +
-        ' L' + panelX + ',' + h;
+      var pathStartY = CONNECTOR_STROKE_HALF;
+      var pathEndY = h - CONNECTOR_STROKE_HALF;
+      var elbowY = Math.round(pathStartY + (pathEndY - pathStartY) * 0.42);
+      var pathD = 'M' + parentX + ',' + pathStartY + ' L' + parentX + ',' + elbowY + ' L' + panelX + ',' + elbowY +
+        ' L' + panelX + ',' + pathEndY;
       if (!svg) {
         svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('aria-hidden', 'true');
@@ -2867,6 +3260,28 @@
     if (svg) svg.remove();
     connector.style.setProperty('--cj-connector-x', parentX + 'px');
     panel.style.setProperty('--cj-connector-x', parentX + 'px');
+  }
+
+  function wireConnectorHoverReposition(root) {
+    if (!root) return;
+    var scheduleReposition = function () {
+      requestAnimationFrame(function () { positionVariantConnectors(root); });
+    };
+    root.querySelectorAll(
+      '.cj-tree-card.is-expanded.is-expandable, .cj-eaz-economy__cat-card.is-expanded.is-expandable'
+    ).forEach(function (card) {
+      card.addEventListener('mouseenter', scheduleReposition);
+      card.addEventListener('mouseleave', scheduleReposition);
+    });
+    if (!root._cjConnectorTransitionBound) {
+      root._cjConnectorTransitionBound = true;
+      root.addEventListener('transitionend', function (e) {
+        if (!e.target || !e.target.closest) return;
+        if (e.target.closest('.cj-tree-card__frame, .cj-tree-card, .cj-eaz-economy__cat-card-inner')) {
+          scheduleReposition();
+        }
+      });
+    }
   }
 
   function positionVariantConnectors(root) {
@@ -2966,6 +3381,7 @@
     root.querySelectorAll('[data-cj-expand-product]').forEach(function (card) {
       card.addEventListener('click', function (e) {
         if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
         var pk = card.getAttribute('data-cj-expand-product');
         if (!pk) return;
         expandedProductKeys[pk] = !expandedProductKeys[pk];
@@ -2980,6 +3396,7 @@
     root.querySelectorAll('[data-cj-expand-color]').forEach(function (card) {
       card.addEventListener('click', function (e) {
         if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
         var key = card.getAttribute('data-cj-expand-color');
         if (!key) return;
         expandedColorKeys[key] = !expandedColorKeys[key];
@@ -2989,6 +3406,7 @@
     root.querySelectorAll('[data-cj-expand-continent]').forEach(function (card) {
       function toggleContinent(e) {
         if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
         var code = card.getAttribute('data-cj-expand-continent');
         if (!code) return;
         // Toggle for any unlocked continent — including fully unlocked (all countries done).
@@ -3005,6 +3423,7 @@
     root.querySelectorAll('[data-cj-expand-channel]').forEach(function (card) {
       function toggleChannel(e) {
         if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
         var key = card.getAttribute('data-cj-expand-channel');
         if (!key) return;
         expandedChannelKeys[key] = !expandedChannelKeys[key];
@@ -3020,6 +3439,7 @@
     root.querySelectorAll('[data-cj-expand-slot-level]').forEach(function (card) {
       function toggleSlotLevel(e) {
         if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
         var key = card.getAttribute('data-cj-expand-slot-level');
         if (!key) return;
         expandedSlotLevelKeys[key] = !expandedSlotLevelKeys[key];
@@ -3052,6 +3472,7 @@
     root.querySelectorAll('[data-cj-expand-listing-limit]').forEach(function (card) {
       function toggleListing(e) {
         if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
         var key = card.getAttribute('data-cj-expand-listing-limit');
         if (!key) return;
         var wasOpen = !!expandedListingLimitKeys[key];
@@ -3075,6 +3496,7 @@
       });
     });
     positionVariantConnectors(root);
+    wireConnectorHoverReposition(root);
     if (!window._cjConnectorResizeBound) {
       window._cjConnectorResizeBound = true;
       window.addEventListener('resize', function () {
@@ -3360,45 +3782,73 @@
     return tpl(key, fallbacks[tier] || fallbacks[1], { pct: String(pct) });
   }
 
-  function openRoyaltyInfoModal(nodeKey) {
+  function openSkillInfoModal(nodeKey, opts) {
+    opts = opts || {};
     var overlayEl = document.getElementById('cjRoyaltyInfoOverlay');
-    if (!overlayEl) return;
-    var node = findJourneyNode(nodeKey);
-    if (!node || node.category !== 'royalty') return;
+    if (!overlayEl || !nodeKey) return;
 
-    var tier = royaltyTierFromNode(node);
-    var pct = royaltyPercentFromNode(node);
-    var title = nodeTitle(node);
+    var isEaz = opts.type === 'eaz_economy';
+    var node = isEaz ? findEazEconomyNode(nodeKey) : findJourneyNode(nodeKey);
+    if (!node) return;
+
+    var modalOpts = isEaz ? { type: 'eaz_economy' } : null;
+    var title = skillInfoField(node, 'title', modalOpts);
+    var body = skillInfoField(node, 'body', modalOpts);
     var iconEl = document.getElementById('cjRoyaltyInfoIcon');
     var titleEl = document.getElementById('cjRoyaltyInfoTitle');
     var bodyEl = document.getElementById('cjRoyaltyInfoBody');
     var metaEl = document.getElementById('cjRoyaltyInfoMeta');
     var noteEl = document.getElementById('cjRoyaltyInfoNote');
 
-    if (iconEl) iconEl.innerHTML = royaltyTierIconSvg(tier);
+    if (iconEl) {
+      iconEl.innerHTML = isEaz
+        ? eazEconomySkillIconSvg(node)
+        : (skillIconSvgForNode(node) || CATEGORY_ICON_SVG.product);
+    }
     if (titleEl) titleEl.textContent = title;
-    if (bodyEl) bodyEl.textContent = royaltyInfoBenefitText(tier, pct);
+    if (bodyEl) bodyEl.textContent = body;
 
     var metaParts = [];
-    var salesRef = node.metadata && node.metadata.sales_ref != null
-      ? Number(node.metadata.sales_ref)
-      : null;
-    if (salesRef != null && salesRef > 0) {
-      metaParts.push(tpl('creator.journey.royalty_sales_ref', '~{{ n }} sales at €10 net', {
-        n: String(salesRef)
-      }));
+    if (!isEaz && node.category === 'royalty') {
+      var salesRef = node.metadata && node.metadata.sales_ref != null
+        ? Number(node.metadata.sales_ref)
+        : null;
+      if (salesRef != null && salesRef > 0) {
+        metaParts.push(tpl('creator.journey.royalty_sales_ref', '~{{ n }} sales at €10 net', {
+          n: String(salesRef)
+        }));
+      }
     }
-    var minLv = Number(node.min_level) || tier || 1;
+    var minLv = isEaz
+      ? (Number(node.mascot_min_level) || 1)
+      : (Number(node.min_level) || 1);
     metaParts.push(tpl('creator.journey.level_badge', 'Level {{ n }}', { n: String(minLv) }));
+    if (isEaz && node.activation_cost_eaz > 0) {
+      metaParts.push(formatEazBadge(Number(node.eaz_paid) || 0, Number(node.activation_cost_eaz) || 0, false, false));
+    } else if (!isEaz && !node.unlocked && nodeEffectiveCost(node) > 0) {
+      metaParts.push(formatEazBadge(Number(node.eaz_committed) || 0, nodeEffectiveCost(node), false, false));
+    }
     if (metaEl) {
       metaEl.textContent = metaParts.join(' · ');
       metaEl.hidden = !metaParts.length;
     }
     if (noteEl) {
-      noteEl.textContent = t(
-        'creator.journey.royalty_min_payout_note',
-        'Payouts use at least €2 net profit equivalent. Actual earnings vary with margin and promotions.'
-      );
+      if (!isEaz && node.category === 'royalty') {
+        noteEl.textContent = t(
+          'creator.journey.royalty_min_payout_note',
+          'Payouts use at least €2 net profit equivalent. Actual earnings vary with margin and promotions.'
+        );
+        noteEl.hidden = false;
+      } else {
+        var note = skillInfoField(node, 'note', modalOpts);
+        if (note && note !== skillInfoInlineFallback(node, 'note', modalOpts)) {
+          noteEl.textContent = note;
+          noteEl.hidden = false;
+        } else {
+          noteEl.textContent = '';
+          noteEl.hidden = true;
+        }
+      }
     }
 
     overlayEl.hidden = false;
@@ -3408,7 +3858,15 @@
     if (closeBtn) closeBtn.focus();
   }
 
+  function openRoyaltyInfoModal(nodeKey) {
+    openSkillInfoModal(nodeKey);
+  }
+
   function closeRoyaltyInfoModal() {
+    closeSkillInfoModal();
+  }
+
+  function closeSkillInfoModal() {
     var overlayEl = document.getElementById('cjRoyaltyInfoOverlay');
     if (!overlayEl) return;
     overlayEl.classList.remove('is-open');
@@ -4288,7 +4746,7 @@
     if (commitConfirm) commitConfirm.addEventListener('click', confirmCommitModal);
     if (commitConfirmCancel) commitConfirmCancel.addEventListener('click', closeCommitConfirm);
     if (commitConfirmOk) commitConfirmOk.addEventListener('click', executePendingCommit);
-    if (royaltyInfoClose) royaltyInfoClose.addEventListener('click', closeRoyaltyInfoModal);
+    if (royaltyInfoClose) royaltyInfoClose.addEventListener('click', closeSkillInfoModal);
     if (commitOverlay) {
       commitOverlay.addEventListener('click', function (e) {
         if (e.target === commitOverlay) closeCommitModal();
@@ -4301,7 +4759,7 @@
     }
     if (royaltyInfoOverlay) {
       royaltyInfoOverlay.addEventListener('click', function (e) {
-        if (e.target === royaltyInfoOverlay) closeRoyaltyInfoModal();
+        if (e.target === royaltyInfoOverlay) closeSkillInfoModal();
       });
     }
 
@@ -4309,7 +4767,7 @@
       if (e.key !== 'Escape') return;
       var royaltyOpen = document.getElementById('cjRoyaltyInfoOverlay');
       if (royaltyOpen && royaltyOpen.classList.contains('is-open')) {
-        closeRoyaltyInfoModal();
+        closeSkillInfoModal();
         return;
       }
       var confirmOpen = document.getElementById('cjCommitConfirmOverlay');

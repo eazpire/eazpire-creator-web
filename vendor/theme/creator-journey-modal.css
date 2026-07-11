@@ -1111,6 +1111,11 @@
   transform: translateY(-2px);
 }
 
+/* Expanded parents with connectors: hover must not shift layout vs. anchored stem */
+.cj-tree-card.is-expandable.is-expanded:hover {
+  transform: none;
+}
+
 .cj-tree-card.is-expanded .cj-tree-card__frame,
 .cj-tree-card.is-selected .cj-tree-card__frame {
   border-color: rgba(255, 200, 60, 1);
@@ -1188,8 +1193,8 @@
 }
 
 /*
- * Snake stem: absolute, JS-anchored from parent frame bottom into child top.
- * Same gold as expanded/unlocked frames — overlaps both borders (no gap).
+ * Snake stem: absolute, JS-anchored from parent frame bottom to child panel top.
+ * Endpoints align to outer border edges; stroke inset handled in JS for SVG paths.
  */
 .cj-variant-connector {
   position: absolute;
@@ -1261,7 +1266,7 @@
   position: relative;
 }
 
-/* Stem continuation through child top border (same gold, no dark notch gap) */
+/* Stem cap on child top border only (2px border strip, not panel interior) */
 .cj-variant-panel::before,
 .cj-variant-size-panel::before {
   content: '';
@@ -1270,7 +1275,7 @@
   left: var(--cj-connector-x, 50%);
   transform: translateX(-50%);
   width: 3px;
-  height: 4px;
+  height: 2px;
   background: rgba(255, 200, 60, 0.95);
   pointer-events: none;
   z-index: 6;
@@ -2058,21 +2063,35 @@
 }
 
 .cj-tree-card--creation-limit-parent .cj-tree-card__icon,
-.cj-tree-card--listing-channel .cj-tree-card__icon {
+.cj-tree-card--creation-limit-tier .cj-tree-card__icon,
+.cj-tree-card--listing-channel .cj-tree-card__icon,
+.cj-tree-card--listing-limit-tier .cj-tree-card__icon,
+.cj-tree-card--design-slot-level .cj-tree-card__icon {
   color: #fbbf24;
   filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.25));
 }
 
 .cj-tree-card--creation-limit-parent.is-level-locked .cj-tree-card__icon,
-.cj-tree-card--listing-channel.is-level-locked .cj-tree-card__icon {
+.cj-tree-card--creation-limit-tier.is-level-locked .cj-tree-card__icon,
+.cj-tree-card--listing-channel.is-level-locked .cj-tree-card__icon,
+.cj-tree-card--listing-limit-tier.is-level-locked .cj-tree-card__icon,
+.cj-tree-card--design-slot-level.is-level-locked .cj-tree-card__icon {
   color: rgba(255, 255, 255, 0.42);
   filter: none;
 }
 
 .cj-tree-card--creation-limit-parent.is-level-locked .cj-tree-card__limit-label,
-.cj-tree-card--listing-channel.is-level-locked .cj-tree-card__limit-label {
+.cj-tree-card--listing-channel.is-level-locked .cj-tree-card__limit-label,
+.cj-tree-card--design-slot-level.is-level-locked .cj-tree-card__limit-label {
   color: rgba(255, 255, 255, 0.45);
   text-shadow: none;
+}
+
+.cj-tree-card--creation-limit-tier .cj-tree-card__icon,
+.cj-tree-card--listing-limit-tier .cj-tree-card__icon {
+  width: 48%;
+  max-width: 52px;
+  max-height: 52px;
 }
 
 .cj-tree-card__icon {
@@ -2108,6 +2127,44 @@
 
 .cj-tree-card--royalty {
   cursor: pointer;
+}
+
+.cj-tree-card.is-info-card {
+  cursor: pointer;
+}
+
+.cj-tree-card.has-info-btn .cj-tree-card__stack,
+.cj-tree-card--royalty .cj-tree-card__stack {
+  position: relative;
+}
+
+.cj-tree-card--eaz-economy .cj-tree-card__icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.25));
+}
+
+.cj-tree-card--eaz-economy.is-level-locked .cj-tree-card__icon {
+  color: rgba(255, 255, 255, 0.42);
+  filter: none;
+}
+
+.cj-tree-card--product .cj-tree-card__icon,
+.cj-tree-card--channel .cj-tree-card__icon,
+.cj-tree-card--design-type .cj-tree-card__icon,
+.cj-tree-card--automation .cj-tree-card__icon,
+.cj-tree-card--promotion .cj-tree-card__icon,
+.cj-tree-card--hero .cj-tree-card__icon,
+.cj-tree-card--social .cj-tree-card__icon,
+.cj-tree-card--creator-name .cj-tree-card__icon,
+.cj-tree-card--design-slot .cj-tree-card__icon,
+.cj-tree-card--variant-color .cj-tree-card__icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.25));
+}
+
+.cj-tree-card.is-level-locked .cj-tree-card__icon {
+  color: rgba(255, 255, 255, 0.42);
+  filter: none;
 }
 
 .cj-tree-card__info-btn {
@@ -2598,6 +2655,32 @@
   background:
     radial-gradient(circle at 30% 30%, rgba(249, 115, 22, 0.4), transparent 55%),
     rgba(255, 255, 255, 0.06);
+}
+
+.cj-eaz-economy__cat-media--icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fbbf24;
+}
+
+.cj-eaz-economy__cat-media--icon svg {
+  width: 30px;
+  height: 30px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cj-eaz-economy__cat-card-inner {
+  position: relative;
+}
+
+.cj-eaz-economy__cat-card .cj-tree-card__info-btn {
+  top: 6px;
+  left: 6px;
 }
 
 .cj-eaz-economy__cat-badge {
