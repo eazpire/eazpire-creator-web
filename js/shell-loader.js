@@ -83,6 +83,7 @@
       fetchPartial("creator-mobile-marketing.html"),
       fetchPartial("creator-mobile-automations.html"),
       fetchPartial("creator-mobile-header.html"),
+      fetchPartial("creator-daily-limits-subheader.html"),
       fetchPartial("creator-mobile-drawer.html"),
     ]);
 
@@ -109,6 +110,7 @@
       "</div></div>" +
       parts[6] +
       parts[7] +
+      parts[8] +
       mobileFooterHtml() +
       "</div>";
 

@@ -266,6 +266,15 @@
           global.loadCreatorSalesBalance(0);
         } catch (e) {}
       }
+      if (
+        global.CreatorDailyLimitsSubheader &&
+        typeof global.CreatorDailyLimitsSubheader.refresh === "function"
+      ) {
+        try {
+          global.CreatorDailyLimitsSubheader.mount();
+          global.CreatorDailyLimitsSubheader.refresh(true);
+        } catch (e) {}
+      }
       global.dispatchEvent(new CustomEvent("eazCreatorContextReady"));
     },
     assetUrl: function (file) {
