@@ -8,6 +8,8 @@
   var loading = false;
   var lastFetch = 0;
   var ownerPollTimer = null;
+  var countdownTimer = null;
+  var countdownModeDaily = false;
   var MIN_REFETCH_MS = 8000;
   var JOURNEY_CACHE_MS = 60000;
   var mounted = false;
@@ -79,6 +81,78 @@
     var c = Number(cap) || 0;
     if (c <= 0) return 0;
     return Math.min(100, Math.round((u / c) * 100));
+  }
+
+  var DAY_MS = 24 * 60 * 60 * 1000;
+
+  function msUntilNextUtcMidnight() {
+    var now = new Date();
+    var next = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0)
+    );
+    return Math.max(0, next.getTime() - now.getTime());
+  }
+
+  function formatCountdown(ms) {
+    var totalSec = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+    if (h > 0) return h + 'h ' + m + 'm';
+    if (m > 0) return m + 'm ' + s + 's';
+    return s + 's';
+  }
+
+  function stopCountdown() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+  }
+
+  function updateCountdownDom() {
+    if (!countdownModeDaily) return;
+    var remaining = msUntilNextUtcMidnight();
+    var pctRemaining = Math.max(0, Math.min(100, (remaining / DAY_MS) * 100));
+    var label = formatCountdown(remaining);
+
+    roots.forEach(function (rootEl) {
+      var wrap = rootEl.querySelector('[data-limit-countdown]');
+      if (!wrap) return;
+      var fill = wrap.querySelector('[data-countdown-fill]');
+      var text = wrap.querySelector('[data-countdown-text]');
+      if (fill) fill.style.height = pctRemaining.toFixed(2) + '%';
+      if (text) text.textContent = label;
+    });
+  }
+
+  function setCountdownVisible(show) {
+    var changed = countdownModeDaily !== show;
+    countdownModeDaily = show;
+    roots.forEach(function (rootEl) {
+      var wrap = rootEl.querySelector('[data-limit-countdown]');
+      if (!wrap) return;
+      if (show) {
+        wrap.hidden = false;
+        wrap.removeAttribute('aria-hidden');
+        var aria = i18n('countdownAria', rootEl);
+        if (aria && aria !== 'countdownAria') wrap.setAttribute('aria-label', aria);
+      } else {
+        wrap.hidden = true;
+        wrap.setAttribute('aria-hidden', 'true');
+        wrap.removeAttribute('aria-label');
+      }
+      rootEl.classList.toggle('has-countdown', !!show);
+    });
+    if (show) {
+      updateCountdownDom();
+      if (!countdownTimer) {
+        countdownTimer = setInterval(updateCountdownDom, 1000);
+      }
+    } else {
+      stopCountdown();
+    }
+    if (changed) syncChromeMetrics();
   }
 
   function storeJourneyCache(data) {
@@ -155,6 +229,7 @@
     roots.forEach(function (rootEl) {
       rootEl.classList.toggle('is-guest', !!isGuest);
     });
+    if (isGuest) setCountdownVisible(false);
   }
 
   function applyPayload(data, loadingState) {
@@ -201,6 +276,12 @@
       rootEl.classList.toggle('is-loading', !!loadingState);
       rootEl.classList.remove('is-guest');
     });
+
+    if (loadingState) {
+      setCountdownVisible(false);
+    } else {
+      setCountdownVisible(mode !== 'lifetime');
+    }
     syncChromeMetrics();
   }
 
@@ -331,7 +412,10 @@
       refresh(true);
     });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') refresh(false);
+      if (document.visibilityState === 'visible') {
+        refresh(false);
+        if (countdownModeDaily) updateCountdownDom();
+      }
     });
   }
 

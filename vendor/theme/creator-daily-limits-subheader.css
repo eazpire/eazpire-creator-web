@@ -149,6 +149,83 @@
   letter-spacing: 0.03em;
 }
 
+.creator-daily-limits__foot-wrap {
+  flex: 1 1 100%;
+  order: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.creator-daily-limits__foot-wrap .creator-daily-limits__foot {
+  flex: 0 0 auto;
+  order: 0;
+  width: 100%;
+  margin: 5px 0 0;
+}
+
+.creator-daily-limits__countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 1px;
+  padding: 0 2px;
+}
+
+.creator-daily-limits__countdown[hidden] {
+  display: none !important;
+}
+
+.creator-daily-limits__countdown-bar {
+  position: relative;
+  flex: 0 0 auto;
+  width: 5px;
+  height: 22px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+.creator-daily-limits__countdown-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    #fde68a 0%,
+    #f97316 28%,
+    #c026d3 62%,
+    #7c3aed 100%
+  );
+  box-shadow:
+    0 0 8px rgba(124, 58, 237, 0.45),
+    0 0 14px rgba(192, 38, 211, 0.25);
+  transition: height 0.85s linear;
+  transform-origin: top center;
+}
+
+.creator-daily-limits__countdown-text {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: rgba(196, 181, 253, 0.92);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px rgba(124, 58, 237, 0.35);
+  white-space: nowrap;
+}
+
+.creator-daily-limits.has-countdown .creator-daily-limits__foot-wrap .creator-daily-limits__foot {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
 .creator-daily-limits__foot-star {
   margin-right: 4px;
   color: rgba(192, 38, 211, 0.75);
@@ -187,17 +264,39 @@
     font-size: 10px;
   }
 
-  .creator-daily-limits__foot {
+  .creator-daily-limits__foot-wrap {
     flex: 0 0 auto;
     order: 0;
-    display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
+    gap: 4px;
     margin: 0 0 0 2px;
     padding: 0 0 0 14px;
-    border-top: none;
     border-left: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .creator-daily-limits__foot-wrap .creator-daily-limits__foot {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border-top: none;
     text-align: left;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .creator-daily-limits__countdown {
+    margin: 0 0 0 1px;
+    padding: 0;
+  }
+
+  .creator-daily-limits__countdown-bar {
+    height: 24px;
+    width: 5px;
+  }
+
+  .creator-daily-limits__countdown-text {
     font-size: 10px;
   }
 
