@@ -404,16 +404,18 @@
   function mountCardMediaComposited(mediaEl, productKey, previewConfig, designUrl) {
     if (!mediaEl) return;
     mediaEl.innerHTML = '';
-    var slides = (previewConfig && previewConfig.slides) || [];
+    var slides = ((previewConfig && previewConfig.slides) || []).filter(function (s) {
+      return s && String(s.mock_url || '').trim();
+    });
     if (!slides.length || !designUrl) {
       mountCardMediaCarouselPlain(mediaEl, productKey, normalizeMockUrls({ mock_urls: [] }));
       return;
     }
 
-    mediaEl.classList.add(
-      'creator-design-products-modal__card-media--composed',
-      slides.length >= 2 ? 'creator-design-products-modal__card-media--carousel' : ''
-    );
+    mediaEl.classList.add('creator-design-products-modal__card-media--composed');
+    if (slides.length >= 2) {
+      mediaEl.classList.add('creator-design-products-modal__card-media--carousel');
+    }
 
     if (slides.length >= 2) {
       var stageWrap = document.createElement('div');
@@ -606,8 +608,12 @@
     if (!mediaEl) return;
     var mountFn = function () {
       if (previewConfig && previewConfig.slides && previewConfig.slides.length && designUrl) {
-        mountCardMediaComposited(mediaEl, productKey, previewConfig, designUrl);
-        return;
+        try {
+          mountCardMediaComposited(mediaEl, productKey, previewConfig, designUrl);
+          return;
+        } catch (err) {
+          console.warn('[creator-design-products-modal] composited mount failed', productKey, err);
+        }
       }
       mountCardMediaCarouselPlain(mediaEl, productKey, urls);
     };
@@ -1099,7 +1105,14 @@
     media.className = 'creator-design-products-modal__card-media';
     var previewConfig = p.studio_card_preview || null;
     var designUrl = designPreviewUrl();
-    mountCardMediaCarousel(media, pk, normalizeMockUrls(p), previewConfig, designUrl);
+    try {
+      mountCardMediaCarousel(media, pk, normalizeMockUrls(p), previewConfig, designUrl);
+    } catch (err) {
+      console.warn('[creator-design-products-modal] card media mount failed', pk, err);
+      try {
+        mountCardMediaCarouselPlain(media, pk, normalizeMockUrls(p));
+      } catch (_) {}
+    }
     var ttl = document.createElement('div');
     ttl.className = 'creator-design-products-modal__card-title';
     ttl.textContent = p.title || pk;
