@@ -72,9 +72,10 @@ body.creator-mobile-page .creator-desktop-app {
     position: fixed;
     top: 0;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
     min-height: var(--creator-desktop-header-height);
     padding: 8px 16px 14px;
     border-radius: 0;
@@ -538,9 +539,9 @@ body.creator-mobile-page .creator-desktop-app {
 
   .creator-desktop-main {
     position: fixed;
-    inset: var(--creator-desktop-header-height) 0 var(--creator-desktop-footer-height) 0;
+    inset: var(--creator-chrome-height, var(--creator-desktop-header-height)) 0 var(--creator-desktop-footer-height) 0;
     height: auto !important;
-    min-height: calc(100dvh - var(--creator-desktop-header-height) - var(--creator-desktop-footer-height));
+    min-height: calc(100dvh - var(--creator-chrome-height, var(--creator-desktop-header-height)) - var(--creator-desktop-footer-height));
     margin-top: 0;
     display: flex;
     flex-direction: column;
@@ -2648,7 +2649,7 @@ body.creator-mobile-page .creator-desktop-app {
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
-  padding-top: calc(var(--creator-desktop-header-height, 74px) + 16px);
+  padding-top: calc(var(--creator-chrome-height, var(--creator-desktop-header-height, 74px)) + 16px);
   padding-bottom: var(--creator-desktop-footer-height, 48px);
 }
 .creator-desktop-content-creation__inner {

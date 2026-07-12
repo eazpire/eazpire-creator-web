@@ -4430,6 +4430,9 @@
         // Journey first — paint shell ASAP. Overview is independent and must not block the tree.
         journeyData = await apiFetch('get-creator-journey', { owner_id: oid });
         journeyFetchedAt = Date.now();
+        try {
+          window.dispatchEvent(new CustomEvent('creator-journey-updated', { detail: { source: 'journey-modal' } }));
+        } catch (_ev) {}
         if (journeyData && journeyData.balance_eaz == null) {
           var seededBal = readCachedBalanceEaz();
           if (seededBal != null) journeyData.balance_eaz = seededBal;

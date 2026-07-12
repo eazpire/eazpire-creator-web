@@ -208,6 +208,7 @@
       loadScript("/vendor/theme/creator-theme-background.js"),
     ]);
     await loadScript("/vendor/theme/creator-dashboard-data.js");
+    await loadScript("/vendor/theme/creator-daily-limits-subheader.js");
     await Promise.all([
       loadScript("/vendor/theme/particle-reveal.js"),
       loadScript("/vendor/theme/design-particle-reveal.js"),

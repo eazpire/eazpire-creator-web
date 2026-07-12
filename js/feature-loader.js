@@ -88,6 +88,7 @@
     [
       "/vendor/theme/sales-modal.css",
       "/vendor/theme/creator-mobile.css",
+      "/vendor/theme/creator-daily-limits-subheader.css",
       "/vendor/theme/creator-mobile-screens.css",
       "/vendor/theme/creator-my-creations.css",
       "/vendor/theme/creator-mobile-filter-modal.css",

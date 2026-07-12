@@ -158,6 +158,56 @@
 </div>
     </div>
   </div>
+  
+<div
+  class="creator-daily-limits"
+  data-creator-daily-limits
+  aria-label="Daily creation and publish limits"
+  data-i18n-uploads="Uploads"
+  data-i18n-designs="Designs"
+  data-i18n-publishes="Publishes"
+  data-i18n-reset="Daily limits reset at 00:00 UTC"
+  data-i18n-lifetime="Starter limits (lifetime)"
+  data-i18n-locked="Locked"
+  hidden
+>
+  <div class="creator-daily-limits__row">
+    <div class="creator-daily-limits__item" data-limit="upload">
+      <span class="creator-daily-limits__label">
+        <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.uploads">Uploads</span>
+        <span class="creator-daily-limits__count" data-limit-count>—</span>
+      </span>
+      <span class="creator-daily-limits__bar" aria-hidden="true">
+        <span class="creator-daily-limits__bar-fill creator-daily-limits__bar-fill--upload" data-limit-fill style="width:0%"></span>
+      </span>
+    </div>
+    <span class="creator-daily-limits__divider" aria-hidden="true">│</span>
+    <div class="creator-daily-limits__item" data-limit="design">
+      <span class="creator-daily-limits__label">
+        <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.designs">Designs</span>
+        <span class="creator-daily-limits__count" data-limit-count>—</span>
+      </span>
+      <span class="creator-daily-limits__bar" aria-hidden="true">
+        <span class="creator-daily-limits__bar-fill creator-daily-limits__bar-fill--design" data-limit-fill style="width:0%"></span>
+      </span>
+    </div>
+    <span class="creator-daily-limits__divider" aria-hidden="true">│</span>
+    <div class="creator-daily-limits__item" data-limit="publish">
+      <span class="creator-daily-limits__label">
+        <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.publishes">Publishes</span>
+        <span class="creator-daily-limits__count" data-limit-count>—</span>
+      </span>
+      <span class="creator-daily-limits__bar" aria-hidden="true">
+        <span class="creator-daily-limits__bar-fill creator-daily-limits__bar-fill--publish" data-limit-fill style="width:0%"></span>
+      </span>
+    </div>
+  </div>
+  <p class="creator-daily-limits__foot">
+    <span class="creator-daily-limits__foot-star" aria-hidden="true">✦</span>
+    <span data-limit-footnote data-t="creator.daily_limits_subheader.reset_hint">Daily limits reset at 00:00 UTC</span>
+  </p>
+</div>
+
 </header>
 
 <div id="creator-desktop-xp-hint-modal" class="creator-desktop-xp-hint-modal" role="dialog" aria-modal="true" aria-labelledby="creator-desktop-xp-hint-modal-title" hidden>

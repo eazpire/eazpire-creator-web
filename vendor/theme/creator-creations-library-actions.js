@@ -178,10 +178,35 @@
     refreshAllActivateCardBadges();
   }
 
+  /** Design artwork URL for composited product cards (same rules as design products modal). */
+  function activateDesignPreviewUrl(design) {
+    var d = design || pendingDesign;
+    if (!d) return '';
+    var result = d.result;
+    if (result && typeof result === 'object') {
+      var fromResult = result.preview_url || result.image_url || result.original_url || '';
+      if (fromResult) return String(fromResult).trim();
+    }
+    if (typeof result === 'string' && result.indexOf('http') === 0) {
+      return String(result).trim();
+    }
+    return String(d.preview_url || d.image_url || d.original_url || '').trim();
+  }
+
   function mountActivateCardMedia(media, pk, product) {
     var cardMedia = window.CreatorDesignProductsCardMedia;
+    var previewConfig = product && product.studio_card_preview ? product.studio_card_preview : null;
+    var designUrl = activateDesignPreviewUrl();
     if (cardMedia && typeof cardMedia.mount === 'function') {
-      cardMedia.mount(media, pk, cardMedia.normalizeMockUrls(product));
+      var urls = cardMedia.normalizeMockUrls(product);
+      try {
+        cardMedia.mount(media, pk, urls, previewConfig, designUrl);
+      } catch (err) {
+        console.warn('[creator-creations-library-actions] card media mount failed', pk, err);
+        try {
+          cardMedia.mount(media, pk, urls, null, '');
+        } catch (_) {}
+      }
       return;
     }
     var imgUrl = product.preview_image_url || null;
@@ -301,7 +326,9 @@
       '?op=get-catalog-products&region=' +
       encodeURIComponent(region) +
       '&design_id=' +
-      encodeURIComponent(designId);
+      encodeURIComponent(designId) +
+      '&owner_id=' +
+      encodeURIComponent(owner);
     if (shop) catUrl += '&shop=' + encodeURIComponent(shop);
     var pubUrl =
       base +
@@ -373,6 +400,23 @@
     }
   }
 
+  function appendListingModeInfoSection(parent, headingText, bodyText) {
+    var section = document.createElement('section');
+    section.className = 'creator-library-action-modal__info-section';
+
+    var heading = document.createElement('h4');
+    heading.className = 'creator-library-action-modal__info-heading';
+    heading.textContent = headingText;
+    section.appendChild(heading);
+
+    var body = document.createElement('p');
+    body.className = 'creator-library-action-modal__info-body';
+    body.textContent = bodyText;
+    section.appendChild(body);
+
+    parent.appendChild(section);
+  }
+
   /** Open the detail overlay explaining Direct Sell vs Personalized Sample. */
   function openListingModeInfoModal() {
     var M = Mi();
@@ -380,24 +424,30 @@
     overlayEl.className = 'creator-library-action-modal__info-overlay';
     overlayEl.setAttribute('role', 'dialog');
     overlayEl.setAttribute('aria-modal', 'true');
+    overlayEl.setAttribute('aria-labelledby', 'creator-listing-mode-info-title');
 
     var panel = document.createElement('div');
     panel.className = 'creator-library-action-modal__info-panel';
 
     var h = document.createElement('h3');
+    h.id = 'creator-listing-mode-info-title';
     h.className = 'creator-library-action-modal__info-title';
     h.textContent = M.listingModeInfoTitle || 'Direct Sell vs. Personalized Sample';
     panel.appendChild(h);
 
-    var pDirect = document.createElement('p');
-    pDirect.className = 'creator-library-action-modal__info-body';
-    pDirect.textContent = M.listingModeInfoDirectBody || '';
-    panel.appendChild(pDirect);
+    appendListingModeInfoSection(
+      panel,
+      M.listingModeInfoDirectHeading || M.listingModeDirectSell || 'Direct Sell',
+      M.listingModeInfoDirectBody ||
+        'Your design is published through Printify and listed as a normal shop product. Customers see the finished mockup and can buy it immediately. Selected products enter the publish queue and go live on Shopify after processing.'
+    );
 
-    var pSample = document.createElement('p');
-    pSample.className = 'creator-library-action-modal__info-body';
-    pSample.textContent = M.listingModeInfoSampleBody || '';
-    panel.appendChild(pSample);
+    appendListingModeInfoSection(
+      panel,
+      M.listingModeInfoSampleHeading || M.listingModePersonalizedSample || 'Personalized Sample',
+      M.listingModeInfoSampleBody ||
+        'Your design is activated as a sample only — not as a direct shop listing. Mockups appear in the Personalizable Samples carousel and sample pages. Customers choose a sample, personalize it with your design, then order the finished product. This still counts toward activation limits and creator rewards.'
+    );
 
     var close = document.createElement('button');
     close.type = 'button';

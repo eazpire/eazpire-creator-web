@@ -655,6 +655,7 @@
   /** Expose for creator-creations-library-actions activate flow */
   window.CreatorDesignProductsCardMedia = {
     mount: mountCardMediaCarousel,
+    mountPlain: mountCardMediaCarouselPlain,
     clearRotations: clearAllRotations,
     normalizeMockUrls: normalizeMockUrls,
     resetPaused: function () {},
