@@ -27,6 +27,7 @@
 
 .creator-daily-limits__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: clamp(6px, 1.6vw, 12px);
@@ -120,6 +121,8 @@
 }
 
 .creator-daily-limits__foot {
+  flex: 1 1 100%;
+  order: 10;
   margin: 5px 0 0;
   padding-top: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
@@ -142,15 +145,17 @@
 @media (min-width: 992px) {
   .creator-daily-limits {
     top: var(--creator-header-only-height, 74px);
-    padding: 8px 20px 9px;
+    padding: 7px 20px 8px;
   }
 
   .creator-daily-limits__row {
+    flex-wrap: nowrap;
     justify-content: flex-start;
     gap: 14px;
     max-width: min(1360px, 100%);
     margin: 0 auto;
     padding: 0 4px;
+    overflow-x: visible;
   }
 
   .creator-daily-limits__label {
@@ -163,11 +168,21 @@
   }
 
   .creator-daily-limits__foot {
+    flex: 0 0 auto;
+    order: 0;
+    display: inline-flex;
+    align-items: center;
+    margin: 0 0 0 2px;
+    padding: 0 0 0 14px;
+    border-top: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
     text-align: left;
-    max-width: min(1360px, 100%);
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 4px;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+
+  .creator-daily-limits__foot-star {
+    margin-right: 5px;
   }
 }
 
