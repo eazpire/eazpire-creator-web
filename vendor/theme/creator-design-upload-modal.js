@@ -1035,7 +1035,7 @@
 
     let uploadInProgress = false;
 
-    const UPLOAD_DEFAULT_COST = 1;
+    const UPLOAD_DEFAULT_COST = 5;
 
     function getEazCostCatalog() {
       if (window.EazCostCatalog) return window.EazCostCatalog;
@@ -1045,14 +1045,14 @@
           var n = map && map[feature] != null ? Number(map[feature]) : NaN;
           if (Number.isFinite(n) && n >= 0) return n;
           if (feature === 'design_upload') return UPLOAD_DEFAULT_COST;
-          if (feature === 'bg_remove') return 0.2;
+          if (feature === 'bg_remove') return 0;
           return 0;
         }
       };
     }
 
     /** Cached EAZ costs for instant confirm dialog (refreshed in background). */
-    var eazCostCache = { design_upload: UPLOAD_DEFAULT_COST, bg_remove: 0.2 };
+    var eazCostCache = { design_upload: UPLOAD_DEFAULT_COST, bg_remove: 0 };
 
     /** Catalog list price in upload UI (mascot discounts apply at billing, not on labels). */
     function getUploadDisplayCost(feature) {
@@ -1069,6 +1069,12 @@
         var feature = el.getAttribute('data-eaz-cost-feature');
         if (!feature) return;
         var cost = getUploadDisplayCost(feature);
+        var btnCost = el.closest('.btn-cost');
+        if (cost <= 0) {
+          if (btnCost) btnCost.hidden = true;
+          return;
+        }
+        if (btnCost) btnCost.hidden = false;
         var formatted = cat.fmtEaz ? cat.fmtEaz(cost) : formatUploadEazAmount(cost);
         if (el.classList.contains('design-upload-eaz-cost-upload--suffix')) {
           el.textContent = formatted + ' EAZ';

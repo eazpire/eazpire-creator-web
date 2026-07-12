@@ -1661,12 +1661,10 @@
 
   function renderProductTree(nodes) {
     var split = splitProductNodes(nodes);
-    var secs = productSections();
     var dispLv = displayLevel();
     var unlocked = (nodes || []).filter(function (n) { return n.unlocked; });
     var lockedStarter = split.starter.filter(function (n) { return !n.unlocked; });
-    var lockedPreview = split.preview.filter(function (n) { return !n.unlocked; });
-    var lockedOffline = split.offline.filter(function (n) { return !n.unlocked; });
+    var lockedNonStarter = split.preview.concat(split.offline).filter(function (n) { return !n.unlocked; });
 
     var html = '<div class="cj-product-sections">';
     if (unlocked.length) {
@@ -1678,28 +1676,35 @@
         { unlockedRow: true, skipFreeHint: true }
       );
     }
-    html += renderCarouselSection(
-      t('creator.journey.starter_products', 'Starter Products'),
-      '',
-      lockedStarter,
-      false
-    );
-    html += renderCarouselSection(
-      tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(secs.preview) }),
-      '',
-      lockedPreview,
-      dispLv < secs.preview,
-      { requiredLevel: secs.preview }
-    );
-    html += renderCarouselSection(
-      tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(secs.premium) }),
-      t('creator.journey.product_premium_hint', 'Premium products available at this level'),
-      lockedOffline,
-      dispLv < secs.premium,
-      { requiredLevel: secs.premium }
-    );
+    if (lockedStarter.length) {
+      html += renderCarouselSection(
+        t('creator.journey.starter_products', 'Starter Products'),
+        t('creator.journey.available_skills', 'Available'),
+        lockedStarter,
+        false
+      );
+    }
+    var levelRows = groupNodesByLevel(lockedNonStarter);
+    if (levelRows.length) {
+      html += '<div class="cj-tree-levels">' + levelRows.map(function (row) {
+        var rowLocked = row.level > dispLv;
+        return '<section class="cj-level-row' + (rowLocked ? ' is-locked' : '') + '" data-level="' + row.level + '">' +
+          '<div class="cj-level-row__label">' +
+          escapeHtml(tpl('creator.journey.level_row', 'Level {{ n }}', { n: String(row.level) })) +
+          '</div>' +
+          '<div class="cj-level-row__cards">' +
+          row.nodes.map(function (n) {
+            return renderProductTreeCard(n, {
+              sectionLocked: rowLocked,
+              expandable: n.product_key === SOFTSTYLE_PRODUCT_KEY,
+              requiredLevel: row.level
+            });
+          }).join('') +
+          '</div></section>';
+      }).join('') + '</div>';
+    }
     html += '</div>';
-    if (!unlocked.length && !lockedStarter.length && !lockedPreview.length && !lockedOffline.length) {
+    if (!unlocked.length && !lockedStarter.length && !levelRows.length) {
       html = '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
     }
     return html;
