@@ -1498,7 +1498,10 @@ body.creator-mobile-page .creator-mobile-app {
    ============================================ */
 .creator-swipe-viewport {
   position: absolute;
-  top: max(var(--creator-chrome-height, 130px), calc(110px + env(safe-area-inset-top)));
+  top: max(
+    var(--creator-content-top, calc(182px + env(safe-area-inset-top))),
+    calc(172px + env(safe-area-inset-top))
+  );
   left: 0;
   right: 0;
   bottom: max(48px, calc(40px + env(safe-area-inset-bottom)));

@@ -172,9 +172,12 @@
     var strip = document.querySelector('[data-creator-daily-limits]:not(.is-guest)');
     var stripH = strip && getComputedStyle(strip).display !== 'none' ? strip.offsetHeight : 0;
     var chromeH = headerH + stripH;
+    var contentTop = chromeH + (stripH > 0 ? 8 : 0);
 
     if (app) app.style.setProperty('--creator-chrome-height', chromeH + 'px');
+    if (app) app.style.setProperty('--creator-content-top', contentTop + 'px');
     document.documentElement.style.setProperty('--creator-chrome-height', chromeH + 'px');
+    document.documentElement.style.setProperty('--creator-content-top', contentTop + 'px');
     document.documentElement.style.setProperty('--creator-daily-limits-height', stripH + 'px');
   }
 
@@ -190,6 +193,7 @@
     }
 
     setGuestState(false);
+    syncChromeMetrics();
     var now = Date.now();
     if (!force && loading) return Promise.resolve();
     if (!force && now - lastFetch < MIN_REFETCH_MS) return Promise.resolve();

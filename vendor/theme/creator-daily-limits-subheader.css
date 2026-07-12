@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   top: var(--creator-header-only-height, max(130px, calc(110px + env(safe-area-inset-top))));
-  z-index: 105;
+  z-index: 145;
   width: 100%;
   padding: 7px 16px 8px;
   margin: 0;
@@ -168,6 +168,12 @@
     margin-left: auto;
     margin-right: auto;
     padding-left: 4px;
+  }
+}
+
+@media (max-width: 991px) {
+  .creator-daily-limits {
+    top: var(--creator-header-only-height, max(120px, calc(108px + env(safe-area-inset-top))));
   }
 }
 
