@@ -9,11 +9,7 @@
 >
   <div class="cds-modal__shell">
     <header class="cds-modal__header">
-      <div class="cds-modal__header-text">
-        <h2 id="cds-modal-title" class="cds-modal__title" data-t="creator.design_studio.title">Design Studio</h2>
-        <p class="cds-modal__subtitle" id="cds-modal-subtitle"></p>
-      </div>
-      <div class="cds-modal__header-actions">
+      <div class="cds-modal__header-main">
         <div class="cds-eazy-wrap" id="cds-eazy-wrap">
           <div
             class="cds-eazy-tip"
@@ -49,6 +45,12 @@
             </span>
           </button>
         </div>
+        <div class="cds-modal__header-text">
+          <h2 id="cds-modal-title" class="cds-modal__title" data-t="creator.design_studio.title">Design Studio</h2>
+          <p class="cds-modal__subtitle" id="cds-modal-subtitle"></p>
+        </div>
+      </div>
+      <div class="cds-modal__header-actions">
         <button type="button" class="cds-modal__btn cds-modal__btn--icon" id="cds-btn-close" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -361,8 +363,10 @@
         <h3 id="cds-history-title" class="cds-submodal__title" data-t="creator.design_studio.history_title">Edit History</h3>
         <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-history-close aria-label="Close">&times;</button>
       </header>
-      <div class="cds-history-grid" id="cds-history-grid" role="list"></div>
-      <p class="cds-muted cds-history-empty" id="cds-history-empty" hidden data-t="creator.design_studio.history_empty">No edits yet. Changes to placement, scale, and designs will appear here.</p>
+      <div class="cds-history-body">
+        <div class="cds-history-grid" id="cds-history-grid" role="list"></div>
+        <p class="cds-muted cds-history-empty" id="cds-history-empty" hidden data-t="creator.design_studio.history_empty">No edits yet. Changes to placement, scale, and designs will appear here.</p>
+      </div>
     </div>
   </div>
 
