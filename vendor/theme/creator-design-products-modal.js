@@ -116,11 +116,6 @@
   var ctxFilter = 'unlocked';
   var unlockedGroupOpen = { active: true, queue: true };
 
-  var ROTATION_MS = 1500;
-  /** @type {Map<string, number>} product_key -> interval id */
-  var rotationTimers = new Map();
-  /** @type {Set<string>} product_keys where user manually changed slide (auto-rotate paused) */
-  var rotationPausedKeys = new Set();
   /** @type {WeakMap<Element, IntersectionObserver>} lazy card media observers */
   var cardMediaObservers = new WeakMap();
 
@@ -144,8 +139,8 @@
   function parseZoneFrac(f) {
     var def = { l: 0.28, t: 0.22, w: 0.44, h: 0.48 };
     if (!f || typeof f !== 'object') return def;
-    var l = Number(f.l != null ? f.l : f.left);
-    var t = Number(f.t != null ? f.t : f.top);
+    var l = Number(f.l != null ? f.l : f.left != null ? f.left : f.x);
+    var t = Number(f.t != null ? f.t : f.top != null ? f.top : f.y);
     var w = Number(f.w != null ? f.w : f.width);
     var h = Number(f.h != null ? f.h : f.height);
     if (![l, t, w, h].every(function (x) {
@@ -180,29 +175,6 @@
 
   function visualScaleForCardPlacement(tr) {
     return clampCardScale(tr && tr.scale);
-  }
-
-  function maxContainScaleInCardZone(zoneEl, designImg) {
-    if (!zoneEl) return CARD_UI_SCALE_MAX;
-    var zw = zoneEl.offsetWidth || 1;
-    var zh = zoneEl.offsetHeight || 1;
-    if (zw < 1 || zh < 1) return CARD_UI_SCALE_MAX;
-    var nw = designImg && designImg.naturalWidth ? designImg.naturalWidth : 0;
-    var nh = designImg && designImg.naturalHeight ? designImg.naturalHeight : 0;
-    if (nw > 0 && nh > 0) {
-      return Math.min(Math.max(1, (zh * nw) / (zw * nh)), CARD_UI_SCALE_MAX);
-    }
-    return CARD_UI_SCALE_MAX;
-  }
-
-  function containClampCardPlacement(placement, zoneEl, designImg) {
-    var tr = normalizeCardPlacement(placement);
-    var maxContain = maxContainScaleInCardZone(zoneEl, designImg);
-    if (!(maxContain > 0) || !Number.isFinite(maxContain)) return tr;
-    var seedScale = Number(tr.scale);
-    if (!Number.isFinite(seedScale) || seedScale <= 0) seedScale = DEFAULT_CARD_PLACEMENT.scale;
-    tr.scale = Math.round(Math.min(seedScale, maxContain) * 100) / 100;
-    return tr;
   }
 
   function fitCardPreviewStage(stageEl, mockImg, frameEl) {
@@ -289,7 +261,7 @@
     } catch (_) {
       placement = null;
     }
-    var tr = containClampCardPlacement(placement, zone, design);
+    var tr = normalizeCardPlacement(placement);
     applyTransformToCardDesignImg(design, zone, tr);
   }
 
@@ -419,7 +391,7 @@
 
     if (slides.length >= 2) {
       var stageWrap = document.createElement('div');
-      stageWrap.className = 'creator-design-products-modal__card-stage';
+      stageWrap.className = 'creator-design-products-modal__card-carousel-host';
       stageWrap.setAttribute('data-product-key', productKey);
 
       var stackA = buildCardPreviewStack(slides[0], designUrl);
@@ -467,77 +439,32 @@
           active.classList.remove('is-active');
           if (active !== inactive && active.parentNode) active.parentNode.removeChild(active);
         }
+        requestAnimationFrame(function () {
+          if (inactive) layoutCardPreviewStack(inactive);
+        });
       }
 
       navPrev.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        rotationPausedKeys.add(productKey);
-        stopCardRotation(productKey);
         advanceComposedSlide(-1);
       });
       navNext.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        rotationPausedKeys.add(productKey);
-        stopCardRotation(productKey);
         advanceComposedSlide(1);
       });
 
       mediaEl.appendChild(navPrev);
       mediaEl.appendChild(navNext);
-      startCardComposedRotation(productKey, stageWrap, slides, designUrl);
       return;
     }
 
     mediaEl.classList.remove('creator-design-products-modal__card-media--carousel');
-    var singleStage = document.createElement('div');
-    singleStage.className = 'creator-design-products-modal__card-stage';
-    singleStage.setAttribute('data-product-key', productKey);
     var singleStack = buildCardPreviewStack(slides[0], designUrl);
     singleStack.classList.add('is-active');
-    singleStage.appendChild(singleStack);
-    mediaEl.appendChild(singleStage);
-  }
-
-  function startCardComposedRotation(productKey, stageWrap, slides, designUrl) {
-    if (!slides || slides.length < 2 || rotationPausedKeys.has(productKey)) return;
-    stopCardRotation(productKey);
-    var id = setInterval(function () {
-      if (rotationPausedKeys.has(productKey)) {
-        stopCardRotation(productKey);
-        return;
-      }
-      var idx = parseInt(stageWrap.dataset.slideIndex || '0', 10);
-      var nextIdx = (idx + 1) % slides.length;
-      stageWrap.dataset.slideIndex = String(nextIdx);
-      var active = stageWrap.querySelector('.creator-design-products-modal__card-slide.is-active');
-      var inactive = stageWrap.querySelector('.creator-design-products-modal__card-slide:not(.is-active)');
-      if (!inactive) {
-        inactive = buildCardPreviewStack(slides[nextIdx], designUrl);
-        stageWrap.appendChild(inactive);
-      } else {
-        var mockImg = inactive.querySelector('.creator-design-products-modal__card-mock');
-        if (mockImg && mockImg.src !== slides[nextIdx].mock_url) {
-          if (inactive.parentNode) inactive.parentNode.removeChild(inactive);
-          inactive = buildCardPreviewStack(slides[nextIdx], designUrl);
-          stageWrap.appendChild(inactive);
-        }
-      }
-      if (active && inactive) {
-        inactive.classList.add('is-active');
-        active.classList.remove('is-active');
-        if (active !== inactive && active.parentNode) active.parentNode.removeChild(active);
-      }
-    }, ROTATION_MS);
-    rotationTimers.set(productKey, id);
-  }
-
-  function clearAllRotations() {
-    rotationTimers.forEach(function (id) {
-      clearInterval(id);
-    });
-    rotationTimers.clear();
+    singleStack.setAttribute('data-product-key', productKey);
+    mediaEl.appendChild(singleStack);
   }
 
   /** Fallback template when catalog API returns no mock_urls (e.g. stale DB row). */
@@ -696,22 +623,17 @@
       navPrev.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        rotationPausedKeys.add(productKey);
-        stopCardRotation(productKey);
         advanceSlide(-1);
       });
       navNext.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        rotationPausedKeys.add(productKey);
-        stopCardRotation(productKey);
         advanceSlide(1);
       });
 
       mediaEl.appendChild(stage);
       mediaEl.appendChild(navPrev);
       mediaEl.appendChild(navNext);
-      startCardRotation(productKey, stage, urls);
     } else {
       mediaEl.classList.remove('creator-design-products-modal__card-media--carousel');
       var imgSingle = document.createElement('img');
@@ -726,36 +648,8 @@
     }
   }
 
-  function stopCardRotation(productKey) {
-    var id = rotationTimers.get(productKey);
-    if (id) {
-      clearInterval(id);
-      rotationTimers.delete(productKey);
-    }
-  }
-
-  function startCardRotation(productKey, stage, urls) {
-    if (!urls || urls.length < 2 || rotationPausedKeys.has(productKey)) return;
-    stopCardRotation(productKey);
-    var id = setInterval(function () {
-      if (rotationPausedKeys.has(productKey)) {
-        stopCardRotation(productKey);
-        return;
-      }
-      var idx = parseInt(stage.dataset.slideIndex || '0', 10);
-      var nextIdx = (idx + 1) % urls.length;
-      stage.dataset.slideIndex = String(nextIdx);
-      var active = stage.querySelector('.creator-design-products-modal__card-slide.is-active');
-      var inactive = stage.querySelector('.creator-design-products-modal__card-slide:not(.is-active)');
-      if (!active || !inactive) return;
-      var nextUrl = urls[nextIdx];
-      preloadUrl(nextUrl, function () {
-        inactive.src = nextUrl;
-        inactive.classList.add('is-active');
-        active.classList.remove('is-active');
-      });
-    }, ROTATION_MS);
-    rotationTimers.set(productKey, id);
+  function clearAllRotations() {
+    /* Auto mock rotation removed — manual arrows only; kept for library activate API. */
   }
 
   /** Expose for creator-creations-library-actions activate flow */
@@ -763,9 +657,7 @@
     mount: mountCardMediaCarousel,
     clearRotations: clearAllRotations,
     normalizeMockUrls: normalizeMockUrls,
-    resetPaused: function () {
-      rotationPausedKeys.clear();
-    },
+    resetPaused: function () {},
   };
 
   function rebuildPublishedRowMap(rows) {
@@ -953,7 +845,6 @@
 
   function resetPanelState() {
     clearAllRotations();
-    rotationPausedKeys.clear();
     ctxDesign = null;
     ctxEligibleKeys = [];
     ctxChecked = {};
