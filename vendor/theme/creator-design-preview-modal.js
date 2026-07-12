@@ -388,6 +388,7 @@
   }
 
   function mockCompositingScriptUrl() {
+    if (window.__CREATOR_MOCK_COMPOSITING_JS) return window.__CREATOR_MOCK_COMPOSITING_JS;
     var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE || [];
     for (var i = 0; i < bundle.length; i++) {
       if (String(bundle[i] || '').indexOf('creator-mock-compositing.js') !== -1) return bundle[i];

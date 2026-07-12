@@ -158,11 +158,14 @@
       global.__CREATOR_LAZY_MODAL_URLS = global.__CREATOR_LAZY_MODAL_URLS || {};
       global.__CREATOR_LAZY_MODAL_URLS["creator-mobile-filter-modal.js"] = asset("creator-mobile-filter-modal.js");
       global.__CREATOR_LAZY_MODAL_URLS["creator-design-preview-modal.js"] = asset("creator-design-preview-modal.js");
+      global.__CREATOR_MOCK_COMPOSITING_JS = asset("creator-mock-compositing.js");
+      global.__CREATOR_PRODUCTS_MODAL_JS = asset("creator-design-products-modal.js");
 
       global.__CREATOR_LAZY_CREATIONS_BUNDLE = [
         asset("creator-perf-debug.js"),
         asset("creator-creations-library-actions.js"),
         asset("creator-creations-bulk.js"),
+        asset("creator-mock-compositing.js"),
         asset("creator-design-products-modal.js"),
         asset("eaz-shop-printify-studio-pattern.js"),
         asset("creator-design-studio-modal.js"),

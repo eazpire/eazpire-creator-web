@@ -169,7 +169,29 @@
   function fitCardPreviewStage(stageEl, mockImg, frameEl) {
     var MC = mockCompositing();
     if (MC) return MC.fitMockStage(stageEl, mockImg, frameEl);
-    return false;
+    if (!stageEl || !mockImg || !frameEl) return false;
+    var nw = mockImg.naturalWidth;
+    var nh = mockImg.naturalHeight;
+    if (!nw || !nh) return false;
+    var boxW = Math.max(1, frameEl.clientWidth);
+    var boxH = Math.max(1, frameEl.clientHeight);
+    if (boxW < 4 || boxH < 4) return false;
+    var fit = Math.min(boxW / nw, boxH / nh);
+    var w = Math.max(1, nw * fit);
+    var h = Math.max(1, nh * fit);
+    stageEl.style.width = w + 'px';
+    stageEl.style.height = h + 'px';
+    stageEl.style.aspectRatio = 'auto';
+    mockImg.style.width = '100%';
+    mockImg.style.height = '100%';
+    mockImg.style.objectFit = 'fill';
+    return true;
+  }
+
+  function clampCardScaleFallback(raw) {
+    var v = Number(raw);
+    if (!Number.isFinite(v) || v <= 0) v = DEFAULT_CARD_PLACEMENT.scale;
+    return Math.min(Math.max(v, 0.08), CARD_UI_SCALE_MAX);
   }
 
   function applyTransformToCardDesignImg(designImg, zoneEl, tr) {
@@ -182,7 +204,37 @@
       });
       return;
     }
-    console.warn('[creator-design-products-modal] CreatorMockCompositing missing — card preview parity degraded');
+    console.warn('[creator-design-products-modal] CreatorMockCompositing missing — using inline card preview fallback');
+    var displayTr = normalizeCardPlacement(tr);
+    var x = displayTr.x;
+    var y = displayTr.y;
+    var rot = displayTr.rotate;
+    var visualScale = clampCardScaleFallback(displayTr.scale);
+    var flipSx = displayTr.flipX ? -1 : 1;
+    var flipSy = displayTr.flipY ? -1 : 1;
+    var zoneW = zoneEl.offsetWidth || 1;
+    var zoneH = zoneEl.offsetHeight || 1;
+    designImg.style.width = Math.max(8, zoneW * visualScale) + 'px';
+    designImg.style.height = 'auto';
+    designImg.style.maxWidth = 'none';
+    designImg.style.maxHeight = 'none';
+    designImg.style.left = '50%';
+    designImg.style.top = '50%';
+    var dx = (x - 0.5) * zoneW;
+    var dy = (y - 0.5) * zoneH;
+    designImg.style.transform =
+      'translate(-50%, -50%) translate(' +
+      dx +
+      'px,' +
+      dy +
+      'px) rotate(' +
+      rot +
+      'deg) scale(' +
+      flipSx +
+      ',' +
+      flipSy +
+      ')';
+    designImg.classList.add('is-laid-out');
   }
 
   function layoutCardPreviewStack(stackEl, attempt) {
