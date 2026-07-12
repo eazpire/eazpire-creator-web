@@ -121,7 +121,7 @@
       if (!wrap) return;
       var fill = wrap.querySelector('[data-countdown-fill]');
       var text = wrap.querySelector('[data-countdown-text]');
-      if (fill) fill.style.height = pctRemaining.toFixed(2) + '%';
+      if (fill) fill.style.width = pctRemaining.toFixed(2) + '%';
       if (text) text.textContent = label;
     });
   }

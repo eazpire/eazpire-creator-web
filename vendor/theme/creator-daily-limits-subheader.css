@@ -181,8 +181,8 @@
 .creator-daily-limits__countdown-bar {
   position: relative;
   flex: 0 0 auto;
-  width: 5px;
-  height: 22px;
+  width: clamp(48px, 10vw, 68px);
+  height: 6px;
   border-radius: 999px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.06);
@@ -190,24 +190,21 @@
 }
 
 .creator-daily-limits__countdown-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  display: block;
   height: 100%;
+  width: 100%;
   border-radius: inherit;
   background: linear-gradient(
-    180deg,
-    #fde68a 0%,
-    #f97316 28%,
-    #c026d3 62%,
-    #7c3aed 100%
+    90deg,
+    #7c3aed 0%,
+    #c026d3 38%,
+    #f97316 72%,
+    #fde68a 100%
   );
   box-shadow:
     0 0 8px rgba(124, 58, 237, 0.45),
     0 0 14px rgba(192, 38, 211, 0.25);
-  transition: height 0.85s linear;
-  transform-origin: top center;
+  transition: width 0.85s linear;
 }
 
 .creator-daily-limits__countdown-text {
@@ -292,8 +289,8 @@
   }
 
   .creator-daily-limits__countdown-bar {
-    height: 24px;
-    width: 5px;
+    width: 72px;
+    height: 6px;
   }
 
   .creator-daily-limits__countdown-text {
