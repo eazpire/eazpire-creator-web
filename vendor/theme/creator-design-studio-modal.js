@@ -262,13 +262,15 @@
     var pct = Number(roy.percent) || 0;
     var profit = Math.max(STUDIO_MIN_PROFIT_USD_CENTS, Math.round(Number(creatorProfitCents) || 0));
     var netProfit = netProfitFromCreatorProfitJs(profit, pct);
-    var community = COMMUNITY_SHARE_PERCENT + pct > 0
-      ? Math.round((netProfit * COMMUNITY_SHARE_PERCENT) / (COMMUNITY_SHARE_PERCENT + pct))
-      : 0;
     var creatorShare = COMMUNITY_SHARE_PERCENT + pct > 0
       ? Math.round((netProfit * pct) / (COMMUNITY_SHARE_PERCENT + pct))
       : 0;
     var eazpire = Math.max(0, Math.round((netProfit * (COMMUNITY_SHARE_PERCENT - pct)) / 100));
+    var communityGross = COMMUNITY_SHARE_PERCENT + pct > 0
+      ? Math.round((netProfit * COMMUNITY_SHARE_PERCENT) / (COMMUNITY_SHARE_PERCENT + pct))
+      : 0;
+    // Network pool only — Eazpire share is carved from gross community (IDEA-008).
+    var community = Math.max(0, communityGross - eazpire);
     var tiers = Array.isArray(roy.tiers) ? roy.tiers : [];
     var tierComparison = tiers.map(function (row) {
       return {
@@ -4017,16 +4019,49 @@
     commitHistoryAfterEdit();
   }
 
+  var PHONE_UPLOAD_WORKER_FALLBACK = 'https://creator-engine.eazpire.workers.dev';
+
   function phoneApiBase() {
-    if (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) {
-      return String(window.CREATOR_API_CONFIG.BASE_URL).replace(/\/+$/, '');
+    var cfg = window.CREATOR_API_CONFIG || {};
+    if (cfg.PHONE_UPLOAD_BASE_URL) {
+      return String(cfg.PHONE_UPLOAD_BASE_URL).replace(/\/+$/, '');
     }
+    var base = cfg.BASE_URL ? String(cfg.BASE_URL).replace(/\/+$/, '') : '';
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(base)) return base;
+    if (window.__CREATOR_PORTAL_HOST__) return PHONE_UPLOAD_WORKER_FALLBACK;
     if (window.CreatorWidgetConfig) {
       var k = Object.keys(window.CreatorWidgetConfig)[0];
       var c = k && window.CreatorWidgetConfig[k];
-      if (c && c.api_root) return String(c.api_root).replace(/\/+$/, '');
+      if (c && c.api_root) {
+        var apiRoot = String(c.api_root).replace(/\/+$/, '').replace(/\/apps\/creator-dispatch$/i, '');
+        if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(apiRoot)) return apiRoot;
+      }
     }
-    return 'https://creator-engine.eazpire.workers.dev';
+    return PHONE_UPLOAD_WORKER_FALLBACK;
+  }
+
+  function fetchPhoneUploadJson(url, options) {
+    return fetch(url, options || { credentials: 'omit' }).then(function (r) {
+      return r.text().then(function (text) {
+        var snippet = String(text || '').trim();
+        var data = {};
+        if (snippet) {
+          try {
+            data = JSON.parse(snippet);
+          } catch (_parseErr) {
+            var isHtml = /^<!DOCTYPE/i.test(snippet) || /^<html/i.test(snippet);
+            var err = new Error(
+              isHtml
+                ? 'Phone upload API returned a web page instead of JSON (HTTP ' + r.status + ').'
+                : 'Invalid phone upload response (HTTP ' + r.status + ').'
+            );
+            err.httpStatus = r.status;
+            throw err;
+          }
+        }
+        return { httpOk: r.ok, status: r.status, data: data };
+      });
+    });
   }
 
   function stopPhonePoll() {
@@ -4942,7 +4977,15 @@
         encodeURIComponent(ownerId);
       fetch(u, { credentials: 'omit' })
         .then(function (r) {
-          return r.json();
+          return r.text().then(function (text) {
+            var snippet = String(text || '').trim();
+            if (!snippet) return null;
+            try {
+              return JSON.parse(snippet);
+            } catch (_e) {
+              return null;
+            }
+          });
         })
         .then(function (data) {
           if (!data || !data.ok) return;
@@ -4972,28 +5015,19 @@
     if (phoneMainEl) phoneMainEl.hidden = true;
 
     var base = phoneApiBase();
-    fetch(base + '/api/creator-phone-upload/config', { credentials: 'omit' })
-      .then(function (r) {
-        return r.json().then(function (cfg) {
-          return { httpOk: r.ok, cfg: cfg };
-        });
-      })
+    fetchPhoneUploadJson(base + '/api/creator-phone-upload/config')
       .then(function (res) {
-        var cfg = res.cfg;
+        var cfg = res.data;
         if (!cfg || !cfg.ok) {
           var err = new Error((cfg && cfg.message) || (cfg && cfg.error) || 'not_configured');
           err.code = cfg && cfg.error;
           throw err;
         }
-        return fetch(base + '/api/creator-phone-upload/session', {
+        return fetchPhoneUploadJson(base + '/api/creator-phone-upload/session', {
           method: 'POST',
           credentials: 'omit',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ owner_id: ownerId }),
-        }).then(function (r2) {
-          return r2.json().then(function (data) {
-            return { httpOk: r2.ok, data: data };
-          });
         });
       })
       .then(function (res) {

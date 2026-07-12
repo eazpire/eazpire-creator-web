@@ -8,6 +8,8 @@
 
   global.CREATOR_API_CONFIG = global.CREATOR_API_CONFIG || {};
   global.CREATOR_API_CONFIG.BASE_URL = origin;
+  global.CREATOR_API_CONFIG.PHONE_UPLOAD_BASE_URL = 'https://creator-engine.eazpire.workers.dev';
+  global.CREATOR_API_CONFIG.WORKER_BASE_URL = 'https://creator-engine.eazpire.workers.dev';
   global.CREATOR_API_CONFIG.TIMEOUT = 90000;
   global.CREATOR_API_CONFIG.RETRY_ATTEMPTS = 2;
   global.CREATOR_API_CONFIG.RETRY_DELAY = 1000;
