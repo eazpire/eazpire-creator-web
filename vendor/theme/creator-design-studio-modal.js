@@ -210,6 +210,27 @@
     return Math.max(0, Math.round(Number(baseCostCents) || 0) + Math.round(Number(netProfitCents) || 0));
   }
 
+  /** Net margin already baked into admin sell prices ($10 fixed margin → default profit at tier). */
+  function defaultNetProfitCentsJs(royaltyPercent) {
+    var pct = Math.max(0, Number(royaltyPercent) || 0);
+    var defaultProfit = Math.max(STUDIO_MIN_PROFIT_USD_CENTS, creatorEarnAtTierJs(1000, pct));
+    return netProfitFromCreatorProfitJs(defaultProfit, pct);
+  }
+
+  /**
+   * Customer price for one variant: admin VK (default_sell_cents from the admin Variants tab)
+   * plus only the creator's extra margin above the default profit. Fallback: cost + net margin.
+   */
+  function studioVariantSellCentsJs(v, netProfitCents, defaultNetCents) {
+    var adminSell = Math.round(Number(v && v.default_sell_cents) || 0);
+    if (adminSell > 0) {
+      var delta = Math.round(Number(netProfitCents) || 0) - Math.round(Number(defaultNetCents) || 0);
+      return Math.max(0, adminSell + delta);
+    }
+    var cost = Math.max(0, Math.round(Number(v && v.cost_cents) || 0));
+    return sellPriceFromCostsJs(cost, netProfitCents);
+  }
+
   function profitCentsToEazcJs(creatorProfitCents, eazCentsPerEaz) {
     var cents = Number(creatorProfitCents) || 0;
     var rate = Number(eazCentsPerEaz) || 10;
@@ -263,13 +284,13 @@
     var keys = Object.keys(groups);
     var sellMin = null;
     var sellMax = null;
+    var defaultNet = defaultNetProfitCentsJs(pct);
     for (var g = 0; g < keys.length; g++) {
       var items = groups[keys[g]] || [];
       for (var i = 0; i < items.length; i++) {
         var v = items[i];
         if (!v || !v.in_admin_pool) continue;
-        var cost = Math.max(0, Math.round(Number(v.cost_cents) || 0));
-        var sell = sellPriceFromCostsJs(cost, netProfit);
+        var sell = studioVariantSellCentsJs(v, netProfit, defaultNet);
         variantPrices.push({ id: Number(v.id), color: keys[g], size: v.size, sell_price_cents: sell });
         if (sellMin == null || sell < sellMin) sellMin = sell;
         if (sellMax == null || sell > sellMax) sellMax = sell;
@@ -1693,8 +1714,9 @@
     syncSelectionChrome();
   }
 
+  /** Variants + Price tabs show the read-only mock preview (no design move/resize/crop). */
   function isVariantPreviewMode() {
-    return activeSettingsTab === 'variants';
+    return activeSettingsTab === 'variants' || activeSettingsTab === 'price';
   }
 
   function isVariantColorGrid() {
@@ -3340,6 +3362,7 @@
     }
     if (activeSettingsTab === 'price') {
       if (cropping) exitCropMode(true);
+      setAssetSelected(false);
       renderPriceSettingsPanel();
     }
     renderViewer();
