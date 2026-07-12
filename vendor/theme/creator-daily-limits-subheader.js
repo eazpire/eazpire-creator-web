@@ -9,6 +9,7 @@
   var lastFetch = 0;
   var ownerPollTimer = null;
   var MIN_REFETCH_MS = 8000;
+  var JOURNEY_CACHE_MS = 60000;
   var mounted = false;
 
   function ownerId() {
@@ -80,20 +81,73 @@
     return Math.min(100, Math.round((u / c) * 100));
   }
 
-  function applyItem(itemEl, used, cap, locked, rootEl) {
+  function storeJourneyCache(data) {
+    if (!data || !data.ok) return;
+    window.__EAZ_CREATOR_JOURNEY__ = data;
+    window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ = Date.now();
+  }
+
+  function readJourneyCache() {
+    var data = window.__EAZ_CREATOR_JOURNEY__;
+    if (!data || !data.ok) return null;
+    var age = Date.now() - (window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ || 0);
+    if (age > JOURNEY_CACHE_MS) return null;
+    return data;
+  }
+
+  function fetchJourneyData(force) {
+    if (!force) {
+      var cached = readJourneyCache();
+      if (cached) return Promise.resolve(cached);
+    }
+    if (window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__) {
+      return window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__;
+    }
+
+    var oid = ownerId();
+    if (!oid) return Promise.resolve(null);
+
+    window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__ = apiGet('get-creator-journey', { owner_id: oid })
+      .then(function (data) {
+        storeJourneyCache(data);
+        if (data && data.ok) {
+          try {
+            window.dispatchEvent(
+              new CustomEvent('creator-journey-updated', {
+                detail: { source: 'daily-limits-subheader', journey: data },
+              })
+            );
+          } catch (_ev) {}
+        }
+        return data;
+      })
+      .finally(function () {
+        window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__ = null;
+      });
+
+    return window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__;
+  }
+
+  function applyItem(itemEl, used, cap, locked, rootEl, loadingState) {
     if (!itemEl) return;
     var countEl = itemEl.querySelector('[data-limit-count]');
     var fillEl = itemEl.querySelector('[data-limit-fill]');
     var c = Number(cap) || 0;
     var u = Number(used) || 0;
-    var isLocked = !!locked || c <= 0;
+    var isLocked = !loadingState && !!locked;
     itemEl.classList.toggle('is-locked', isLocked);
-    itemEl.classList.toggle('is-at-limit', !isLocked && u >= c && c > 0);
+    itemEl.classList.toggle('is-at-limit', !isLocked && !loadingState && u >= c && c > 0);
     if (countEl) {
-      countEl.textContent = isLocked ? i18n('locked', rootEl) : u + '/' + c;
+      if (loadingState) {
+        countEl.textContent = '—';
+      } else if (isLocked) {
+        countEl.textContent = i18n('locked', rootEl);
+      } else {
+        countEl.textContent = u + '/' + c;
+      }
     }
     if (fillEl) {
-      fillEl.style.width = isLocked ? '0%' : pct(u, c) + '%';
+      fillEl.style.width = loadingState || isLocked ? '0%' : pct(u, c) + '%';
     }
   }
 
@@ -103,42 +157,48 @@
     });
   }
 
-  function applyPayload(data) {
+  function applyPayload(data, loadingState) {
     if (!roots.length) return;
     var creation = (data && data.creation_limits_effective) || {};
     var listing = (data && data.listing_limits_effective) || {};
     var shopify = (listing.channels && listing.channels.shopify) || {};
     var mode = creation.mode || 'daily';
+    var hasCreation = !!(data && data.creation_limits_effective);
+    var hasListing = !!(data && data.listing_limits_effective);
 
     roots.forEach(function (rootEl) {
       applyItem(
         rootEl.querySelector('[data-limit="upload"]'),
         creation.upload_used,
         creation.upload_cap,
-        mode === 'daily_blocked',
-        rootEl
+        hasCreation && (creation.upload_cap || 0) <= 0,
+        rootEl,
+        loadingState
       );
       applyItem(
         rootEl.querySelector('[data-limit="design"]'),
         creation.generate_used,
         creation.generate_cap,
-        mode === 'daily_blocked',
-        rootEl
+        hasCreation && (creation.generate_cap || 0) <= 0,
+        rootEl,
+        loadingState
       );
       applyItem(
         rootEl.querySelector('[data-limit="publish"]'),
         shopify.listings_used_today,
         shopify.listings_per_day,
-        !shopify.channel_unlocked,
-        rootEl
+        hasListing &&
+          (shopify.channel_unlocked === false || (shopify.listings_per_day || 0) <= 0),
+        rootEl,
+        loadingState
       );
 
       var foot = rootEl.querySelector('[data-limit-footnote]');
-      if (foot) {
+      if (foot && !loadingState) {
         foot.textContent = mode === 'lifetime' ? i18n('lifetime', rootEl) : i18n('reset', rootEl);
       }
 
-      rootEl.classList.remove('is-loading');
+      rootEl.classList.toggle('is-loading', !!loadingState);
       rootEl.classList.remove('is-guest');
     });
     syncChromeMetrics();
@@ -198,19 +258,23 @@
     if (!force && loading) return Promise.resolve();
     if (!force && now - lastFetch < MIN_REFETCH_MS) return Promise.resolve();
 
+    var cached = !force ? readJourneyCache() : null;
+    if (cached) {
+      applyPayload(cached, false);
+      lastFetch = now;
+      return Promise.resolve();
+    }
+
     loading = true;
-    roots.forEach(function (el) {
-      el.classList.add('is-loading');
-      el.classList.remove('is-guest');
-    });
+    applyPayload(null, true);
     lastFetch = now;
 
-    return apiGet('get-creator-journey', { owner_id: oid })
+    return fetchJourneyData(force)
       .then(function (data) {
-        if (data && data.ok) applyPayload(data);
+        if (data && data.ok) applyPayload(data, false);
       })
       .catch(function () {
-        /* keep visible shell with placeholders */
+        applyPayload(null, true);
       })
       .finally(function () {
         loading = false;
@@ -253,7 +317,14 @@
         refresh(true);
       }, 1200);
     });
-    window.addEventListener('creator-journey-updated', function () {
+    window.addEventListener('creator-journey-updated', function (e) {
+      var detail = e && e.detail ? e.detail : {};
+      if (detail.journey && detail.journey.ok) {
+        storeJourneyCache(detail.journey);
+        applyPayload(detail.journey, false);
+        lastFetch = Date.now();
+        return;
+      }
       refresh(true);
     });
     window.addEventListener('eazCreatorContextReady', function () {

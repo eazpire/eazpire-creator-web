@@ -4299,6 +4299,19 @@
     });
   }
 
+  function storeJourneyOnWindow(data) {
+    if (!data || !data.ok) return;
+    window.__EAZ_CREATOR_JOURNEY__ = data;
+    window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ = Date.now();
+  }
+
+  function prefetchJourneyForDashboard() {
+    if (!ownerId()) return;
+    if (journeyCacheFresh()) return;
+    if (window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__) return;
+    loadJourney().catch(function () {});
+  }
+
   function journeyCacheFresh() {
     return !!(journeyData && journeyData.ok && journeyFetchedAt &&
       (Date.now() - journeyFetchedAt) < JOURNEY_CACHE_TTL_MS);
@@ -4320,6 +4333,8 @@
     levelLoadPromise = null;
     window.__EAZ_JOURNEY_LEVEL_DATA__ = null;
     window.__EAZ_JOURNEY_LEVEL_LOAD_PROMISE__ = null;
+    window.__EAZ_CREATOR_JOURNEY__ = null;
+    window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ = 0;
   }
 
   async function loadOverviewStats(opts) {
@@ -4419,8 +4434,10 @@
       } else {
         loadOverviewStats().then(function () { renderOverview(); }).catch(console.warn);
       }
+      storeJourneyOnWindow(journeyData);
       return journeyData;
     }
+    if (window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__) return window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__;
     if (journeyLoadPromise) return journeyLoadPromise;
 
     setPanelLoading(true);
@@ -4430,8 +4447,11 @@
         // Journey first — paint shell ASAP. Overview is independent and must not block the tree.
         journeyData = await apiFetch('get-creator-journey', { owner_id: oid });
         journeyFetchedAt = Date.now();
+        storeJourneyOnWindow(journeyData);
         try {
-          window.dispatchEvent(new CustomEvent('creator-journey-updated', { detail: { source: 'journey-modal' } }));
+          window.dispatchEvent(new CustomEvent('creator-journey-updated', {
+            detail: { source: 'journey-modal', journey: journeyData },
+          }));
         } catch (_ev) {}
         if (journeyData && journeyData.balance_eaz == null) {
           var seededBal = readCachedBalanceEaz();
@@ -4462,8 +4482,10 @@
       } finally {
         setPanelLoading(false);
         journeyLoadPromise = null;
+        window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__ = null;
       }
     })();
+    window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__ = journeyLoadPromise;
 
     return journeyLoadPromise;
   }
@@ -4896,6 +4918,14 @@
       }
       renderSidebarBalance();
     });
+
+    if (document.querySelector('[data-creator-daily-limits]')) {
+      if (ownerId()) {
+        prefetchJourneyForDashboard();
+      } else {
+        document.addEventListener('eazCreatorContextReady', prefetchJourneyForDashboard, { once: true });
+      }
+    }
   }
 
   window.CreatorJourneyModal = {
@@ -4904,6 +4934,10 @@
     isOpen: isOpen,
     getCachedLevelData: function () {
       return levelData && levelData.ok ? levelData : (window.__EAZ_JOURNEY_LEVEL_DATA__ || null);
+    },
+    getCachedJourneyData: function () {
+      if (journeyData && journeyData.ok) return journeyData;
+      return window.__EAZ_CREATOR_JOURNEY__ || null;
     },
     reload: function () {
       invalidateJourneyCaches();
