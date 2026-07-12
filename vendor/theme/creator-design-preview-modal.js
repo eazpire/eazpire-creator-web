@@ -387,6 +387,14 @@
     return null;
   }
 
+  function mockCompositingScriptUrl() {
+    var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE || [];
+    for (var i = 0; i < bundle.length; i++) {
+      if (String(bundle[i] || '').indexOf('creator-mock-compositing.js') !== -1) return bundle[i];
+    }
+    return inferScriptAssetUrl('creator-mock-compositing.js');
+  }
+
   function productsPanelScriptUrl() {
     if (window.__CREATOR_PRODUCTS_MODAL_JS) return window.__CREATOR_PRODUCTS_MODAL_JS;
     var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE || [];
@@ -402,19 +410,43 @@
     if (window.CreatorDesignProductsPanel && typeof window.CreatorDesignProductsPanel.mount === 'function') {
       return Promise.resolve();
     }
+    var compositingUrl = mockCompositingScriptUrl();
     var url = productsPanelScriptUrl();
     if (!url) return Promise.reject(new Error('products_panel_script_missing'));
     if (productsPanelLoadPromise) return productsPanelLoadPromise;
-    if (window.__CreatorLazyModals && typeof window.__CreatorLazyModals.loadScript === 'function') {
-      productsPanelLoadPromise = window.__CreatorLazyModals.loadScript(url);
+    function loadProductsScript() {
+      if (window.__CreatorLazyModals && typeof window.__CreatorLazyModals.loadScript === 'function') {
+        return window.__CreatorLazyModals.loadScript(url);
+      }
+      return new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = url;
+        s.async = true;
+        s.onload = function () { resolve(); };
+        s.onerror = function () { reject(new Error('products_script_load_failed')); };
+        document.head.appendChild(s);
+      });
+    }
+    if (
+      window.CreatorMockCompositing ||
+      !compositingUrl ||
+      compositingUrl === url
+    ) {
+      productsPanelLoadPromise = loadProductsScript();
+      return productsPanelLoadPromise;
+    }
+    if (window.__CreatorLazyModals && typeof window.__CreatorLazyModals.loadScriptsSequential === 'function') {
+      productsPanelLoadPromise = window.__CreatorLazyModals.loadScriptsSequential([compositingUrl, url]);
       return productsPanelLoadPromise;
     }
     productsPanelLoadPromise = new Promise(function (resolve, reject) {
       var s = document.createElement('script');
-      s.src = url;
+      s.src = compositingUrl;
       s.async = true;
-      s.onload = function () { resolve(); };
-      s.onerror = function () { reject(new Error('products_script_load_failed')); };
+      s.onload = function () {
+        loadProductsScript().then(resolve).catch(reject);
+      };
+      s.onerror = function () { reject(new Error('mock_compositing_script_load_failed')); };
       document.head.appendChild(s);
     });
     return productsPanelLoadPromise;

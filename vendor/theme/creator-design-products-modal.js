@@ -122,6 +122,10 @@
   var DEFAULT_CARD_PLACEMENT = { x: 0.5, y: 0.5, scale: 0.95, rotate: 0, flipX: false, flipY: false };
   var CARD_UI_SCALE_MAX = 4;
 
+  function mockCompositing() {
+    return window.CreatorMockCompositing || null;
+  }
+
   function designPreviewUrl() {
     if (!ctxDesign) return '';
     var d = ctxDesign;
@@ -137,22 +141,17 @@
   }
 
   function parseZoneFrac(f) {
-    var def = { l: 0.28, t: 0.22, w: 0.44, h: 0.48 };
-    if (!f || typeof f !== 'object') return def;
-    var l = Number(f.l != null ? f.l : f.left != null ? f.left : f.x);
-    var t = Number(f.t != null ? f.t : f.top != null ? f.top : f.y);
-    var w = Number(f.w != null ? f.w : f.width);
-    var h = Number(f.h != null ? f.h : f.height);
-    if (![l, t, w, h].every(function (x) {
-      return Number.isFinite(x);
-    })) {
-      return def;
-    }
-    return { l: l, t: t, w: w, h: h };
+    var MC = mockCompositing();
+    if (MC) return MC.parseZoneFrac(f);
+    return { l: 0.28, t: 0.22, w: 0.44, h: 0.48 };
   }
 
   function normalizeCardPlacement(raw) {
     if (!raw || typeof raw !== 'object') return Object.assign({}, DEFAULT_CARD_PLACEMENT);
+    var MC = mockCompositing();
+    if (MC && typeof MC.normalizeOpenSeedPlacement === 'function') {
+      return MC.normalizeOpenSeedPlacement(raw);
+    }
     var x = Number(raw.x);
     var y = Number(raw.y);
     var scale = Number(raw.scale);
@@ -167,72 +166,23 @@
     };
   }
 
-  function clampCardScale(raw) {
-    var v = Number(raw);
-    if (!Number.isFinite(v) || v <= 0) v = DEFAULT_CARD_PLACEMENT.scale;
-    return Math.min(Math.max(v, 0.08), CARD_UI_SCALE_MAX);
-  }
-
-  function visualScaleForCardPlacement(tr) {
-    return clampCardScale(tr && tr.scale);
-  }
-
   function fitCardPreviewStage(stageEl, mockImg, frameEl) {
-    if (!stageEl || !mockImg || !frameEl) return false;
-    var nw = mockImg.naturalWidth;
-    var nh = mockImg.naturalHeight;
-    if (!nw || !nh) return false;
-    var boxW = Math.max(1, frameEl.clientWidth);
-    var boxH = Math.max(1, frameEl.clientHeight);
-    if (boxW < 4 || boxH < 4) return false;
-    var fit = Math.min(boxW / nw, boxH / nh);
-    var w = Math.max(1, nw * fit);
-    var h = Math.max(1, nh * fit);
-    stageEl.style.width = w + 'px';
-    stageEl.style.height = h + 'px';
-    stageEl.style.aspectRatio = 'auto';
-    mockImg.style.width = '100%';
-    mockImg.style.height = '100%';
-    mockImg.style.objectFit = 'fill';
-    return true;
+    var MC = mockCompositing();
+    if (MC) return MC.fitMockStage(stageEl, mockImg, frameEl);
+    return false;
   }
 
   function applyTransformToCardDesignImg(designImg, zoneEl, tr) {
     if (!designImg || !zoneEl) return;
-    var x = Number(tr && tr.x);
-    var y = Number(tr && tr.y);
-    var scale = Number(tr && tr.scale);
-    var rot = Number(tr && tr.rotate);
-    if (!Number.isFinite(x)) x = 0.5;
-    if (!Number.isFinite(y)) y = 0.5;
-    if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
-    if (!Number.isFinite(rot)) rot = 0;
-    var visualScale = visualScaleForCardPlacement({ scale: scale });
-    var flipSx = tr && tr.flipX ? -1 : 1;
-    var flipSy = tr && tr.flipY ? -1 : 1;
-    var zoneW = zoneEl.offsetWidth || 1;
-    var zoneH = zoneEl.offsetHeight || 1;
-    designImg.style.width = Math.max(8, zoneW * visualScale) + 'px';
-    designImg.style.height = 'auto';
-    designImg.style.maxWidth = 'none';
-    designImg.style.maxHeight = 'none';
-    designImg.style.left = '50%';
-    designImg.style.top = '50%';
-    var dx = (x - 0.5) * zoneW;
-    var dy = (y - 0.5) * zoneH;
-    designImg.style.transform =
-      'translate(-50%, -50%) translate(' +
-      dx +
-      'px,' +
-      dy +
-      'px) rotate(' +
-      rot +
-      'deg) scale(' +
-      flipSx +
-      ',' +
-      flipSy +
-      ')';
-    designImg.classList.add('is-laid-out');
+    var MC = mockCompositing();
+    if (MC) {
+      MC.applyDesignTransformInZone(designImg, zoneEl, tr, {
+        uiScaleMax: CARD_UI_SCALE_MAX,
+        minDesignWidth: 8,
+      });
+      return;
+    }
+    console.warn('[creator-design-products-modal] CreatorMockCompositing missing — card preview parity degraded');
   }
 
   function layoutCardPreviewStack(stackEl, attempt) {

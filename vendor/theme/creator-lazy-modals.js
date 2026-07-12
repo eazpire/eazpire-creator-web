@@ -179,6 +179,7 @@
 
   window.__CreatorLazyModals = {
     loadScript: loadScript,
+    loadScriptsSequential: loadScriptsSequential,
     ensureDesignPreviewModal: ensureDesignPreviewModal,
     ensureStudioModal: ensureStudioModal,
     ensureCreationsBundle: ensureCreationsBundle,
