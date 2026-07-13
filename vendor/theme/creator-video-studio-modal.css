@@ -405,46 +405,59 @@
   border-top: 8px solid #f97316;
 }
 
-/* Footer center Video Studio button — desktop footers */
-.creator-global-footer,
-.creator-desktop-footer {
+/* Video content footer bar — Video Studio CTA (IDEA-028) */
+.creator-video-eazy-footer.creator-hero-eazy-footer--status-only {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
   position: relative;
-}
-.creator-global-footer__center,
-.creator-desktop-footer__center {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
+  bottom: auto;
+  background: rgba(6, 4, 14, 0.92);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
   z-index: 2;
 }
-.creator-global-footer__center.is-visible,
-.creator-desktop-footer__center.is-visible {
-  display: flex !important;
-  pointer-events: auto;
+.creator-video-eazy-footer__bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 48px;
+  padding: 8px 16px;
+  box-sizing: border-box;
 }
-.creator-global-footer__studio-btn,
-.creator-desktop-footer__studio-btn {
+.creator-video-eazy-footer__bar .creator-hero-create-status {
+  position: absolute;
+  left: 16px;
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 12px;
+}
+.creator-video-eazy-footer__studio-btn {
   appearance: none;
-  border: 1px solid rgba(249, 115, 22, 0.75);
-  background: rgba(249, 115, 22, 0.18);
+  border: 1px solid rgba(249, 115, 22, 0.8);
+  background: rgba(249, 115, 22, 0.2);
   color: #fff;
   border-radius: 999px;
-  padding: 6px 16px;
-  font-size: 12px;
+  padding: 8px 20px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
 }
-.creator-global-footer__studio-btn:hover,
-.creator-desktop-footer__studio-btn:hover {
-  background: rgba(249, 115, 22, 0.32);
+.creator-video-eazy-footer__studio-btn:hover {
+  background: rgba(249, 115, 22, 0.35);
 }
 
-@media (max-width: 900px) {
-  .creator-global-footer__center,
-  .creator-desktop-footer__center { display: none !important; }
+/* Legacy main-footer studio button styles (no longer used for CTA) */
+.creator-global-footer__center,
+.creator-desktop-footer__center {
+  display: none !important;
 }

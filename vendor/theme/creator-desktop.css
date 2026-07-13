@@ -2251,38 +2251,6 @@ body.creator-mobile-page .creator-desktop-app {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    flex: 1;
-    min-width: 0;
-  }
-  .creator-desktop-footer__right {
-    justify-content: flex-end;
-  }
-  .creator-desktop-footer__center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1;
-  }
-  .creator-desktop-footer__center.is-visible {
-    display: flex;
-  }
-  .creator-desktop-footer__studio-btn {
-    appearance: none;
-    border: 1px solid rgba(249, 115, 22, 0.75);
-    background: rgba(249, 115, 22, 0.18);
-    color: #fff;
-    border-radius: 999px;
-    padding: 6px 16px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .creator-desktop-footer__studio-btn:hover {
-    background: rgba(249, 115, 22, 0.32);
   }
 
   .creator-desktop-footer__link {
@@ -3764,6 +3732,14 @@ body.creator-video-motion-info-modal-open {
 .creator-desktop-marketing-host .creator-hero-eazy-footer {
   display: block !important;
   padding: 12px 20px 18px;
+}
+.creator-desktop-content-creation .creator-video-eazy-footer.creator-hero-eazy-footer--status-only,
+.creator-desktop-marketing-host .creator-video-eazy-footer.creator-hero-eazy-footer--status-only,
+#creatorMarketing .creator-video-eazy-footer.creator-hero-eazy-footer--status-only {
+  display: block !important;
+  padding: 0 !important;
+  background: rgba(6, 4, 14, 0.95) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 .creator-desktop-content-creation .creator-hero-eazy-footer__inner,
 .creator-desktop-marketing-host .creator-hero-eazy-footer__inner {

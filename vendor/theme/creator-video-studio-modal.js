@@ -896,61 +896,38 @@
   }
 
   function updateFooterButtonVisibility() {
-    var centers = document.querySelectorAll('#creatorFooterVideoStudio, .creator-desktop-footer__center, .creator-global-footer__center');
-    if (!centers.length) return;
-    var desktop = window.matchMedia('(min-width: 901px)').matches;
-    var show = desktop && isVideoCreationWorkspaceActive();
-    for (var i = 0; i < centers.length; i++) {
-      var center = centers[i];
-      center.classList.toggle('is-visible', !!show);
-      if (show) center.removeAttribute('hidden');
-      else center.setAttribute('hidden', '');
-    }
+    /* Content-bar button is only in the Videos panel footer; no toggle needed beyond panel visibility. */
   }
 
   function ensureFooterButton() {
-    var footers = document.querySelectorAll('.creator-desktop-footer, .creator-global-footer');
-    if (!footers.length) return;
-
-    for (var fi = 0; fi < footers.length; fi++) {
-      var footer = footers[fi];
-      var isDesktop = footer.classList.contains('creator-desktop-footer');
-      var center = footer.querySelector('#creatorFooterVideoStudio, .creator-desktop-footer__center, .creator-global-footer__center');
-      if (!center) {
-        center = document.createElement('div');
-        center.id = fi === 0 ? 'creatorFooterVideoStudio' : 'creatorFooterVideoStudio_' + fi;
-        center.className = isDesktop ? 'creator-desktop-footer__center' : 'creator-global-footer__center';
-        center.setAttribute('hidden', '');
-        var right = footer.querySelector('.creator-desktop-footer__right, .creator-global-footer__right');
-        if (right) footer.insertBefore(center, right);
-        else footer.appendChild(center);
-      }
-      if (!center.id) center.id = 'creatorFooterVideoStudio';
-
-      var btn = center.querySelector('button') || document.getElementById('creatorFooterVideoStudioBtn');
-      if (!btn || !center.contains(btn)) {
-        btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = isDesktop ? 'creator-desktop-footer__studio-btn' : 'creator-global-footer__studio-btn';
-        if (fi === 0) btn.id = 'creatorFooterVideoStudioBtn';
-        btn.textContent = i18n('title', 'Video Studio');
-        btn.setAttribute('data-t', 'creator.video_studio.title');
-        center.appendChild(btn);
-      }
-      if (!btn._cvsBound) {
-        btn._cvsBound = true;
-        btn.addEventListener('click', function () {
-          open();
-        });
-      }
+    var buttons = document.querySelectorAll(
+      '[data-creator-video-studio-open], #creatorFooterVideoStudioBtn, .creator-video-eazy-footer__studio-btn'
+    );
+    for (var i = 0; i < buttons.length; i++) {
+      var btn = buttons[i];
+      if (btn._cvsBound) continue;
+      btn._cvsBound = true;
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        open();
+      });
     }
-    updateFooterButtonVisibility();
+
+    // Remove leftover main-footer CTAs from earlier iteration
+    var leftovers = document.querySelectorAll(
+      '.creator-desktop-footer__center, .creator-global-footer__center, #creatorFooterVideoStudio'
+    );
+    for (var j = 0; j < leftovers.length; j++) {
+      var node = leftovers[j];
+      if (node.closest && node.closest('.creator-video-eazy-footer')) continue;
+      if (node.parentNode) node.parentNode.removeChild(node);
+    }
   }
 
   function observeWorkspace() {
     ensureFooterButton();
     var obs = new MutationObserver(function () {
-      updateFooterButtonVisibility();
+      ensureFooterButton();
     });
     var targets = [
       document.getElementById('creatorMobileSwipeViewport'),
@@ -960,6 +937,7 @@
       document.getElementById('creatorDesktopContentCreation'),
       document.getElementById('creatorMarketingPanelCreation'),
       document.getElementById('creatorMarketingHost'),
+      document.body,
     ].filter(Boolean);
     targets.forEach(function (t) {
       obs.observe(t, {
@@ -969,14 +947,8 @@
         attributeFilter: ['class', 'data-desktop-active-screen', 'hidden', 'data-subtab', 'data-marketing-subtab', 'data-content'],
       });
     });
-    window.addEventListener('resize', updateFooterButtonVisibility);
-    document.addEventListener('click', function () {
-      setTimeout(updateFooterButtonVisibility, 50);
-    });
-    // Portal may mount marketing UI later
     setTimeout(ensureFooterButton, 500);
-    setTimeout(updateFooterButtonVisibility, 800);
-    setTimeout(updateFooterButtonVisibility, 2000);
+    setTimeout(ensureFooterButton, 1500);
   }
 
   function boot() {

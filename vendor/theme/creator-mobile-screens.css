@@ -3836,8 +3836,8 @@ body.creator-video-motion-info-modal-open {
   backdrop-filter: blur(8px);
 }
 
-/* Hero: compact strip — primary CTA is header speech bubble */
-.creator-hero-eazy-footer--status-only {
+/* Hero: compact strip — primary CTA is header speech bubble; Video Studio uses own bar */
+.creator-hero-eazy-footer--status-only:not(.creator-video-eazy-footer) {
   flex-shrink: 0;
   padding: 6px 0 10px;
   width: 100%;
