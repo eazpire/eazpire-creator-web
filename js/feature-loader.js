@@ -25,7 +25,7 @@
     if (!href || document.querySelector('link[data-portal-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href + "?v=10";
+    link.href = href + "?v=11";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -37,7 +37,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=5";
+      s.src = src + "?v=6";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -264,6 +264,9 @@
         await injectPartial("creator-mobile-marketing.html", host);
       }
 
+      await injectPartial("creator-video-studio-modal.html");
+      loadCss(asset("creator-video-studio-modal.css"));
+
       await loadScriptsSequential([
         asset("creator-footer-eaz-ui.js"),
         asset("hero-region-utils.js"),
@@ -276,7 +279,13 @@
         asset("creator-content-publish-images-screen.js"),
         asset("eaz-creator-promotions.js"),
         asset("creator-marketing-screen.js"),
+        asset("creator-video-studio-timeline.js"),
+        asset("creator-video-studio-modal.js"),
       ]);
+
+      try {
+        document.dispatchEvent(new Event("creator-marketing-ready"));
+      } catch (e) {}
 
       applyMarketingDeepLink();
     })();

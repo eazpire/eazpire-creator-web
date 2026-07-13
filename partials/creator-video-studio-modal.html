@@ -1,0 +1,103 @@
+<div
+  id="creatorVideoStudioModal"
+  class="cvs-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cvs-modal-title"
+>
+  <div class="cvs-modal__shell">
+    <header class="cvs-modal__header">
+      <div class="cvs-modal__header-text">
+        <h2 id="cvs-modal-title" class="cvs-modal__title" data-t="creator.video_studio.title">Video Studio</h2>
+        <p class="cvs-modal__status" id="cvs-status" role="status"></p>
+      </div>
+      <div class="cvs-modal__header-actions">
+        <label class="cvs-aspect">
+          <span class="cvs-aspect__label" data-t="creator.video_studio.aspect_label">Aspect</span>
+          <select id="cvs-aspect-preset" class="cvs-aspect__select" aria-label="Aspect">
+            <option value="youtube_16_9">YouTube 16:9</option>
+            <option value="shorts_9_16">Shorts / TikTok / Reels 9:16</option>
+            <option value="ig_feed_1_1">Instagram Feed 1:1</option>
+            <option value="ig_portrait_4_5">Instagram Portrait 4:5</option>
+            <option value="facebook_1_91">Facebook / LinkedIn 1.91:1</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <div class="cvs-aspect-custom" id="cvs-aspect-custom" hidden>
+          <input type="number" id="cvs-aspect-w" class="cvs-aspect__dim" min="2" max="1920" step="2" value="1920" aria-label="Width">
+          <span aria-hidden="true">×</span>
+          <input type="number" id="cvs-aspect-h" class="cvs-aspect__dim" min="2" max="1920" step="2" value="1080" aria-label="Height">
+        </div>
+        <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-undo" title="Undo">Undo</button>
+        <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-redo" title="Redo">Redo</button>
+        <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-save" data-t="creator.video_studio.save">Save</button>
+        <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-btn-export" data-t="creator.video_studio.export">Export</button>
+        <button type="button" class="cvs-btn cvs-btn--icon" id="cvs-btn-close" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="cvs-modal__workspace">
+      <aside class="cvs-sidebar-wrap" id="cvs-sidebar-wrap">
+        <div class="cvs-sidebar" id="cvs-sidebar">
+          <div class="cvs-sidebar__top">
+            <button type="button" class="cvs-btn cvs-btn--primary cvs-btn--block" id="cvs-btn-add" data-t="creator.video_studio.add_assets">Add</button>
+            <input type="file" id="cvs-file-input" accept="image/*,video/*,audio/*" multiple hidden>
+          </div>
+          <div class="cvs-asset-grid" id="cvs-asset-grid" role="list"></div>
+          <p class="cvs-asset-empty" id="cvs-asset-empty" data-t="creator.video_studio.assets_empty">
+            No assets yet. Click Add to upload images, videos, or audio.
+          </p>
+        </div>
+        <button type="button" class="cvs-rail" id="cvs-sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="true">
+          <span class="cvs-rail__arrow" aria-hidden="true">‹</span>
+        </button>
+      </aside>
+
+      <div class="cvs-main">
+        <section class="cvs-viewer" aria-label="Preview">
+          <div class="cvs-viewer__stage" id="cvs-viewer-stage">
+            <canvas id="cvs-preview-canvas" class="cvs-preview-canvas" width="1920" height="1080"></canvas>
+            <div class="cvs-crop-overlay" id="cvs-crop-overlay" hidden>
+              <div class="cvs-crop-box" id="cvs-crop-box">
+                <span class="cvs-crop-handle" data-handle="nw"></span>
+                <span class="cvs-crop-handle" data-handle="ne"></span>
+                <span class="cvs-crop-handle" data-handle="sw"></span>
+                <span class="cvs-crop-handle" data-handle="se"></span>
+              </div>
+            </div>
+          </div>
+          <div class="cvs-viewer__transport">
+            <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-play" aria-label="Play">▶</button>
+            <span class="cvs-time" id="cvs-time">0:00 / 0:00</span>
+            <div class="cvs-transform-tools" id="cvs-transform-tools">
+              <label>Scale <input type="range" id="cvs-scale" min="10" max="300" value="100"></label>
+              <label>X <input type="number" id="cvs-pos-x" value="0" step="1"></label>
+              <label>Y <input type="number" id="cvs-pos-y" value="0" step="1"></label>
+              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-crop" data-t="creator.video_studio.crop">Crop</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="cvs-timeline" id="cvs-timeline" aria-label="Timeline">
+          <div class="cvs-timeline__toolbar">
+            <label class="cvs-zoom">
+              Zoom
+              <input type="range" id="cvs-timeline-zoom" min="40" max="200" value="80">
+            </label>
+            <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-split" data-t="creator.video_studio.split">Split</button>
+            <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-delete-clip" data-t="creator.video_studio.delete_clip">Delete clip</button>
+          </div>
+          <div class="cvs-timeline__scroll" id="cvs-timeline-scroll">
+            <div class="cvs-timeline__ruler" id="cvs-timeline-ruler"></div>
+            <div class="cvs-timeline__tracks" id="cvs-timeline-tracks"></div>
+            <div class="cvs-timeline__playhead" id="cvs-timeline-playhead"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

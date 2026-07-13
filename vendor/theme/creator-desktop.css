@@ -2251,6 +2251,38 @@ body.creator-mobile-page .creator-desktop-app {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+  .creator-desktop-footer__right {
+    justify-content: flex-end;
+  }
+  .creator-desktop-footer__center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+  .creator-desktop-footer__center.is-visible {
+    display: flex;
+  }
+  .creator-desktop-footer__studio-btn {
+    appearance: none;
+    border: 1px solid rgba(249, 115, 22, 0.75);
+    background: rgba(249, 115, 22, 0.18);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .creator-desktop-footer__studio-btn:hover {
+    background: rgba(249, 115, 22, 0.32);
   }
 
   .creator-desktop-footer__link {
