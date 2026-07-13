@@ -79,6 +79,17 @@
               <label>Y <input type="number" id="cvs-pos-y" value="0" step="1"></label>
               <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-crop" data-t="creator.video_studio.crop">Crop</button>
             </div>
+            <div class="cvs-audio-tools" id="cvs-audio-tools" hidden>
+              <label>Volume <input type="range" id="cvs-clip-volume" min="0" max="100" value="100"></label>
+              <button
+                type="button"
+                class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm"
+                id="cvs-btn-clip-mute"
+                aria-pressed="false"
+                aria-label="Mute clip"
+                title="Mute clip"
+              >&#128266;</button>
+            </div>
           </div>
         </section>
 

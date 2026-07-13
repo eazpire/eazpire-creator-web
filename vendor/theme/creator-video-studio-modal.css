@@ -154,6 +154,14 @@
   flex: 1;
   min-height: 0;
   align-content: start;
+  /* Hide scrollbar visually while keeping native scroll (mouse wheel/touch/drag) */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.cvs-asset-grid::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 .cvs-asset-card {
   position: relative;
@@ -261,6 +269,25 @@
 }
 .cvs-transform-tools input[type="range"] { width: 100px; }
 
+.cvs-audio-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.cvs-audio-tools input[type="range"] { width: 100px; }
+.cvs-btn--icon-sm {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 14px;
+}
+.cvs-btn--icon-sm.is-muted {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.6);
+}
+
 .cvs-crop-overlay {
   position: absolute;
   inset: 0;
@@ -307,6 +334,14 @@
   flex: 1;
   overflow: auto;
   min-height: 0;
+  /* Hide scrollbar visually while keeping native scroll (mouse wheel/touch/drag) */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.cvs-timeline__scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 .cvs-timeline__ruler {
   height: 22px;
@@ -333,16 +368,53 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  width: 48px;
+  width: 104px;
   flex-shrink: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  box-sizing: border-box;
   font-size: 11px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.65);
   background: rgba(12, 8, 22, 0.95);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.cvs-track__name {
+  line-height: 1;
+}
+.cvs-track__audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cvs-track__mute {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cvs-track__mute:hover { background: rgba(255, 255, 255, 0.14); }
+.cvs-track__mute.is-muted {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.6);
+  background: rgba(248, 113, 113, 0.12);
+}
+.cvs-track__volume {
+  width: 48px;
+  height: 14px;
+  cursor: pointer;
 }
 .cvs-track__lane {
   position: relative;

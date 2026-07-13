@@ -33,6 +33,25 @@
   var saveTimer = null;
   var isOpen = false;
   var cropMode = false;
+  var exportAudioCtx = null;
+  var exportSourceCache = Object.create(null);
+
+  function getExportAudioContext() {
+    if (!exportAudioCtx) {
+      exportAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } else if (exportAudioCtx.state === 'suspended') {
+      exportAudioCtx.resume().catch(function () {});
+    }
+    return exportAudioCtx;
+  }
+
+  function getExportMediaSource(assetId, el, ctx) {
+    var cached = exportSourceCache[assetId];
+    if (cached && cached.el === el) return cached.node;
+    var node = ctx.createMediaElementSource(el);
+    exportSourceCache[assetId] = { el: el, node: node };
+    return node;
+  }
 
   function i18n(key, fallback) {
     try {
@@ -117,11 +136,31 @@
     var scale = document.getElementById('cvs-scale');
     var x = document.getElementById('cvs-pos-x');
     var y = document.getElementById('cvs-pos-y');
-    if (!sel) return;
+    var audioTools = document.getElementById('cvs-audio-tools');
+    var volume = document.getElementById('cvs-clip-volume');
+    var muteBtn = document.getElementById('cvs-btn-clip-mute');
+    if (!sel) {
+      if (audioTools) audioTools.hidden = true;
+      return;
+    }
     var t = sel.clip.transform || { x: 0, y: 0, scale: 1 };
     if (scale) scale.value = String(Math.round((t.scale || 1) * 100));
     if (x) x.value = String(Math.round(t.x || 0));
     if (y) y.value = String(Math.round(t.y || 0));
+
+    var asset = (engine.assetsById && engine.assetsById[sel.clip.assetId]) || {};
+    var hasAudio = asset.kind === 'video' || asset.kind === 'audio';
+    if (audioTools) audioTools.hidden = !hasAudio;
+    if (hasAudio) {
+      var vol = sel.clip.volume != null ? sel.clip.volume : 1;
+      var muted = !!sel.clip.muted;
+      if (volume) volume.value = String(Math.round(vol * 100));
+      if (muteBtn) {
+        muteBtn.classList.toggle('is-muted', muted);
+        muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+        muteBtn.textContent = muted ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+      }
+    }
   }
 
   function onSelectClip() {
@@ -536,18 +575,22 @@
       canvas.width = width;
       canvas.height = height;
       var stream = canvas.captureStream(30);
-      // mix first audio track if available
+      // Mix every video/audio clip's audio into the export. Web Audio only
+      // allows a MediaElementSource to be created once per element, ever —
+      // reuse a single persistent AudioContext + cached source nodes so
+      // exporting more than once doesn't throw "already connected".
       try {
-        var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        var audioCtx = getExportAudioContext();
         var dest = audioCtx.createMediaStreamDestination();
         var hasAudio = false;
-        Object.keys(engine.mediaEls || {}).forEach(function (id) {
-          var el = engine.mediaEls[id];
-          if (el && el.tagName === 'AUDIO') {
-            var src = audioCtx.createMediaElementSource(el);
+        Object.keys(engine.mediaEls || {}).forEach(function (assetId) {
+          var el = engine.mediaEls[assetId];
+          if (!el || (el.tagName !== 'AUDIO' && el.tagName !== 'VIDEO')) return;
+          try {
+            var src = getExportMediaSource(assetId, el, audioCtx);
             src.connect(dest);
             hasAudio = true;
-          }
+          } catch (e) {}
         });
         if (hasAudio) {
           dest.stream.getAudioTracks().forEach(function (t) {
@@ -714,6 +757,10 @@
       scrollEl: document.getElementById('cvs-timeline-scroll'),
       onChange: onEngineChange,
       onSelect: onSelectClip,
+      labels: {
+        muteTrack: i18n('mute_track', 'Mute track'),
+        trackVolume: i18n('track_volume', 'Track volume'),
+      },
     });
     return engine;
   }
@@ -786,6 +833,17 @@
     });
     on('cvs-pos-y', 'change', function (e) {
       if (engine) engine.updateSelectedTransform({ y: Number(e.target.value) || 0 });
+    });
+    on('cvs-clip-volume', 'input', function (e) {
+      if (!engine) return;
+      engine.updateSelectedAudio({ volume: (Number(e.target.value) || 0) / 100 });
+    });
+    on('cvs-btn-clip-mute', 'click', function () {
+      if (!engine) return;
+      var sel = engine.getSelected();
+      if (!sel) return;
+      engine.updateSelectedAudio({ muted: !sel.clip.muted });
+      syncTransformUi();
     });
 
     document.addEventListener('keydown', function (e) {

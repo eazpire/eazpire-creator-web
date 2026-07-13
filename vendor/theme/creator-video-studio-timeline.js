@@ -4,8 +4,11 @@
 (function (global) {
   'use strict';
 
-  var LABEL_W = 48;
+  var LABEL_W = 104;
   var MAX_TIMELINE_MS = 3 * 60 * 1000;
+  var SEEK_THRESHOLD_PLAYING = 0.35;
+  var SEEK_THRESHOLD_PAUSED = 0.03;
+  var SEEK_THRESHOLD_START = 0.15;
 
   function uid(prefix) {
     return (prefix || 'id') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
@@ -17,10 +20,18 @@
 
   function defaultTracks() {
     return [
-      { id: 'v1', type: 'video', name: 'V1', clips: [] },
-      { id: 'v2', type: 'video', name: 'V2', clips: [] },
-      { id: 'a1', type: 'audio', name: 'A1', clips: [] },
+      { id: 'v1', type: 'video', name: 'V1', clips: [], volume: 1, muted: false },
+      { id: 'v2', type: 'video', name: 'V2', clips: [], volume: 1, muted: false },
+      { id: 'a1', type: 'audio', name: 'A1', clips: [], volume: 1, muted: false },
     ];
+  }
+
+  function ensureTrackAudioDefaults(tracks) {
+    (tracks || []).forEach(function (t) {
+      if (t.volume == null) t.volume = 1;
+      if (t.muted == null) t.muted = false;
+    });
+    return tracks;
   }
 
   function createEngine(opts) {
@@ -30,7 +41,7 @@
       height: opts.height || 1080,
       playheadMs: 0,
       durationMs: 0,
-      tracks: defaultTracks(),
+      tracks: ensureTrackAudioDefaults(defaultTracks()),
       selectedClipId: null,
       assetsById: Object.create(null),
       localUrls: Object.create(null),
@@ -43,11 +54,12 @@
     };
 
     var canvas = opts.canvas;
-    var ctx = canvas ? canvas.getContext('2d') : null;
+    var ctx = canvas ? canvas.getContext('2d', { alpha: false }) : null;
     var tracksEl = opts.tracksEl;
     var rulerEl = opts.rulerEl;
     var playheadEl = opts.playheadEl;
     var scrollEl = opts.scrollEl;
+    var labels = opts.labels || {};
 
     function timelineWidthPx() {
       var secs = Math.max(api.durationMs / 1000, 10);
@@ -116,8 +128,34 @@
       tracksEl.style.width = w + 'px';
       var html = '';
       api.tracks.forEach(function (track) {
+        var trackVol = track.volume != null ? track.volume : 1;
+        var trackMuted = !!track.muted;
+        var muteLabel = labels.muteTrack || 'Mute track';
+        var volLabel = labels.trackVolume || 'Track volume';
         html += '<div class="cvs-track" data-track-id="' + track.id + '">';
-        html += '<div class="cvs-track__label">' + track.name + '</div>';
+        html += '<div class="cvs-track__label">';
+        html += '<span class="cvs-track__name">' + track.name + '</span>';
+        html += '<div class="cvs-track__audio-controls">';
+        html +=
+          '<button type="button" class="cvs-track__mute' +
+          (trackMuted ? ' is-muted' : '') +
+          '" data-track-mute aria-pressed="' +
+          (trackMuted ? 'true' : 'false') +
+          '" aria-label="' +
+          muteLabel +
+          '" title="' +
+          muteLabel +
+          '">' +
+          (trackMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A') +
+          '</button>';
+        html +=
+          '<input type="range" class="cvs-track__volume" data-track-volume min="0" max="100" value="' +
+          Math.round(clamp(trackVol, 0, 1) * 100) +
+          '" aria-label="' +
+          volLabel +
+          '">';
+        html += '</div>';
+        html += '</div>';
         html +=
           '<div class="cvs-track__lane" data-track-lane="' +
           track.id +
@@ -129,6 +167,10 @@
       tracksEl.innerHTML = html;
 
       api.tracks.forEach(function (track) {
+        var labelEl = tracksEl.querySelector(
+          '.cvs-track[data-track-id="' + track.id + '"] .cvs-track__label'
+        );
+        bindTrackControls(labelEl, track);
         var lane = tracksEl.querySelector('[data-track-lane="' + track.id + '"]');
         if (!lane) return;
         (track.clips || []).forEach(function (clip) {
@@ -186,6 +228,32 @@
         }
         startMove(e, clip);
       });
+    }
+
+    function bindTrackControls(labelEl, track) {
+      if (!labelEl) return;
+      var muteBtn = labelEl.querySelector('[data-track-mute]');
+      var volInput = labelEl.querySelector('[data-track-volume]');
+      if (muteBtn) {
+        muteBtn.addEventListener('mousedown', function (e) {
+          e.stopPropagation();
+        });
+        muteBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          api.setTrackMute(track.id, !track.muted);
+          muteBtn.classList.toggle('is-muted', !!track.muted);
+          muteBtn.textContent = track.muted ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+          muteBtn.setAttribute('aria-pressed', track.muted ? 'true' : 'false');
+        });
+      }
+      if (volInput) {
+        volInput.addEventListener('mousedown', function (e) {
+          e.stopPropagation();
+        });
+        volInput.addEventListener('input', function (e) {
+          api.setTrackVolume(track.id, (Number(e.target.value) || 0) / 100);
+        });
+      }
     }
 
     function startMove(e, clip) {
@@ -259,6 +327,9 @@
       } else {
         el = document.createElement('video');
         el.preload = 'auto';
+        // Start muted only to satisfy autoplay policies before the first user
+        // gesture; drawFrame() applies the real clip/track mute + volume mix
+        // on every frame once playback settings are known.
         el.muted = true;
         el.playsInline = true;
         el.crossOrigin = 'anonymous';
@@ -286,34 +357,86 @@
       });
     }
 
+    // Keeps <video>/<audio> elements playing smoothly during playback instead
+    // of scrubbing (seeking) every RAF tick, which is what caused choppy
+    // preview. While playing we only correct drift once it becomes large;
+    // otherwise the media element is left to decode/advance on its own so
+    // the canvas draw below (which just reads the live frame) stays smooth.
+    function syncMediaPlayback(media, localMs, playing) {
+      var targetSec = Math.max(0, localMs / 1000);
+      try {
+        if (playing) {
+          if (media.paused) {
+            if (Math.abs((media.currentTime || 0) - targetSec) > SEEK_THRESHOLD_START) {
+              media.currentTime = targetSec;
+            }
+            var p = media.play();
+            if (p && p.catch) p.catch(function () {});
+          } else if (Math.abs((media.currentTime || 0) - targetSec) > SEEK_THRESHOLD_PLAYING) {
+            media.currentTime = targetSec;
+          }
+        } else {
+          if (!media.paused) media.pause();
+          if (Math.abs((media.currentTime || 0) - targetSec) > SEEK_THRESHOLD_PAUSED) {
+            media.currentTime = targetSec;
+          }
+        }
+      } catch (e) {}
+    }
+
+    function clipAudioMix(track, clip) {
+      var trackVol = track.volume != null ? track.volume : 1;
+      var trackMuted = !!track.muted;
+      var clipVol = clip.volume != null ? clip.volume : 1;
+      var clipMuted = !!clip.muted;
+      var volume = clamp(trackVol, 0, 1) * clamp(clipVol, 0, 1);
+      return { volume: volume, muted: trackMuted || clipMuted || volume <= 0 };
+    }
+
+    function pauseInactiveMedia(activeAssetIds) {
+      Object.keys(api.mediaEls).forEach(function (assetId) {
+        if (activeAssetIds[assetId]) return;
+        var m = api.mediaEls[assetId];
+        if (m && (m.tagName === 'VIDEO' || m.tagName === 'AUDIO') && !m.paused) {
+          try {
+            m.pause();
+          } catch (e) {}
+        }
+      });
+    }
+
     function drawFrame(ms) {
       if (!ctx || !canvas) return;
-      canvas.width = api.width;
-      canvas.height = api.height;
+      if (canvas.width !== api.width) canvas.width = api.width;
+      if (canvas.height !== api.height) canvas.height = api.height;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, api.width, api.height);
 
       var actives = activeClipsAt(ms);
+      var activeAssetIds = Object.create(null);
+
       actives.forEach(function (item) {
-        if (item.track.type === 'audio') return;
         var asset = api.assetsById[item.clip.assetId];
         if (!asset) return;
         var media = ensureMedia(item.clip.assetId);
         if (!media) return;
+        activeAssetIds[item.clip.assetId] = true;
+
+        if (asset.kind === 'video' || asset.kind === 'audio') {
+          var mix = clipAudioMix(item.track, item.clip);
+          media.muted = mix.muted;
+          media.volume = clamp(mix.volume, 0, 1);
+          syncMediaPlayback(media, item.localMs, api.playing);
+        }
+
+        if (item.track.type === 'audio') return;
+        if (asset.kind === 'video' && media.readyState < 2) return;
 
         var crop = item.clip.crop || { x: 0, y: 0, w: 1, h: 1 };
         var transform = item.clip.transform || { x: 0, y: 0, scale: 1 };
         var scale = Number(transform.scale) || 1;
         var ox = Number(transform.x) || 0;
         var oy = Number(transform.y) || 0;
-
-        if (asset.kind === 'video' && media.readyState >= 2) {
-          try {
-            if (Math.abs((media.currentTime || 0) - item.localMs / 1000) > 0.08) {
-              media.currentTime = item.localMs / 1000;
-            }
-          } catch (e) {}
-        }
 
         var mw = media.videoWidth || media.naturalWidth || asset.width || api.width;
         var mh = media.videoHeight || media.naturalHeight || asset.height || api.height;
@@ -324,12 +447,10 @@
         var sw = Math.max(1, crop.w * mw);
         var sh = Math.max(1, crop.h * mh);
 
-        var dw = api.width * scale;
-        var dh = (sw / sh ? (api.width * (sh / sw)) : api.height) * scale;
         // cover-fit inside frame then apply scale from center
         var fit = Math.min(api.width / sw, api.height / sh);
-        dw = sw * fit * scale;
-        dh = sh * fit * scale;
+        var dw = sw * fit * scale;
+        var dh = sh * fit * scale;
         var dx = (api.width - dw) / 2 + ox;
         var dy = (api.height - dh) / 2 + oy;
 
@@ -338,30 +459,7 @@
         } catch (err) {}
       });
 
-      // sync audio elements
-      api.tracks.forEach(function (track) {
-        if (track.type !== 'audio') return;
-        (track.clips || []).forEach(function (clip) {
-          var media = ensureMedia(clip.assetId);
-          if (!media) return;
-          var dur = (clip.end || 0) - (clip.start || 0);
-          var a = clip.timelineStart || 0;
-          var b = a + dur;
-          var vol = clip.volume != null ? clip.volume : 1;
-          media.volume = clamp(vol, 0, 1);
-          if (api.playing && ms >= a && ms < b) {
-            var local = (clip.start || 0) + (ms - a);
-            try {
-              if (Math.abs((media.currentTime || 0) - local / 1000) > 0.12) {
-                media.currentTime = local / 1000;
-              }
-              if (media.paused) media.play().catch(function () {});
-            } catch (e) {}
-          } else if (!media.paused) {
-            media.pause();
-          }
-        });
-      });
+      pauseInactiveMedia(activeAssetIds);
     }
 
     function renderAll() {
@@ -409,7 +507,9 @@
       api.width = project.width || api.width;
       api.height = project.height || api.height;
       var draft = project.draft || {};
-      api.tracks = Array.isArray(draft.tracks) && draft.tracks.length ? draft.tracks : defaultTracks();
+      api.tracks = ensureTrackAudioDefaults(
+        Array.isArray(draft.tracks) && draft.tracks.length ? draft.tracks : defaultTracks()
+      );
       api.playheadMs = Number(draft.playhead_ms) || 0;
       renderAll();
     };
@@ -443,9 +543,14 @@
       if (api.playing) {
         api._lastTs = 0;
         api._raf = requestAnimationFrame(tick);
-      } else if (api._raf) {
-        cancelAnimationFrame(api._raf);
-        api._raf = 0;
+      } else {
+        if (api._raf) {
+          cancelAnimationFrame(api._raf);
+          api._raf = 0;
+        }
+        // Explicitly pause any media that kept playing under the old
+        // playhead position now that playback has stopped.
+        drawFrame(api.playheadMs);
       }
       return api.playing;
     };
@@ -483,6 +588,7 @@
         crop: { x: 0, y: 0, w: 1, h: 1 },
         transform: { x: 0, y: 0, scale: 1 },
         volume: 1,
+        muted: false,
       };
       if (startAt + (clip.end - clip.start) > MAX_TIMELINE_MS) {
         clip.end = clip.start + Math.max(100, MAX_TIMELINE_MS - startAt);
@@ -524,6 +630,7 @@
         crop: JSON.parse(JSON.stringify(clip.crop || { x: 0, y: 0, w: 1, h: 1 })),
         transform: JSON.parse(JSON.stringify(clip.transform || { x: 0, y: 0, scale: 1 })),
         volume: clip.volume != null ? clip.volume : 1,
+        muted: !!clip.muted,
       };
       clip.end = local;
       found.track.clips.push(right);
@@ -543,6 +650,39 @@
       var found = selectedClip();
       if (!found) return;
       found.clip.crop = Object.assign({}, found.clip.crop || {}, crop);
+      drawFrame(api.playheadMs);
+      api.onChange();
+    };
+
+    api.updateSelectedAudio = function (partial) {
+      var found = selectedClip();
+      if (!found) return;
+      if (partial && partial.volume != null) {
+        found.clip.volume = clamp(Number(partial.volume), 0, 1);
+      }
+      if (partial && partial.muted != null) {
+        found.clip.muted = !!partial.muted;
+      }
+      drawFrame(api.playheadMs);
+      api.onChange();
+    };
+
+    api.setTrackVolume = function (trackId, vol) {
+      var track = api.tracks.find(function (t) {
+        return t.id === trackId;
+      });
+      if (!track) return;
+      track.volume = clamp(Number(vol), 0, 1);
+      drawFrame(api.playheadMs);
+      api.onChange();
+    };
+
+    api.setTrackMute = function (trackId, muted) {
+      var track = api.tracks.find(function (t) {
+        return t.id === trackId;
+      });
+      if (!track) return;
+      track.muted = !!muted;
       drawFrame(api.playheadMs);
       api.onChange();
     };
