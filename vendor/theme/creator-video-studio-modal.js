@@ -33,6 +33,9 @@
   var saveTimer = null;
   var isOpen = false;
   var cropMode = false;
+  var isDirty = false;
+  var cropRefFrame = null;
+  var projectsCache = [];
   var exportAudioCtx = null;
   var exportSourceCache = Object.create(null);
 
@@ -59,6 +62,130 @@
       if (pack && pack[key]) return String(pack[key]);
     } catch (e) {}
     return fallback;
+  }
+
+  /**
+   * Reusable in-app confirm/alert dialog — replaces window.confirm/alert
+   * everywhere in Video Studio. Promise-based: resolves true (confirmed) or
+   * false (cancelled/escaped/backdrop click).
+   * cvsConfirm({ title, message, confirmLabel, cancelLabel, danger, alertOnly })
+   */
+  function cvsConfirm(opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      var overlay = document.getElementById('cvsConfirmDialog');
+      var titleEl = document.getElementById('cvs-confirm-title');
+      var msgEl = document.getElementById('cvs-confirm-message');
+      var cancelBtn = document.getElementById('cvs-confirm-cancel');
+      var okBtn = document.getElementById('cvs-confirm-ok');
+      if (!overlay || !titleEl || !msgEl || !cancelBtn || !okBtn) {
+        resolve(opts.alertOnly ? (window.alert(opts.message || ''), true) : window.confirm(opts.message || ''));
+        return;
+      }
+      titleEl.textContent = opts.title || i18n('confirm_title', 'Please confirm');
+      msgEl.textContent = opts.message || '';
+      okBtn.textContent = opts.confirmLabel || i18n('confirm_ok', 'OK');
+      cancelBtn.hidden = !!opts.alertOnly;
+      cancelBtn.textContent = opts.cancelLabel || i18n('confirm_cancel', 'Cancel');
+      okBtn.classList.toggle('cvs-btn--danger', !!opts.danger);
+      okBtn.classList.toggle('cvs-btn--primary', !opts.danger);
+
+      function cleanup(result) {
+        overlay.hidden = true;
+        overlay.setAttribute('aria-hidden', 'true');
+        document.removeEventListener('keydown', onKey, true);
+        overlay.removeEventListener('mousedown', onBackdrop);
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        resolve(result);
+      }
+      function onOk() {
+        cleanup(true);
+      }
+      function onCancel() {
+        cleanup(false);
+      }
+      function onBackdrop(e) {
+        if (e.target === overlay) cleanup(false);
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          cleanup(false);
+        } else if (e.key === 'Enter') {
+          e.stopPropagation();
+          cleanup(true);
+        }
+      }
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+      overlay.addEventListener('mousedown', onBackdrop);
+      document.addEventListener('keydown', onKey, true);
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      okBtn.focus();
+    });
+  }
+  window.cvsConfirm = cvsConfirm;
+
+  /**
+   * In-app project name/description editor — used by the header Save button
+   * and the Projects modal's Edit action. Resolves { name, description } or
+   * null if cancelled.
+   */
+  function openMetaModal(opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      var overlay = document.getElementById('cvsProjectMetaModal');
+      var titleEl = document.getElementById('cvs-meta-title');
+      var nameInput = document.getElementById('cvs-meta-name');
+      var descInput = document.getElementById('cvs-meta-description');
+      var cancelBtn = document.getElementById('cvs-meta-cancel');
+      var saveBtn = document.getElementById('cvs-meta-save');
+      if (!overlay || !titleEl || !nameInput || !descInput || !cancelBtn || !saveBtn) {
+        resolve(null);
+        return;
+      }
+      titleEl.textContent = opts.title || i18n('save_project_title', 'Save project');
+      nameInput.value = opts.name || '';
+      descInput.value = opts.description || '';
+
+      function cleanup(result) {
+        overlay.hidden = true;
+        overlay.setAttribute('aria-hidden', 'true');
+        document.removeEventListener('keydown', onKey, true);
+        overlay.removeEventListener('mousedown', onBackdrop);
+        saveBtn.removeEventListener('click', onSave);
+        cancelBtn.removeEventListener('click', onCancel);
+        resolve(result);
+      }
+      function onSave() {
+        cleanup({
+          name: nameInput.value.trim() || i18n('untitled', 'Untitled'),
+          description: descInput.value.trim(),
+        });
+      }
+      function onCancel() {
+        cleanup(null);
+      }
+      function onBackdrop(e) {
+        if (e.target === overlay) cleanup(null);
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          cleanup(null);
+        }
+      }
+      saveBtn.addEventListener('click', onSave);
+      cancelBtn.addEventListener('click', onCancel);
+      overlay.addEventListener('mousedown', onBackdrop);
+      document.addEventListener('keydown', onKey, true);
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      nameInput.focus();
+      nameInput.select();
+    });
   }
 
   function getOwnerId() {
@@ -128,7 +255,13 @@
   function onEngineChange() {
     updateTimeUi();
     pushHistory();
+    isDirty = true;
     scheduleSave();
+  }
+
+  function updateProjectPickerLabel() {
+    var el = document.getElementById('cvs-project-picker-name');
+    if (el) el.textContent = (project && project.title) || i18n('untitled', 'Untitled');
   }
 
   function syncTransformUi() {
@@ -165,6 +298,119 @@
 
   function onSelectClip() {
     syncTransformUi();
+    syncTransformOverlay();
+  }
+
+  // ── Canvas <-> viewer-stage CSS pixel mapping (shared by transform + crop overlays) ──
+  function getCanvasScale() {
+    var canvas = document.getElementById('cvs-preview-canvas');
+    if (!canvas) return { x: 1, y: 1 };
+    var r = canvas.getBoundingClientRect();
+    return { x: r.width / (canvas.width || 1), y: r.height / (canvas.height || 1) };
+  }
+
+  function canvasToStageRectFromScale(box, scale) {
+    var stage = document.getElementById('cvs-viewer-stage');
+    var canvas = document.getElementById('cvs-preview-canvas');
+    if (!stage || !canvas || !box) return null;
+    var stageRect = stage.getBoundingClientRect();
+    var canvasRect = canvas.getBoundingClientRect();
+    var offX = canvasRect.left - stageRect.left;
+    var offY = canvasRect.top - stageRect.top;
+    return {
+      left: offX + box.x * scale.x,
+      top: offY + box.y * scale.y,
+      width: box.w * scale.x,
+      height: box.h * scale.y,
+    };
+  }
+
+  function canvasToStageRect(box) {
+    return canvasToStageRectFromScale(box, getCanvasScale());
+  }
+
+  function syncTransformOverlay() {
+    var overlay = document.getElementById('cvs-transform-overlay');
+    var box = document.getElementById('cvs-transform-box');
+    if (!overlay || !box) return;
+    if (cropMode || !engine) {
+      overlay.hidden = true;
+      return;
+    }
+    var clipBox = engine.getSelectedClipBox && engine.getSelectedClipBox();
+    var rect = clipBox && canvasToStageRect(clipBox);
+    if (!rect) {
+      overlay.hidden = true;
+      return;
+    }
+    overlay.hidden = false;
+    box.style.left = rect.left + 'px';
+    box.style.top = rect.top + 'px';
+    box.style.width = rect.width + 'px';
+    box.style.height = rect.height + 'px';
+  }
+
+  function bindTransformDrag() {
+    var box = document.getElementById('cvs-transform-box');
+    var handle = document.getElementById('cvs-transform-handle');
+    if (!box || box._cvsBound) return;
+    box._cvsBound = true;
+    box.addEventListener('mousedown', function (e) {
+      if (e.target === handle || cropMode || !engine) return;
+      e.preventDefault();
+      var sel = engine.getSelected();
+      if (!sel) return;
+      var startX = e.clientX;
+      var startY = e.clientY;
+      var origT = sel.clip.transform || { x: 0, y: 0, scale: 1 };
+      var origX = Number(origT.x) || 0;
+      var origY = Number(origT.y) || 0;
+      var scale = getCanvasScale();
+      function onMove(ev) {
+        var dx = (ev.clientX - startX) / (scale.x || 1);
+        var dy = (ev.clientY - startY) / (scale.y || 1);
+        engine.updateSelectedTransform({ x: origX + dx, y: origY + dy });
+        syncTransformOverlay();
+        syncTransformUi();
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        pushHistory();
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    if (handle) {
+      handle.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!engine) return;
+        var sel = engine.getSelected();
+        if (!sel) return;
+        var origScale = Number((sel.clip.transform || {}).scale) || 1;
+        var boxRect = box.getBoundingClientRect();
+        var cx = boxRect.left + boxRect.width / 2;
+        var cy = boxRect.top + boxRect.height / 2;
+        var baseDist = Math.max(1, Math.hypot(boxRect.width, boxRect.height) / 2);
+        function onMove(ev) {
+          var dx = ev.clientX - cx;
+          var dy = ev.clientY - cy;
+          var dist = Math.hypot(dx, dy);
+          var newScale = Math.max(0.1, Math.min(3, origScale * (dist / baseDist)));
+          engine.updateSelectedTransform({ scale: newScale });
+          syncTransformOverlay();
+          syncTransformUi();
+        }
+        function onUp() {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          pushHistory();
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
   }
 
   function renderAssetGrid() {
@@ -229,7 +475,7 @@
         delBtn.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
-          deleteAsset(asset.id);
+          detachAssetFromProject(asset.id);
         });
         card.appendChild(delBtn);
       }
@@ -281,7 +527,12 @@
     onEngineChange();
   }
 
-  async function deleteAsset(assetId) {
+  /**
+   * Sidebar "×" — removes the asset from THIS project's sidebar only
+   * (unlink via the project_assets join table). The underlying asset row
+   * is untouched and stays available in the global Assets library modal.
+   */
+  async function detachAssetFromProject(assetId) {
     var asset = assets.find(function (a) {
       return a.id === assetId;
     });
@@ -299,17 +550,89 @@
     var msg;
     if (usage > 0) {
       msg =
-        i18n('confirm_delete_used_prefix', 'This asset is used in ') +
+        i18n('confirm_remove_used_prefix', 'This asset is used in ') +
         usage +
         i18n(
-          'confirm_delete_used_suffix',
-          ' clip(s) in the current project. Delete it anyway? The clips will be removed from the timeline.'
+          'confirm_remove_used_suffix',
+          ' clip(s) in this project. Remove it anyway? The clips will be removed from the timeline. It stays available in your Assets library.'
         );
     } else {
-      msg = i18n('confirm_delete', 'Delete this asset? This cannot be undone.');
+      msg = i18n(
+        'confirm_remove_from_project',
+        'Remove this asset from the project? It stays available in your Assets library.'
+      );
     }
-    if (!window.confirm(msg)) return;
+    var confirmed = await cvsConfirm({
+      title: i18n('confirm_remove_title', 'Remove from project?'),
+      message: msg,
+      confirmLabel: i18n('confirm_remove_action', 'Remove'),
+      danger: true,
+    });
+    if (!confirmed) return;
 
+    var projectId = project && project.id;
+    try {
+      if (projectId) {
+        var res = await fetch(apiUrl('video-studio-project-asset-detach'), {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: projectId, asset_id: assetId }),
+        });
+        var data = await res.json().catch(function () {
+          return { ok: false };
+        });
+        if (!data.ok) throw new Error(data.error || 'detach_failed');
+      }
+      assets = assets.filter(function (a) {
+        return a.id !== assetId;
+      });
+      delete localUrls[assetId];
+      delete localFiles[assetId];
+      if (usage > 0) removeAssetClipsFromProject(assetId);
+      if (engine) engine.setAssets(assets, localUrls);
+      renderAssetGrid();
+      setStatus(i18n('asset_removed_from_project', 'Removed from project'));
+    } catch (e) {
+      console.warn('[VideoStudio] detach failed', e);
+      setStatus(i18n('remove_failed', 'Remove failed'));
+    }
+  }
+
+  /**
+   * Attaches an already-uploaded library asset to the current project's
+   * sidebar. Used by the Assets library modal (click / multi-select "Add")
+   * and right after a fresh Device/Link upload finishes.
+   */
+  async function attachAssetToProject(assetId, opts) {
+    opts = opts || {};
+    var projectId = project && project.id;
+    if (!projectId || !assetId) return false;
+    try {
+      var res = await fetch(apiUrl('video-studio-project-asset-attach'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId, asset_id: assetId }),
+      });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (!data.ok) throw new Error(data.error || 'attach_failed');
+      if (!opts.skipReload) await loadAssets();
+      return true;
+    } catch (e) {
+      console.warn('[VideoStudio] attach asset failed', e);
+      return false;
+    }
+  }
+
+  /**
+   * Permanent delete from the global Assets library (Assets modal "×" /
+   * multi-select "Remove"). Detaches from every project too (server-side
+   * cascade) and updates the current sidebar if it happened to include it.
+   */
+  async function hardDeleteLibraryAsset(assetId) {
     try {
       var res = await fetch(apiUrl('video-studio-asset-delete'), {
         method: 'POST',
@@ -321,6 +644,7 @@
         return { ok: false };
       });
       if (!data.ok) throw new Error(data.error || 'delete_failed');
+      var usage = assetUsageCount(assetId);
       assets = assets.filter(function (a) {
         return a.id !== assetId;
       });
@@ -329,12 +653,352 @@
       if (usage > 0) removeAssetClipsFromProject(assetId);
       if (engine) engine.setAssets(assets, localUrls);
       renderAssetGrid();
-      setStatus(i18n('asset_deleted', 'Asset deleted'));
+      return true;
     } catch (e) {
-      console.warn('[VideoStudio] delete failed', e);
-      setStatus(i18n('delete_failed', 'Delete failed'));
+      console.warn('[VideoStudio] library delete failed', e);
+      return false;
     }
   }
+
+  function isDesktopViewport() {
+    try {
+      return window.matchMedia('(min-width: 768px)').matches;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  // ── "Add" source picker (Assets / Device / Phone / Link) ──
+  function openAddSourceModal() {
+    var overlay = document.getElementById('cvsAddSourceModal');
+    if (!overlay) return;
+    var phoneBtn = document.getElementById('cvs-addsrc-phone');
+    if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeAddSourceModal() {
+    var overlay = document.getElementById('cvsAddSourceModal');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  // ── Assets library modal (global, all uploaded assets for this owner) ──
+  var libraryAssets = [];
+  var librarySelected = Object.create(null);
+
+  function librarySelectedCount() {
+    return Object.keys(librarySelected).length;
+  }
+
+  function updateLibrarySelectBar() {
+    var bar = document.getElementById('cvs-library-selectbar');
+    var countEl = document.getElementById('cvs-library-selectbar-count');
+    var count = librarySelectedCount();
+    if (bar) bar.hidden = count === 0;
+    if (countEl) {
+      countEl.textContent =
+        count + ' ' + (count === 1 ? i18n('library_selected_one', 'selected') : i18n('library_selected_many', 'selected'));
+    }
+  }
+
+  function renderLibraryGrid() {
+    var grid = document.getElementById('cvs-library-grid');
+    var empty = document.getElementById('cvs-library-empty');
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (!libraryAssets.length) {
+      if (empty) empty.hidden = false;
+      updateLibrarySelectBar();
+      return;
+    }
+    if (empty) empty.hidden = true;
+    libraryAssets.forEach(function (asset) {
+      var card = document.createElement('div');
+      card.className = 'cvs-library-card';
+      card.dataset.assetId = asset.id;
+      card.setAttribute('role', 'listitem');
+      if (librarySelected[asset.id]) card.classList.add('is-selected');
+
+      var url = asset.thumb_url || asset.url;
+      if (asset.kind === 'image' && url) {
+        var img = document.createElement('img');
+        img.src = url;
+        img.alt = asset.original_name || '';
+        card.appendChild(img);
+      } else if (asset.kind === 'video' && url) {
+        var vid = document.createElement('video');
+        vid.src = url;
+        vid.muted = true;
+        vid.preload = 'metadata';
+        card.appendChild(vid);
+      } else {
+        var audioWrap = document.createElement('div');
+        audioWrap.className = 'cvs-library-card__audio';
+        audioWrap.textContent = '♪';
+        card.appendChild(audioWrap);
+      }
+
+      var badge = document.createElement('span');
+      badge.className = 'cvs-library-card__badge';
+      badge.textContent = asset.kind || '';
+      card.appendChild(badge);
+
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'cvs-library-card__checkbox';
+      checkbox.checked = !!librarySelected[asset.id];
+      checkbox.setAttribute('aria-label', i18n('library_select_asset', 'Select asset'));
+      checkbox.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+      checkbox.addEventListener('change', function () {
+        if (checkbox.checked) {
+          librarySelected[asset.id] = true;
+          card.classList.add('is-selected');
+        } else {
+          delete librarySelected[asset.id];
+          card.classList.remove('is-selected');
+        }
+        updateLibrarySelectBar();
+      });
+      card.appendChild(checkbox);
+
+      var delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'cvs-library-card__delete';
+      var delLabel = i18n('library_delete_asset', 'Delete from library');
+      delBtn.setAttribute('aria-label', delLabel);
+      delBtn.title = delLabel;
+      delBtn.innerHTML = '&times;';
+      delBtn.addEventListener('click', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var confirmed = await cvsConfirm({
+          title: i18n('library_delete_title', 'Delete from library?'),
+          message: i18n(
+            'library_delete_message',
+            'This permanently deletes the asset for all projects. This cannot be undone.'
+          ),
+          confirmLabel: i18n('confirm_delete_action', 'Delete'),
+          danger: true,
+        });
+        if (!confirmed) return;
+        var ok = await hardDeleteLibraryAsset(asset.id);
+        if (ok) {
+          libraryAssets = libraryAssets.filter(function (a) {
+            return a.id !== asset.id;
+          });
+          delete librarySelected[asset.id];
+          renderLibraryGrid();
+        }
+      });
+      card.appendChild(delBtn);
+
+      card.addEventListener('click', async function () {
+        var statusEl = document.getElementById('cvs-library-status');
+        var ok = await attachAssetToProject(asset.id);
+        if (statusEl) {
+          statusEl.textContent = ok
+            ? i18n('library_added_to_project', 'Added to project sidebar')
+            : i18n('attach_failed', 'Could not add asset');
+        }
+      });
+
+      grid.appendChild(card);
+    });
+    updateLibrarySelectBar();
+  }
+
+  async function loadLibraryAssets() {
+    var statusEl = document.getElementById('cvs-library-status');
+    try {
+      var res = await fetch(apiUrl('video-studio-assets-list'), { credentials: 'include' });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (data.ok && Array.isArray(data.items)) {
+        libraryAssets = data.items;
+        renderLibraryGrid();
+      }
+    } catch (e) {
+      console.warn('[VideoStudio] library list failed', e);
+      if (statusEl) statusEl.textContent = i18n('library_load_failed', 'Could not load your assets library');
+    }
+  }
+
+  function openAssetsLibraryModal() {
+    var overlay = document.getElementById('cvsAssetsLibraryModal');
+    if (!overlay) return;
+    librarySelected = Object.create(null);
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    var statusEl = document.getElementById('cvs-library-status');
+    if (statusEl) statusEl.textContent = i18n('library_hint', 'Click an asset to add it to this project.');
+    loadLibraryAssets();
+  }
+
+  function closeAssetsLibraryModal() {
+    var overlay = document.getElementById('cvsAssetsLibraryModal');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    librarySelected = Object.create(null);
+  }
+
+  async function addSelectedLibraryAssetsToProject() {
+    var ids = Object.keys(librarySelected);
+    if (!ids.length) return;
+    for (var i = 0; i < ids.length; i += 1) {
+      await attachAssetToProject(ids[i], { skipReload: true });
+    }
+    await loadAssets();
+    librarySelected = Object.create(null);
+    renderLibraryGrid();
+    setStatus(i18n('library_added_to_project', 'Added to project sidebar'));
+  }
+
+  async function removeSelectedLibraryAssets() {
+    var ids = Object.keys(librarySelected);
+    if (!ids.length) return;
+    var confirmed = await cvsConfirm({
+      title: i18n('library_delete_title', 'Delete from library?'),
+      message:
+        ids.length === 1
+          ? i18n('library_delete_message', 'This permanently deletes the asset for all projects. This cannot be undone.')
+          : i18n('library_delete_message_many_prefix', 'This permanently deletes ') +
+            ids.length +
+            i18n('library_delete_message_many_suffix', ' assets for all projects. This cannot be undone.'),
+      confirmLabel: i18n('confirm_delete_action', 'Delete'),
+      danger: true,
+    });
+    if (!confirmed) return;
+    for (var i = 0; i < ids.length; i += 1) {
+      await hardDeleteLibraryAsset(ids[i]);
+      libraryAssets = libraryAssets.filter(function (a) {
+        return a.id !== ids[i];
+      });
+    }
+    librarySelected = Object.create(null);
+    renderLibraryGrid();
+  }
+
+  // ── Link ingest (paste URL → download media, best-effort) ──
+  function openLinkModal() {
+    var overlay = document.getElementById('cvsLinkModal');
+    if (!overlay) return;
+    var urlInput = document.getElementById('cvs-link-url');
+    var statusEl = document.getElementById('cvs-link-status');
+    if (urlInput) urlInput.value = '';
+    if (statusEl) {
+      statusEl.textContent = '';
+      statusEl.classList.remove('is-success');
+    }
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    if (urlInput) urlInput.focus();
+  }
+
+  function closeLinkModal() {
+    var overlay = document.getElementById('cvsLinkModal');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function linkIngestErrorMessage(data) {
+    if (data && data.message) return data.message;
+    var map = {
+      unsupported_platform:
+        (data && data.platform ? data.platform + ': ' : '') +
+        i18n('link_error_platform', "This platform isn't supported yet. Save the file first and use Device instead."),
+      unsupported_content_type: i18n(
+        'link_error_content_type',
+        "That link doesn't point directly to a video, audio, or image file."
+      ),
+      invalid_url: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
+      missing_url: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
+      file_too_large: i18n('file_too_large', 'File too large (max 500 MB)'),
+      fetch_failed: i18n('link_error_fetch_failed', 'Could not download that link.'),
+    };
+    return (data && map[data.error]) || i18n('link_error_generic', 'Could not add media from that link.');
+  }
+
+  async function submitLinkIngest() {
+    var urlInput = document.getElementById('cvs-link-url');
+    var statusEl = document.getElementById('cvs-link-status');
+    var submitBtn = document.getElementById('cvs-link-submit');
+    var formatInput = document.querySelector('input[name="cvs-link-format"]:checked');
+    var url = urlInput ? String(urlInput.value || '').trim() : '';
+    if (!url) {
+      if (statusEl) {
+        statusEl.textContent = i18n('link_error_invalid_url', 'Please enter a valid URL.');
+        statusEl.classList.remove('is-success');
+      }
+      return;
+    }
+    if (statusEl) {
+      statusEl.textContent = i18n('link_downloading', 'Downloading…');
+      statusEl.classList.remove('is-success');
+    }
+    if (submitBtn) submitBtn.disabled = true;
+    try {
+      var res = await fetch(apiUrl('video-studio-link-ingest'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url, format: formatInput ? formatInput.value : 'mp4' }),
+      });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (!data.ok || !data.asset) {
+        if (statusEl) {
+          statusEl.textContent = linkIngestErrorMessage(data);
+          statusEl.classList.remove('is-success');
+        }
+        return;
+      }
+      libraryAssets.unshift(data.asset);
+      await attachAssetToProject(data.asset.id);
+      if (statusEl) {
+        statusEl.textContent = data.warning
+          ? i18n('link_added_with_warning', 'Added — audio-only extraction was not available, saved the original media.')
+          : i18n('link_added', 'Added to project sidebar');
+        statusEl.classList.add('is-success');
+      }
+      setTimeout(closeLinkModal, 900);
+    } catch (e) {
+      console.warn('[VideoStudio] link ingest failed', e);
+      if (statusEl) {
+        statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+        statusEl.classList.remove('is-success');
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  }
+
+  // ── Phone upload (desktop QR flow) → adds the received image as an asset ──
+  window.__eazVideoStudioPhoneApply = function (imageUrl) {
+    if (!isOpen || !imageUrl) return false;
+    fetch(imageUrl, { mode: 'cors', credentials: 'omit' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('fetch_failed');
+        return r.blob();
+      })
+      .then(function (blob) {
+        var ft = blob.type && blob.type.indexOf('image/') === 0 ? blob.type : 'image/jpeg';
+        var file = new File([blob], 'phone-upload.jpg', { type: ft });
+        return uploadFile(file);
+      })
+      .catch(function () {
+        setStatus(i18n('upload_failed', 'Upload failed'));
+      });
+    return true;
+  };
 
   function evenDim(n) {
     var v = Math.max(2, Math.min(1920, Math.round(Number(n) || 0)));
@@ -363,9 +1027,24 @@
     scheduleSave();
   }
 
+  /**
+   * Sidebar list — only assets attached to the CURRENT project (join table),
+   * not the full library. See `loadLibraryAssets` for the global Assets modal.
+   */
   async function loadAssets() {
+    var projectId = project && project.id;
+    if (!projectId) {
+      assets = assets.filter(function (a) {
+        return a._uploading;
+      });
+      renderAssetGrid();
+      return;
+    }
     try {
-      var res = await fetch(apiUrl('video-studio-assets-list'), { credentials: 'include' });
+      var res = await fetch(
+        apiUrl('video-studio-project-assets-list') + '&project_id=' + encodeURIComponent(projectId),
+        { credentials: 'include' }
+      );
       var data = await res.json().catch(function () {
         return { ok: false };
       });
@@ -379,13 +1058,15 @@
         renderAssetGrid();
       }
     } catch (e) {
-      console.warn('[VideoStudio] assets list failed', e);
+      console.warn('[VideoStudio] project assets list failed', e);
     }
   }
 
-  async function loadProject() {
+  async function loadProject(projectId) {
     try {
-      var res = await fetch(apiUrl('video-studio-project-get'), { credentials: 'include' });
+      var url = apiUrl('video-studio-project-get');
+      if (projectId) url += '&project_id=' + encodeURIComponent(projectId);
+      var res = await fetch(url, { credentials: 'include' });
       var data = await res.json().catch(function () {
         return { ok: false };
       });
@@ -399,6 +1080,7 @@
       if (hEl) hEl.value = String(project.height || 1080);
       var custom = document.getElementById('cvs-aspect-custom');
       if (custom) custom.hidden = (project.aspect_preset || '') !== 'custom';
+      await loadAssets();
       if (engine) {
         engine.setAssets(assets, localUrls);
         engine.setProject(project);
@@ -406,17 +1088,21 @@
       history = [JSON.stringify(engine.getDraft())];
       historyIndex = 0;
       updateTimeUi();
+      updateProjectPickerLabel();
+      isDirty = false;
     } catch (e) {
       console.warn('[VideoStudio] project load failed', e);
     }
   }
 
-  async function saveProject(silent) {
+  async function saveProject(silent, overrides) {
     if (!engine) return;
     var a = currentAspect();
     var body = {
       project_id: project && project.id,
-      title: (project && project.title) || 'Untitled',
+      title: (overrides && overrides.title) || (project && project.title) || 'Untitled',
+      description:
+        overrides && overrides.description != null ? overrides.description : (project && project.description) || '',
       aspect_preset: a.preset,
       width: a.width,
       height: a.height,
@@ -435,6 +1121,8 @@
       });
       if (data.ok && data.project) {
         project = data.project;
+        isDirty = false;
+        updateProjectPickerLabel();
         if (!silent) setStatus(i18n('saved', 'Saved'));
       } else if (!silent) {
         setStatus(i18n('save_failed', 'Save failed'));
@@ -442,6 +1130,350 @@
     } catch (e) {
       if (!silent) setStatus(i18n('save_failed', 'Save failed'));
     }
+  }
+
+  async function onSaveButtonClick() {
+    var result = await openMetaModal({
+      title: i18n('save_project_title', 'Save project'),
+      name: (project && project.title) || '',
+      description: (project && project.description) || '',
+    });
+    if (!result) return;
+    await saveProject(false, { title: result.name, description: result.description });
+  }
+
+  async function createNewProject() {
+    if (isDirty) {
+      var ok = await cvsConfirm({
+        title: i18n('discard_unsaved_title', 'Discard unsaved project?'),
+        message: i18n(
+          'discard_unsaved_message',
+          'You have unsaved changes in the current project. Starting a new project will discard them.'
+        ),
+        confirmLabel: i18n('discard_action', 'Discard'),
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    setStatus(i18n('loading', 'Loading…'));
+    try {
+      var res = await fetch(apiUrl('video-studio-project-create'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: i18n('untitled', 'Untitled') }),
+      });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (!data.ok || !data.project) throw new Error(data.error || 'create_failed');
+      project = data.project;
+      await loadAssets();
+      if (engine) {
+        engine.setAssets(assets, localUrls);
+        engine.setProject(project);
+        history = [JSON.stringify(engine.getDraft())];
+        historyIndex = 0;
+      }
+      updateProjectPickerLabel();
+      updateTimeUi();
+      isDirty = false;
+      setStatus(i18n('project_created', 'New project created'));
+    } catch (e) {
+      console.warn('[VideoStudio] create project failed', e);
+      setStatus(i18n('save_failed', 'Save failed'));
+    }
+  }
+
+  // ── Projects modal (grid browser) ─────────────────────────────────────
+  function formatProjectDate(ms) {
+    try {
+      return new Date(Number(ms) || 0).toLocaleDateString();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function formatProjectDuration(ms) {
+    var s = Math.round((Number(ms) || 0) / 1000);
+    var m = Math.floor(s / 60);
+    var ss = String(s % 60).padStart(2, '0');
+    return m + ':' + ss;
+  }
+
+  function aspectLabel(preset) {
+    var map = {
+      youtube_16_9: '16:9',
+      shorts_9_16: '9:16',
+      ig_feed_1_1: '1:1',
+      ig_portrait_4_5: '4:5',
+      facebook_1_91: '1.91:1',
+      custom: i18n('aspect_custom', 'Custom'),
+    };
+    return map[preset] || preset || '';
+  }
+
+  function openProjectsModal() {
+    var overlay = document.getElementById('cvsProjectsModal');
+    if (!overlay) return;
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    loadProjectsList();
+  }
+
+  function closeProjectsModal() {
+    var overlay = document.getElementById('cvsProjectsModal');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  async function loadProjectsList() {
+    var statusEl = document.getElementById('cvs-projects-status');
+    if (statusEl) statusEl.textContent = i18n('loading', 'Loading…');
+    try {
+      var res = await fetch(apiUrl('video-studio-project-list'), { credentials: 'include' });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (data.ok && Array.isArray(data.items)) {
+        projectsCache = data.items;
+        renderProjectsGrid();
+      }
+    } catch (e) {
+      console.warn('[VideoStudio] project list failed', e);
+    }
+    if (statusEl) statusEl.textContent = '';
+  }
+
+  function renderProjectsGrid() {
+    var grid = document.getElementById('cvs-projects-grid');
+    var empty = document.getElementById('cvs-projects-empty');
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (!projectsCache.length) {
+      if (empty) empty.hidden = false;
+      return;
+    }
+    if (empty) empty.hidden = true;
+    projectsCache.forEach(function (p) {
+      var card = document.createElement('div');
+      card.className = 'cvs-project-card' + (project && project.id === p.id ? ' is-current' : '');
+      card.setAttribute('role', 'listitem');
+
+      var name = document.createElement('div');
+      name.className = 'cvs-project-card__name';
+      name.textContent = p.title || i18n('untitled', 'Untitled');
+      card.appendChild(name);
+
+      var desc = document.createElement('div');
+      desc.className = 'cvs-project-card__desc';
+      desc.textContent = p.description || '';
+      card.appendChild(desc);
+
+      var stats = document.createElement('div');
+      stats.className = 'cvs-project-card__stats';
+      [aspectLabel(p.aspect_preset), formatProjectDate(p.updated_at), formatProjectDuration(p.duration_ms)].forEach(
+        function (txt) {
+          if (!txt) return;
+          var s = document.createElement('span');
+          s.className = 'cvs-project-card__stat';
+          s.textContent = txt;
+          stats.appendChild(s);
+        }
+      );
+      card.appendChild(stats);
+
+      var actions = document.createElement('div');
+      actions.className = 'cvs-project-card__actions';
+      var openBtn = document.createElement('button');
+      openBtn.type = 'button';
+      openBtn.className = 'cvs-btn cvs-btn--primary';
+      openBtn.textContent = i18n('project_open', 'Open');
+      openBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectProjectFromGrid(p.id);
+      });
+      var editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'cvs-btn cvs-btn--ghost';
+      editBtn.textContent = i18n('project_edit', 'Edit');
+      editBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        editProjectMeta(p);
+      });
+      var delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'cvs-btn cvs-btn--danger';
+      delBtn.textContent = i18n('project_delete', 'Delete');
+      delBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        deleteProjectFromGrid(p.id);
+      });
+      actions.appendChild(openBtn);
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
+      card.appendChild(actions);
+
+      card.addEventListener('click', function () {
+        selectProjectFromGrid(p.id);
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  async function selectProjectFromGrid(projectId) {
+    if (project && project.id === projectId) {
+      closeProjectsModal();
+      return;
+    }
+    if (isDirty) {
+      var ok = await cvsConfirm({
+        title: i18n('discard_unsaved_title', 'Discard unsaved project?'),
+        message: i18n(
+          'discard_unsaved_message',
+          'You have unsaved changes in the current project. Opening another project will discard them.'
+        ),
+        confirmLabel: i18n('discard_action', 'Discard'),
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    setStatus(i18n('loading', 'Loading…'));
+    await loadProject(projectId);
+    setStatus('');
+    closeProjectsModal();
+  }
+
+  async function editProjectMeta(p) {
+    var result = await openMetaModal({
+      title: i18n('edit_project_title', 'Edit project'),
+      name: p.title || '',
+      description: p.description || '',
+    });
+    if (!result) return;
+    var statusEl = document.getElementById('cvs-projects-status');
+    try {
+      var res = await fetch(apiUrl('video-studio-project-get') + '&project_id=' + encodeURIComponent(p.id), {
+        credentials: 'include',
+      });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (!data.ok || !data.project) throw new Error('not_found');
+      var full = data.project;
+      var res2 = await fetch(apiUrl('video-studio-project-save'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_id: p.id,
+          title: result.name,
+          description: result.description,
+          aspect_preset: full.aspect_preset,
+          width: full.width,
+          height: full.height,
+          duration_ms: full.duration_ms,
+          draft: full.draft,
+        }),
+      });
+      var saved = await res2.json().catch(function () {
+        return { ok: false };
+      });
+      if (!saved.ok) throw new Error('save_failed');
+      if (project && project.id === p.id) {
+        project = saved.project;
+        updateProjectPickerLabel();
+      }
+      await loadProjectsList();
+    } catch (e) {
+      console.warn('[VideoStudio] edit project meta failed', e);
+      if (statusEl) statusEl.textContent = i18n('save_failed', 'Save failed');
+    }
+  }
+
+  async function deleteProjectFromGrid(projectId) {
+    var ok = await cvsConfirm({
+      title: i18n('delete_project_title', 'Delete project?'),
+      message: i18n(
+        'delete_project_message',
+        'This project and its timeline will be permanently deleted. This cannot be undone.'
+      ),
+      confirmLabel: i18n('delete_project_action', 'Delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    var statusEl = document.getElementById('cvs-projects-status');
+    try {
+      var res = await fetch(apiUrl('video-studio-project-delete'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId }),
+      });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (!data.ok) throw new Error(data.error || 'delete_failed');
+      projectsCache = projectsCache.filter(function (x) {
+        return x.id !== projectId;
+      });
+      renderProjectsGrid();
+      if (project && project.id === projectId) {
+        await loadProject();
+      }
+      if (statusEl) statusEl.textContent = i18n('project_deleted', 'Project deleted');
+    } catch (e) {
+      console.warn('[VideoStudio] delete project failed', e);
+      if (statusEl) statusEl.textContent = i18n('delete_failed', 'Delete failed');
+    }
+  }
+
+  // ── Timeline clip right-click menu (Remove / Duplicate) ───────────────
+  function openClipContextMenu(clip, track, evt) {
+    var menu = document.getElementById('cvsClipContextMenu');
+    if (!menu) return;
+    var removeBtn = document.getElementById('cvs-ctx-remove');
+    var dupBtn = document.getElementById('cvs-ctx-duplicate');
+    if (!removeBtn || !dupBtn) return;
+    menu.style.left = evt.clientX + 'px';
+    menu.style.top = evt.clientY + 'px';
+    menu.hidden = false;
+    menu.setAttribute('aria-hidden', 'false');
+
+    function close() {
+      menu.hidden = true;
+      menu.setAttribute('aria-hidden', 'true');
+      removeBtn.removeEventListener('click', onRemove);
+      dupBtn.removeEventListener('click', onDup);
+      document.removeEventListener('mousedown', onOutside, true);
+      document.removeEventListener('keydown', onKey, true);
+    }
+    function onRemove() {
+      close();
+      if (engine) engine.deleteSelected();
+    }
+    function onDup() {
+      close();
+      if (engine) engine.duplicateSelected();
+    }
+    function onOutside(e) {
+      if (!menu.contains(e.target)) close();
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+    }
+    removeBtn.addEventListener('click', onRemove);
+    dupBtn.addEventListener('click', onDup);
+    setTimeout(function () {
+      document.addEventListener('mousedown', onOutside, true);
+      document.addEventListener('keydown', onKey, true);
+    }, 0);
+    requestAnimationFrame(function () {
+      var rect = menu.getBoundingClientRect();
+      if (rect.right > window.innerWidth) menu.style.left = Math.max(4, window.innerWidth - rect.width - 8) + 'px';
+      if (rect.bottom > window.innerHeight) menu.style.top = Math.max(4, window.innerHeight - rect.height - 8) + 'px';
+    });
   }
 
   function probeMedia(file) {
@@ -558,6 +1590,7 @@
         if (engine) engine.setAssets(assets, localUrls);
         renderAssetGrid();
         setStatus(i18n('upload_done', 'Upload complete'));
+        attachAssetToProject(ready.id, { skipReload: true }).catch(function () {});
       }
     } catch (err) {
       console.warn('[VideoStudio] upload failed', err);
@@ -811,13 +1844,26 @@
     });
   }
 
+  // Crop mode shows the full, uncropped source media letterboxed ("contain"
+  // fit) as a fixed reference frame, and the crop box maps 1:1 onto it.
+  // Dragging edge handles (or the box itself, to reposition) only ever
+  // recomputes the crop fraction against that fixed reference — it never
+  // touches clip.transform — which is what previously made the whole clip
+  // appear to move while cropping.
   function toggleCropMode() {
     cropMode = !cropMode;
     var overlay = document.getElementById('cvs-crop-overlay');
     var box = document.getElementById('cvs-crop-box');
+    var transformOverlay = document.getElementById('cvs-transform-overlay');
     if (!overlay || !box) return;
-    overlay.hidden = !cropMode;
-    if (!cropMode) return;
+    if (!cropMode) {
+      overlay.hidden = true;
+      cropRefFrame = null;
+      if (engine) engine.drawFrame(engine.playheadMs);
+      syncTransformOverlay();
+      setStatus('');
+      return;
+    }
     var sel = engine && engine.getSelected();
     if (!sel) {
       cropMode = false;
@@ -825,27 +1871,31 @@
       setStatus(i18n('select_clip_first', 'Select a clip to crop'));
       return;
     }
+    if (transformOverlay) transformOverlay.hidden = true;
+    var ref = engine.drawCropReferenceFrame && engine.drawCropReferenceFrame(sel.clip.id);
+    if (!ref) {
+      cropMode = false;
+      overlay.hidden = true;
+      return;
+    }
+    overlay.hidden = false;
+    cropRefFrame = canvasToStageRect(ref);
     var crop = sel.clip.crop || { x: 0, y: 0, w: 1, h: 1 };
-    var stage = document.getElementById('cvs-viewer-stage');
-    var canvas = document.getElementById('cvs-preview-canvas');
-    if (!stage || !canvas) return;
-    var stageRect = stage.getBoundingClientRect();
-    var canvasRect = canvas.getBoundingClientRect();
-    var left = canvasRect.left - stageRect.left + crop.x * canvasRect.width;
-    var top = canvasRect.top - stageRect.top + crop.y * canvasRect.height;
-    box.style.left = left + 'px';
-    box.style.top = top + 'px';
-    box.style.width = Math.max(20, crop.w * canvasRect.width) + 'px';
-    box.style.height = Math.max(20, crop.h * canvasRect.height) + 'px';
-    bindCropDrag(box, canvas, stage);
+    box.style.left = cropRefFrame.left + crop.x * cropRefFrame.width + 'px';
+    box.style.top = cropRefFrame.top + crop.y * cropRefFrame.height + 'px';
+    box.style.width = Math.max(20, crop.w * cropRefFrame.width) + 'px';
+    box.style.height = Math.max(20, crop.h * cropRefFrame.height) + 'px';
+    setStatus(i18n('crop_hint', 'Drag the edge handles to crop, or drag the box to reposition. Click Crop again to finish.'));
+    bindCropDrag(box);
   }
 
-  function bindCropDrag(box, canvas, stage) {
+  function bindCropDrag(box) {
     if (box._cvsBound) return;
     box._cvsBound = true;
     box.addEventListener('mousedown', function (e) {
-      if (!cropMode) return;
-      var handle = e.target.getAttribute('data-handle');
+      if (!cropMode || !cropRefFrame) return;
+      e.preventDefault();
+      var handle = e.target.getAttribute && e.target.getAttribute('data-handle');
       var startX = e.clientX;
       var startY = e.clientY;
       var start = {
@@ -854,6 +1904,8 @@
         width: box.offsetWidth,
         height: box.offsetHeight,
       };
+      var minSize = 20;
+      var ref = cropRefFrame;
       function onMove(ev) {
         var dx = ev.clientX - startX;
         var dy = ev.clientY - startY;
@@ -864,20 +1916,29 @@
         if (!handle) {
           left += dx;
           top += dy;
-        } else {
-          if (handle.indexOf('w') >= 0) {
-            left += dx;
-            width -= dx;
-          }
-          if (handle.indexOf('e') >= 0) width += dx;
-          if (handle.indexOf('n') >= 0) {
-            top += dy;
-            height -= dy;
-          }
-          if (handle.indexOf('s') >= 0) height += dy;
+        } else if (handle === 'w') {
+          left += dx;
+          width -= dx;
+        } else if (handle === 'e') {
+          width += dx;
+        } else if (handle === 'n') {
+          top += dy;
+          height -= dy;
+        } else if (handle === 's') {
+          height += dy;
         }
-        width = Math.max(20, width);
-        height = Math.max(20, height);
+        if (width < minSize) {
+          if (handle === 'w') left -= minSize - width;
+          width = minSize;
+        }
+        if (height < minSize) {
+          if (handle === 'n') top -= minSize - height;
+          height = minSize;
+        }
+        left = Math.max(ref.left, Math.min(left, ref.left + ref.width - width));
+        top = Math.max(ref.top, Math.min(top, ref.top + ref.height - height));
+        width = Math.min(width, ref.left + ref.width - left);
+        height = Math.min(height, ref.top + ref.height - top);
         box.style.left = left + 'px';
         box.style.top = top + 'px';
         box.style.width = width + 'px';
@@ -886,15 +1947,11 @@
       function onUp() {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        var stageRect = stage.getBoundingClientRect();
-        var canvasRect = canvas.getBoundingClientRect();
-        var bx = box.offsetLeft - (canvasRect.left - stageRect.left);
-        var by = box.offsetTop - (canvasRect.top - stageRect.top);
         var crop = {
-          x: clamp01(bx / canvasRect.width),
-          y: clamp01(by / canvasRect.height),
-          w: clamp01(box.offsetWidth / canvasRect.width),
-          h: clamp01(box.offsetHeight / canvasRect.height),
+          x: clamp01((box.offsetLeft - ref.left) / ref.width),
+          y: clamp01((box.offsetTop - ref.top) / ref.height),
+          w: clamp01(box.offsetWidth / ref.width),
+          h: clamp01(box.offsetHeight / ref.height),
         };
         if (crop.x + crop.w > 1) crop.w = 1 - crop.x;
         if (crop.y + crop.h > 1) crop.h = 1 - crop.y;
@@ -917,6 +1974,7 @@
       scrollEl: document.getElementById('cvs-timeline-scroll'),
       onChange: onEngineChange,
       onSelect: onSelectClip,
+      onClipContextMenu: openClipContextMenu,
       labels: {
         muteTrack: i18n('mute_track', 'Mute track'),
         trackVolume: i18n('track_volume', 'Track volume'),
@@ -935,13 +1993,35 @@
       if (el) el.addEventListener(evt, fn);
     }
     on('cvs-btn-close', 'click', close);
-    on('cvs-btn-save', 'click', function () {
-      saveProject(false);
-    });
+    on('cvs-btn-save', 'click', onSaveButtonClick);
     on('cvs-btn-export', 'click', exportProject);
-    on('cvs-btn-add', 'click', function () {
+    on('cvs-project-picker', 'click', openProjectsModal);
+    on('cvs-btn-new-project', 'click', createNewProject);
+    on('cvs-projects-btn-new', 'click', createNewProject);
+    on('cvs-projects-btn-close', 'click', closeProjectsModal);
+    on('cvs-btn-add', 'click', openAddSourceModal);
+    on('cvs-addsrc-cancel', 'click', closeAddSourceModal);
+    on('cvsAddSourceModal', 'mousedown', function (e) {
+      if (e.target && e.target.id === 'cvsAddSourceModal') closeAddSourceModal();
+    });
+    on('cvs-addsrc-assets', 'click', function () {
+      closeAddSourceModal();
+      openAssetsLibraryModal();
+    });
+    on('cvs-addsrc-device', 'click', function () {
+      closeAddSourceModal();
       var input = document.getElementById('cvs-file-input');
       if (input) input.click();
+    });
+    on('cvs-addsrc-phone', 'click', function () {
+      closeAddSourceModal();
+      if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
+        window.CreatorPhoneUploadModal.open({ purpose: 'video-studio' });
+      }
+    });
+    on('cvs-addsrc-link', 'click', function () {
+      closeAddSourceModal();
+      openLinkModal();
     });
     on('cvs-file-input', 'change', function (e) {
       var files = Array.prototype.slice.call(e.target.files || []);
@@ -950,6 +2030,21 @@
         uploadFile(f);
       });
     });
+    on('cvs-link-cancel', 'click', closeLinkModal);
+    on('cvsLinkModal', 'mousedown', function (e) {
+      if (e.target && e.target.id === 'cvsLinkModal') closeLinkModal();
+    });
+    on('cvs-link-submit', 'click', submitLinkIngest);
+    on('cvs-link-url', 'keydown', function (e) {
+      if (e.key === 'Enter') submitLinkIngest();
+    });
+    on('cvs-library-btn-close', 'click', closeAssetsLibraryModal);
+    on('cvs-library-btn-cancel-select', 'click', function () {
+      librarySelected = Object.create(null);
+      renderLibraryGrid();
+    });
+    on('cvs-library-btn-remove-selected', 'click', removeSelectedLibraryAssets);
+    on('cvs-library-btn-add-selected', 'click', addSelectedLibraryAssetsToProject);
     on('cvs-sidebar-toggle', 'click', function () {
       var wrap = document.getElementById('cvs-sidebar-wrap');
       if (!wrap) return;
@@ -967,6 +2062,18 @@
       if (!engine) return;
       var playing = engine.togglePlay();
       this.textContent = playing ? '❚❚' : '▶';
+    });
+    on('cvs-btn-restart', 'click', function () {
+      if (!engine) return;
+      engine.restartToStart();
+      var playBtn = document.getElementById('cvs-btn-play');
+      if (playBtn) playBtn.textContent = '▶';
+    });
+    on('cvs-btn-backward', 'click', function () {
+      if (engine) engine.seekToPrevAudioClip();
+    });
+    on('cvs-btn-forward', 'click', function () {
+      if (engine) engine.seekToNextAudioClip();
     });
     on('cvs-btn-split', 'click', function () {
       if (engine) engine.splitSelected();
@@ -987,12 +2094,19 @@
     on('cvs-btn-crop', 'click', toggleCropMode);
     on('cvs-scale', 'input', function (e) {
       if (engine) engine.updateSelectedTransform({ scale: (Number(e.target.value) || 100) / 100 });
+      syncTransformOverlay();
     });
     on('cvs-pos-x', 'change', function (e) {
       if (engine) engine.updateSelectedTransform({ x: Number(e.target.value) || 0 });
+      syncTransformOverlay();
     });
     on('cvs-pos-y', 'change', function (e) {
       if (engine) engine.updateSelectedTransform({ y: Number(e.target.value) || 0 });
+      syncTransformOverlay();
+    });
+    bindTransformDrag();
+    window.addEventListener('resize', function () {
+      syncTransformOverlay();
     });
     on('cvs-clip-volume', 'input', function (e) {
       if (!engine) return;
@@ -1041,7 +2155,6 @@
     isOpen = true;
     document.documentElement.classList.add('cvs-studio-open');
     setStatus(i18n('loading', 'Loading…'));
-    await loadAssets();
     await loadProject();
     setStatus('');
   }
@@ -1054,8 +2167,15 @@
     isOpen = false;
     document.documentElement.classList.remove('cvs-studio-open');
     cropMode = false;
+    cropRefFrame = null;
     var overlay = document.getElementById('cvs-crop-overlay');
     if (overlay) overlay.hidden = true;
+    var transformOverlay = document.getElementById('cvs-transform-overlay');
+    if (transformOverlay) transformOverlay.hidden = true;
+    closeProjectsModal();
+    closeAddSourceModal();
+    closeAssetsLibraryModal();
+    closeLinkModal();
   }
 
   function isVideoCreationWorkspaceActive() {
@@ -1200,11 +2320,15 @@
     apiUrl: apiUrl,
     i18n: i18n,
     setStatus: setStatus,
-    deleteAsset: deleteAsset,
+    deleteAsset: detachAssetFromProject,
+    detachAsset: detachAssetFromProject,
+    hardDeleteLibraryAsset: hardDeleteLibraryAsset,
+    attachAssetToProject: attachAssetToProject,
     upsertNewAsset: upsertNewAsset,
     replaceAssetInPlace: replaceAssetInPlace,
     removeAssetClipsFromProject: removeAssetClipsFromProject,
     assetUsageCount: assetUsageCount,
     uploadBlobAsAsset: uploadBlobAsAsset,
+    confirm: cvsConfirm,
   };
 })();

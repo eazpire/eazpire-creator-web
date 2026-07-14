@@ -51,6 +51,7 @@
       _lastTs: 0,
       onChange: opts.onChange || function () {},
       onSelect: opts.onSelect || function () {},
+      onClipContextMenu: opts.onClipContextMenu || function () {},
     };
 
     var canvas = opts.canvas;
@@ -218,6 +219,7 @@
 
     function bindClipInteractions(el, track, clip) {
       el.addEventListener('mousedown', function (e) {
+        if (e.button === 2) return; // right-click handled by contextmenu below
         var edge = e.target && e.target.getAttribute && e.target.getAttribute('data-edge');
         api.selectedClipId = clip.id;
         api.onSelect(clip);
@@ -226,7 +228,20 @@
           startTrim(e, clip, edge);
           return;
         }
-        startMove(e, clip);
+        startMove(e, clip, function (moved) {
+          if (!moved) {
+            // Plain click (no drag): seek the playhead to this clip's start.
+            api.setPlayhead(clip.timelineStart || 0);
+            api.onChange();
+          }
+        });
+      });
+      el.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        api.selectedClipId = clip.id;
+        api.onSelect(clip);
+        renderTracks();
+        api.onClipContextMenu(clip, track, e);
       });
     }
 
@@ -256,12 +271,14 @@
       }
     }
 
-    function startMove(e, clip) {
+    function startMove(e, clip, onDone) {
       e.preventDefault();
       var startX = e.clientX;
       var orig = clip.timelineStart || 0;
+      var moved = false;
       function onMove(ev) {
         var dx = ev.clientX - startX;
+        if (Math.abs(dx) > 3) moved = true;
         clip.timelineStart = clamp(orig + (dx / api.pxPerSec) * 1000, 0, MAX_TIMELINE_MS);
         recomputeDuration();
         renderTracks();
@@ -271,6 +288,7 @@
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
         api.onChange();
+        if (onDone) onDone(moved);
       }
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
@@ -611,6 +629,30 @@
       api.onChange();
     };
 
+    api.duplicateSelected = function () {
+      var found = selectedClip();
+      if (!found) return null;
+      var clip = found.clip;
+      var dur = (clip.end || 0) - (clip.start || 0);
+      var copy = {
+        id: uid('clip'),
+        assetId: clip.assetId,
+        start: clip.start || 0,
+        end: clip.end || 0,
+        timelineStart: clamp((clip.timelineStart || 0) + dur, 0, MAX_TIMELINE_MS),
+        crop: JSON.parse(JSON.stringify(clip.crop || { x: 0, y: 0, w: 1, h: 1 })),
+        transform: JSON.parse(JSON.stringify(clip.transform || { x: 0, y: 0, scale: 1 })),
+        volume: clip.volume != null ? clip.volume : 1,
+        muted: !!clip.muted,
+      };
+      found.track.clips.push(copy);
+      api.selectedClipId = copy.id;
+      renderAll();
+      api.onSelect(copy);
+      api.onChange();
+      return copy;
+    };
+
     api.splitSelected = function () {
       var found = selectedClip();
       if (!found) return;
@@ -689,6 +731,134 @@
 
     api.getSelected = function () {
       return selectedClip();
+    };
+
+    // ── Transport: restart / jump to previous|next audio clip ────────────
+    // Primary source: clips on audio-type tracks, ordered by timelineStart.
+    // Fallback (no audio tracks/clips): any clip whose asset has audio
+    // (kind 'audio' or 'video'), so Forward/Backward still do something
+    // useful on video-only projects that carry their own sound.
+    function audioClipStartTimes() {
+      var audioTracks = api.tracks.filter(function (t) {
+        return t.type === 'audio' && (t.clips || []).length;
+      });
+      var starts = [];
+      if (audioTracks.length) {
+        audioTracks.forEach(function (t) {
+          (t.clips || []).forEach(function (c) {
+            starts.push(c.timelineStart || 0);
+          });
+        });
+      } else {
+        api.tracks.forEach(function (t) {
+          (t.clips || []).forEach(function (c) {
+            var asset = api.assetsById[c.assetId];
+            if (asset && (asset.kind === 'audio' || asset.kind === 'video')) {
+              starts.push(c.timelineStart || 0);
+            }
+          });
+        });
+      }
+      starts.sort(function (a, b) {
+        return a - b;
+      });
+      return starts.filter(function (v, i) {
+        return i === 0 || v !== starts[i - 1];
+      });
+    }
+
+    api.restartToStart = function () {
+      if (api.playing) api.togglePlay();
+      api.setPlayhead(0);
+      api.onChange();
+    };
+
+    api.seekToNextAudioClip = function () {
+      var starts = audioClipStartTimes();
+      var cur = api.playheadMs;
+      for (var i = 0; i < starts.length; i++) {
+        if (starts[i] > cur + 1) {
+          api.setPlayhead(starts[i]);
+          api.onChange();
+          return true;
+        }
+      }
+      return false;
+    };
+
+    api.seekToPrevAudioClip = function () {
+      var starts = audioClipStartTimes();
+      var cur = api.playheadMs;
+      var prev = 0;
+      for (var i = starts.length - 1; i >= 0; i--) {
+        if (starts[i] < cur - 1) {
+          prev = starts[i];
+          break;
+        }
+      }
+      api.setPlayhead(prev);
+      api.onChange();
+      return true;
+    };
+
+    // ── Viewer overlay helpers (move/scale handles + crop reference) ─────
+    function mediaNaturalSize(clip, asset) {
+      var media = ensureMedia(clip.assetId);
+      var mw = (media && (media.videoWidth || media.naturalWidth)) || (asset && asset.width) || api.width;
+      var mh = (media && (media.videoHeight || media.naturalHeight)) || (asset && asset.height) || api.height;
+      return { w: mw || api.width, h: mh || api.height, media: media };
+    }
+
+    // Returns the on-canvas rect (in canvas pixel space) of the currently
+    // selected clip's composited image, using the same cover-fit math as
+    // drawFrame() — used to position the move/scale overlay in the viewer.
+    api.getSelectedClipBox = function () {
+      var found = selectedClip();
+      if (!found) return null;
+      var asset = api.assetsById[found.clip.assetId];
+      if (!asset || asset.kind === 'audio') return null;
+      var natural = mediaNaturalSize(found.clip, asset);
+      var crop = found.clip.crop || { x: 0, y: 0, w: 1, h: 1 };
+      var transform = found.clip.transform || { x: 0, y: 0, scale: 1 };
+      var scale = Number(transform.scale) || 1;
+      var ox = Number(transform.x) || 0;
+      var oy = Number(transform.y) || 0;
+      var sw = Math.max(1, crop.w * natural.w);
+      var sh = Math.max(1, crop.h * natural.h);
+      var fit = Math.min(api.width / sw, api.height / sh);
+      var dw = sw * fit * scale;
+      var dh = sh * fit * scale;
+      var dx = (api.width - dw) / 2 + ox;
+      var dy = (api.height - dh) / 2 + oy;
+      return { x: dx, y: dy, w: dw, h: dh, baseW: sw * fit, baseH: sh * fit };
+    };
+
+    // Draws the full, uncropped, untransformed source media letterboxed
+    // ("contain" fit) into the canvas — used as the crop-mode reference
+    // frame so the crop box maps 1:1 to the actual source image instead of
+    // the cover-fit composited output (which caused the old crop UI to look
+    // like the whole clip was translating when a handle was dragged).
+    api.drawCropReferenceFrame = function (clipId) {
+      var found = getClip(clipId);
+      if (!found || !ctx || !canvas) return null;
+      var asset = api.assetsById[found.clip.assetId];
+      if (!asset) return null;
+      var natural = mediaNaturalSize(found.clip, asset);
+      if (canvas.width !== api.width) canvas.width = api.width;
+      if (canvas.height !== api.height) canvas.height = api.height;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, api.width, api.height);
+      var fit = Math.min(api.width / natural.w, api.height / natural.h);
+      var dw = natural.w * fit;
+      var dh = natural.h * fit;
+      var dx = (api.width - dw) / 2;
+      var dy = (api.height - dh) / 2;
+      if (natural.media && !(asset.kind === 'video' && natural.media.readyState < 2)) {
+        try {
+          ctx.drawImage(natural.media, 0, 0, natural.w, natural.h, dx, dy, dw, dh);
+        } catch (e) {}
+      }
+      return { x: dx, y: dy, w: dw, h: dh };
     };
 
     api.render = renderAll;

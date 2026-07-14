@@ -10,7 +10,15 @@
   <div class="cvs-modal__shell">
     <header class="cvs-modal__header">
       <div class="cvs-modal__header-text">
-        <h2 id="cvs-modal-title" class="cvs-modal__title" data-t="creator.video_studio.title">Video Studio</h2>
+        <div class="cvs-modal__title-row">
+          <h2 id="cvs-modal-title" class="cvs-modal__title" data-t="creator.video_studio.title">Video Studio</h2>
+          <button type="button" class="cvs-project-picker" id="cvs-project-picker" aria-haspopup="dialog" aria-label="Open project" title="Open project">
+            <span class="cvs-project-picker__name" id="cvs-project-picker-name">Untitled</span>
+            <span class="cvs-project-picker__chevron" aria-hidden="true">&#9662;</span>
+          </button>
+          <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-new-project" aria-label="New project" title="New project">&#65291;</button>
+          <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-save" aria-label="Save" title="Save">&#128190;</button>
+        </div>
         <p class="cvs-modal__status" id="cvs-status" role="status"></p>
       </div>
       <div class="cvs-modal__header-actions">
@@ -30,10 +38,9 @@
           <span aria-hidden="true">×</span>
           <input type="number" id="cvs-aspect-h" class="cvs-aspect__dim" min="2" max="1920" step="2" value="1080" aria-label="Height">
         </div>
-        <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-undo" title="Undo">Undo</button>
-        <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-redo" title="Redo">Redo</button>
-        <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-save" data-t="creator.video_studio.save">Save</button>
-        <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-btn-export" data-t="creator.video_studio.export">Export</button>
+        <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-undo" aria-label="Undo" title="Undo">&#8634;</button>
+        <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-redo" aria-label="Redo" title="Redo">&#8635;</button>
+        <button type="button" class="cvs-btn cvs-btn--primary cvs-btn--icon" id="cvs-btn-export" aria-label="Export" title="Export">&#11015;</button>
         <button type="button" class="cvs-btn cvs-btn--icon" id="cvs-btn-close" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -61,17 +68,27 @@
         <section class="cvs-viewer" aria-label="Preview">
           <div class="cvs-viewer__stage" id="cvs-viewer-stage">
             <canvas id="cvs-preview-canvas" class="cvs-preview-canvas" width="1920" height="1080"></canvas>
+            <div class="cvs-transform-overlay" id="cvs-transform-overlay" hidden>
+              <div class="cvs-transform-box" id="cvs-transform-box">
+                <span class="cvs-transform-handle" id="cvs-transform-handle" data-handle="scale" aria-hidden="true"></span>
+              </div>
+            </div>
             <div class="cvs-crop-overlay" id="cvs-crop-overlay" hidden>
               <div class="cvs-crop-box" id="cvs-crop-box">
-                <span class="cvs-crop-handle" data-handle="nw"></span>
-                <span class="cvs-crop-handle" data-handle="ne"></span>
-                <span class="cvs-crop-handle" data-handle="sw"></span>
-                <span class="cvs-crop-handle" data-handle="se"></span>
+                <span class="cvs-crop-handle" data-handle="n"></span>
+                <span class="cvs-crop-handle" data-handle="s"></span>
+                <span class="cvs-crop-handle" data-handle="e"></span>
+                <span class="cvs-crop-handle" data-handle="w"></span>
               </div>
             </div>
           </div>
           <div class="cvs-viewer__transport">
-            <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-play" aria-label="Play">▶</button>
+            <div class="cvs-transport-controls" id="cvs-transport-controls">
+              <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-restart" aria-label="Restart to start" title="Restart to start">&#9198;</button>
+              <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-backward" aria-label="Previous audio clip" title="Previous audio clip">&#9194;</button>
+              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-play" aria-label="Play">&#9654;</button>
+              <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-forward" aria-label="Next audio clip" title="Next audio clip">&#9193;</button>
+            </div>
             <span class="cvs-time" id="cvs-time">0:00 / 0:00</span>
             <div class="cvs-transform-tools" id="cvs-transform-tools">
               <label>Scale <input type="range" id="cvs-scale" min="10" max="300" value="100"></label>
@@ -152,82 +169,245 @@
       </div>
 
       <div class="cvs-tools-panel">
-        <div class="cvs-tools-tabs" id="cvs-tools-tabs" role="tablist">
-          <button type="button" class="cvs-tools-tab" data-tool="cut" role="tab">Cut</button>
-          <button type="button" class="cvs-tools-tab" data-tool="audio-remove" role="tab">Remove Audio</button>
-          <button type="button" class="cvs-tools-tab" data-tool="export-audio" role="tab">Export Audio</button>
-          <button type="button" class="cvs-tools-tab" data-tool="export-vocals" role="tab">Export Vocals</button>
-          <button type="button" class="cvs-tools-tab" data-tool="screenshot" role="tab">Screenshot</button>
-          <button type="button" class="cvs-tools-tab" data-tool="duplicate" role="tab">Duplicate</button>
+        <div class="cvs-tools-accordion" id="cvs-tools-accordion">
+          <div class="cvs-accordion-item" data-tool-item="cut">
+            <button type="button" class="cvs-accordion-header" data-tool-header="cut" aria-expanded="false">
+              <span class="cvs-accordion-header__title">Cut</span>
+              <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="cut" hidden>
+              <p class="cvs-tool-hint">Add cut points, then keep or remove parts. Export a part as its own asset, or reassemble the kept parts into a new asset.</p>
+              <div class="cvs-cut-ruler-wrap">
+                <div class="cvs-cut-ruler" id="cvs-cut-ruler"></div>
+              </div>
+              <div class="cvs-cut-actions">
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-cut-btn-split">Add cut at playhead</button>
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-cut-btn-reset">Reset</button>
+              </div>
+              <div class="cvs-cut-segments" id="cvs-cut-segments"></div>
+              <div class="cvs-tool-footer">
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-cut-btn-preview">Preview reassembled</button>
+                <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-cut-btn-save" disabled>Save reassembled as new asset</button>
+              </div>
+              <p class="cvs-tool-status" id="cvs-cut-status"></p>
+            </div>
+          </div>
+
+          <div class="cvs-accordion-item" data-tool-item="audio-remove">
+            <button type="button" class="cvs-accordion-header" data-tool-header="audio-remove" aria-expanded="false">
+              <span class="cvs-accordion-header__title">Remove Audio</span>
+              <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="audio-remove" hidden>
+              <p class="cvs-tool-hint">Removes all audio from this video. Saving overwrites the original asset — this cannot be undone.</p>
+              <div class="cvs-tool-footer">
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-audio-remove-btn-preview">Preview silent video</button>
+                <button type="button" class="cvs-btn cvs-btn--danger" id="cvs-audio-remove-btn-save" disabled>Save (overwrite original)</button>
+              </div>
+              <p class="cvs-tool-status" id="cvs-audio-remove-status"></p>
+            </div>
+          </div>
+
+          <div class="cvs-accordion-item" data-tool-item="export-audio">
+            <button type="button" class="cvs-accordion-header" data-tool-header="export-audio" aria-expanded="false">
+              <span class="cvs-accordion-header__title">Export Audio</span>
+              <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="export-audio" hidden>
+              <p class="cvs-tool-hint">Extracts the full audio track as a new audio asset (WAV — lossless and playable everywhere). Each click generates a new preview below.</p>
+              <div class="cvs-tool-footer">
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-export-audio-btn-preview">Generate audio preview</button>
+              </div>
+              <div class="cvs-preview-list" id="cvs-export-audio-previews"></div>
+              <p class="cvs-tool-status" id="cvs-export-audio-status"></p>
+            </div>
+          </div>
+
+          <div class="cvs-accordion-item" data-tool-item="export-vocals">
+            <button type="button" class="cvs-accordion-header" data-tool-header="export-vocals" aria-expanded="false">
+              <span class="cvs-accordion-header__title">Export Vocals</span>
+              <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="export-vocals" hidden>
+              <p class="cvs-tool-hint">Best-effort vocal isolation (center-channel gating + vocal-range filtering + compression). Still a heuristic, not full AI stem separation — some instruments may remain audible.</p>
+              <div class="cvs-tool-footer">
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-export-vocals-btn-preview">Generate vocals preview</button>
+              </div>
+              <div class="cvs-preview-list" id="cvs-export-vocals-previews"></div>
+              <p class="cvs-tool-status" id="cvs-export-vocals-status"></p>
+            </div>
+          </div>
+
+          <div class="cvs-accordion-item" data-tool-item="screenshot">
+            <button type="button" class="cvs-accordion-header" data-tool-header="screenshot" aria-expanded="false">
+              <span class="cvs-accordion-header__title">Screenshot</span>
+              <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="screenshot" hidden>
+              <p class="cvs-tool-hint">Captures the current playhead frame as a new image asset. Each click adds a new capture below.</p>
+              <div class="cvs-tool-footer">
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-screenshot-btn-capture">Capture frame</button>
+              </div>
+              <div class="cvs-preview-list" id="cvs-screenshot-previews"></div>
+              <p class="cvs-tool-status" id="cvs-screenshot-status"></p>
+            </div>
+          </div>
+
+          <div class="cvs-accordion-item" data-tool-item="duplicate">
+            <button type="button" class="cvs-accordion-header" data-tool-header="duplicate" aria-expanded="false">
+              <span class="cvs-accordion-header__title">Duplicate</span>
+              <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="duplicate" hidden>
+              <p class="cvs-tool-hint">Creates a full copy of this asset in your library.</p>
+              <div class="cvs-tool-footer">
+                <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-duplicate-btn">Duplicate asset</button>
+              </div>
+              <p class="cvs-tool-status" id="cvs-duplicate-status"></p>
+            </div>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <div class="cvs-tools-panels" id="cvs-tools-panels">
-          <section class="cvs-tool-panel" data-tool-panel="cut" hidden>
-            <p class="cvs-tool-hint">Add cut points, then keep or remove parts. Export a part as its own asset, or reassemble the kept parts into a new asset.</p>
-            <div class="cvs-cut-ruler-wrap">
-              <div class="cvs-cut-ruler" id="cvs-cut-ruler"></div>
-            </div>
-            <div class="cvs-cut-actions">
-              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-cut-btn-split">Add cut at playhead</button>
-              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-cut-btn-reset">Reset</button>
-            </div>
-            <div class="cvs-cut-segments" id="cvs-cut-segments"></div>
-            <div class="cvs-tool-footer">
-              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-cut-btn-preview">Preview reassembled</button>
-              <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-cut-btn-save" disabled>Save reassembled as new asset</button>
-            </div>
-            <p class="cvs-tool-status" id="cvs-cut-status"></p>
-          </section>
+<div id="cvsConfirmDialog" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div
+    class="cvs-confirm-box"
+    id="cvs-confirm-box"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="cvs-confirm-title"
+    aria-describedby="cvs-confirm-message"
+  >
+    <h3 class="cvs-confirm-title" id="cvs-confirm-title"></h3>
+    <p class="cvs-confirm-message" id="cvs-confirm-message"></p>
+    <div class="cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-confirm-cancel">Cancel</button>
+      <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-confirm-ok">OK</button>
+    </div>
+  </div>
+</div>
 
-          <section class="cvs-tool-panel" data-tool-panel="audio-remove" hidden>
-            <p class="cvs-tool-hint">Removes all audio from this video. Saving overwrites the original asset — this cannot be undone.</p>
-            <div class="cvs-tool-footer">
-              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-audio-remove-btn-preview">Preview silent video</button>
-              <button type="button" class="cvs-btn cvs-btn--danger" id="cvs-audio-remove-btn-save" disabled>Save (overwrite original)</button>
-            </div>
-            <p class="cvs-tool-status" id="cvs-audio-remove-status"></p>
-          </section>
+<div id="cvsClipContextMenu" class="cvs-context-menu" hidden role="menu" aria-hidden="true">
+  <button type="button" class="cvs-context-menu__item" id="cvs-ctx-duplicate" role="menuitem">Duplicate clip</button>
+  <button type="button" class="cvs-context-menu__item cvs-context-menu__item--danger" id="cvs-ctx-remove" role="menuitem">Remove clip</button>
+</div>
 
-          <section class="cvs-tool-panel" data-tool-panel="export-audio" hidden>
-            <p class="cvs-tool-hint">Extracts the full audio track as a new audio asset (WAV — lossless and playable everywhere).</p>
-            <div class="cvs-tool-footer">
-              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-export-audio-btn-preview">Preview audio</button>
-              <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-export-audio-btn-save" disabled>Export as new asset</button>
-            </div>
-            <audio id="cvs-export-audio-player" class="cvs-tool-audio-player" controls hidden></audio>
-            <p class="cvs-tool-status" id="cvs-export-audio-status"></p>
-          </section>
+<div id="cvsProjectMetaModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div class="cvs-confirm-box cvs-meta-box" id="cvs-meta-box" role="dialog" aria-modal="true" aria-labelledby="cvs-meta-title">
+    <h3 class="cvs-confirm-title" id="cvs-meta-title">Save project</h3>
+    <label class="cvs-meta-field">
+      <span>Name</span>
+      <input type="text" id="cvs-meta-name" maxlength="120" placeholder="Untitled">
+    </label>
+    <label class="cvs-meta-field">
+      <span>Description</span>
+      <textarea id="cvs-meta-description" maxlength="500" rows="3" placeholder="Optional notes about this project…"></textarea>
+    </label>
+    <div class="cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-meta-cancel">Cancel</button>
+      <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-meta-save">Save</button>
+    </div>
+  </div>
+</div>
 
-          <section class="cvs-tool-panel" data-tool-panel="export-vocals" hidden>
-            <p class="cvs-tool-hint">Best-effort vocal isolation (center-channel heuristic). This is a preview-quality vocal extract, not full AI stem separation — some instruments may remain audible.</p>
-            <div class="cvs-tool-footer">
-              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-export-vocals-btn-preview">Preview vocals</button>
-              <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-export-vocals-btn-save" disabled>Export as new asset</button>
-            </div>
-            <audio id="cvs-export-vocals-player" class="cvs-tool-audio-player" controls hidden></audio>
-            <p class="cvs-tool-status" id="cvs-export-vocals-status"></p>
-          </section>
+<div id="cvsProjectsModal" class="cvs-modal-root cvs-projects-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cvs-projects-title">
+  <div class="cvs-modal__shell cvs-projects-shell">
+    <header class="cvs-modal__header">
+      <div class="cvs-modal__header-text">
+        <h2 id="cvs-projects-title" class="cvs-modal__title">Projects</h2>
+        <p class="cvs-modal__status" id="cvs-projects-status" role="status"></p>
+      </div>
+      <div class="cvs-modal__header-actions">
+        <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-projects-btn-new" aria-label="New project" title="New project">&#65291;</button>
+        <button type="button" class="cvs-btn cvs-btn--icon" id="cvs-projects-btn-close" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </header>
+    <div class="cvs-projects-body">
+      <div class="cvs-projects-grid" id="cvs-projects-grid" role="list"></div>
+      <p class="cvs-projects-empty" id="cvs-projects-empty" hidden>No saved projects yet.</p>
+    </div>
+  </div>
+</div>
 
-          <section class="cvs-tool-panel" data-tool-panel="screenshot" hidden>
-            <p class="cvs-tool-hint">Captures the current playhead frame as a new image asset.</p>
-            <div class="cvs-screenshot-preview-wrap">
-              <img id="cvs-screenshot-preview" class="cvs-screenshot-preview" hidden alt="">
-            </div>
-            <div class="cvs-tool-footer">
-              <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-screenshot-btn-capture">Capture frame</button>
-              <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-screenshot-btn-save" disabled>Save as new asset</button>
-            </div>
-            <p class="cvs-tool-status" id="cvs-screenshot-status"></p>
-          </section>
+<div id="cvsAddSourceModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div class="cvs-confirm-box cvs-addsrc-box" id="cvs-addsrc-box" role="dialog" aria-modal="true" aria-labelledby="cvs-addsrc-title">
+    <h3 class="cvs-confirm-title" id="cvs-addsrc-title">Add media</h3>
+    <div class="cvs-addsrc-grid">
+      <button type="button" class="cvs-addsrc-option" id="cvs-addsrc-assets">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128193;</span>
+        <span class="cvs-addsrc-option__label">Assets</span>
+        <span class="cvs-addsrc-option__hint">Your uploaded library</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cvs-addsrc-device">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128187;</span>
+        <span class="cvs-addsrc-option__label">Device</span>
+        <span class="cvs-addsrc-option__hint">Upload from this device</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cvs-addsrc-phone" data-desktop-only="1">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128241;</span>
+        <span class="cvs-addsrc-option__label">Phone</span>
+        <span class="cvs-addsrc-option__hint">Scan a QR code to upload</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cvs-addsrc-link">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128279;</span>
+        <span class="cvs-addsrc-option__label">Link</span>
+        <span class="cvs-addsrc-option__hint">Paste a media URL</span>
+      </button>
+    </div>
+    <div class="cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-addsrc-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
 
-          <section class="cvs-tool-panel" data-tool-panel="duplicate" hidden>
-            <p class="cvs-tool-hint">Creates a full copy of this asset in your library.</p>
-            <div class="cvs-tool-footer">
-              <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-duplicate-btn">Duplicate asset</button>
-            </div>
-            <p class="cvs-tool-status" id="cvs-duplicate-status"></p>
-          </section>
-        </div>
+<div id="cvsLinkModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div class="cvs-confirm-box cvs-meta-box" id="cvs-link-box" role="dialog" aria-modal="true" aria-labelledby="cvs-link-title">
+    <h3 class="cvs-confirm-title" id="cvs-link-title">Add from link</h3>
+    <label class="cvs-meta-field">
+      <span>Media URL</span>
+      <input type="url" id="cvs-link-url" placeholder="https://…">
+    </label>
+    <div class="cvs-link-format" role="radiogroup" aria-label="Format">
+      <span class="cvs-meta-field__label-only">Format</span>
+      <label class="cvs-link-format__option"><input type="radio" name="cvs-link-format" value="mp4" checked> MP4 (video)</label>
+      <label class="cvs-link-format__option"><input type="radio" name="cvs-link-format" value="mp3"> MP3 (audio)</label>
+    </div>
+    <p class="cvs-link-status" id="cvs-link-status" role="status"></p>
+    <div class="cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-link-cancel">Cancel</button>
+      <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-link-submit">Download</button>
+    </div>
+  </div>
+</div>
+
+<div id="cvsAssetsLibraryModal" class="cvs-modal-root cvs-projects-modal cvs-library-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cvs-library-title">
+  <div class="cvs-modal__shell cvs-projects-shell">
+    <header class="cvs-modal__header">
+      <div class="cvs-modal__header-text">
+        <h2 id="cvs-library-title" class="cvs-modal__title">Assets library</h2>
+        <p class="cvs-modal__status" id="cvs-library-status" role="status">Click an asset to add it to this project.</p>
+      </div>
+      <div class="cvs-modal__header-actions">
+        <button type="button" class="cvs-btn cvs-btn--icon" id="cvs-library-btn-close" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </header>
+    <div class="cvs-projects-body">
+      <div class="cvs-library-grid" id="cvs-library-grid" role="list"></div>
+      <p class="cvs-projects-empty" id="cvs-library-empty" hidden>No assets uploaded yet.</p>
+    </div>
+    <div class="cvs-library-selectbar" id="cvs-library-selectbar" hidden>
+      <span class="cvs-library-selectbar__count" id="cvs-library-selectbar-count"></span>
+      <div class="cvs-library-selectbar__actions">
+        <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-library-btn-cancel-select">Cancel</button>
+        <button type="button" class="cvs-btn cvs-btn--danger" id="cvs-library-btn-remove-selected">Remove</button>
+        <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-library-btn-add-selected">Add</button>
       </div>
     </div>
   </div>
