@@ -422,22 +422,45 @@
   // click adds a new discardable preview item, with its own Play/test,
   // Save (commit as a new asset) and Delete (discard) actions — instead of
   // a single preview slot that gets silently overwritten.
-  var previewLists = {
-    'export-audio': [],
-    'export-vocals': [],
-    screenshot: [],
-  };
+  //
+  // Keyed by SOURCE ASSET ID first, then by tool. This is what keeps a
+  // preview generated for asset A from ever being shown while the Tools
+  // modal is open for asset B: each asset gets its own independent set of
+  // lists, and the render/lookup functions below always resolve against
+  // the asset the preview was generated for (captured up front, before any
+  // `await`), not whatever `currentAsset` happens to be when a slow
+  // generation (e.g. AI vocal separation) finishes.
+  var previewsByAsset = {};
 
-  function addPreviewItem(tool, item) {
+  function assetPreviewLists(assetId) {
+    if (!previewsByAsset[assetId]) {
+      previewsByAsset[assetId] = { 'export-audio': [], 'export-vocals': [], screenshot: [] };
+    }
+    return previewsByAsset[assetId];
+  }
+
+  function getPreviewList(assetId, tool) {
+    var lists = previewsByAsset[assetId];
+    return (lists && lists[tool]) || [];
+  }
+
+  function isViewingAssetTool(assetId, tool) {
+    return !!currentAsset && currentAsset.id === assetId && currentTool === tool;
+  }
+
+  function addPreviewItem(assetId, tool, item) {
     item.id = 'pv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-    previewLists[tool] = previewLists[tool] || [];
-    previewLists[tool].unshift(item);
-    renderPreviewList(tool);
+    item.sourceAssetId = assetId;
+    var lists = assetPreviewLists(assetId);
+    lists[tool] = lists[tool] || [];
+    lists[tool].unshift(item);
+    if (currentAsset && currentAsset.id === assetId) renderPreviewList(tool);
     return item;
   }
 
   function removePreviewItem(tool, id) {
-    var list = previewLists[tool] || [];
+    if (!currentAsset) return;
+    var list = getPreviewList(currentAsset.id, tool);
     var idx = -1;
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === id) {
@@ -457,27 +480,17 @@
     renderPreviewList(tool);
   }
 
-  function clearPreviewList(tool) {
-    (previewLists[tool] || []).forEach(function (item) {
-      if (item._mediaEl) {
-        try {
-          item._mediaEl.pause();
-        } catch (e) {}
-      }
-      if (item.url) URL.revokeObjectURL(item.url);
-    });
-    previewLists[tool] = [];
-    renderPreviewList(tool);
-  }
-
   function stopAllPreviewPlayback() {
-    Object.keys(previewLists).forEach(function (tool) {
-      (previewLists[tool] || []).forEach(function (item) {
-        if (item._mediaEl && !item._mediaEl.paused) {
-          try {
-            item._mediaEl.pause();
-          } catch (e) {}
-        }
+    Object.keys(previewsByAsset).forEach(function (assetId) {
+      var lists = previewsByAsset[assetId];
+      Object.keys(lists).forEach(function (tool) {
+        (lists[tool] || []).forEach(function (item) {
+          if (item._mediaEl && !item._mediaEl.paused) {
+            try {
+              item._mediaEl.pause();
+            } catch (e) {}
+          }
+        });
       });
     });
   }
@@ -534,7 +547,9 @@
   function renderPreviewList(tool) {
     var wrap = document.getElementById('cvs-' + tool + '-previews');
     if (!wrap) return;
-    var list = previewLists[tool] || [];
+    // Always render only the CURRENT asset's previews — this is the core
+    // fix for previews leaking across assets.
+    var list = currentAsset ? getPreviewList(currentAsset.id, tool) : [];
     wrap.innerHTML = '';
     if (!list.length) {
       var empty = document.createElement('p');
@@ -956,19 +971,27 @@
 
   // ── Export audio tool ──────────────────────────────────────────────
   function exportAudioReset() {
-    clearPreviewList('export-audio');
+    // Re-render (don't wipe) — previews belong to the asset, not the tool
+    // tab, so switching tabs and back must still show them for THIS asset.
+    renderPreviewList('export-audio');
   }
 
   async function exportAudioPreview() {
     if (!currentAsset) return;
+    // Snapshot the source asset up front: decoding can take a moment, and
+    // if the user switches to a different asset before it finishes, the
+    // result must still land on THIS asset's list, not whatever asset is
+    // open when the promise resolves.
+    var asset = currentAsset;
+    var assetId = asset.id;
     var btn = document.getElementById('cvs-export-audio-btn-preview');
     if (btn) btn.disabled = true;
     setToolStatus('export-audio', t('export_audio_decoding', 'Decoding audio\u2026'));
     try {
-      var buffer = await decodeAssetAudioBuffer(currentAsset);
+      var buffer = await decodeAssetAudioBuffer(asset);
       var blob = audioBufferToWav(buffer);
-      var label = (currentAsset.original_name || 'asset') + '-audio-' + (previewLists['export-audio'].length + 1) + '.wav';
-      var item = addPreviewItem('export-audio', {
+      var label = (asset.original_name || 'asset') + '-audio-' + (getPreviewList(assetId, 'export-audio').length + 1) + '.wav';
+      var item = addPreviewItem(assetId, 'export-audio', {
         label: label,
         blob: blob,
         url: blobToObjectUrl(blob),
@@ -976,14 +999,18 @@
         kind: 'audio',
         meta: { duration_ms: Math.round((buffer.duration || 0) * 1000) },
       });
-      setToolStatus('export-audio', t('export_audio_ready', 'Preview ready (WAV) — added below.'));
-      // Auto-play the freshly generated preview so it's immediately audible.
-      var row = document.getElementById('cvs-export-audio-previews');
-      var playBtn3 = row && row.querySelector('.cvs-preview-row .cvs-btn--ghost');
-      if (playBtn3) togglePreviewItemPlayback(item, playBtn3);
+      if (isViewingAssetTool(assetId, 'export-audio')) {
+        setToolStatus('export-audio', t('export_audio_ready', 'Preview ready (WAV) — added below.'));
+        // Auto-play the freshly generated preview so it's immediately audible.
+        var row = document.getElementById('cvs-export-audio-previews');
+        var playBtn3 = row && row.querySelector('.cvs-preview-row .cvs-btn--ghost');
+        if (playBtn3) togglePreviewItemPlayback(item, playBtn3);
+      }
     } catch (e) {
       console.warn('[VideoStudio] export audio preview failed', e);
-      setToolStatus('export-audio', t('export_audio_failed', 'Could not decode audio for this asset.'));
+      if (isViewingAssetTool(assetId, 'export-audio')) {
+        setToolStatus('export-audio', t('export_audio_failed', 'Could not decode audio for this asset.'));
+      }
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -996,7 +1023,7 @@
   // channel gate + band-pass) only if AI separation isn't configured or
   // fails for this file, and clearly labels the fallback as lower quality.
   function exportVocalsReset() {
-    clearPreviewList('export-vocals');
+    renderPreviewList('export-vocals');
   }
 
   async function requestAiVocalSeparation(asset) {
@@ -1021,6 +1048,11 @@
 
   async function exportVocalsPreview() {
     if (!currentAsset) return;
+    // Snapshot the source asset up front — AI separation "can take up to a
+    // minute", and the user switching to a different asset in the meantime
+    // must not cause the eventual result to attach to that other asset.
+    var asset = currentAsset;
+    var assetId = asset.id;
     // Fix: make sure the original mix isn't still audibly playing
     // underneath the vocals-only preview.
     if (video) video.pause();
@@ -1038,7 +1070,7 @@
     var usedAi = false;
 
     try {
-      blob = await requestAiVocalSeparation(currentAsset);
+      blob = await requestAiVocalSeparation(asset);
       mime = (blob && blob.type) || 'audio/mpeg';
       usedAi = true;
     } catch (aiErr) {
@@ -1050,14 +1082,16 @@
       var durationMs = 0;
 
       if (!blob) {
-        setToolStatus(
-          'export-vocals',
-          t(
-            'export_vocals_processing_fallback',
-            'AI separation unavailable \u2014 using basic method (more instrumental bleed)\u2026'
-          )
-        );
-        var buffer = await decodeAssetAudioBuffer(currentAsset);
+        if (isViewingAssetTool(assetId, 'export-vocals')) {
+          setToolStatus(
+            'export-vocals',
+            t(
+              'export_vocals_processing_fallback',
+              'AI separation unavailable \u2014 using basic method (more instrumental bleed)\u2026'
+            )
+          );
+        }
+        var buffer = await decodeAssetAudioBuffer(asset);
         var vocalsBuffer = await extractVocalsHeuristic(buffer, ctx);
         blob = audioBufferToWav(vocalsBuffer);
         mime = 'audio/wav';
@@ -1068,18 +1102,18 @@
           var decoded = await ctx.decodeAudioData(arrBuf.slice(0));
           durationMs = Math.round((decoded.duration || 0) * 1000);
         } catch (decodeErr) {
-          durationMs = Number(currentAsset.duration_ms) || 0;
+          durationMs = Number(asset.duration_ms) || 0;
         }
       }
 
       var ext = mime.indexOf('wav') !== -1 ? 'wav' : 'mp3';
       var label =
-        (currentAsset.original_name || 'asset') +
+        (asset.original_name || 'asset') +
         '-vocals-' +
-        (previewLists['export-vocals'].length + 1) +
+        (getPreviewList(assetId, 'export-vocals').length + 1) +
         '.' +
         ext;
-      var item = addPreviewItem('export-vocals', {
+      var item = addPreviewItem(assetId, 'export-vocals', {
         label: label,
         blob: blob,
         url: blobToObjectUrl(blob),
@@ -1088,26 +1122,30 @@
         meta: { duration_ms: durationMs },
       });
 
-      setToolStatus(
-        'export-vocals',
-        usedAi
-          ? t(
-              'export_vocals_ready_ai',
-              'Playing AI-isolated vocals (Demucs) \u2014 far less instrumental bleed than the old method.'
-            )
-          : t(
-              'export_vocals_ready_fallback',
-              'Playing basic vocal extract (center-channel + EQ) \u2014 some instrumental bleed is expected. Ask an admin to enable AI separation for cleaner results.'
-            )
-      );
-      // Actually plays the processed vocals-only buffer, not the original
-      // mix — this is the fix for the "still hears original mix" bug.
-      var row = document.getElementById('cvs-export-vocals-previews');
-      var playBtn4 = row && row.querySelector('.cvs-preview-row .cvs-btn--ghost');
-      if (playBtn4) togglePreviewItemPlayback(item, playBtn4);
+      if (isViewingAssetTool(assetId, 'export-vocals')) {
+        setToolStatus(
+          'export-vocals',
+          usedAi
+            ? t(
+                'export_vocals_ready_ai',
+                'Playing AI-isolated vocals (Demucs) \u2014 far less instrumental bleed than the old method.'
+              )
+            : t(
+                'export_vocals_ready_fallback',
+                'Playing basic vocal extract (center-channel + EQ) \u2014 some instrumental bleed is expected. Ask an admin to enable AI separation for cleaner results.'
+              )
+        );
+        // Actually plays the processed vocals-only buffer, not the original
+        // mix — this is the fix for the "still hears original mix" bug.
+        var row = document.getElementById('cvs-export-vocals-previews');
+        var playBtn4 = row && row.querySelector('.cvs-preview-row .cvs-btn--ghost');
+        if (playBtn4) togglePreviewItemPlayback(item, playBtn4);
+      }
     } catch (e) {
       console.warn('[VideoStudio] export vocals preview failed', e);
-      setToolStatus('export-vocals', t('export_vocals_failed', 'Could not process audio for this asset.'));
+      if (isViewingAssetTool(assetId, 'export-vocals')) {
+        setToolStatus('export-vocals', t('export_vocals_failed', 'Could not process audio for this asset.'));
+      }
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -1115,36 +1153,45 @@
 
   // ── Screenshot tool ─────────────────────────────────────────────────
   function screenshotReset() {
-    clearPreviewList('screenshot');
+    renderPreviewList('screenshot');
   }
 
   function screenshotCapture() {
-    if (!video || video.hidden || !video.videoWidth) {
+    if (!video || video.hidden || !video.videoWidth || !currentAsset) {
       setToolStatus('screenshot', t('screenshot_no_frame', 'No video frame available yet.'));
       return;
     }
+    // Snapshot the source asset up front — `canvas.toBlob` resolves
+    // asynchronously, so the user could switch assets before it fires.
+    var asset = currentAsset;
+    var assetId = asset.id;
+    var width = video.videoWidth;
+    var height = video.videoHeight;
     var canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = width;
+    canvas.height = height;
     var ctx = canvas.getContext('2d');
     try {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       canvas.toBlob(function (blob) {
         if (!blob) {
-          setToolStatus('screenshot', t('screenshot_failed', 'Capture failed.'));
+          if (isViewingAssetTool(assetId, 'screenshot')) {
+            setToolStatus('screenshot', t('screenshot_failed', 'Capture failed.'));
+          }
           return;
         }
-        var label =
-          (currentAsset.original_name || 'asset') + '-frame-' + (previewLists.screenshot.length + 1) + '.png';
-        addPreviewItem('screenshot', {
+        var label = (asset.original_name || 'asset') + '-frame-' + (getPreviewList(assetId, 'screenshot').length + 1) + '.png';
+        addPreviewItem(assetId, 'screenshot', {
           label: label,
           blob: blob,
           url: blobToObjectUrl(blob),
           mime: 'image/png',
           kind: 'image',
-          meta: { width: video.videoWidth, height: video.videoHeight },
+          meta: { width: width, height: height },
         });
-        setToolStatus('screenshot', t('screenshot_ready', 'Frame captured — added below.'));
+        if (isViewingAssetTool(assetId, 'screenshot')) {
+          setToolStatus('screenshot', t('screenshot_ready', 'Frame captured — added below.'));
+        }
       }, 'image/png');
     } catch (e) {
       // Tainted canvas (cross-origin frame without CORS) — should no longer
