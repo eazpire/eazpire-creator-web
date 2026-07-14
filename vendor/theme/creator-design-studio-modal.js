@@ -91,6 +91,15 @@
   var previewActiveColor = null;
   var previewActiveView = null;
   var previewUnloadBound = false;
+  var previewPersisted = false;
+  var previewMainView = null;
+  var previewBaseline = null;
+  var previewSaving = false;
+  var previewUnsavedDialogEl = null;
+  var previewSetMainEl = null;
+  var previewSaveBtnEl = null;
+  var previewDiscardBtnEl = null;
+  var pendingPreviewUnsavedAction = null;
   var historyToolbarEl = null;
   var btnUndoEl = null;
   var btnRedoEl = null;
@@ -1073,6 +1082,10 @@
     previewColorCarouselEl = root.querySelector('#cds-preview-color-carousel');
     previewColorPrevEl = root.querySelector('#cds-preview-color-prev');
     previewColorNextEl = root.querySelector('#cds-preview-color-next');
+    previewUnsavedDialogEl = root.querySelector('#cds-preview-unsaved-dialog');
+    previewSetMainEl = root.querySelector('#cds-preview-set-main');
+    previewSaveBtnEl = root.querySelector('#cds-preview-save');
+    previewDiscardBtnEl = root.querySelector('#cds-preview-discard');
     eazyBtnEl = root.querySelector('#cds-eazy-btn');
     eazyTipEl = root.querySelector('#cds-eazy-tip');
     eazyTipTextEl = root.querySelector('#cds-eazy-tip-text');
@@ -4129,7 +4142,7 @@
     if (previewModalEl) {
       previewModalEl.classList.toggle('is-preview-busy', !!on);
     }
-    if (btnPreviewEl) btnPreviewEl.disabled = !!on || previewBusy;
+    if (btnPreviewEl) btnPreviewEl.disabled = !!on || previewBusy || previewSaving;
   }
 
   function setPreviewError(msg) {
@@ -4141,6 +4154,91 @@
     }
     previewErrorEl.hidden = false;
     previewErrorEl.textContent = msg;
+  }
+
+  function snapshotPreviewBaseline() {
+    previewBaseline = {
+      colors: previewColors.map(function (c) {
+        return { color_key: c.color_key, enabled: !!c.enabled };
+      }),
+      main_preview_view: previewMainView || 'front',
+    };
+  }
+
+  function isPreviewDirty() {
+    if (!previewBaseline) return false;
+    if (String(previewMainView || '') !== String(previewBaseline.main_preview_view || '')) {
+      return true;
+    }
+    var baselineMap = {};
+    for (var i = 0; i < (previewBaseline.colors || []).length; i++) {
+      var b = previewBaseline.colors[i];
+      baselineMap[b.color_key] = !!b.enabled;
+    }
+    for (var j = 0; j < previewColors.length; j++) {
+      var c = previewColors[j];
+      var was = baselineMap[c.color_key];
+      if (was === undefined) was = true;
+      if (!!c.enabled !== was) return true;
+    }
+    return false;
+  }
+
+  function markPreviewDirtyUi() {
+    var dirty = isPreviewDirty();
+    if (previewSaveBtnEl) previewSaveBtnEl.disabled = !dirty || previewBusy || previewSaving;
+    if (previewSetMainEl) {
+      var isCurrent = previewMainView && previewActiveView && previewMainView === previewActiveView;
+      previewSetMainEl.hidden = !previewColors.length;
+      previewSetMainEl.classList.toggle('is-current', !!isCurrent);
+      previewSetMainEl.disabled = !!isCurrent || previewBusy || previewSaving;
+      previewSetMainEl.textContent = isCurrent
+        ? t('designStudioPreviewIsMain', 'Main preview')
+        : t('designStudioPreviewSetAsPreview', 'Set as Preview');
+    }
+  }
+
+  function syncStudioDraftFromPreviewColors() {
+    if (!draft) return;
+    draft.variants = draft.variants || { selected_ids: [] };
+    var ids = new Set();
+    for (var i = 0; i < previewColors.length; i++) {
+      var c = previewColors[i];
+      if (!c || !c.enabled) continue;
+      var vids = Array.isArray(c.variant_ids) ? c.variant_ids : [];
+      for (var j = 0; j < vids.length; j++) {
+        var n = Number(vids[j]);
+        if (Number.isFinite(n)) ids.add(n);
+      }
+    }
+    // Prefer mapping via studio variant groups when Printify ids are missing.
+    if (!ids.size && ctxData && ctxData.variant_groups) {
+      var groups = ctxData.variant_groups;
+      for (var ck in groups) {
+        if (!Object.prototype.hasOwnProperty.call(groups, ck)) continue;
+        var match = previewColors.find(function (pc) {
+          return (
+            normColorKey(pc.color_key) === normColorKey(ck) ||
+            normColorKey(pc.label) === normColorKey(ck)
+          );
+        });
+        if (!match || !match.enabled) continue;
+        (groups[ck] || []).forEach(function (v) {
+          if (v && v.unlocked && v.in_admin_pool && v.id != null) ids.add(Number(v.id));
+        });
+      }
+    }
+    draft.variants.selected_ids = Array.from(ids);
+    draft.mockups = draft.mockups || {};
+    draft.mockups.main_preview_view = previewMainView || 'front';
+    draft.mockups.channel_preview = draft.mockups.channel_preview || {};
+    draft.mockups.channel_preview.shopify = previewMainView || 'front';
+    markDirtyUi();
+    if (typeof renderVariantSettingsPanel === 'function' && panelVariantsEl) {
+      try {
+        renderVariantSettingsPanel();
+      } catch (_) {}
+    }
   }
 
   function currentPrimaryDesignUrl() {
@@ -4259,11 +4357,13 @@
       previewMainImgEl.hidden = true;
       previewMainImgEl.removeAttribute('src');
       if (previewMainEmptyEl) previewMainEmptyEl.hidden = false;
+      markPreviewDirtyUi();
       return;
     }
     if (previewMainEmptyEl) previewMainEmptyEl.hidden = true;
     previewMainImgEl.hidden = false;
     previewMainImgEl.src = src;
+    markPreviewDirtyUi();
   }
 
   function renderPreviewViews() {
@@ -4287,9 +4387,11 @@
     for (var i = 0; i < views.length; i++) {
       var v = views[i];
       var on = v.view_key === previewActiveView;
+      var isMain = previewMainView && v.view_key === previewMainView;
       html +=
         '<button type="button" class="cds-preview-view' +
         (on ? ' is-active' : '') +
+        (isMain ? ' is-main-preview' : '') +
         '" data-cds-preview-view="' +
         encodeURIComponent(v.view_key) +
         '" role="option" aria-selected="' +
@@ -4298,6 +4400,11 @@
         '<img class="cds-preview-view__img" src="' +
         String(v.preview_url || '').replace(/"/g, '&quot;') +
         '" alt="" decoding="async">' +
+        (isMain
+          ? '<span class="cds-preview-view__badge">' +
+            t('designStudioPreviewIsMain', 'Main preview') +
+            '</span>'
+          : '') +
         '<span class="cds-preview-view__label">' +
         String(v.label || v.view_key) +
         '</span></button>';
@@ -4334,16 +4441,34 @@
     for (var i = 0; i < previewColors.length; i++) {
       var c = previewColors[i];
       var on = c.color_key === previewActiveColor;
+      var enabled = c.enabled !== false;
       var hex = c.hex || '#888888';
       html +=
-        '<button type="button" class="cds-preview-color' +
+        '<div class="cds-preview-color' +
         (on ? ' is-active' : '') +
+        (enabled ? '' : ' is-disabled') +
         '" data-cds-preview-color="' +
         encodeURIComponent(c.color_key) +
         '" role="option" aria-selected="' +
         (on ? 'true' : 'false') +
         '" title="' +
         String(c.label || c.color_key).replace(/"/g, '&quot;') +
+        '">' +
+        '<button type="button" class="cds-preview-color__toggle' +
+        (enabled ? ' is-on' : '') +
+        '" data-cds-preview-color-toggle="' +
+        encodeURIComponent(c.color_key) +
+        '" aria-pressed="' +
+        (enabled ? 'true' : 'false') +
+        '" title="' +
+        (enabled
+          ? t('designStudioPreviewColorDisable', 'Disable color')
+          : t('designStudioPreviewColorEnable', 'Enable color')) +
+        '">' +
+        (enabled ? '✓' : '') +
+        '</button>' +
+        '<button type="button" class="cds-preview-color__pick" data-cds-preview-color-pick="' +
+        encodeURIComponent(c.color_key) +
         '">' +
         (c.front_preview_url
           ? '<img class="cds-preview-color__img" src="' +
@@ -4355,17 +4480,26 @@
         '"></span>' +
         '<span class="cds-preview-color__label">' +
         String(c.label || c.color_key) +
-        '</span></button>';
+        '</span></button></div>';
     }
     previewColorCarouselEl.innerHTML = html;
-    previewColorCarouselEl.querySelectorAll('[data-cds-preview-color]').forEach(function (btn) {
+    previewColorCarouselEl.querySelectorAll('[data-cds-preview-color-pick]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var ck = decodeURIComponent(btn.getAttribute('data-cds-preview-color') || '');
+        var ck = decodeURIComponent(btn.getAttribute('data-cds-preview-color-pick') || '');
         selectPreviewColor(ck);
+      });
+    });
+    previewColorCarouselEl.querySelectorAll('[data-cds-preview-color-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var ck = decodeURIComponent(btn.getAttribute('data-cds-preview-color-toggle') || '');
+        togglePreviewColorEnabled(ck);
       });
     });
     if (previewFooterEl) previewFooterEl.hidden = !previewColors.length;
     requestAnimationFrame(updatePreviewCarouselNav);
+    markPreviewDirtyUi();
   }
 
   function selectPreviewView(viewKey) {
@@ -4390,9 +4524,42 @@
     renderPreviewViews();
   }
 
-  function applyPreviewPayload(data) {
+  function togglePreviewColorEnabled(colorKey) {
+    var ck = normColorKey(colorKey) || colorKey;
+    var enabledCount = previewColors.filter(function (c) {
+      return c && c.enabled !== false;
+    }).length;
+    for (var i = 0; i < previewColors.length; i++) {
+      if (previewColors[i].color_key !== ck) continue;
+      var next = previewColors[i].enabled === false;
+      if (!next && enabledCount <= 1) {
+        // Keep at least one color enabled (Printify requires ≥1 variant).
+        return;
+      }
+      previewColors[i].enabled = next;
+      break;
+    }
+    syncStudioDraftFromPreviewColors();
+    renderPreviewColorCarousel();
+  }
+
+  function setAsMainPreview() {
+    if (!previewActiveView) return;
+    previewMainView = previewActiveView;
+    syncStudioDraftFromPreviewColors();
+    renderPreviewViews();
+    markPreviewDirtyUi();
+  }
+
+  function applyPreviewPayload(data, opts) {
+    opts = opts || {};
     previewPrintifyId = data && data.printify_product_id ? String(data.printify_product_id) : null;
-    previewColors = Array.isArray(data && data.colors) ? data.colors : [];
+    previewPersisted = !!(data && data.persisted) || previewPersisted;
+    previewColors = Array.isArray(data && data.colors)
+      ? data.colors.map(function (c) {
+          return Object.assign({}, c, { enabled: c.enabled !== false });
+        })
+      : [];
     previewViewsByColor =
       data && data.views_by_color && typeof data.views_by_color === 'object' ? data.views_by_color : {};
     if (!Object.keys(previewViewsByColor).length && Array.isArray(data && data.views)) {
@@ -4405,10 +4572,18 @@
       normColorKey(resolveColorKey()) ||
       null;
     previewActiveView = data.active_view || 'front';
+    previewMainView =
+      data.main_preview_view ||
+      (draft && draft.mockups && draft.mockups.main_preview_view) ||
+      previewMainView ||
+      data.active_view ||
+      'front';
     setPreviewError('');
     if (previewContentEl) previewContentEl.hidden = false;
     renderPreviewColorCarousel();
     renderPreviewViews();
+    if (opts.resetBaseline !== false) snapshotPreviewBaseline();
+    markPreviewDirtyUi();
   }
 
   async function cleanupPreviewDraft(opts) {
@@ -4425,7 +4600,10 @@
           : 0;
     var productKey =
       opts.product_key != null ? opts.product_key : ctxProductKey;
-    previewPrintifyId = null;
+    var keep = opts.keep_printify === true || previewPersisted;
+    if (!opts.keepLocalIds) {
+      previewPrintifyId = null;
+    }
     if (!pid && !(designId > 0 && productKey)) return;
     var owner = getOwnerId();
     if (!owner) return;
@@ -4439,6 +4617,7 @@
           design_id: designId || undefined,
           product_key: productKey || undefined,
           printify_product_id: pid || undefined,
+          keep_printify: keep,
         }),
         keepalive: true,
       });
@@ -4447,14 +4626,85 @@
     }
   }
 
-  function closePreviewModal() {
+  function resetPreviewUiState() {
+    setPreviewLoading(false);
+    setPreviewError('');
+    if (previewContentEl) previewContentEl.hidden = true;
+    if (previewFooterEl) previewFooterEl.hidden = true;
+    if (previewViewsEl) previewViewsEl.innerHTML = '';
+    if (previewColorCarouselEl) previewColorCarouselEl.innerHTML = '';
+    if (previewSetMainEl) previewSetMainEl.hidden = true;
+    previewColors = [];
+    previewViewsByColor = {};
+    previewActiveColor = null;
+    previewActiveView = null;
+    previewMainView = null;
+    previewBaseline = null;
+    previewBusy = false;
+    previewSaving = false;
+    if (btnPreviewEl) btnPreviewEl.disabled = false;
+    if (previewSaveBtnEl) previewSaveBtnEl.disabled = true;
+  }
+
+  function closePreviewUnsavedDialog() {
+    pendingPreviewUnsavedAction = null;
+    if (!previewUnsavedDialogEl) return;
+    blurFocusInside(previewUnsavedDialogEl);
+    previewUnsavedDialogEl.hidden = true;
+    previewUnsavedDialogEl.setAttribute('aria-hidden', 'true');
+  }
+
+  function openPreviewUnsavedDialog() {
+    if (!previewUnsavedDialogEl) return false;
+    previewUnsavedDialogEl.hidden = false;
+    previewUnsavedDialogEl.setAttribute('aria-hidden', 'false');
+    return true;
+  }
+
+  function requestClosePreviewModal() {
+    if (!previewModalEl || previewModalEl.hidden) return;
+    if (previewBusy || previewSaving) return;
+    if (isPreviewDirty()) {
+      pendingPreviewUnsavedAction = 'close';
+      if (!openPreviewUnsavedDialog()) {
+        discardPreviewChangesAndClose();
+      }
+      return;
+    }
+    closePreviewModal();
+  }
+
+  function discardPreviewChangesAndClose() {
+    closePreviewUnsavedDialog();
+    // Revert studio draft color selection if we mutated it while dirty.
+    if (previewBaseline && draft) {
+      var enabledKeys = {};
+      (previewBaseline.colors || []).forEach(function (c) {
+        enabledKeys[c.color_key] = !!c.enabled;
+      });
+      previewColors.forEach(function (c) {
+        if (Object.prototype.hasOwnProperty.call(enabledKeys, c.color_key)) {
+          c.enabled = enabledKeys[c.color_key];
+        }
+      });
+      previewMainView = previewBaseline.main_preview_view || 'front';
+      syncStudioDraftFromPreviewColors();
+    }
+    closePreviewModal({ forceClose: true, discardEphemeral: !previewPersisted });
+  }
+
+  function closePreviewModal(opts) {
+    opts = opts || {};
     var snapDesignId = ctxDesign && ctxDesign.id != null ? Number(ctxDesign.id) : 0;
     var snapProductKey = ctxProductKey;
     var snapPid = previewPrintifyId;
+    // Keep Printify product after Save Product; delete only ephemeral unsaved drafts.
+    var keep = previewPersisted && !opts.discardEphemeral;
     var cleanupOpts = {
       design_id: snapDesignId,
       product_key: snapProductKey,
       printify_product_id: snapPid,
+      keep_printify: keep,
     };
 
     if (!previewModalEl || previewModalEl.hidden) {
@@ -4463,26 +4713,119 @@
       }
       return;
     }
+    if (!opts.forceClose && isPreviewDirty()) {
+      requestClosePreviewModal();
+      return;
+    }
     setPreviewLoading(true, t('designStudioPreviewCloseCleanup', 'Closing preview…'));
     var done = function () {
       blurFocusInside(previewModalEl);
       previewModalEl.hidden = true;
       previewModalEl.setAttribute('aria-hidden', 'true');
       previewModalEl.classList.remove('is-preview-busy');
-      setPreviewLoading(false);
-      setPreviewError('');
-      if (previewContentEl) previewContentEl.hidden = true;
-      if (previewFooterEl) previewFooterEl.hidden = true;
-      if (previewViewsEl) previewViewsEl.innerHTML = '';
-      if (previewColorCarouselEl) previewColorCarouselEl.innerHTML = '';
-      previewColors = [];
-      previewViewsByColor = {};
-      previewActiveColor = null;
-      previewActiveView = null;
-      previewBusy = false;
-      if (btnPreviewEl) btnPreviewEl.disabled = false;
+      resetPreviewUiState();
+      if (!keep) previewPersisted = false;
     };
     cleanupPreviewDraft(cleanupOpts).finally(done);
+  }
+
+  async function savePreviewProduct() {
+    if (previewSaving || previewBusy || !previewPrintifyId || !ctxDesign || !ctxProductKey) return false;
+    if (!isPreviewDirty() && previewPersisted) return true;
+    var owner = getOwnerId();
+    if (!owner) return false;
+
+    previewSaving = true;
+    markPreviewDirtyUi();
+    setPreviewLoading(true, t('designStudioPreviewSaving', 'Saving product…'));
+
+    try {
+      var enabledKeys = previewColors
+        .filter(function (c) {
+          return c && c.enabled !== false;
+        })
+        .map(function (c) {
+          return c.color_key;
+        });
+      var selectedIds = [];
+      previewColors.forEach(function (c) {
+        if (!c || c.enabled === false) return;
+        (c.variant_ids || []).forEach(function (id) {
+          var n = Number(id);
+          if (Number.isFinite(n)) selectedIds.push(n);
+        });
+      });
+      if (!selectedIds.length && draft && draft.variants && Array.isArray(draft.variants.selected_ids)) {
+        selectedIds = draft.variants.selected_ids.slice();
+      }
+
+      var res = await fetch(
+        apiBase() + '?op=creator-studio-preview-save&owner_id=' + encodeURIComponent(owner),
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            owner_id: owner,
+            design_id: Number(ctxDesign.id),
+            product_key: ctxProductKey,
+            printify_product_id: previewPrintifyId,
+            enabled_color_keys: enabledKeys,
+            selected_variant_ids: selectedIds,
+            main_preview_view: previewMainView || previewActiveView || 'front',
+            color_key: previewActiveColor || undefined,
+          }),
+        }
+      );
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok || !data || !data.ok) {
+        setPreviewLoading(false);
+        setPreviewError(
+          (data && data.detail) || t('designStudioPreviewSaveError', 'Could not save product.')
+        );
+        previewSaving = false;
+        markPreviewDirtyUi();
+        return false;
+      }
+      previewPersisted = true;
+      applyPreviewPayload(data, { resetBaseline: true });
+      syncStudioDraftFromPreviewColors();
+      if (draft) {
+        savedDraftJson = JSON.stringify(draft);
+        markDirtyUi();
+      }
+      setPreviewLoading(false);
+      previewSaving = false;
+      markPreviewDirtyUi();
+      setStatus(t('designStudioPreviewSaved', 'Product saved.'));
+      return true;
+    } catch (e) {
+      console.warn('[creator-design-studio] preview save', e);
+      setPreviewLoading(false);
+      setPreviewError(t('designStudioPreviewSaveError', 'Could not save product.'));
+      previewSaving = false;
+      markPreviewDirtyUi();
+      return false;
+    }
+  }
+
+  async function handlePreviewUnsavedAction(action) {
+    if (action === 'cancel') {
+      closePreviewUnsavedDialog();
+      return;
+    }
+    if (action === 'discard') {
+      discardPreviewChangesAndClose();
+      return;
+    }
+    if (action === 'save') {
+      var ok = await savePreviewProduct();
+      if (!ok) return;
+      closePreviewUnsavedDialog();
+      closePreviewModal({ forceClose: true });
+    }
   }
 
   async function openPreviewModal() {
@@ -4495,8 +4838,11 @@
     if (!previewModalEl) return;
 
     previewBusy = true;
+    previewPersisted = false;
+    previewBaseline = null;
     if (btnPreviewEl) btnPreviewEl.disabled = true;
     closeSubmodals();
+    closePreviewUnsavedDialog();
     previewModalEl.hidden = false;
     previewModalEl.setAttribute('aria-hidden', 'false');
     if (previewContentEl) previewContentEl.hidden = true;
@@ -4535,7 +4881,7 @@
         if (btnPreviewEl) btnPreviewEl.disabled = false;
         return;
       }
-      applyPreviewPayload(data);
+      applyPreviewPayload(data, { resetBaseline: true });
       setPreviewLoading(false);
       previewBusy = false;
       if (btnPreviewEl) btnPreviewEl.disabled = false;
@@ -4552,10 +4898,14 @@
     if (previewUnloadBound) return;
     previewUnloadBound = true;
     window.addEventListener('pagehide', function () {
-      if (previewPrintifyId) cleanupPreviewDraft();
+      if (previewPrintifyId) {
+        cleanupPreviewDraft({ keep_printify: previewPersisted });
+      }
     });
     window.addEventListener('beforeunload', function () {
-      if (previewPrintifyId) cleanupPreviewDraft();
+      if (previewPrintifyId) {
+        cleanupPreviewDraft({ keep_printify: previewPersisted });
+      }
     });
   }
 
@@ -5181,9 +5531,34 @@
     });
     root.querySelectorAll('[data-cds-preview-close]').forEach(function (el) {
       el.addEventListener('click', function () {
-        closePreviewModal();
+        requestClosePreviewModal();
       });
     });
+    root.querySelectorAll('[data-cds-preview-unsaved]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        handlePreviewUnsavedAction(el.getAttribute('data-cds-preview-unsaved') || 'cancel');
+      });
+    });
+    if (previewSaveBtnEl) {
+      previewSaveBtnEl.addEventListener('click', function () {
+        savePreviewProduct();
+      });
+    }
+    if (previewDiscardBtnEl) {
+      previewDiscardBtnEl.addEventListener('click', function () {
+        if (isPreviewDirty()) {
+          discardPreviewChangesAndClose();
+          return;
+        }
+        // No dirty changes: close preview; keep Printify product only if previously saved.
+        closePreviewModal({ forceClose: true, discardEphemeral: !previewPersisted });
+      });
+    }
+    if (previewSetMainEl) {
+      previewSetMainEl.addEventListener('click', function () {
+        setAsMainPreview();
+      });
+    }
     if (btnPreviewEl) {
       btnPreviewEl.addEventListener('click', function () {
         openPreviewModal();
@@ -5346,8 +5721,13 @@
           ev.preventDefault();
           return;
         }
+        if (previewUnsavedDialogEl && !previewUnsavedDialogEl.hidden) {
+          handlePreviewUnsavedAction('cancel');
+          ev.preventDefault();
+          return;
+        }
         if (previewModalEl && !previewModalEl.hidden) {
-          closePreviewModal();
+          requestClosePreviewModal();
           ev.preventDefault();
           return;
         }
@@ -5506,7 +5886,8 @@
     if (cropLayerEl) cropLayerEl.hidden = true;
     if (printZoneEl) printZoneEl.classList.remove('is-cropping');
     closeUnsavedDialog();
-    closePreviewModal();
+    closePreviewUnsavedDialog();
+    closePreviewModal({ forceClose: true });
     closeHistoryModal();
     closeSubmodals();
     hideEazyTip();

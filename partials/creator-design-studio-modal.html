@@ -434,16 +434,45 @@
         <div class="cds-preview-content" id="cds-preview-content" hidden>
           <aside class="cds-preview-views" id="cds-preview-views" aria-label="Product views"></aside>
           <div class="cds-preview-main">
+            <button
+              type="button"
+              class="cds-preview-set-main"
+              id="cds-preview-set-main"
+              hidden
+              data-t="creator.design_studio.preview_set_as_preview"
+            >Set as Preview</button>
             <img class="cds-preview-main__img" id="cds-preview-main-img" alt="" decoding="async">
             <p class="cds-preview-main__empty" id="cds-preview-main-empty" hidden data-t="creator.design_studio.preview_no_image">No preview image for this view.</p>
           </div>
         </div>
       </div>
       <footer class="cds-preview-footer" id="cds-preview-footer" hidden>
-        <button type="button" class="cds-preview-carousel__nav" id="cds-preview-color-prev" aria-label="Previous colors" hidden>‹</button>
-        <div class="cds-preview-carousel" id="cds-preview-color-carousel" role="listbox" aria-label="Color variants"></div>
-        <button type="button" class="cds-preview-carousel__nav" id="cds-preview-color-next" aria-label="Next colors" hidden>›</button>
+        <div class="cds-preview-footer__carousel">
+          <button type="button" class="cds-preview-carousel__nav" id="cds-preview-color-prev" aria-label="Previous colors" hidden>‹</button>
+          <div class="cds-preview-carousel" id="cds-preview-color-carousel" role="listbox" aria-label="Color variants"></div>
+          <button type="button" class="cds-preview-carousel__nav" id="cds-preview-color-next" aria-label="Next colors" hidden>›</button>
+        </div>
+        <div class="cds-preview-footer__actions">
+          <button type="button" class="cds-btn-secondary cds-preview-discard" id="cds-preview-discard" data-t="creator.design_studio.preview_discard">Discard</button>
+          <button type="button" class="cds-modal__btn cds-modal__btn--save cds-preview-save" id="cds-preview-save" disabled data-t="creator.design_studio.preview_save_product">Save Product</button>
+        </div>
       </footer>
+    </div>
+  </div>
+
+  <div class="cds-submodal cds-submodal--preview-unsaved" id="cds-preview-unsaved-dialog" hidden aria-hidden="true">
+    <div class="cds-submodal__backdrop" data-cds-preview-unsaved="cancel"></div>
+    <div class="cds-submodal__sheet cds-unsaved-sheet" role="dialog" aria-modal="true" aria-labelledby="cds-preview-unsaved-title">
+      <header class="cds-submodal__head">
+        <h3 id="cds-preview-unsaved-title" class="cds-submodal__title" data-t="creator.design_studio.preview_unsaved_title">Unsaved preview changes</h3>
+        <button type="button" class="cds-modal__btn cds-modal__btn--icon" data-cds-preview-unsaved="cancel" aria-label="Close">&times;</button>
+      </header>
+      <p class="cds-unsaved-message" id="cds-preview-unsaved-message" data-t="creator.design_studio.preview_unsaved_body">You have unsaved preview changes. Save the product, discard changes, or cancel to keep editing.</p>
+      <div class="cds-unsaved-actions">
+        <button type="button" class="cds-btn-secondary" data-cds-preview-unsaved="cancel" data-t="creator.design_studio.unsaved_cancel">Cancel</button>
+        <button type="button" class="cds-btn-secondary cds-unsaved-discard" data-cds-preview-unsaved="discard" data-t="creator.design_studio.preview_discard">Discard</button>
+        <button type="button" class="cds-modal__btn cds-modal__btn--save" data-cds-preview-unsaved="save" data-t="creator.design_studio.preview_save_product">Save Product</button>
+      </div>
     </div>
   </div>
 
