@@ -93,6 +93,7 @@
   var previewUnloadBound = false;
   var previewPersisted = false;
   var previewMainView = null;
+  var previewMainColor = null;
   var previewBaseline = null;
   var previewSaving = false;
   var previewUnsavedDialogEl = null;
@@ -4162,12 +4163,120 @@
         return { color_key: c.color_key, enabled: !!c.enabled };
       }),
       main_preview_view: previewMainView || 'front',
+      main_preview_color: previewMainColor || null,
     };
+  }
+
+  function previewColorKeysMatch(a, b) {
+    var x = normColorKey(a);
+    var y = normColorKey(b);
+    if (!x || !y) return false;
+    if (x === y) return true;
+    return x.indexOf(y) !== -1 || y.indexOf(x) !== -1;
+  }
+
+  /** Admin global-shipping pool from Variants tab (`in_admin_pool`). */
+  function adminPoolColorMeta() {
+    var map = {};
+    var groups = (ctxData && ctxData.variant_groups) || {};
+    Object.keys(groups).forEach(function (color) {
+      var items = (groups[color] || []).filter(function (v) {
+        return v && v.in_admin_pool;
+      });
+      if (!items.length) return;
+      var key = normColorKey(color);
+      if (!key) return;
+      map[key] = {
+        label: color,
+        unlocked: items.some(function (v) {
+          return !!v.unlocked;
+        }),
+      };
+    });
+    return map;
+  }
+
+  function findAdminPoolMetaForColor(colorKey, label) {
+    var pool = adminPoolColorMeta();
+    var keys = Object.keys(pool);
+    if (!keys.length) return null;
+    var ck = normColorKey(colorKey);
+    var lk = normColorKey(label);
+    if (ck && pool[ck]) return pool[ck];
+    if (lk && pool[lk]) return pool[lk];
+    for (var i = 0; i < keys.length; i++) {
+      var pk = keys[i];
+      if (previewColorKeysMatch(pk, ck) || previewColorKeysMatch(pk, lk)) return pool[pk];
+    }
+    return null;
+  }
+
+  function isPreviewColorInAdminPool(c) {
+    if (!c) return false;
+    var pool = adminPoolColorMeta();
+    if (!Object.keys(pool).length) return true; // no context yet — keep payload colors
+    return !!findAdminPoolMetaForColor(c.color_key, c.label);
+  }
+
+  function isPreviewColorUnlocked(c) {
+    if (!c) return false;
+    var meta = findAdminPoolMetaForColor(c.color_key, c.label);
+    if (meta) return !!meta.unlocked;
+    // No pool meta: treat enabled Printify colors as selectable.
+    return c.enabled !== false;
+  }
+
+  function filterPreviewColorsToAdminPool(colors) {
+    var list = Array.isArray(colors) ? colors : [];
+    var filtered = list.filter(isPreviewColorInAdminPool);
+    return filtered.length ? filtered : list.slice();
+  }
+
+  function isWhitePreviewColor(c) {
+    if (!c) return false;
+    var ck = normColorKey(c.color_key);
+    var lb = String(c.label || '').trim().toLowerCase();
+    return ck === 'white' || lb === 'white' || /^white(\b|_)/i.test(ck) || /^white\b/i.test(lb);
+  }
+
+  /** Prefer White + unlocked; else random unlocked admin-pool color. */
+  function pickDefaultPreviewColor(colors) {
+    var list = Array.isArray(colors) ? colors : [];
+    if (!list.length) return null;
+    var white = list.find(isWhitePreviewColor) || null;
+    if (white && isPreviewColorUnlocked(white)) return white;
+    var unlocked = list.filter(isPreviewColorUnlocked);
+    if (unlocked.length) {
+      return unlocked[Math.floor(Math.random() * unlocked.length)];
+    }
+    if (white) return white;
+    return list[0];
+  }
+
+  function pickPreferredPreviewView(views, preferred) {
+    var list = Array.isArray(views) ? views : [];
+    if (!list.length) return preferred || 'front';
+    var want = normPos(preferred) || 'front';
+    var hit =
+      list.find(function (v) {
+        return v.view_key === want;
+      }) ||
+      list.find(function (v) {
+        return v.view_key === 'front';
+      }) ||
+      list[0];
+    return hit ? hit.view_key : want;
   }
 
   function isPreviewDirty() {
     if (!previewBaseline) return false;
     if (String(previewMainView || '') !== String(previewBaseline.main_preview_view || '')) {
+      return true;
+    }
+    if (
+      String(normColorKey(previewMainColor) || '') !==
+      String(normColorKey(previewBaseline.main_preview_color) || '')
+    ) {
       return true;
     }
     var baselineMap = {};
@@ -4188,10 +4297,16 @@
     var dirty = isPreviewDirty();
     if (previewSaveBtnEl) previewSaveBtnEl.disabled = !dirty || previewBusy || previewSaving;
     if (previewSetMainEl) {
-      var isCurrent = previewMainView && previewActiveView && previewMainView === previewActiveView;
+      var sameView = previewMainView && previewActiveView && previewMainView === previewActiveView;
+      var sameColor =
+        previewMainColor &&
+        previewActiveColor &&
+        previewColorKeysMatch(previewMainColor, previewActiveColor);
+      var isCurrent = !!(sameView && sameColor);
       previewSetMainEl.hidden = !previewColors.length;
       previewSetMainEl.classList.toggle('is-current', !!isCurrent);
       previewSetMainEl.disabled = !!isCurrent || previewBusy || previewSaving;
+      previewSetMainEl.setAttribute('aria-disabled', isCurrent || previewBusy || previewSaving ? 'true' : 'false');
       previewSetMainEl.textContent = isCurrent
         ? t('designStudioPreviewIsMain', 'Main preview')
         : t('designStudioPreviewSetAsPreview', 'Set as Preview');
@@ -4231,6 +4346,7 @@
     draft.variants.selected_ids = Array.from(ids);
     draft.mockups = draft.mockups || {};
     draft.mockups.main_preview_view = previewMainView || 'front';
+    draft.mockups.main_preview_color = previewMainColor || null;
     draft.mockups.channel_preview = draft.mockups.channel_preview || {};
     draft.mockups.channel_preview.shopify = previewMainView || 'front';
     markDirtyUi();
@@ -4387,7 +4503,11 @@
     for (var i = 0; i < views.length; i++) {
       var v = views[i];
       var on = v.view_key === previewActiveView;
-      var isMain = previewMainView && v.view_key === previewMainView;
+      var isMain =
+        previewMainView &&
+        v.view_key === previewMainView &&
+        previewMainColor &&
+        previewColorKeysMatch(previewActiveColor, previewMainColor);
       html +=
         '<button type="button" class="cds-preview-view' +
         (on ? ' is-active' : '') +
@@ -4544,8 +4664,10 @@
   }
 
   function setAsMainPreview() {
+    if (previewBusy || previewSaving) return;
     if (!previewActiveView) return;
     previewMainView = previewActiveView;
+    previewMainColor = previewActiveColor || previewMainColor || null;
     syncStudioDraftFromPreviewColors();
     renderPreviewViews();
     markPreviewDirtyUi();
@@ -4555,29 +4677,73 @@
     opts = opts || {};
     previewPrintifyId = data && data.printify_product_id ? String(data.printify_product_id) : null;
     previewPersisted = !!(data && data.persisted) || previewPersisted;
-    previewColors = Array.isArray(data && data.colors)
+    var rawColors = Array.isArray(data && data.colors)
       ? data.colors.map(function (c) {
           return Object.assign({}, c, { enabled: c.enabled !== false });
         })
       : [];
+    previewColors = filterPreviewColorsToAdminPool(rawColors);
     previewViewsByColor =
       data && data.views_by_color && typeof data.views_by_color === 'object' ? data.views_by_color : {};
     if (!Object.keys(previewViewsByColor).length && Array.isArray(data && data.views)) {
       var ack = data.active_color_key || (previewColors[0] && previewColors[0].color_key) || 'default';
       previewViewsByColor[ack] = data.views;
     }
-    previewActiveColor =
-      data.active_color_key ||
-      (previewColors[0] && previewColors[0].color_key) ||
-      normColorKey(resolveColorKey()) ||
-      null;
-    previewActiveView = data.active_view || 'front';
-    previewMainView =
-      data.main_preview_view ||
-      (draft && draft.mockups && draft.mockups.main_preview_view) ||
-      previewMainView ||
-      data.active_view ||
-      'front';
+    // Drop views for colors filtered out of the admin pool.
+    var allowedViews = {};
+    for (var vi = 0; vi < previewColors.length; vi++) {
+      var pck = previewColors[vi].color_key;
+      if (previewViewsByColor[pck]) allowedViews[pck] = previewViewsByColor[pck];
+    }
+    previewViewsByColor = allowedViews;
+
+    var draftMainView =
+      (draft && draft.mockups && draft.mockups.main_preview_view) || null;
+    var draftMainColor =
+      (draft && draft.mockups && draft.mockups.main_preview_color) || null;
+    var hasDraftMain = !!(draftMainView || draftMainColor);
+    var savedMainView = hasDraftMain ? draftMainView || data.main_preview_view || null : null;
+    var savedMainColor = hasDraftMain ? draftMainColor || data.main_preview_color || null : null;
+
+    var preferredActive = null;
+    if (savedMainColor) {
+      preferredActive =
+        previewColors.find(function (c) {
+          return (
+            previewColorKeysMatch(c.color_key, savedMainColor) ||
+            previewColorKeysMatch(c.label, savedMainColor)
+          );
+        }) || null;
+    }
+    if (!preferredActive && hasDraftMain && data.active_color_key) {
+      preferredActive =
+        previewColors.find(function (c) {
+          return (
+            previewColorKeysMatch(c.color_key, data.active_color_key) ||
+            previewColorKeysMatch(c.label, data.active_color_key)
+          );
+        }) || null;
+    }
+    if (!preferredActive) {
+      preferredActive = pickDefaultPreviewColor(previewColors) || previewColors[0] || null;
+    }
+
+    previewActiveColor = preferredActive ? preferredActive.color_key : null;
+    var viewsForActive = (previewActiveColor && previewViewsByColor[previewActiveColor]) || [];
+    previewActiveView = pickPreferredPreviewView(
+      viewsForActive,
+      savedMainView || 'front'
+    );
+    if (hasDraftMain) {
+      previewMainView = savedMainView || pickPreferredPreviewView(viewsForActive, 'front');
+      previewMainColor = savedMainColor || (preferredActive && preferredActive.color_key) || previewActiveColor;
+    } else {
+      // Fresh: White + Front if unlocked, else random unlocked admin color + Front.
+      previewMainView = pickPreferredPreviewView(viewsForActive, 'front');
+      previewMainColor = (preferredActive && preferredActive.color_key) || previewActiveColor;
+      previewActiveView = previewMainView;
+    }
+
     setPreviewError('');
     if (previewContentEl) previewContentEl.hidden = false;
     renderPreviewColorCarousel();
@@ -4639,6 +4805,7 @@
     previewActiveColor = null;
     previewActiveView = null;
     previewMainView = null;
+    previewMainColor = null;
     previewBaseline = null;
     previewBusy = false;
     previewSaving = false;
@@ -4688,6 +4855,7 @@
         }
       });
       previewMainView = previewBaseline.main_preview_view || 'front';
+      previewMainColor = previewBaseline.main_preview_color || null;
       syncStudioDraftFromPreviewColors();
     }
     closePreviewModal({ forceClose: true, discardEphemeral: !previewPersisted });
@@ -4773,7 +4941,9 @@
             enabled_color_keys: enabledKeys,
             selected_variant_ids: selectedIds,
             main_preview_view: previewMainView || previewActiveView || 'front',
+            main_preview_color: previewMainColor || previewActiveColor || undefined,
             color_key: previewActiveColor || undefined,
+            allowed_color_keys: Object.keys(adminPoolColorMeta()),
           }),
         }
       );
@@ -4867,6 +5037,7 @@
             color_key: resolveColorKey(),
             placement: currentPlacementPayload(),
             by_position: buildPreviewByPositionPayload(),
+            allowed_color_keys: Object.keys(adminPoolColorMeta()),
           }),
         }
       );
@@ -5555,7 +5726,10 @@
       });
     }
     if (previewSetMainEl) {
-      previewSetMainEl.addEventListener('click', function () {
+      previewSetMainEl.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (previewSetMainEl.disabled) return;
         setAsMainPreview();
       });
     }
