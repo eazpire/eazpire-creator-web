@@ -38,6 +38,9 @@
   var projectsCache = [];
   var exportAudioCtx = null;
   var exportSourceCache = Object.create(null);
+  var linkExtracted = null; // { url, format, kind } once Extract succeeds — required before Download is enabled
+  var linkPhonePollTimer = null;
+  var linkPhoneSessionId = null;
 
   function getExportAudioContext() {
     if (!exportAudioCtx) {
@@ -885,7 +888,24 @@
     renderLibraryGrid();
   }
 
-  // ── Link ingest (paste URL → download media, best-effort) ──
+  // ── Link ingest (paste URL → preview via Extract → save via Download) ──
+  function resetLinkPreview() {
+    linkExtracted = null;
+    var preview = document.getElementById('cvs-link-preview');
+    var video = document.getElementById('cvs-link-preview-video');
+    var audio = document.getElementById('cvs-link-preview-audio');
+    var image = document.getElementById('cvs-link-preview-image');
+    var downloadBtn = document.getElementById('cvs-link-submit');
+    if (preview) preview.hidden = true;
+    [video, audio, image].forEach(function (el) {
+      if (!el) return;
+      el.hidden = true;
+      if (el.pause) el.pause();
+      el.removeAttribute('src');
+    });
+    if (downloadBtn) downloadBtn.disabled = true;
+  }
+
   function openLinkModal() {
     var overlay = document.getElementById('cvsLinkModal');
     if (!overlay) return;
@@ -894,11 +914,13 @@
     if (urlInput) urlInput.value = '';
     if (statusEl) {
       statusEl.textContent = '';
-      statusEl.classList.remove('is-success');
+      statusEl.className = 'cvs-link-status';
     }
+    resetLinkPreview();
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
     if (urlInput) urlInput.focus();
+    startLinkPhoneBridge();
   }
 
   function closeLinkModal() {
@@ -906,14 +928,17 @@
     if (!overlay) return;
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
+    stopLinkPhoneBridge();
+    resetLinkPreview();
   }
 
   function linkIngestErrorMessage(data) {
     if (data && data.message) return data.message;
     var map = {
-      unsupported_platform:
+      link_service_not_configured:
         (data && data.platform ? data.platform + ': ' : '') +
-        i18n('link_error_platform', "This platform isn't supported yet. Save the file first and use Device instead."),
+        i18n('link_error_not_configured', 'Link download service not configured. Please contact support.'),
+      cobalt_failed: i18n('link_error_cobalt_failed', 'Could not extract media from that link.'),
       unsupported_content_type: i18n(
         'link_error_content_type',
         "That link doesn't point directly to a video, audio, or image file."
@@ -926,30 +951,100 @@
     return (data && map[data.error]) || i18n('link_error_generic', 'Could not add media from that link.');
   }
 
-  async function submitLinkIngest() {
+  function currentLinkFormat() {
+    var formatInput = document.querySelector('input[name="cvs-link-format"]:checked');
+    return formatInput ? formatInput.value : 'mp4';
+  }
+
+  async function submitLinkExtract() {
     var urlInput = document.getElementById('cvs-link-url');
     var statusEl = document.getElementById('cvs-link-status');
-    var submitBtn = document.getElementById('cvs-link-submit');
-    var formatInput = document.querySelector('input[name="cvs-link-format"]:checked');
+    var extractBtn = document.getElementById('cvs-link-extract');
     var url = urlInput ? String(urlInput.value || '').trim() : '';
+    resetLinkPreview();
     if (!url) {
       if (statusEl) {
         statusEl.textContent = i18n('link_error_invalid_url', 'Please enter a valid URL.');
-        statusEl.classList.remove('is-success');
+        statusEl.className = 'cvs-link-status';
       }
       return;
     }
+    var format = currentLinkFormat();
+    if (statusEl) {
+      statusEl.textContent = i18n('link_extracting', 'Extracting preview…');
+      statusEl.className = 'cvs-link-status is-info';
+    }
+    if (extractBtn) extractBtn.disabled = true;
+    try {
+      var res = await fetch(apiUrl('video-studio-link-extract'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url, format: format }),
+      });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (!data.ok || !data.preview_url) {
+        if (statusEl) {
+          statusEl.textContent = linkIngestErrorMessage(data);
+          statusEl.className = 'cvs-link-status';
+        }
+        return;
+      }
+      linkExtracted = { url: url, format: format, kind: data.kind };
+      renderLinkPreview(data.preview_url, data.kind);
+      var downloadBtn = document.getElementById('cvs-link-submit');
+      if (downloadBtn) downloadBtn.disabled = false;
+      if (statusEl) {
+        statusEl.textContent = data.warning
+          ? i18n('link_extracted_with_warning', 'Preview ready — audio-only extraction was not available, this will save the original media.')
+          : i18n('link_extracted', 'Preview ready — click Download to save it.');
+        statusEl.className = 'cvs-link-status is-success';
+      }
+    } catch (e) {
+      console.warn('[VideoStudio] link extract failed', e);
+      if (statusEl) {
+        statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+        statusEl.className = 'cvs-link-status';
+      }
+    } finally {
+      if (extractBtn) extractBtn.disabled = false;
+    }
+  }
+
+  function renderLinkPreview(previewUrl, kind) {
+    var preview = document.getElementById('cvs-link-preview');
+    var video = document.getElementById('cvs-link-preview-video');
+    var audio = document.getElementById('cvs-link-preview-audio');
+    var image = document.getElementById('cvs-link-preview-image');
+    if (!preview) return;
+    [video, audio, image].forEach(function (el) {
+      if (el) el.hidden = true;
+    });
+    var target = kind === 'audio' ? audio : kind === 'image' ? image : video;
+    if (target) {
+      target.src = previewUrl;
+      target.hidden = false;
+    }
+    preview.hidden = false;
+  }
+
+  async function submitLinkDownload() {
+    var statusEl = document.getElementById('cvs-link-status');
+    var downloadBtn = document.getElementById('cvs-link-submit');
+    if (!linkExtracted) return;
     if (statusEl) {
       statusEl.textContent = i18n('link_downloading', 'Downloading…');
-      statusEl.classList.remove('is-success');
+      statusEl.className = 'cvs-link-status is-info';
     }
-    if (submitBtn) submitBtn.disabled = true;
+    if (downloadBtn) downloadBtn.disabled = true;
     try {
       var res = await fetch(apiUrl('video-studio-link-ingest'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url, format: formatInput ? formatInput.value : 'mp4' }),
+        body: JSON.stringify({ url: linkExtracted.url, format: linkExtracted.format }),
       });
       var data = await res.json().catch(function () {
         return { ok: false };
@@ -957,8 +1052,9 @@
       if (!data.ok || !data.asset) {
         if (statusEl) {
           statusEl.textContent = linkIngestErrorMessage(data);
-          statusEl.classList.remove('is-success');
+          statusEl.className = 'cvs-link-status';
         }
+        if (downloadBtn) downloadBtn.disabled = false;
         return;
       }
       libraryAssets.unshift(data.asset);
@@ -967,18 +1063,116 @@
         statusEl.textContent = data.warning
           ? i18n('link_added_with_warning', 'Added — audio-only extraction was not available, saved the original media.')
           : i18n('link_added', 'Added to project sidebar');
-        statusEl.classList.add('is-success');
+        statusEl.className = 'cvs-link-status is-success';
       }
       setTimeout(closeLinkModal, 900);
     } catch (e) {
-      console.warn('[VideoStudio] link ingest failed', e);
+      console.warn('[VideoStudio] link download failed', e);
       if (statusEl) {
         statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
-        statusEl.classList.remove('is-success');
+        statusEl.className = 'cvs-link-status';
       }
-    } finally {
-      if (submitBtn) submitBtn.disabled = false;
+      if (downloadBtn) downloadBtn.disabled = false;
     }
+  }
+
+  // ── Link modal phone QR bridge — paste a link on your phone, it fills the desktop input live ──
+  function phoneBridgeApiBase() {
+    return API_BASE.replace(/\/apps\/creator-dispatch$/, '');
+  }
+
+  function stopLinkPhoneBridge() {
+    if (linkPhonePollTimer) {
+      clearInterval(linkPhonePollTimer);
+      linkPhonePollTimer = null;
+    }
+    linkPhoneSessionId = null;
+  }
+
+  function applyPhoneLinkValue(value) {
+    var urlInput = document.getElementById('cvs-link-url');
+    var phoneStatus = document.getElementById('cvs-link-phone-status');
+    if (urlInput) {
+      urlInput.value = value;
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (phoneStatus) phoneStatus.textContent = i18n('link_phone_received', 'Link received from phone');
+    submitLinkExtract();
+  }
+
+  function pollLinkPhoneSession(sessionId, ownerId) {
+    var base = phoneBridgeApiBase();
+    var u =
+      base +
+      '/api/creator-phone-upload/session?id=' +
+      encodeURIComponent(sessionId) +
+      '&owner_id=' +
+      encodeURIComponent(ownerId);
+    fetch(u, { credentials: 'omit' })
+      .then(function (r) {
+        return r.json().catch(function () {
+          return null;
+        });
+      })
+      .then(function (data) {
+        if (!data || !data.ok || linkPhoneSessionId !== sessionId) return;
+        if (data.status === 'completed' && data.value) {
+          stopLinkPhoneBridge();
+          applyPhoneLinkValue(data.value);
+        } else if (data.status === 'expired') {
+          stopLinkPhoneBridge();
+        }
+      })
+      .catch(function () {});
+  }
+
+  function startLinkPhoneBridge() {
+    var box = document.getElementById('cvs-link-phone');
+    var qrImg = document.getElementById('cvs-link-qr-img');
+    var phoneStatus = document.getElementById('cvs-link-phone-status');
+    if (!box || !isDesktopViewport()) return;
+    var ownerId = getOwnerId();
+    if (!ownerId) return;
+    if (phoneStatus) phoneStatus.textContent = '';
+
+    var base = phoneBridgeApiBase();
+    fetch(base + '/api/creator-phone-upload/config', { credentials: 'omit' })
+      .then(function (r) {
+        return r.json().catch(function () {
+          return null;
+        });
+      })
+      .then(function (cfg) {
+        if (!cfg || !cfg.ok) return null;
+        return fetch(base + '/api/creator-phone-upload/session', {
+          method: 'POST',
+          credentials: 'omit',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ owner_id: ownerId, purpose: 'video_link' }),
+        }).then(function (r2) {
+          return r2.json().catch(function () {
+            return null;
+          });
+        });
+      })
+      .then(function (session) {
+        if (!session || !session.ok || !session.session_id) {
+          if (phoneStatus) {
+            phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+          }
+          return;
+        }
+        linkPhoneSessionId = session.session_id;
+        if (qrImg) {
+          qrImg.src = base + '/api/creator-phone-upload/qr-image?session=' + encodeURIComponent(session.session_id);
+        }
+        linkPhonePollTimer = setInterval(function () {
+          pollLinkPhoneSession(session.session_id, ownerId);
+        }, 2000);
+      })
+      .catch(function () {
+        if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+      });
   }
 
   // ── Phone upload (desktop QR flow) → adds the received image as an asset ──
@@ -2034,9 +2228,16 @@
     on('cvsLinkModal', 'mousedown', function (e) {
       if (e.target && e.target.id === 'cvsLinkModal') closeLinkModal();
     });
-    on('cvs-link-submit', 'click', submitLinkIngest);
+    on('cvs-link-extract', 'click', submitLinkExtract);
+    on('cvs-link-submit', 'click', submitLinkDownload);
     on('cvs-link-url', 'keydown', function (e) {
-      if (e.key === 'Enter') submitLinkIngest();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitLinkExtract();
+      }
+    });
+    on('cvs-link-url', 'input', function () {
+      if (linkExtracted) resetLinkPreview();
     });
     on('cvs-library-btn-close', 'click', closeAssetsLibraryModal);
     on('cvs-library-btn-cancel-select', 'click', function () {

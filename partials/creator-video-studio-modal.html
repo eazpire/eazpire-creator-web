@@ -12,12 +12,31 @@
       <div class="cvs-modal__header-text">
         <div class="cvs-modal__title-row">
           <h2 id="cvs-modal-title" class="cvs-modal__title" data-t="creator.video_studio.title">Video Studio</h2>
-          <button type="button" class="cvs-project-picker" id="cvs-project-picker" aria-haspopup="dialog" aria-label="Open project" title="Open project">
+          <button
+            type="button"
+            class="cvs-project-picker"
+            id="cvs-project-picker"
+            aria-haspopup="dialog"
+            aria-label="Open project"
+            title="Open project"
+          >
             <span class="cvs-project-picker__name" id="cvs-project-picker-name">Untitled</span>
             <span class="cvs-project-picker__chevron" aria-hidden="true">&#9662;</span>
           </button>
-          <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-new-project" aria-label="New project" title="New project">&#65291;</button>
-          <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-save" aria-label="Save" title="Save">&#128190;</button>
+          <button
+            type="button"
+            class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm"
+            id="cvs-btn-new-project"
+            aria-label="New project"
+            title="New project"
+          >&#65291;</button>
+          <button
+            type="button"
+            class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm"
+            id="cvs-btn-save"
+            aria-label="Save"
+            title="Save"
+          >&#128190;</button>
         </div>
         <p class="cvs-modal__status" id="cvs-status" role="status"></p>
       </div>
@@ -38,9 +57,27 @@
           <span aria-hidden="true">×</span>
           <input type="number" id="cvs-aspect-h" class="cvs-aspect__dim" min="2" max="1920" step="2" value="1080" aria-label="Height">
         </div>
-        <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-undo" aria-label="Undo" title="Undo">&#8634;</button>
-        <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-redo" aria-label="Redo" title="Redo">&#8635;</button>
-        <button type="button" class="cvs-btn cvs-btn--primary cvs-btn--icon" id="cvs-btn-export" aria-label="Export" title="Export">&#11015;</button>
+        <button
+          type="button"
+          class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm"
+          id="cvs-btn-undo"
+          aria-label="Undo"
+          title="Undo"
+        >&#8634;</button>
+        <button
+          type="button"
+          class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm"
+          id="cvs-btn-redo"
+          aria-label="Redo"
+          title="Redo"
+        >&#8635;</button>
+        <button
+          type="button"
+          class="cvs-btn cvs-btn--primary cvs-btn--icon"
+          id="cvs-btn-export"
+          aria-label="Export"
+          title="Export"
+        >&#11015;</button>
         <button type="button" class="cvs-btn cvs-btn--icon" id="cvs-btn-close" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -55,9 +92,7 @@
             <input type="file" id="cvs-file-input" accept="image/*,video/*,audio/*" multiple hidden>
           </div>
           <div class="cvs-asset-grid" id="cvs-asset-grid" role="list"></div>
-          <p class="cvs-asset-empty" id="cvs-asset-empty" data-t="creator.video_studio.assets_empty">
-            No assets yet. Click Add to upload images, videos, or audio.
-          </p>
+          <p class="cvs-asset-empty" id="cvs-asset-empty" data-t="creator.video_studio.assets_empty">No assets yet. Click Add to upload images, videos, or audio.</p>
         </div>
         <button type="button" class="cvs-rail" id="cvs-sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="true">
           <span class="cvs-rail__arrow" aria-hidden="true">‹</span>
@@ -85,9 +120,9 @@
           <div class="cvs-viewer__transport">
             <div class="cvs-transport-controls" id="cvs-transport-controls">
               <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-restart" aria-label="Restart to start" title="Restart to start">&#9198;</button>
-              <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-backward" aria-label="Previous audio clip" title="Previous audio clip">&#9194;</button>
+              <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-backward" aria-label="Previous clip" title="Previous clip">&#9194;</button>
               <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-btn-play" aria-label="Play">&#9654;</button>
-              <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-forward" aria-label="Next audio clip" title="Next audio clip">&#9193;</button>
+              <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-btn-forward" aria-label="Next clip" title="Next clip">&#9193;</button>
             </div>
             <span class="cvs-time" id="cvs-time">0:00 / 0:00</span>
             <div class="cvs-transform-tools" id="cvs-transform-tools">
@@ -129,6 +164,7 @@
     </div>
   </div>
 </div>
+
 
 <div
   id="cvsAssetToolsModal"
@@ -272,6 +308,7 @@
   </div>
 </div>
 
+
 <div id="cvsConfirmDialog" class="cvs-confirm-overlay" hidden aria-hidden="true">
   <div
     class="cvs-confirm-box"
@@ -290,13 +327,30 @@
   </div>
 </div>
 
+
 <div id="cvsClipContextMenu" class="cvs-context-menu" hidden role="menu" aria-hidden="true">
-  <button type="button" class="cvs-context-menu__item" id="cvs-ctx-duplicate" role="menuitem">Duplicate clip</button>
-  <button type="button" class="cvs-context-menu__item cvs-context-menu__item--danger" id="cvs-ctx-remove" role="menuitem">Remove clip</button>
+  <button type="button" class="cvs-context-menu__item" id="cvs-ctx-duplicate" role="menuitem">
+    Duplicate clip
+  </button>
+  <button type="button" class="cvs-context-menu__item cvs-context-menu__item--danger" id="cvs-ctx-remove" role="menuitem">
+    Remove clip
+  </button>
 </div>
 
-<div id="cvsProjectMetaModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
-  <div class="cvs-confirm-box cvs-meta-box" id="cvs-meta-box" role="dialog" aria-modal="true" aria-labelledby="cvs-meta-title">
+
+<div
+  id="cvsProjectMetaModal"
+  class="cvs-confirm-overlay"
+  hidden
+  aria-hidden="true"
+>
+  <div
+    class="cvs-confirm-box cvs-meta-box"
+    id="cvs-meta-box"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cvs-meta-title"
+  >
     <h3 class="cvs-confirm-title" id="cvs-meta-title">Save project</h3>
     <label class="cvs-meta-field">
       <span>Name</span>
@@ -313,7 +367,16 @@
   </div>
 </div>
 
-<div id="cvsProjectsModal" class="cvs-modal-root cvs-projects-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cvs-projects-title">
+
+<div
+  id="cvsProjectsModal"
+  class="cvs-modal-root cvs-projects-modal"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cvs-projects-title"
+>
   <div class="cvs-modal__shell cvs-projects-shell">
     <header class="cvs-modal__header">
       <div class="cvs-modal__header-text">
@@ -321,7 +384,13 @@
         <p class="cvs-modal__status" id="cvs-projects-status" role="status"></p>
       </div>
       <div class="cvs-modal__header-actions">
-        <button type="button" class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm" id="cvs-projects-btn-new" aria-label="New project" title="New project">&#65291;</button>
+        <button
+          type="button"
+          class="cvs-btn cvs-btn--ghost cvs-btn--icon-sm"
+          id="cvs-projects-btn-new"
+          aria-label="New project"
+          title="New project"
+        >&#65291;</button>
         <button type="button" class="cvs-btn cvs-btn--icon" id="cvs-projects-btn-close" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -329,13 +398,22 @@
     </header>
     <div class="cvs-projects-body">
       <div class="cvs-projects-grid" id="cvs-projects-grid" role="list"></div>
-      <p class="cvs-projects-empty" id="cvs-projects-empty" hidden>No saved projects yet.</p>
+      <p class="cvs-projects-empty" id="cvs-projects-empty" hidden>
+        No saved projects yet.
+      </p>
     </div>
   </div>
 </div>
 
+
 <div id="cvsAddSourceModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
-  <div class="cvs-confirm-box cvs-addsrc-box" id="cvs-addsrc-box" role="dialog" aria-modal="true" aria-labelledby="cvs-addsrc-title">
+  <div
+    class="cvs-confirm-box cvs-addsrc-box"
+    id="cvs-addsrc-box"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cvs-addsrc-title"
+  >
     <h3 class="cvs-confirm-title" id="cvs-addsrc-title">Add media</h3>
     <div class="cvs-addsrc-grid">
       <button type="button" class="cvs-addsrc-option" id="cvs-addsrc-assets">
@@ -365,27 +443,73 @@
   </div>
 </div>
 
+
 <div id="cvsLinkModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
-  <div class="cvs-confirm-box cvs-meta-box" id="cvs-link-box" role="dialog" aria-modal="true" aria-labelledby="cvs-link-title">
+  <div
+    class="cvs-confirm-box cvs-meta-box cvs-link-box"
+    id="cvs-link-box"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cvs-link-title"
+  >
     <h3 class="cvs-confirm-title" id="cvs-link-title">Add from link</h3>
-    <label class="cvs-meta-field">
-      <span>Media URL</span>
-      <input type="url" id="cvs-link-url" placeholder="https://…">
-    </label>
-    <div class="cvs-link-format" role="radiogroup" aria-label="Format">
-      <span class="cvs-meta-field__label-only">Format</span>
-      <label class="cvs-link-format__option"><input type="radio" name="cvs-link-format" value="mp4" checked> MP4 (video)</label>
-      <label class="cvs-link-format__option"><input type="radio" name="cvs-link-format" value="mp3"> MP3 (audio)</label>
+
+    <div class="cvs-link-body">
+      <div class="cvs-link-main">
+        <label class="cvs-meta-field">
+          <span>Media URL</span>
+          <div class="cvs-link-url-row">
+            <input type="url" id="cvs-link-url" placeholder="https://…">
+            <button type="button" class="cvs-btn cvs-btn--ghost cvs-link-extract-btn" id="cvs-link-extract">
+              Extract
+            </button>
+          </div>
+        </label>
+        <div class="cvs-link-format" role="radiogroup" aria-label="Format">
+          <span class="cvs-meta-field__label-only">Format</span>
+          <label class="cvs-link-format__option">
+            <input type="radio" name="cvs-link-format" value="mp4" checked> MP4 (video)
+          </label>
+          <label class="cvs-link-format__option">
+            <input type="radio" name="cvs-link-format" value="mp3"> MP3 (audio)
+          </label>
+        </div>
+        <p class="cvs-link-status" id="cvs-link-status" role="status"></p>
+
+        <div class="cvs-link-preview" id="cvs-link-preview" hidden>
+          <video id="cvs-link-preview-video" class="cvs-link-preview__media" controls playsinline hidden></video>
+          <audio id="cvs-link-preview-audio" class="cvs-link-preview__media" controls hidden></audio>
+          <img id="cvs-link-preview-image" class="cvs-link-preview__media" alt="" hidden>
+        </div>
+      </div>
+
+      <div class="cvs-link-phone" id="cvs-link-phone" data-desktop-only="1">
+        <p class="cvs-link-phone__title">Or scan with your phone</p>
+        <div class="cvs-link-phone__qr-wrap">
+          <img id="cvs-link-qr-img" class="cvs-link-phone__qr" alt="" width="120" height="120" loading="lazy">
+        </div>
+        <p class="cvs-link-phone__hint">Paste the link on your phone — it fills in here automatically.</p>
+        <p class="cvs-link-phone__status" id="cvs-link-phone-status" role="status"></p>
+      </div>
     </div>
-    <p class="cvs-link-status" id="cvs-link-status" role="status"></p>
-    <div class="cvs-confirm-actions">
+
+    <div class="cvs-modal-footer cvs-confirm-actions">
       <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-link-cancel">Cancel</button>
-      <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-link-submit">Download</button>
+      <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-link-submit" disabled>Download</button>
     </div>
   </div>
 </div>
 
-<div id="cvsAssetsLibraryModal" class="cvs-modal-root cvs-projects-modal cvs-library-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cvs-library-title">
+
+<div
+  id="cvsAssetsLibraryModal"
+  class="cvs-modal-root cvs-projects-modal cvs-library-modal"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cvs-library-title"
+>
   <div class="cvs-modal__shell cvs-projects-shell">
     <header class="cvs-modal__header">
       <div class="cvs-modal__header-text">
@@ -400,7 +524,9 @@
     </header>
     <div class="cvs-projects-body">
       <div class="cvs-library-grid" id="cvs-library-grid" role="list"></div>
-      <p class="cvs-projects-empty" id="cvs-library-empty" hidden>No assets uploaded yet.</p>
+      <p class="cvs-projects-empty" id="cvs-library-empty" hidden>
+        No assets uploaded yet.
+      </p>
     </div>
     <div class="cvs-library-selectbar" id="cvs-library-selectbar" hidden>
       <span class="cvs-library-selectbar__count" id="cvs-library-selectbar-count"></span>
