@@ -265,9 +265,9 @@
               <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
             </button>
             <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="export-vocals" hidden>
-              <p class="cvs-tool-hint">Best-effort vocal isolation (center-channel gating + vocal-range filtering + compression). Still a heuristic, not full AI stem separation — some instruments may remain audible.</p>
+              <p class="cvs-tool-hint">Uses AI source separation (Demucs) to isolate vocals from the instrumental — much cleaner than simple EQ. Falls back to a basic center-channel method if AI separation is unavailable for this file.</p>
               <div class="cvs-tool-footer">
-                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-export-vocals-btn-preview">Generate vocals preview</button>
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-export-vocals-btn-preview">Generate vocals</button>
               </div>
               <div class="cvs-preview-list" id="cvs-export-vocals-previews"></div>
               <p class="cvs-tool-status" id="cvs-export-vocals-status"></p>

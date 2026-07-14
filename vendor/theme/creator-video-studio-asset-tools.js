@@ -1,6 +1,8 @@
 /**
  * Creator Video Studio — asset preview + tools modal (IDEA-028)
- * Cut/reassemble, remove audio, export audio, export vocals (best-effort),
+ * Cut/reassemble, remove audio, export audio, export vocals (AI source
+ * separation via Demucs on Replicate, with a client-side heuristic
+ * fallback — see requestAiVocalSeparation()/extractVocalsHeuristic()),
  * screenshot, duplicate. Preview-first, then Save/Export (except Duplicate).
  */
 (function () {
@@ -292,8 +294,10 @@
   }
 
   /**
-   * Best-effort client-side vocal isolation. Combines three cheap heuristics
-   * (no ML / WASM stem-separation model in the repo, so this stays pure
+   * FALLBACK ONLY — used when server-side AI separation (Demucs via
+   * Replicate, see requestAiVocalSeparation() / src/features/videoStudio/
+   * vocals.js) isn't configured or fails for this file. Combines three
+   * cheap heuristics (no ML model runs client-side, so this stays pure
    * WebAudio + plain JS):
    *
    *  1. Center-channel extraction (mid = (L+R)/2). Vocals are almost always
@@ -309,7 +313,10 @@
    *     followed by a fast compressor to even out levels and mask residual
    *     low-level bleed (acts like a soft noise gate).
    *
-   * Still heuristic quality — see the "best-effort" hint shown in the UI.
+   * This is EQ + gating, not real source separation — anything mixed
+   * dead-center (kick/bass/some synths) still bleeds through. It only
+   * exists as a graceful degradation path; the AI path above is the real
+   * fix for "instrumentals still mixed in".
    */
   function extractVocalsHeuristic(srcBuffer, ctxForOffline) {
     var numFrames = srcBuffer.length;
@@ -982,9 +989,34 @@
     }
   }
 
-  // ── Export vocals tool (best-effort center-channel gate + band-pass) ──
+  // ── Export vocals tool ──────────────────────────────────────────────
+  // Primary path: server-side AI source separation (Demucs on Replicate,
+  // see src/features/videoStudio/vocals.js) — a real neural stem-separation
+  // model, not EQ. Falls back to the old client-side heuristic (center-
+  // channel gate + band-pass) only if AI separation isn't configured or
+  // fails for this file, and clearly labels the fallback as lower quality.
   function exportVocalsReset() {
     clearPreviewList('export-vocals');
+  }
+
+  async function requestAiVocalSeparation(asset) {
+    var mod = Mod();
+    var res = await fetch(mod.apiUrl('video-studio-separate-vocals'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ asset_id: asset.id }),
+    });
+    if (!res.ok) {
+      var errBody = null;
+      try {
+        errBody = await res.json();
+      } catch (e) {}
+      var err = new Error((errBody && (errBody.message || errBody.error)) || 'ai_separation_failed');
+      err.code = errBody && errBody.error;
+      throw err;
+    }
+    return res.blob();
   }
 
   async function exportVocalsPreview() {
@@ -996,25 +1028,77 @@
     stopAllPreviewPlayback();
     var btn = document.getElementById('cvs-export-vocals-btn-preview');
     if (btn) btn.disabled = true;
-    setToolStatus('export-vocals', t('export_vocals_processing', 'Isolating vocals (best-effort)\u2026'));
+    setToolStatus(
+      'export-vocals',
+      t('export_vocals_processing_ai', 'Separating vocals with AI (Demucs)\u2026 this can take up to a minute.')
+    );
+
+    var blob = null;
+    var mime = 'audio/mpeg';
+    var usedAi = false;
+
     try {
-      var buffer = await decodeAssetAudioBuffer(currentAsset);
+      blob = await requestAiVocalSeparation(currentAsset);
+      mime = (blob && blob.type) || 'audio/mpeg';
+      usedAi = true;
+    } catch (aiErr) {
+      console.warn('[VideoStudio] AI vocal separation unavailable, falling back to basic method', aiErr);
+    }
+
+    try {
       var ctx = getToolsAudioContext();
-      var vocalsBuffer = await extractVocalsHeuristic(buffer, ctx);
-      var blob = audioBufferToWav(vocalsBuffer);
+      var durationMs = 0;
+
+      if (!blob) {
+        setToolStatus(
+          'export-vocals',
+          t(
+            'export_vocals_processing_fallback',
+            'AI separation unavailable \u2014 using basic method (more instrumental bleed)\u2026'
+          )
+        );
+        var buffer = await decodeAssetAudioBuffer(currentAsset);
+        var vocalsBuffer = await extractVocalsHeuristic(buffer, ctx);
+        blob = audioBufferToWav(vocalsBuffer);
+        mime = 'audio/wav';
+        durationMs = Math.round((vocalsBuffer.duration || 0) * 1000);
+      } else {
+        try {
+          var arrBuf = await blob.arrayBuffer();
+          var decoded = await ctx.decodeAudioData(arrBuf.slice(0));
+          durationMs = Math.round((decoded.duration || 0) * 1000);
+        } catch (decodeErr) {
+          durationMs = Number(currentAsset.duration_ms) || 0;
+        }
+      }
+
+      var ext = mime.indexOf('wav') !== -1 ? 'wav' : 'mp3';
       var label =
-        (currentAsset.original_name || 'asset') + '-vocals-' + (previewLists['export-vocals'].length + 1) + '.wav';
+        (currentAsset.original_name || 'asset') +
+        '-vocals-' +
+        (previewLists['export-vocals'].length + 1) +
+        '.' +
+        ext;
       var item = addPreviewItem('export-vocals', {
         label: label,
         blob: blob,
         url: blobToObjectUrl(blob),
-        mime: 'audio/wav',
+        mime: mime,
         kind: 'audio',
-        meta: { duration_ms: Math.round((vocalsBuffer.duration || 0) * 1000) },
+        meta: { duration_ms: durationMs },
       });
+
       setToolStatus(
         'export-vocals',
-        t('export_vocals_ready', 'Playing preview-quality vocal extract (best-effort, not full AI separation).')
+        usedAi
+          ? t(
+              'export_vocals_ready_ai',
+              'Playing AI-isolated vocals (Demucs) \u2014 far less instrumental bleed than the old method.'
+            )
+          : t(
+              'export_vocals_ready_fallback',
+              'Playing basic vocal extract (center-channel + EQ) \u2014 some instrumental bleed is expected. Ask an admin to enable AI separation for cleaner results.'
+            )
       );
       // Actually plays the processed vocals-only buffer, not the original
       // mix — this is the fix for the "still hears original mix" bug.

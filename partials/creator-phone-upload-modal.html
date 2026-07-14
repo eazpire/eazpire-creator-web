@@ -1,0 +1,335 @@
+<style>
+  /* Base modal - dialog element */
+  .creator-base-modal {
+    position: fixed;
+    z-index: 10050;
+    border: none;
+    border-radius: 16px;
+    padding: 0;
+    background: #fff;
+    max-width: 520px;
+    width: 95vw;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .creator-base-modal[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .creator-base-modal::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  /* Header - fixed, no shrink */
+  .creator-base-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  .creator-base-modal__title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .creator-base-modal__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    border-radius: 8px;
+    transition: background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .creator-base-modal__close:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .creator-base-modal__close svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Body - scrollable */
+  .creator-base-modal__body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 200px;
+    padding: 16px 20px;
+  }
+  .creator-base-modal__body::-webkit-scrollbar {
+    width: 8px;
+  }
+  .creator-base-modal__body::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.08);
+    border-radius: 4px;
+  }
+  .creator-base-modal__body::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.25);
+    border-radius: 4px;
+  }
+  .creator-base-modal__body::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.35);
+  }
+  body.creator-mode .creator-base-modal__body::-webkit-scrollbar-track,
+  body[data-creator-mode="true"] .creator-base-modal__body::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.25);
+  }
+  body.creator-mode .creator-base-modal__body::-webkit-scrollbar-thumb,
+  body[data-creator-mode="true"] .creator-base-modal__body::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+  }
+  body.creator-mode .creator-base-modal__body::-webkit-scrollbar-thumb:hover,
+  body[data-creator-mode="true"] .creator-base-modal__body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.3);
+  }
+
+  /* Footer - fixed */
+  .creator-base-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 12px 20px;
+    border-top: 1px solid #e5e7eb;
+    background: #fff;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  /* Dark Mode: Creator-Seiten */
+  body.creator-mode .creator-base-modal,
+  body[data-creator-mode="true"] .creator-base-modal {
+    background: #1f2937;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  }
+  body.creator-mode .creator-base-modal::backdrop,
+  body[data-creator-mode="true"] .creator-base-modal::backdrop {
+    background: rgba(0, 0, 0, 0.75);
+  }
+  body.creator-mode .creator-base-modal__header,
+  body[data-creator-mode="true"] .creator-base-modal__header {
+    background: #1f2937;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  body.creator-mode .creator-base-modal__title,
+  body[data-creator-mode="true"] .creator-base-modal__title {
+    color: #f3f4f6;
+  }
+  body.creator-mode .creator-base-modal__close,
+  body[data-creator-mode="true"] .creator-base-modal__close {
+    color: #9ca3af;
+  }
+  body.creator-mode .creator-base-modal__close:hover,
+  body[data-creator-mode="true"] .creator-base-modal__close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f3f4f6;
+  }
+  body.creator-mode .creator-base-modal__body,
+  body[data-creator-mode="true"] .creator-base-modal__body {
+    color: #e5e7eb;
+  }
+  body.creator-mode .creator-base-modal__footer,
+  body[data-creator-mode="true"] .creator-base-modal__footer {
+    background: #1f2937;
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+  .creator-base-modal__btn {
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #f9fafb;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+  }
+  .creator-base-modal__btn:hover {
+    border-color: #F59E0B;
+    background: #fffbeb;
+    color: #92400e;
+  }
+  body.creator-mode .creator-base-modal__btn,
+  body[data-creator-mode="true"] .creator-base-modal__btn {
+    background: rgba(2,6,23,0.35);
+    color: #e5e7eb;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  body.creator-mode .creator-base-modal__btn:hover,
+  body[data-creator-mode="true"] .creator-base-modal__btn:hover {
+    border-color: var(--creator-accent, #F59E0B);
+    background: rgba(245,158,11,0.12);
+    color: var(--creator-accent, #F59E0B);
+  }
+
+  /* Responsive - fullscreen on mobile (Account Modal pattern) */
+  @media (max-width: 749px) {
+    .creator-base-modal {
+      max-width: 100vw;
+      width: 100vw;
+      max-height: 100dvh;
+      height: 100dvh;
+      border-radius: 0;
+      margin: 0;
+    }
+
+    .creator-base-modal__body {
+      min-height: 0;
+      padding: 12px 16px;
+    }
+
+    .creator-base-modal__footer {
+      padding: 10px 16px;
+    }
+  }
+</style>
+
+
+<dialog class="creator-base-modal creator-phone-upload-modal" id="creator-phone-upload-modal" aria-labelledby="creator-phone-upload-title">
+  <div class="creator-base-modal__header creator-phone-upload-modal__header">
+    <span class="creator-phone-upload-modal__phone-icon" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="6" y="2" width="12" height="20" rx="3"/>
+        <path d="M10 18h4"/>
+      </svg>
+    </span>
+    <h3 id="creator-phone-upload-title" class="creator-base-modal__title creator-phone-upload-modal__title">
+      Or upload from your phone
+    </h3>
+    <button type="button" class="creator-base-modal__close" id="creator-phone-upload-modal-close" aria-label="Close dialog">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="creator-base-modal__body creator-phone-upload-modal__body">
+    <div id="creator-phone-upload-error" class="creator-phone-upload-modal__error" hidden></div>
+    <div id="creator-phone-upload-loading" class="creator-phone-upload-modal__loading">Loading...</div>
+    <div id="creator-phone-upload-main" class="creator-phone-upload-modal__main" hidden>
+      <div class="creator-phone-upload-modal__dashed">
+        <p class="creator-phone-upload-modal__scan-title">Scan the QR code</p>
+        <div class="creator-phone-upload-modal__qr-wrap">
+          <img id="creator-phone-upload-qr-img" alt="" width="220" height="220" loading="lazy" />
+        </div>
+        <details class="creator-phone-upload-modal__help">
+          <summary>How do I upload from my phone?</summary>
+          <p>Open your phone camera, scan the code, then pick or take a photo. Your computer will receive the image automatically.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  .creator-phone-upload-modal .creator-base-modal__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .creator-phone-upload-modal__title {
+    flex: 1;
+    margin: 0;
+    text-align: left;
+    font-size: 1.05rem;
+  }
+  .creator-phone-upload-modal__phone-icon {
+    display: flex;
+    color: #111827;
+  }
+  body.creator-mode .creator-phone-upload-modal__phone-icon,
+  body[data-creator-mode="true"] .creator-phone-upload-modal__phone-icon {
+    color: #e5e7eb;
+  }
+  .creator-phone-upload-modal__dashed {
+    border: 2px dashed #d1d5db;
+    border-radius: 14px;
+    padding: 20px 16px 16px;
+    text-align: center;
+    background: #fff;
+  }
+  body.creator-mode .creator-phone-upload-modal__dashed,
+  body[data-creator-mode="true"] .creator-phone-upload-modal__dashed {
+    background: rgba(17, 24, 39, 0.5);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  .creator-phone-upload-modal__scan-title {
+    margin: 0 0 14px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #111827;
+  }
+  body.creator-mode .creator-phone-upload-modal__scan-title,
+  body[data-creator-mode="true"] .creator-phone-upload-modal__scan-title {
+    color: #e5e7eb;
+  }
+  .creator-phone-upload-modal__qr-wrap {
+    display: inline-block;
+    padding: 10px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 8px;
+  }
+  .creator-phone-upload-modal__qr-wrap img {
+    display: block;
+    width: 220px;
+    height: 220px;
+    object-fit: contain;
+  }
+  .creator-phone-upload-modal__error {
+    color: #b91c1c;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .creator-phone-upload-modal__loading {
+    text-align: center;
+    padding: 24px;
+    color: #6b7280;
+  }
+  .creator-phone-upload-modal__help {
+    margin-top: 12px;
+    text-align: left;
+    font-size: 14px;
+    color: #374151;
+  }
+  .creator-phone-upload-modal__help summary {
+    cursor: pointer;
+    text-decoration: underline;
+    color: #2563eb;
+    list-style-position: outside;
+  }
+  body.creator-mode .creator-phone-upload-modal__help,
+  body[data-creator-mode="true"] .creator-phone-upload-modal__help {
+    color: #9ca3af;
+  }
+  body.creator-mode .creator-phone-upload-modal__help summary,
+  body[data-creator-mode="true"] .creator-phone-upload-modal__help summary {
+    color: #93c5fd;
+  }
+
+  body.eaz-shop-printify-studio-open .creator-phone-upload-modal.creator-base-modal {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+  }
+</style>

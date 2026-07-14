@@ -215,6 +215,7 @@
       await injectPartial("creator-mobile-generator-modals.html");
       await injectPartial("reference-influence-modal.html");
       await injectPartial("creator-inspiration-modal.html");
+      await injectPartial("creator-phone-upload-modal.html");
 
       if (typeof global.mountCreatorDesktopShellModals === "function") {
         global.mountCreatorDesktopShellModals();
@@ -264,10 +265,12 @@
         await injectPartial("creator-mobile-marketing.html", host);
       }
 
+      await injectPartial("creator-phone-upload-modal.html");
       await injectPartial("creator-video-studio-modal.html");
       loadCss(asset("creator-video-studio-modal.css"));
 
       await loadScriptsSequential([
+        asset("creator-phone-upload-modal.js"),
         asset("creator-footer-eaz-ui.js"),
         asset("hero-region-utils.js"),
         asset("creator-product-image-carousel.js"),
