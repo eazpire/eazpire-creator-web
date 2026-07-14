@@ -12,6 +12,8 @@
     ownerId: null,
   };
 
+  var uiBound = false;
+
   function setAuth(loggedIn, ownerId) {
     state.loggedIn = !!loggedIn;
     state.ownerId = ownerId ? String(ownerId) : null;
@@ -73,7 +75,11 @@
     }
   }
 
-  function closeLoginModal() {
+  function closeLoginModal(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     var modal = document.getElementById("creatorLoginModal");
     if (modal) {
       modal.classList.remove("is-open");
@@ -93,9 +99,37 @@
     global.location.href = LOGOUT_URL;
   }
 
-  async function init() {
-    handleAuthQuery();
-    await refreshSession();
+  function isLoginCloseTarget(el) {
+    if (!el || !el.closest) return false;
+    return !!(el.closest("#creatorLoginClose") || el.closest("[data-login-close]"));
+  }
+
+  function bindUi() {
+    if (uiBound) return;
+    uiBound = true;
+
+    // Bind early (before session refresh) so X works even while /auth/me is in flight.
+    document.addEventListener(
+      "click",
+      function (e) {
+        if (isLoginCloseTarget(e.target)) {
+          closeLoginModal(e);
+          return;
+        }
+        var modal = document.getElementById("creatorLoginModal");
+        if (modal && modal.classList.contains("is-open") && e.target === modal) {
+          closeLoginModal(e);
+        }
+      },
+      true
+    );
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      var modal = document.getElementById("creatorLoginModal");
+      if (modal && modal.classList.contains("is-open")) closeLoginModal(e);
+    });
+
     document.querySelectorAll("[data-login]").forEach(function (el) {
       el.addEventListener("click", login);
     });
@@ -105,14 +139,12 @@
     document.querySelectorAll("[data-logout]").forEach(function (el) {
       el.addEventListener("click", logout);
     });
-    var closeBtn = document.getElementById("creatorLoginClose");
-    if (closeBtn) closeBtn.addEventListener("click", closeLoginModal);
-    var modal = document.getElementById("creatorLoginModal");
-    if (modal) {
-      modal.addEventListener("click", function (e) {
-        if (e.target === modal) closeLoginModal();
-      });
-    }
+  }
+
+  async function init() {
+    bindUi();
+    handleAuthQuery();
+    await refreshSession();
   }
 
   global.CreatorPortalAuth = {
@@ -120,9 +152,11 @@
     refreshSession: refreshSession,
     login: login,
     logout: logout,
+    closeLoginModal: closeLoginModal,
     state: state,
   };
 
+  bindUi();
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
