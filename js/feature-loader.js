@@ -26,7 +26,7 @@
     var link = document.createElement("link");
     link.rel = "stylesheet";
     // Bump when creator-design-studio / portal CSS changes — stale ?v= kept old layout for users.
-    link.href = href + "?v=21";
+    link.href = href + "?v=22";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
