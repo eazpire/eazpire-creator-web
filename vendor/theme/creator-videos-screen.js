@@ -102,5 +102,9 @@
     if (d) renderGrid(d);
   }
 
-  window.CreatorVideosScreen = { load: loadAll, fetchVideos: fetchVideos };
+  window.CreatorVideosScreen = {
+    load: loadAll,
+    refresh: loadAll,
+    fetchVideos: fetchVideos,
+  };
 })();

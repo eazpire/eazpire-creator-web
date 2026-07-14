@@ -281,6 +281,7 @@
         asset("creator-marketing-screen.js"),
         asset("creator-video-studio-timeline.js"),
         asset("creator-video-studio-modal.js"),
+        asset("creator-video-studio-asset-tools.js"),
       ]);
 
       try {

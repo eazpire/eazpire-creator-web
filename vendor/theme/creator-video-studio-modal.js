@@ -211,13 +211,41 @@
         bar.style.transform = 'scaleX(' + clamp01(asset._progress) + ')';
         card.appendChild(bar);
       }
+      if (!asset._uploading) {
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'cvs-asset-card__delete';
+        var delLabel = i18n('delete_asset', 'Delete asset');
+        delBtn.setAttribute('aria-label', delLabel);
+        delBtn.title = delLabel;
+        delBtn.innerHTML = '&times;';
+        delBtn.addEventListener('mousedown', function (e) {
+          e.stopPropagation();
+        });
+        delBtn.addEventListener('dragstart', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        delBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteAsset(asset.id);
+        });
+        card.appendChild(delBtn);
+      }
       card.addEventListener('dragstart', function (e) {
         e.dataTransfer.setData('text/cvs-asset-id', asset.id);
         e.dataTransfer.effectAllowed = 'copy';
       });
       card.addEventListener('dblclick', function () {
-        if (!engine) return;
+        if (!engine || asset._uploading) return;
         engine.addClipFromAsset(asset.id, asset.kind === 'audio' ? 'a1' : 'v1', engine.playheadMs);
+      });
+      card.addEventListener('click', function () {
+        if (asset._uploading) return;
+        if (window.CreatorVideoStudioAssetTools) {
+          window.CreatorVideoStudioAssetTools.open(asset.id);
+        }
       });
       grid.appendChild(card);
     });
@@ -225,6 +253,87 @@
 
   function clamp01(n) {
     return Math.max(0, Math.min(1, Number(n) || 0));
+  }
+
+  function assetUsageCount(assetId) {
+    if (!engine) return 0;
+    var count = 0;
+    (engine.tracks || []).forEach(function (t) {
+      (t.clips || []).forEach(function (c) {
+        if (c.assetId === assetId) count += 1;
+      });
+    });
+    return count;
+  }
+
+  function removeAssetClipsFromProject(assetId) {
+    if (!engine) return;
+    var removedSelected = false;
+    engine.tracks.forEach(function (t) {
+      t.clips = (t.clips || []).filter(function (c) {
+        var keep = c.assetId !== assetId;
+        if (!keep && c.id === engine.selectedClipId) removedSelected = true;
+        return keep;
+      });
+    });
+    if (removedSelected) engine.selectedClipId = null;
+    engine.render();
+    onEngineChange();
+  }
+
+  async function deleteAsset(assetId) {
+    var asset = assets.find(function (a) {
+      return a.id === assetId;
+    });
+    if (!asset) return;
+
+    if (asset._uploading) {
+      assets = assets.filter(function (a) {
+        return a.id !== assetId;
+      });
+      renderAssetGrid();
+      return;
+    }
+
+    var usage = assetUsageCount(assetId);
+    var msg;
+    if (usage > 0) {
+      msg =
+        i18n('confirm_delete_used_prefix', 'This asset is used in ') +
+        usage +
+        i18n(
+          'confirm_delete_used_suffix',
+          ' clip(s) in the current project. Delete it anyway? The clips will be removed from the timeline.'
+        );
+    } else {
+      msg = i18n('confirm_delete', 'Delete this asset? This cannot be undone.');
+    }
+    if (!window.confirm(msg)) return;
+
+    try {
+      var res = await fetch(apiUrl('video-studio-asset-delete'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ asset_id: assetId }),
+      });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (!data.ok) throw new Error(data.error || 'delete_failed');
+      assets = assets.filter(function (a) {
+        return a.id !== assetId;
+      });
+      delete localUrls[assetId];
+      delete localFiles[assetId];
+      if (usage > 0) removeAssetClipsFromProject(assetId);
+      if (engine) engine.setAssets(assets, localUrls);
+      renderAssetGrid();
+      setStatus(i18n('asset_deleted', 'Asset deleted'));
+    } catch (e) {
+      console.warn('[VideoStudio] delete failed', e);
+      setStatus(i18n('delete_failed', 'Delete failed'));
+    }
   }
 
   function evenDim(n) {
@@ -373,6 +482,35 @@
     });
   }
 
+  function upsertNewAsset(asset) {
+    if (!asset || !asset.id) return;
+    assets = assets.filter(function (a) {
+      return a.id !== asset.id;
+    });
+    assets.unshift(asset);
+    if (engine) engine.setAssets(assets, localUrls);
+    renderAssetGrid();
+  }
+
+  function replaceAssetInPlace(assetId, asset) {
+    if (!asset) return;
+    var idx = -1;
+    for (var i = 0; i < assets.length; i++) {
+      if (assets[i].id === assetId) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx >= 0) assets[idx] = asset;
+    else assets.unshift(asset);
+    delete localUrls[assetId];
+    if (engine) {
+      if (engine.mediaEls && engine.mediaEls[assetId]) delete engine.mediaEls[assetId];
+      engine.setAssets(assets, localUrls);
+    }
+    renderAssetGrid();
+  }
+
   async function uploadFile(file) {
     if (!file || file.size > MAX_BYTES) {
       setStatus(i18n('file_too_large', 'File too large (max 500 MB)'));
@@ -505,6 +643,28 @@
     var completeData = await completeRes.json();
     if (!completeData.ok) throw new Error(completeData.error || 'complete_failed');
     return completeData.asset;
+  }
+
+  /**
+   * Upload a client-generated Blob (cut export, audio/vocals export, screenshot,
+   * audio-removed video) as a brand-new asset. Does not touch the grid/timeline —
+   * callers decide when to merge the result via upsertNewAsset()/replaceAssetInPlace().
+   */
+  async function uploadBlobAsAsset(blob, opts) {
+    opts = opts || {};
+    var name = opts.name || 'asset';
+    var mime = opts.mime || blob.type || 'application/octet-stream';
+    var file = blob instanceof File ? blob : new File([blob], name, { type: mime });
+    if (file.size > MAX_BYTES) throw new Error('file_too_large');
+    var meta = {
+      width: opts.width || null,
+      height: opts.height || null,
+      duration_ms: opts.duration_ms || null,
+    };
+    if (file.size <= SIMPLE_MAX) {
+      return await uploadSimple(file, meta);
+    }
+    return await uploadMultipart(file, meta, opts.onProgress);
   }
 
   async function exportProject() {
@@ -1028,5 +1188,23 @@
     open: open,
     close: close,
     refreshAssets: loadAssets,
+    getAssets: function () {
+      return assets;
+    },
+    getLocalUrls: function () {
+      return localUrls;
+    },
+    getEngine: function () {
+      return engine;
+    },
+    apiUrl: apiUrl,
+    i18n: i18n,
+    setStatus: setStatus,
+    deleteAsset: deleteAsset,
+    upsertNewAsset: upsertNewAsset,
+    replaceAssetInPlace: replaceAssetInPlace,
+    removeAssetClipsFromProject: removeAssetClipsFromProject,
+    assetUsageCount: assetUsageCount,
+    uploadBlobAsAsset: uploadBlobAsAsset,
   };
 })();
