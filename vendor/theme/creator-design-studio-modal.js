@@ -4214,7 +4214,7 @@
   function isPreviewColorInAdminPool(c) {
     if (!c) return false;
     var pool = adminPoolColorMeta();
-    if (!Object.keys(pool).length) return true; // no context yet — keep payload colors
+    if (!Object.keys(pool).length) return false;
     return !!findAdminPoolMetaForColor(c.color_key, c.label);
   }
 
@@ -4228,8 +4228,29 @@
 
   function filterPreviewColorsToAdminPool(colors) {
     var list = Array.isArray(colors) ? colors : [];
+    var poolKeys = Object.keys(adminPoolColorMeta());
+    // Local pool missing: trust server-filtered payload (do not invent extras).
+    if (!poolKeys.length) {
+      try {
+        console.info('[cds-preview] local admin pool empty — trusting API colors', list.length);
+      } catch (_) {
+        /* ignore */
+      }
+      return list;
+    }
     var filtered = list.filter(isPreviewColorInAdminPool);
-    return filtered.length ? filtered : list.slice();
+    try {
+      console.info(
+        '[cds-preview] admin-pool colors',
+        filtered.length + '/' + list.length,
+        'poolKeys=' + poolKeys.length,
+        poolKeys.slice(0, 12).join(',')
+      );
+    } catch (_) {
+      /* ignore */
+    }
+    // Never fall back to the unfiltered Printify list when pool is known.
+    return filtered;
   }
 
   function isWhitePreviewColor(c) {
@@ -4307,6 +4328,8 @@
       previewSetMainEl.classList.toggle('is-current', !!isCurrent);
       previewSetMainEl.disabled = !!isCurrent || previewBusy || previewSaving;
       previewSetMainEl.setAttribute('aria-disabled', isCurrent || previewBusy || previewSaving ? 'true' : 'false');
+      previewSetMainEl.style.pointerEvents = 'auto';
+      previewSetMainEl.style.cursor = previewSetMainEl.disabled ? 'default' : 'pointer';
       previewSetMainEl.textContent = isCurrent
         ? t('designStudioPreviewIsMain', 'Main preview')
         : t('designStudioPreviewSetAsPreview', 'Set as Preview');

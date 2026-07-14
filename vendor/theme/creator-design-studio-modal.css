@@ -2118,31 +2118,34 @@
   flex: 1 1 auto;
   display: flex;
   flex-direction: row;
-  align-items: stretch;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 5px;
   min-height: 0;
   padding: 5px;
-  overflow: hidden;
+  overflow: auto;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .cds-preview-content[hidden] {
   display: none !important;
 }
 
+/* Thumbs | 5px | mock — no 1fr / flex-grow main stage */
 .cds-preview-views {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-auto-rows: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 84px));
+  grid-auto-rows: minmax(0, auto);
   gap: 5px;
-  align-content: stretch;
-  align-self: stretch;
+  align-content: start;
+  align-self: start;
   flex: 0 0 auto;
   height: auto;
   min-height: 0;
-  width: min(280px, 42vw);
-  overflow: hidden;
+  width: max-content;
+  max-width: none;
+  overflow: auto;
   padding: 0;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -2223,26 +2226,38 @@
 
 .cds-preview-main {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  flex: 0 0 auto;
-  width: max-content;
-  max-width: min(100%, calc(100% - min(280px, 42vw) - 5px));
-  max-height: 100%;
+  display: block;
+  align-self: flex-start;
+  flex: 0 0 auto !important;
+  flex-grow: 0 !important;
+  width: fit-content !important;
+  max-width: calc(100% - 178px);
+  min-width: 0;
   min-height: 0;
   margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent !important;
+  overflow: visible;
+}
+
+/* Frame sized by the mock image — Set as Preview is positioned inside this box */
+.cds-preview-mock {
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  line-height: 0;
   border-radius: 12px;
-  background: transparent;
-  overflow: hidden;
+  overflow: visible;
+  vertical-align: top;
 }
 
 .cds-preview-set-main {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 5;
+  z-index: 30;
   padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid rgba(249, 115, 22, 0.65);
@@ -2250,23 +2265,28 @@
   color: #fb923c;
   font-size: 0.78rem;
   font-weight: 700;
-  cursor: pointer;
-  pointer-events: auto;
+  line-height: 1.2;
+  cursor: pointer !important;
+  pointer-events: auto !important;
   backdrop-filter: blur(6px);
 }
 
 .cds-preview-set-main:hover:not(:disabled) {
   background: rgba(249, 115, 22, 0.18);
   color: #fdba74;
-  cursor: pointer;
+  cursor: pointer !important;
 }
 
 .cds-preview-set-main.is-current,
 .cds-preview-set-main:disabled {
   opacity: 0.55;
-  cursor: default;
+  cursor: default !important;
   border-color: rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.7);
+}
+
+.cds-preview-set-main:not(:disabled):not(.is-current) {
+  cursor: pointer !important;
 }
 
 .cds-preview-set-main[hidden] {
@@ -2278,9 +2298,10 @@
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: min(100%, calc(100dvh - 220px));
+  max-height: calc(100dvh - 220px);
   object-fit: contain;
   border-radius: 12px;
+  pointer-events: none;
 }
 
 .cds-preview-main__img[hidden],
@@ -2475,16 +2496,16 @@
   }
 
   .cds-preview-views {
-    width: min(168px, 36vw);
+    grid-template-columns: repeat(2, minmax(0, 64px));
     gap: 5px;
   }
 
   .cds-preview-main {
-    max-width: min(100%, calc(100% - min(168px, 36vw) - 5px));
+    max-width: calc(100% - 138px);
   }
 
   .cds-preview-main__img {
-    max-height: min(100%, calc(100dvh - 260px));
+    max-height: calc(100dvh - 260px);
   }
 
   .cds-preview-color {
