@@ -1043,24 +1043,33 @@
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     var ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(function (blob) {
-      if (!blob) {
-        setToolStatus('screenshot', t('screenshot_failed', 'Capture failed.'));
-        return;
-      }
-      var label =
-        (currentAsset.original_name || 'asset') + '-frame-' + (previewLists.screenshot.length + 1) + '.png';
-      addPreviewItem('screenshot', {
-        label: label,
-        blob: blob,
-        url: blobToObjectUrl(blob),
-        mime: 'image/png',
-        kind: 'image',
-        meta: { width: video.videoWidth, height: video.videoHeight },
-      });
-      setToolStatus('screenshot', t('screenshot_ready', 'Frame captured — added below.'));
-    }, 'image/png');
+    try {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(function (blob) {
+        if (!blob) {
+          setToolStatus('screenshot', t('screenshot_failed', 'Capture failed.'));
+          return;
+        }
+        var label =
+          (currentAsset.original_name || 'asset') + '-frame-' + (previewLists.screenshot.length + 1) + '.png';
+        addPreviewItem('screenshot', {
+          label: label,
+          blob: blob,
+          url: blobToObjectUrl(blob),
+          mime: 'image/png',
+          kind: 'image',
+          meta: { width: video.videoWidth, height: video.videoHeight },
+        });
+        setToolStatus('screenshot', t('screenshot_ready', 'Frame captured — added below.'));
+      }, 'image/png');
+    } catch (e) {
+      // Tainted canvas (cross-origin frame without CORS) — should no longer
+      // happen now that the media element sets crossOrigin='anonymous'
+      // before src, but keep a friendly fallback instead of an uncaught
+      // SecurityError.
+      console.warn('[VideoStudio] screenshot capture failed', e);
+      setToolStatus('screenshot', t('screenshot_failed', 'Capture failed — this source doesn\u2019t allow screenshots.'));
+    }
   }
 
   // ── Duplicate tool ──────────────────────────────────────────────────
@@ -1189,6 +1198,15 @@
     timeEl = document.getElementById('cvs-tools-time');
     accordionEl = document.getElementById('cvs-tools-accordion');
     if (!modal) return;
+
+    // Assets are served cross-origin (worker/R2 `/file/...`, CORS-enabled)
+    // relative to the storefront. Without `crossOrigin` set *before* `src`
+    // is assigned, drawing these elements onto a <canvas> (screenshot,
+    // cut/audio-remove export) taints it, so later `toBlob`/`toDataURL`
+    // calls throw `SecurityError: Tainted canvases may not be exported.`
+    if (video) video.crossOrigin = 'anonymous';
+    if (audioEl) audioEl.crossOrigin = 'anonymous';
+    if (imgEl) imgEl.crossOrigin = 'anonymous';
 
     function on(id, evt, fn) {
       var el = document.getElementById(id);
