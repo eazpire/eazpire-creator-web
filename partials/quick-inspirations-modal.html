@@ -79,6 +79,26 @@
       <div class="qi-modal__sidebar-backdrop" id="qi-sidebar-backdrop" hidden></div>
 
       <div class="qi-modal__content" data-allow-scroll="true">
+        <div class="qi-modal__tabs" role="tablist" aria-label="Quick Inspiration sources">
+          <button
+            type="button"
+            role="tab"
+            id="qi-tab-public"
+            class="qi-modal__tab is-active"
+            data-qi-tab="public"
+            aria-selected="true"
+            data-t="creator.quick_inspirations.tab_public"
+          >Public Inspirations</button>
+          <button
+            type="button"
+            role="tab"
+            id="qi-tab-yours"
+            class="qi-modal__tab"
+            data-qi-tab="yours"
+            aria-selected="false"
+            data-t="creator.quick_inspirations.tab_yours"
+          >Your Inspirations</button>
+        </div>
         <div id="qi-loading" class="qi-modal__loading" style="display:none;" data-t="creator.quick_inspirations.loading">Loading…</div>
         <div id="qi-empty" class="qi-modal__empty" style="display:none;" data-t="creator.quick_inspirations.empty">No quick inspirations yet. Be the first to upload!</div>
         <div id="qi-grid" class="qi-modal__grid"></div>

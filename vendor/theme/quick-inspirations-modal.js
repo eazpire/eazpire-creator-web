@@ -25,6 +25,8 @@
   var bound = false;
   var screenshotBinder = null;
   var uploading = false;
+  /** 'public' | 'yours' — default Public Inspirations */
+  var activeTab = 'public';
 
   function t(key, fallback) {
     try {
@@ -158,6 +160,27 @@
     if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
+  function setActiveTab(tab) {
+    activeTab = tab === 'yours' ? 'yours' : 'public';
+    if (!modal) return;
+    var tabs = modal.querySelectorAll('[data-qi-tab]');
+    tabs.forEach(function (btn) {
+      var isOn = btn.getAttribute('data-qi-tab') === activeTab;
+      btn.classList.toggle('is-active', isOn);
+      btn.setAttribute('aria-selected', isOn ? 'true' : 'false');
+    });
+  }
+
+  function emptyMessageForTab() {
+    if (activeTab === 'yours') {
+      if (!getOwnerId()) {
+        return t('creator.quick_inspirations.empty_yours_login', 'Sign in to see your Quick Inspirations.');
+      }
+      return t('creator.quick_inspirations.empty_yours', 'You have no Quick Inspirations yet.');
+    }
+    return t('creator.quick_inspirations.empty', 'No quick inspirations yet. Be the first to upload!');
+  }
+
   function renderFilterChips(containerId, list, activeValue, onPick) {
     var el = document.getElementById(containerId);
     if (!el) return;
@@ -200,6 +223,47 @@
     } catch (_e) {}
   }
 
+  async function deleteOwnItem(item) {
+    var ownerId = getOwnerId();
+    if (!item || !item.id || !ownerId) return;
+
+    var confirmMsg = t(
+      'creator.quick_inspirations.delete_confirm',
+      'Delete this Quick Inspiration? This cannot be undone.'
+    );
+    if (typeof window.confirm === 'function' && !window.confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      var u = apiUrl('delete-quick-inspiration');
+      u.searchParams.set('id', String(item.id));
+      var res = await fetch(u.toString(), {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, owner_id: ownerId }),
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'delete_failed');
+      }
+      items = items.filter(function (row) {
+        return String(row.id) !== String(item.id);
+      });
+      if (selectedId != null && String(selectedId) === String(item.id)) {
+        selectedId = null;
+      }
+      renderGrid();
+    } catch (_e) {
+      window.alert(
+        t('creator.quick_inspirations.delete_failed', 'Could not delete Quick Inspiration.')
+      );
+    }
+  }
+
   function renderGrid() {
     var grid = document.getElementById('qi-grid');
     var empty = document.getElementById('qi-empty');
@@ -208,29 +272,72 @@
     if (loading) loading.style.display = 'none';
     grid.innerHTML = '';
     if (!items.length) {
-      if (empty) empty.style.display = 'block';
+      if (empty) {
+        empty.textContent = emptyMessageForTab();
+        empty.style.display = 'block';
+      }
       return;
     }
     if (empty) empty.style.display = 'none';
+
+    var showDelete = activeTab === 'yours';
+    var deleteAria = t('creator.quick_inspirations.delete_aria', 'Delete inspiration');
+    var applyLabel = t('creator.common.apply', 'Apply');
+
     items.forEach(function (item) {
-      var card = document.createElement('button');
-      card.type = 'button';
+      var card = document.createElement('div');
       card.className = 'qi-card' + (selectedId === item.id ? ' is-selected' : '');
       card.setAttribute('data-id', item.id);
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+
       var img = document.createElement('img');
       img.src = item.thumb_url || item.image_url;
       img.alt = item.summary || 'Quick inspiration';
       img.loading = 'lazy';
       card.appendChild(img);
-      var apply = document.createElement('span');
+
+      if (showDelete) {
+        var deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'qi-card__delete';
+        deleteBtn.setAttribute('aria-label', deleteAria);
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteBtn.blur();
+          deleteOwnItem(item);
+        });
+        card.appendChild(deleteBtn);
+      }
+
+      var apply = document.createElement('button');
+      apply.type = 'button';
       apply.className = 'qi-card__apply';
-      apply.textContent = t('creator.common.apply', 'Apply');
-      card.appendChild(apply);
-      card.addEventListener('click', function () {
+      apply.textContent = applyLabel;
+      apply.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
         selectedId = item.id;
         renderGrid();
         applyItem(item);
       });
+      card.appendChild(apply);
+
+      var useAsRef = function () {
+        selectedId = item.id;
+        renderGrid();
+        applyItem(item);
+      };
+      card.addEventListener('click', useAsRef);
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          useAsRef();
+        }
+      });
+
       grid.appendChild(card);
     });
   }
@@ -242,8 +349,18 @@
     var empty = document.getElementById('qi-empty');
     if (loading) loading.style.display = 'block';
     if (empty) empty.style.display = 'none';
+
+    if (activeTab === 'yours' && !getOwnerId()) {
+      items = [];
+      renderGrid();
+      isLoading = false;
+      if (loading) loading.style.display = 'none';
+      return;
+    }
+
     try {
       var u = apiUrl('list-quick-inspirations');
+      if (activeTab === 'yours') u.searchParams.set('mine', '1');
       if (searchQuery) u.searchParams.set('search', searchQuery);
       if (activeTag) u.searchParams.set('tag', activeTag);
       if (activeStyle) u.searchParams.set('style', activeStyle);
@@ -395,6 +512,7 @@
     modal.setAttribute('aria-hidden', 'false');
     modal.style.cssText =
       'opacity:1; pointer-events:auto; display:flex; position:fixed; inset:0; z-index:2147483647; align-items:center; justify-content:center; background:rgba(2,6,23,0.92);';
+    setActiveTab('public');
     loadFilterTags();
     loadItems();
   }
@@ -748,6 +866,19 @@
     if (closeBtn) closeBtn.addEventListener('click', close);
     modal.addEventListener('click', function (e) {
       if (e.target === modal) close();
+    });
+
+    modal.querySelectorAll('[data-qi-tab]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var next = btn.getAttribute('data-qi-tab') === 'yours' ? 'yours' : 'public';
+        if (next === activeTab) return;
+        setActiveTab(next);
+        items = [];
+        selectedId = null;
+        loadItems();
+      });
     });
 
     var filterToggle = document.getElementById('qi-filter-toggle');

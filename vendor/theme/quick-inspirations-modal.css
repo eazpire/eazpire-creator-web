@@ -254,6 +254,39 @@
   background: #111827;
 }
 
+.qi-modal__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.qi-modal__tab {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #0b1220;
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.qi-modal__tab:hover {
+  border-color: #f59e0b;
+  color: #fde68a;
+}
+
+.qi-modal__tab.is-active {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25);
+}
+
 .qi-modal__loading,
 .qi-modal__empty {
   text-align: center;
@@ -302,6 +335,38 @@
   background: #0b1220;
 }
 
+.qi-card__delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.qi-card__delete:hover {
+  background: #ef4444;
+  transform: scale(1.05);
+}
+
+.qi-card__delete:active {
+  transform: scale(0.98);
+}
+
 .qi-card__apply {
   position: absolute;
   left: 8px;
@@ -318,6 +383,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
+  z-index: 2;
 }
 
 .qi-card.is-selected .qi-card__apply,
