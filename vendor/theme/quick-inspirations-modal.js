@@ -14,6 +14,7 @@
   var sourceModal = null;
   var sectionId = null;
   var selectedId = null;
+  var previewItem = null;
   var items = [];
   var searchQuery = '';
   var activeTag = '';
@@ -225,14 +226,15 @@
 
   async function deleteOwnItem(item) {
     var ownerId = getOwnerId();
-    if (!item || !item.id || !ownerId) return;
+    if (!item || !item.id || !ownerId) return false;
+    if (!isOwnedItem(item)) return false;
 
     var confirmMsg = t(
       'creator.quick_inspirations.delete_confirm',
       'Delete this Quick Inspiration? This cannot be undone.'
     );
     if (typeof window.confirm === 'function' && !window.confirm(confirmMsg)) {
-      return;
+      return false;
     }
 
     try {
@@ -256,12 +258,68 @@
       if (selectedId != null && String(selectedId) === String(item.id)) {
         selectedId = null;
       }
+      if (previewItem && String(previewItem.id) === String(item.id)) {
+        closePreview();
+      }
       renderGrid();
+      loadFilterTags();
+      return true;
     } catch (_e) {
       window.alert(
         t('creator.quick_inspirations.delete_failed', 'Could not delete Quick Inspiration.')
       );
+      return false;
     }
+  }
+
+  function isOwnedItem(item) {
+    var ownerId = getOwnerId();
+    if (!ownerId || !item) return false;
+    return String(item.owner_id || '') === String(ownerId);
+  }
+
+  function openPreview(item) {
+    if (!ensureEls() || !item) return;
+    previewItem = item;
+    var browse = document.getElementById('qi-browse-view');
+    var preview = document.getElementById('qi-preview-view');
+    var img = document.getElementById('qi-preview-image');
+    var removeBtn = document.getElementById('qi-preview-remove');
+    if (img) {
+      img.src = item.image_url || item.thumb_url || '';
+      img.alt = item.summary || t('creator.quick_inspirations.preview_aria', 'Preview inspiration');
+    }
+    if (removeBtn) {
+      var owned = isOwnedItem(item);
+      removeBtn.hidden = !owned;
+      removeBtn.style.display = owned ? '' : 'none';
+    }
+    if (browse) browse.style.display = 'none';
+    if (preview) {
+      preview.hidden = false;
+      preview.style.display = 'flex';
+      preview.setAttribute('aria-hidden', 'false');
+    }
+    modal.classList.add('is-preview');
+  }
+
+  function closePreview() {
+    previewItem = null;
+    if (!modal) return;
+    var browse = document.getElementById('qi-browse-view');
+    var preview = document.getElementById('qi-preview-view');
+    var img = document.getElementById('qi-preview-image');
+    if (img) {
+      img.src = '';
+      img.alt = '';
+    }
+    if (browse) browse.style.display = '';
+    if (preview) {
+      preview.hidden = true;
+      preview.style.display = 'none';
+      preview.setAttribute('aria-hidden', 'true');
+    }
+    modal.classList.remove('is-preview');
   }
 
   function renderGrid() {
@@ -280,8 +338,8 @@
     }
     if (empty) empty.style.display = 'none';
 
-    var showDelete = activeTab === 'yours';
     var deleteAria = t('creator.quick_inspirations.delete_aria', 'Delete inspiration');
+    var previewAria = t('creator.quick_inspirations.preview_aria', 'Preview inspiration');
     var applyLabel = t('creator.common.apply', 'Apply');
 
     items.forEach(function (item) {
@@ -290,6 +348,7 @@
       card.setAttribute('data-id', item.id);
       card.setAttribute('role', 'button');
       card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', previewAria);
 
       var img = document.createElement('img');
       img.src = item.thumb_url || item.image_url;
@@ -297,7 +356,7 @@
       img.loading = 'lazy';
       card.appendChild(img);
 
-      if (showDelete) {
+      if (isOwnedItem(item)) {
         var deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.className = 'qi-card__delete';
@@ -325,16 +384,16 @@
       });
       card.appendChild(apply);
 
-      var useAsRef = function () {
+      var openItemPreview = function () {
         selectedId = item.id;
         renderGrid();
-        applyItem(item);
+        openPreview(item);
       };
-      card.addEventListener('click', useAsRef);
+      card.addEventListener('click', openItemPreview);
       card.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          useAsRef();
+          openItemPreview();
         }
       });
 
@@ -494,6 +553,7 @@
     if (!ensureEls()) return;
     sectionId = opts.sectionId != null ? String(opts.sectionId).trim() : null;
     selectedId = null;
+    closePreview();
     setSidebarOpen(false);
 
     var host = null;
@@ -525,6 +585,7 @@
 
   function close() {
     if (!ensureEls()) return;
+    closePreview();
     setSidebarOpen(false);
     closeSourcePicker();
     closeUpload();
@@ -863,9 +924,60 @@
     bound = true;
 
     var closeBtn = document.getElementById('quick-inspirations-modal-close');
-    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        if (modal && modal.classList.contains('is-preview')) {
+          closePreview();
+          return;
+        }
+        close();
+      });
+    }
     modal.addEventListener('click', function (e) {
       if (e.target === modal) close();
+    });
+
+    var previewCancel = document.getElementById('qi-preview-cancel');
+    if (previewCancel) {
+      previewCancel.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        previewCancel.blur();
+        closePreview();
+      });
+    }
+    var previewApply = document.getElementById('qi-preview-apply');
+    if (previewApply) {
+      previewApply.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!previewItem) return;
+        previewApply.blur();
+        var item = previewItem;
+        closePreview();
+        selectedId = item.id;
+        renderGrid();
+        applyItem(item);
+      });
+    }
+    var previewRemove = document.getElementById('qi-preview-remove');
+    if (previewRemove) {
+      previewRemove.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!previewItem) return;
+        previewRemove.blur();
+        deleteOwnItem(previewItem);
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (!modal || !modal.classList.contains('creator-modal--open')) return;
+      if (modal.classList.contains('is-preview')) {
+        e.preventDefault();
+        closePreview();
+      }
     });
 
     modal.querySelectorAll('[data-qi-tab]').forEach(function (btn) {

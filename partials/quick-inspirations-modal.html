@@ -16,6 +16,7 @@
       </button>
     </div>
 
+    <div id="qi-browse-view" class="qi-modal__browse">
     <div class="qi-modal__toolbar">
       <button
         type="button"
@@ -102,6 +103,18 @@
         <div id="qi-loading" class="qi-modal__loading" style="display:none;" data-t="creator.quick_inspirations.loading">Loading…</div>
         <div id="qi-empty" class="qi-modal__empty" style="display:none;" data-t="creator.quick_inspirations.empty">No quick inspirations yet. Be the first to upload!</div>
         <div id="qi-grid" class="qi-modal__grid"></div>
+      </div>
+    </div>
+    </div>
+
+    <div id="qi-preview-view" class="qi-preview" style="display: none;" hidden aria-hidden="true">
+      <div class="qi-preview__image-wrap">
+        <img id="qi-preview-image" class="qi-preview__image" src="" alt="">
+      </div>
+      <div class="qi-preview__actions">
+        <button type="button" id="qi-preview-cancel" class="qi-preview__btn qi-preview__btn--secondary" data-t="creator.common.cancel">Cancel</button>
+        <button type="button" id="qi-preview-remove" class="qi-preview__btn qi-preview__btn--danger" style="display: none;" hidden data-t="creator.quick_inspirations.remove">Remove</button>
+        <button type="button" id="qi-preview-apply" class="qi-preview__btn qi-preview__btn--primary" data-t="creator.common.apply">Apply</button>
       </div>
     </div>
   </div>
