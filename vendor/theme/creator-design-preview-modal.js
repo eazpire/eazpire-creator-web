@@ -608,12 +608,16 @@
 
   function syncActivatePublishModeButtons() {
     if (!modal) return;
-    modal.querySelectorAll('[data-cdp-activate-publish-mode]').forEach(function (btn) {
-      var mode = String(btn.getAttribute('data-cdp-activate-publish-mode') || '');
-      var on = mode === activatePublishMode;
-      btn.classList.toggle('is-active', on);
-      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    var isEdit = activatePublishMode === 'edit';
+    modal.querySelectorAll('[data-cdp-activate-mode-label]').forEach(function (el) {
+      var key = String(el.getAttribute('data-cdp-activate-mode-label') || '');
+      el.classList.toggle('is-active', key === activatePublishMode);
     });
+    var track = modal.querySelector('[data-cdp-activate-mode-track]');
+    if (track) {
+      track.classList.toggle('is-edit', isEdit);
+      track.setAttribute('aria-checked', isEdit ? 'true' : 'false');
+    }
   }
 
   function clearActivateEntryMode() {
@@ -5219,11 +5223,17 @@
     if (modal && !modal.__cdpActivateModeBound) {
       modal.__cdpActivateModeBound = true;
       modal.addEventListener('click', function (e) {
-        var modeBtn = e.target.closest('[data-cdp-activate-publish-mode]');
-        if (modeBtn && modal.contains(modeBtn)) {
+        var track = e.target.closest('[data-cdp-activate-mode-track]');
+        if (track && modal.contains(track)) {
           e.preventDefault();
-          setActivatePublishMode(modeBtn.getAttribute('data-cdp-activate-publish-mode'));
+          setActivatePublishMode(activatePublishMode === 'edit' ? 'quick' : 'edit');
           return;
+        }
+        var label = e.target.closest('[data-cdp-activate-mode-label]');
+        if (label && modal.contains(label)) {
+          e.preventDefault();
+          var mode = String(label.getAttribute('data-cdp-activate-mode-label') || '');
+          if (mode === 'quick' || mode === 'edit') setActivatePublishMode(mode);
         }
       });
     }
