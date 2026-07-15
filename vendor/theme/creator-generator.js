@@ -103,7 +103,13 @@
     var input = document.getElementById('genImageInput');
     var refImageOverlay = document.getElementById('genRefImageOverlay');
     var refImageClose = document.getElementById('genRefImageClose');
-    var refImageCards = document.querySelectorAll('.gen-ref-image-card');
+    var refImageCards = refImageOverlay
+      ? refImageOverlay.querySelectorAll('.gen-ref-image-card[data-source]')
+      : [];
+    var clipboardCard = refImageOverlay
+      ? refImageOverlay.querySelector('.gen-ref-image-card[data-source="clipboard"]')
+      : null;
+    var clipboardBinder = null;
     var selectedCard = document.getElementById('genSelectedImagesCard');
     var selectedGrid = document.getElementById('genSelectedImagesGrid');
     var selectedCount = document.getElementById('genSelectedImagesCount');
@@ -112,10 +118,22 @@
     var selectedImages = [];
     window.__creatorGenSelectedImages = selectedImages;
 
+    function isRefImageModalOpen() {
+      return !!(refImageOverlay && refImageOverlay.classList.contains('is-open'));
+    }
+
     function openRefImageModal() {
       if (refImageOverlay) {
         refImageOverlay.classList.add('is-open');
         refImageOverlay.setAttribute('aria-hidden', 'false');
+      }
+      if (clipboardCard && window.EazClipboardImage) {
+        if (!clipboardBinder) {
+          clipboardBinder = window.EazClipboardImage.bindOption(clipboardCard, {
+            isOpen: isRefImageModalOpen
+          });
+        }
+        clipboardBinder.refresh();
       }
     }
 
@@ -235,6 +253,16 @@
     function openSource(source, card) {
       if (source === 'device') {
         triggerFileInput(false);
+        return;
+      }
+      if (source === 'clipboard') {
+        if (!(window.EazClipboardImage && typeof window.EazClipboardImage.readImageFile === 'function')) {
+          return;
+        }
+        window.EazClipboardImage.readImageFile().then(function (file) {
+          if (!file) return;
+          addFiles([file]);
+        });
         return;
       }
       if (source === 'camera') {
@@ -454,7 +482,11 @@
 
     [].forEach.call(refImageCards || [], function (card) {
       card.addEventListener('click', function () {
+        if (card.disabled || card.getAttribute('aria-disabled') === 'true' || card.classList.contains('is-disabled')) {
+          return;
+        }
         var source = card.dataset.source;
+        if (!source) return;
         closeRefImageModal();
         openSource(source, card);
       });

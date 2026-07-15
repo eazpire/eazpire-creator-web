@@ -1171,6 +1171,7 @@
       o.classList.add('is-open');
     }
     o.setAttribute('aria-hidden', 'false');
+    if (autoClipboardBinder) autoClipboardBinder.refresh();
   }
 
   function closeAutoRefOverlay() {
@@ -1187,6 +1188,14 @@
     o.setAttribute('aria-hidden', 'true');
   }
 
+  function isAutoRefOverlayOpen() {
+    var o = document.getElementById('autoRefImageOverlay');
+    if (!o) return false;
+    return o.classList.contains('is-open') || !!o.open;
+  }
+
+  var autoClipboardBinder = null;
+
   function triggerAutoFileInput(useCamera) {
     var input = document.getElementById('creatorAutoImageInput');
     if (!input) return;
@@ -1200,6 +1209,16 @@
     closeAutoRefOverlay();
     if (source === 'device') {
       triggerAutoFileInput(false);
+      return;
+    }
+    if (source === 'clipboard') {
+      if (!(window.EazClipboardImage && typeof window.EazClipboardImage.readImageFile === 'function')) {
+        return;
+      }
+      window.EazClipboardImage.readImageFile().then(function (file) {
+        if (!file) return;
+        addAutoFilesFromInput([file]);
+      });
       return;
     }
     if (source === 'camera') {
@@ -1432,10 +1451,19 @@
     if (overlay) {
       overlay.querySelectorAll('[data-auto-source]').forEach(function (card) {
         card.addEventListener('click', function () {
+          if (card.disabled || card.getAttribute('aria-disabled') === 'true' || card.classList.contains('is-disabled')) {
+            return;
+          }
           var source = card.getAttribute('data-auto-source');
           if (source) openAutoSource(source);
         });
       });
+      var clipBtn = overlay.querySelector('[data-auto-source="clipboard"]');
+      if (clipBtn && window.EazClipboardImage && typeof window.EazClipboardImage.bindOption === 'function') {
+        autoClipboardBinder = window.EazClipboardImage.bindOption(clipBtn, {
+          isOpen: isAutoRefOverlayOpen
+        });
+      }
     }
     if (fileInput) {
       fileInput.addEventListener('change', function () {
