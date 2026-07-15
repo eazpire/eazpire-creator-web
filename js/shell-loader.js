@@ -7,7 +7,7 @@
 
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
-  var RUNTIME_V = "10";
+  var RUNTIME_V = "11";
   var secondaryScreensPromise = null;
 
   function scheduleIdle(fn, timeoutMs) {
@@ -274,9 +274,15 @@
       await secondary;
     } catch (e) {}
 
-    // Eazy chat, audio, sales/journey modals — not needed for first interactive dashboard paint.
+    // Header audio widget needs modal JS + party hooks right after shell/runtime (not idle).
+    try {
+      await loadAudioModal();
+    } catch (e) {
+      console.warn("[CreatorPortal] audio modal load failed", e);
+    }
+
+    // Eazy chat + sales/journey modals — still deferred off first interactive paint.
     scheduleIdle(function () {
-      loadAudioModal().catch(function () {});
       if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
         global.CreatorPortalEazy.ensure().catch(function (e) {
           console.warn("[CreatorPortal] Eazy load failed", e);
