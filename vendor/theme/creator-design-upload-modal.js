@@ -519,13 +519,15 @@
     reader.readAsDataURL(file);
   }
 
-  function initUploadLogic(modal, sectionId, onUploadStart, ownerId, apiBase, selectedFile, shopMode) {
+  function initUploadLogic(modal, sectionId, onUploadStart, ownerIdParam, apiBaseParam, selectedFile, shopMode) {
     const closeBtn = modal.querySelector('.design-upload-modal__close');
     const backdrop = modal.querySelector('.design-upload-modal__backdrop');
     const cancelBtn = modal.querySelector('.design-upload-modal__button--secondary');
     const uploadBtn = modal.querySelector('.design-upload-modal__button--primary');
     const shopEazyBtn = modal.querySelector('[data-eaz-shop-upload-submit]');
 
+    let ownerId = ownerIdParam || null;
+    let apiBase = apiBaseParam || null;
     let savedUploadSettings = null;
 
     let tempSelectedFile = selectedFile || null;
@@ -539,6 +541,46 @@
 
     if (!window.CreatorDesignUploadModal) window.CreatorDesignUploadModal = {};
     window.CreatorDesignUploadModal.savedUploadSettings = savedUploadSettings;
+
+    function resolveOwnerId() {
+      if (ownerId != null && String(ownerId).trim()) return String(ownerId).trim();
+      if (typeof window.__EAZ_OWNER_ID !== 'undefined' && window.__EAZ_OWNER_ID != null && String(window.__EAZ_OWNER_ID).trim()) {
+        ownerId = String(window.__EAZ_OWNER_ID).trim();
+        return ownerId;
+      }
+      var meta = document.querySelector('meta[name="creator-owner-id"]');
+      if (meta && meta.getAttribute('content') && String(meta.getAttribute('content')).trim()) {
+        ownerId = String(meta.getAttribute('content')).trim();
+        return ownerId;
+      }
+      return null;
+    }
+
+    function resolveApiBase() {
+      if (apiBase && String(apiBase).trim()) {
+        apiBase = String(apiBase).replace(/\/$/, '');
+        return apiBase;
+      }
+      if (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) {
+        apiBase = String(window.CREATOR_API_CONFIG.BASE_URL).replace(/\/$/, '');
+        return apiBase;
+      }
+      apiBase = 'https://creator-engine.eazpire.workers.dev';
+      return apiBase;
+    }
+
+    async function waitForOwnerId(maxMs) {
+      var limit = typeof maxMs === 'number' ? maxMs : 4000;
+      var id = resolveOwnerId();
+      if (id) return id;
+      var start = Date.now();
+      while (Date.now() - start < limit) {
+        await new Promise(function (r) { setTimeout(r, 100); });
+        id = resolveOwnerId();
+        if (id) return id;
+      }
+      return null;
+    }
 
     function setActionsBarVisible(visible) {
       const bar = modal.querySelector('.design-upload-actions-bar');
@@ -620,7 +662,7 @@
               previewPlaceholderEl: previewPlaceholder,
               apiBaseUrl,
               file: fileForBg,
-              ownerId,
+              ownerId: resolveOwnerId(),
             });
 
             tempSelectedFile = processed;
@@ -674,7 +716,7 @@
               previewPlaceholderEl: previewPlaceholder,
               apiBaseUrl,
               file: fileForCrop,
-              ownerId,
+              ownerId: resolveOwnerId(),
             });
             tempSelectedFile = processed;
             displayFilePreview(modal, processed);
@@ -697,6 +739,18 @@
     const creatorSelect = modal.querySelector(`#design-upload-creator-select-${sectionId}`);
     const visibilityCheckbox = modal.querySelector(`#design-upload-visibility-${sectionId}`);
 
+    function normalizeCreatorNames(list) {
+      const out = [];
+      const seen = Object.create(null);
+      (Array.isArray(list) ? list : []).forEach(function (raw) {
+        const n = raw != null ? String(raw).trim() : '';
+        if (!n || seen[n]) return;
+        seen[n] = true;
+        out.push(n);
+      });
+      return out;
+    }
+
     function resolveActiveCreatorName() {
       if (window.CreatorSettings && window.CreatorSettings.creatorName != null && String(window.CreatorSettings.creatorName).trim()) {
         return String(window.CreatorSettings.creatorName).trim();
@@ -709,6 +763,14 @@
 
     function applyUploadSettingsToUI(settings) {
       const s = settings || savedUploadSettings || {};
+      if (creatorSelect) {
+        const name = (s.creator_name !== undefined && s.creator_name !== null) ? String(s.creator_name).trim() : '';
+        if (name && Array.from(creatorSelect.options).some(function (opt) { return opt.value === name; })) {
+          creatorSelect.value = name;
+        } else if (name) {
+          creatorSelect.value = name;
+        }
+      }
       if (visibilityCheckbox) {
         const vis = s.visibility === 'private' ? 'private' : 'public';
         visibilityCheckbox.checked = vis === 'public';
@@ -716,9 +778,99 @@
       }
     }
 
+    async function fetchCreatorNamesFromApi(oid, base) {
+      const names = [];
+      let activeName = '';
+      const endpoints = [
+        `${base}/creator`,
+        `${base}/apps/creator-dispatch`
+      ];
+      for (let i = 0; i < endpoints.length; i++) {
+        try {
+          const url = new URL(endpoints[i]);
+          url.searchParams.set('op', 'get-settings');
+          url.searchParams.set('owner_id', oid);
+          url.searchParams.set('logged_in_customer_id', oid);
+          url.searchParams.set('_t', String(Date.now()));
+          const res = await fetch(url.toString(), { credentials: 'include', cache: 'no-store' });
+          if (!res.ok) continue;
+          const data = await res.json().catch(function () { return {}; });
+          const settings = data.settings || data || {};
+          const arr = Array.isArray(settings.creator_names) ? settings.creator_names.slice() : [];
+          if (settings.creator_name && arr.indexOf(settings.creator_name) === -1) {
+            arr.unshift(settings.creator_name);
+          }
+          const normalized = normalizeCreatorNames(arr);
+          if (normalized.length) {
+            names.push.apply(names, normalized);
+          }
+          if (settings.active_creator_name != null && String(settings.active_creator_name).trim()) {
+            activeName = String(settings.active_creator_name).trim();
+          } else if (settings.creator_name != null && String(settings.creator_name).trim()) {
+            activeName = String(settings.creator_name).trim();
+          }
+          if (names.length) break;
+        } catch (e) {
+          console.warn('Upload modal: get-settings failed for', endpoints[i], e);
+        }
+      }
+      return { names: normalizeCreatorNames(names), activeName: activeName };
+    }
+
     async function loadCreatorNamesForUploadModal() {
-      // Creator dropdown removed — upload always uses the active creator from settings.
-      return;
+      if (!creatorSelect || shopModeRef) return;
+
+      let names = [];
+      let activeName = '';
+
+      if (window.CreatorSettings && Array.isArray(window.CreatorSettings.creatorNames)) {
+        names = normalizeCreatorNames(window.CreatorSettings.creatorNames);
+        if (window.CreatorSettings.creatorName != null && String(window.CreatorSettings.creatorName).trim()) {
+          activeName = String(window.CreatorSettings.creatorName).trim();
+        }
+      }
+
+      const oid = await waitForOwnerId(4000);
+      const base = resolveApiBase();
+      if (names.length === 0 && oid && base) {
+        const fetched = await fetchCreatorNamesFromApi(oid, base);
+        names = fetched.names;
+        if (fetched.activeName) activeName = fetched.activeName;
+      }
+
+      const emptyLabel = (typeof window.getI18n === 'function'
+        ? window.getI18n('upload_modal_no_creator', 'No creator available')
+        : null)
+        || (window.CreatorMobileI18n && window.CreatorMobileI18n.upload_modal_no_creator)
+        || (window.CreatorI18n && (window.CreatorI18n['creator.upload_modal.no_creator'] || window.CreatorI18n.uploadModalNoCreator))
+        || 'No creator available';
+
+      creatorSelect.innerHTML = '';
+      if (names.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = emptyLabel;
+        creatorSelect.appendChild(opt);
+        return;
+      }
+
+      names.forEach(function (n) {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        creatorSelect.appendChild(opt);
+      });
+
+      // Default: last selected (saved upload settings), then active creator, then first
+      const fromSettings = (savedUploadSettings && savedUploadSettings.creator_name)
+        ? String(savedUploadSettings.creator_name).trim()
+        : '';
+      const toSelect = fromSettings || activeName || resolveActiveCreatorName();
+      if (toSelect && Array.from(creatorSelect.options).some(function (opt) { return opt.value === toSelect; })) {
+        creatorSelect.value = toSelect;
+      } else if (creatorSelect.options.length) {
+        creatorSelect.selectedIndex = 0;
+      }
     }
 
     function getUploadSettings() {
@@ -748,18 +900,20 @@
     }
 
     async function loadSavedUploadSettings() {
-      if (!ownerId || !apiBase) {
+      const oid = await waitForOwnerId(4000);
+      const base = resolveApiBase();
+      if (!oid || !base) {
         console.warn('⚠️ Keine ownerId oder apiBase - Upload-Einstellungen können nicht geladen werden');
         return null;
       }
 
       try {
-        const url = new URL(`${apiBase}/creator`);
+        const url = new URL(`${base}/creator`);
         url.searchParams.set('op', 'get-upload-settings');
-        url.searchParams.set('owner_id', ownerId);
+        url.searchParams.set('owner_id', oid);
         url.searchParams.set('_t', Date.now().toString());
 
-        const response = await fetch(url.toString(), { cache: 'no-store' });
+        const response = await fetch(url.toString(), { credentials: 'include', cache: 'no-store' });
 
         if (!response.ok) {
           console.warn('⚠️ Upload-Einstellungen konnten nicht geladen werden (HTTP ' + response.status + ')');
@@ -780,7 +934,9 @@
     }
 
     async function saveUploadSettings(settings) {
-      if (!ownerId || !apiBase) {
+      const oid = resolveOwnerId();
+      const base = resolveApiBase();
+      if (!oid || !base) {
         console.warn('⚠️ Keine ownerId oder apiBase - Upload-Einstellungen können nicht gespeichert werden');
         return;
       }
@@ -788,13 +944,14 @@
       try {
         const settingsToSave = settings ? { ...settings } : {};
 
-        const url = new URL(`${apiBase}/creator`);
+        const url = new URL(`${base}/creator`);
         url.searchParams.set('op', 'set-upload-settings');
-        url.searchParams.set('owner_id', ownerId);
+        url.searchParams.set('owner_id', oid);
 
         const response = await fetch(url.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           cache: 'no-store',
           body: JSON.stringify({ upload: settingsToSave }),
         });
@@ -811,7 +968,7 @@
     }
 
     function buildDispatchBaseUrl() {
-      const raw = String(apiBase || window.api_base_url || window.API_BASE_URL || window.creator_api_base_url || '').trim();
+      const raw = String(resolveApiBase() || window.api_base_url || window.API_BASE_URL || window.creator_api_base_url || '').trim();
       if (!raw) return '';
       const clean = raw.split('?')[0].replace(/\/+$/, '');
       if (clean.indexOf('/apps/creator-dispatch') !== -1) return clean;
@@ -819,7 +976,8 @@
     }
 
     async function pollUploadStatus(jobId) {
-      if (!jobId || !ownerId) return;
+      const oid = resolveOwnerId();
+      if (!jobId || !oid) return;
       const base = buildDispatchBaseUrl();
       if (!base) return;
 
@@ -832,7 +990,7 @@
           const statusUrl = new URL(base);
           statusUrl.searchParams.set('op', 'status');
           statusUrl.searchParams.set('job_id', String(jobId));
-          statusUrl.searchParams.set('owner_id', String(ownerId));
+          statusUrl.searchParams.set('owner_id', String(oid));
 
           const resp = await fetch(statusUrl.toString(), { credentials: 'include', cache: 'no-store' });
           const data = await resp.json().catch(() => ({}));
@@ -853,7 +1011,8 @@
     }
 
     async function uploadDesignViaQueue(settings, file) {
-      if (!ownerId) throw new Error('missing owner_id');
+      const oid = resolveOwnerId();
+      if (!oid) throw new Error('missing owner_id');
       if (!file) throw new Error('missing file');
 
       const base = buildDispatchBaseUrl();
@@ -861,13 +1020,13 @@
 
       const formData = new FormData();
       formData.append('image', file);
-      formData.append('owner_id', String(ownerId));
+      formData.append('owner_id', String(oid));
       formData.append('creator_name', (settings && settings.creator_name) ? String(settings.creator_name) : '');
       formData.append('visibility', (settings && settings.visibility === 'private') ? 'private' : 'public');
 
       const url = new URL(base);
       url.searchParams.set('op', 'upload-design');
-      url.searchParams.set('owner_id', String(ownerId));
+      url.searchParams.set('owner_id', String(oid));
 
       const resp = await fetch(url.toString(), {
         method: 'POST',
@@ -1047,14 +1206,15 @@
 
     function prefetchUploadModalEazCosts() {
       var dispatchBase = buildDispatchBaseUrl();
-      if (!ownerId || !dispatchBase) {
+      var oid = resolveOwnerId();
+      if (!oid || !dispatchBase) {
         updateUploadCostLabels();
         return;
       }
       try {
         var balUrl = new URL(dispatchBase);
         balUrl.searchParams.set('op', 'get-balance');
-        balUrl.searchParams.set('owner_id', String(ownerId));
+        balUrl.searchParams.set('owner_id', String(oid));
         balUrl.searchParams.set('_t', String(Date.now()));
         fetch(balUrl.toString(), { credentials: 'include', cache: 'no-store' })
           .then(function (r) { return r.ok ? r.json() : null; })
@@ -1122,6 +1282,19 @@
       document.head.appendChild(style);
     }
 
+    function resolveEazvCoinUrl() {
+      if (window.EazCoinBrand && typeof window.EazCoinBrand.urlEazv === 'function') {
+        try {
+          var u = window.EazCoinBrand.urlEazv();
+          if (u) return String(u);
+        } catch (_) {}
+      }
+      if (window.__EazCoinUrls && window.__EazCoinUrls.eazv_coin_logo) {
+        return String(window.__EazCoinUrls.eazv_coin_logo);
+      }
+      return 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazv_coin_logo';
+    }
+
     // Bestätigungsdialog für Upload anzeigen (sofort — Kosten aus Cache, API im Hintergrund)
     function showUploadConfirmDialog(settings, file, onConfirm) {
       ensureUploadConfirmStyles();
@@ -1141,6 +1314,7 @@
       const visPub = i18nUploadConfirm('uploadConfirmVisibilityPublic', 'Public');
       const visPriv = i18nUploadConfirm('uploadConfirmVisibilityPrivate', 'Private');
       const visibilityLabel = settings.visibility === 'public' ? visPub : visPriv;
+      const eazvCoinSrc = resolveEazvCoinUrl();
 
       const modalBox = document.createElement('div');
       modalBox.className = 'creator-upload-confirm-dialog';
@@ -1168,7 +1342,7 @@
           <div class="creator-upload-confirm-dialog__row">
             <span class="creator-upload-confirm-dialog__label">${escapeHtml(i18nUploadConfirm('uploadConfirmCost', 'Cost'))}</span>
             <span class="creator-upload-confirm-dialog__value creator-upload-confirm-dialog__value--cost">
-              <img class="eaz-coin-icon" src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="" width="18" height="18">
+              <img class="eaz-coin-icon" src="${escapeHtml(eazvCoinSrc)}" alt="" width="18" height="18" data-eaz-coin="eazv">
               <span data-upload-confirm-cost-value>${escapeHtml((cat.fmtEaz ? cat.fmtEaz(totalCost) : formatUploadEazAmount(totalCost)) + ' EAZ')}</span>
             </span>
           </div>
@@ -1180,7 +1354,7 @@
           </button>
           <button type="button" class="creator-upload-confirm-dialog__btn creator-upload-confirm-dialog__btn--primary upload-confirm-yes">
             <span>${escapeHtml(i18nUploadConfirm('uploadConfirmUploadBtn', 'Upload'))}</span>
-            <img class="eaz-coin-icon" src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="" width="14" height="14">
+            <img class="eaz-coin-icon" src="${escapeHtml(eazvCoinSrc)}" alt="" width="14" height="14" data-eaz-coin="eazv">
           </button>
         </div>
       `;

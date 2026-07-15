@@ -427,11 +427,11 @@
     object-fit:contain;
   }
 
-  /* Primary Upload CTA: EAZV coin left of label */
+  /* Primary Upload CTA: [EAZV logo] [cost] Upload Design */
   .design-upload-modal__button--primary{
     display:inline-flex;
     align-items:center;
-    gap:10px;
+    gap:8px;
   }
 
   .design-upload-modal__button--primary .eaz-coin-icon--upload-cta{
@@ -446,15 +446,19 @@
     line-height:1.2;
   }
 
-  .btn-cost-inline{
+  /* Cost sits immediately right of the logo, before the label — black on orange CTA */
+  .design-upload-modal__button--primary .btn-cost-inline{
     display:inline-flex;
     align-items:center;
     gap:0;
-    padding:2px 8px;
-    background:rgba(255, 255, 255, 0.2);
-    border-radius:4px;
-    font-size:12px;
+    margin:0;
+    padding:0;
+    background:transparent;
+    border-radius:0;
+    font-size:15px;
     font-weight:700;
+    line-height:1;
+    color:#000000;
   }
 
   .design-upload-modal__footer{
@@ -1001,8 +1005,14 @@
       </div>
 
       
-      <!-- Sichtbarkeit (Creator = aktiver Creator aus den Settings, keine Auswahl hier) -->
+      <!-- Creator + Sichtbarkeit (wie beim Speichern von Designs) -->
       <div class="design-upload-options">
+        <div class="design-upload-options__row">
+          <label for="design-upload-creator-select-creator-mobile" class="design-upload-options__label">Creator</label>
+          <select id="design-upload-creator-select-creator-mobile" class="design-upload-creator-select" aria-label="Select Creator">
+            <option value="">Loading Creator...</option>
+          </select>
+        </div>
         <div class="design-upload-options__row">
           <span class="design-upload-options__label">Visibility</span>
           <div class="design-upload-visibility-row">
@@ -1020,19 +1030,20 @@
     </div>
 
     
+    
     <div class="design-upload-modal__footer">
       <button type="button" class="design-upload-modal__button design-upload-modal__button--secondary">Cancel</button>
       <button type="button" class="design-upload-modal__button design-upload-modal__button--primary">
         <img
-          src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png"
+          src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazv_coin_logo"
           alt=""
           width="22"
           height="22"
           class="eaz-coin-icon eaz-coin-icon--upload-cta"
           data-eaz-coin="eazv"
         >
-        <span class="design-upload-modal__upload-label">Upload Design</span>
         <span class="btn-cost-inline" data-eaz-cost-feature="design_upload">5</span>
+        <span class="design-upload-modal__upload-label">Upload Design</span>
       </button>
     </div>
     
