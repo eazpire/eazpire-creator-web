@@ -1171,7 +1171,7 @@
       o.classList.add('is-open');
     }
     o.setAttribute('aria-hidden', 'false');
-    if (autoClipboardBinder) autoClipboardBinder.refresh();
+    if (autoScreenshotBinder) autoScreenshotBinder.refresh();
   }
 
   function closeAutoRefOverlay() {
@@ -1194,7 +1194,7 @@
     return o.classList.contains('is-open') || !!o.open;
   }
 
-  var autoClipboardBinder = null;
+  var autoScreenshotBinder = null;
 
   function triggerAutoFileInput(useCamera) {
     var input = document.getElementById('creatorAutoImageInput');
@@ -1211,11 +1211,11 @@
       triggerAutoFileInput(false);
       return;
     }
-    if (source === 'clipboard') {
-      if (!(window.EazClipboardImage && typeof window.EazClipboardImage.readImageFile === 'function')) {
+    if (source === 'screenshot') {
+      if (!(window.EazScreenshotCapture && typeof window.EazScreenshotCapture.start === 'function')) {
         return;
       }
-      window.EazClipboardImage.readImageFile().then(function (file) {
+      window.EazScreenshotCapture.start().then(function (file) {
         if (!file) return;
         addAutoFilesFromInput([file]);
       });
@@ -1458,11 +1458,9 @@
           if (source) openAutoSource(source);
         });
       });
-      var clipBtn = overlay.querySelector('[data-auto-source="clipboard"]');
-      if (clipBtn && window.EazClipboardImage && typeof window.EazClipboardImage.bindOption === 'function') {
-        autoClipboardBinder = window.EazClipboardImage.bindOption(clipBtn, {
-          isOpen: isAutoRefOverlayOpen
-        });
+      var shotBtn = overlay.querySelector('[data-auto-source="screenshot"]');
+      if (shotBtn && window.EazScreenshotCapture && typeof window.EazScreenshotCapture.bindOption === 'function') {
+        autoScreenshotBinder = window.EazScreenshotCapture.bindOption(shotBtn);
       }
     }
     if (fileInput) {

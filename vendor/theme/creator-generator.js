@@ -106,10 +106,10 @@
     var refImageCards = refImageOverlay
       ? refImageOverlay.querySelectorAll('.gen-ref-image-card[data-source]')
       : [];
-    var clipboardCard = refImageOverlay
-      ? refImageOverlay.querySelector('.gen-ref-image-card[data-source="clipboard"]')
+    var screenshotCard = refImageOverlay
+      ? refImageOverlay.querySelector('.gen-ref-image-card[data-source="screenshot"]')
       : null;
-    var clipboardBinder = null;
+    var screenshotBinder = null;
     var selectedCard = document.getElementById('genSelectedImagesCard');
     var selectedGrid = document.getElementById('genSelectedImagesGrid');
     var selectedCount = document.getElementById('genSelectedImagesCount');
@@ -118,22 +118,16 @@
     var selectedImages = [];
     window.__creatorGenSelectedImages = selectedImages;
 
-    function isRefImageModalOpen() {
-      return !!(refImageOverlay && refImageOverlay.classList.contains('is-open'));
-    }
-
     function openRefImageModal() {
       if (refImageOverlay) {
         refImageOverlay.classList.add('is-open');
         refImageOverlay.setAttribute('aria-hidden', 'false');
       }
-      if (clipboardCard && window.EazClipboardImage) {
-        if (!clipboardBinder) {
-          clipboardBinder = window.EazClipboardImage.bindOption(clipboardCard, {
-            isOpen: isRefImageModalOpen
-          });
+      if (screenshotCard && window.EazScreenshotCapture) {
+        if (!screenshotBinder) {
+          screenshotBinder = window.EazScreenshotCapture.bindOption(screenshotCard);
         }
-        clipboardBinder.refresh();
+        screenshotBinder.refresh();
       }
     }
 
@@ -255,11 +249,11 @@
         triggerFileInput(false);
         return;
       }
-      if (source === 'clipboard') {
-        if (!(window.EazClipboardImage && typeof window.EazClipboardImage.readImageFile === 'function')) {
+      if (source === 'screenshot') {
+        if (!(window.EazScreenshotCapture && typeof window.EazScreenshotCapture.start === 'function')) {
           return;
         }
-        window.EazClipboardImage.readImageFile().then(function (file) {
+        window.EazScreenshotCapture.start().then(function (file) {
           if (!file) return;
           addFiles([file]);
         });

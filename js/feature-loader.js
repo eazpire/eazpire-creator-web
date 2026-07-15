@@ -243,7 +243,7 @@
         asset("reference-influence-modal.js"),
         asset("creator-inspiration-modal.js"),
         asset("creator-phone-upload-modal.js"),
-        asset("eaz-clipboard-image.js"),
+        asset("eaz-screenshot-capture.js"),
         asset("creator-generator.js"),
       ]);
 
@@ -328,7 +328,7 @@
       }
 
       await loadScriptsSequential([
-        asset("eaz-clipboard-image.js"),
+        asset("eaz-screenshot-capture.js"),
         asset("creator-automations-screen.js"),
       ]);
     })();
