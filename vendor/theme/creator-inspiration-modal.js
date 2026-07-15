@@ -935,7 +935,7 @@
       return;
     }
 
-    function applyToUploadZone(strength) {
+    function applyToUploadZone(strength, influenceResult) {
       if (_modalPurpose === 'remix') {
         const existing = getExistingRemixParentId(sectionId);
         if (existing && design.id && !confirmRemixReplace(existing, design.id)) {
@@ -956,6 +956,20 @@
       if (fileInput) {
         fileInput.dataset.imageUrl = imageUrl;
         if (typeof strength === 'number') fileInput.dataset.referenceStrength = String(strength);
+        if (influenceResult && influenceResult.inspiration_mode) {
+          fileInput.dataset.inspirationMode = String(influenceResult.inspiration_mode);
+        }
+        try {
+          if (influenceResult && influenceResult.elements) {
+            fileInput.dataset.referenceElements = JSON.stringify(influenceResult.elements);
+          }
+          if (influenceResult && Array.isArray(influenceResult.exclude_elements)) {
+            fileInput.dataset.referenceExcludeElements = JSON.stringify(influenceResult.exclude_elements);
+          }
+          if (influenceResult && Array.isArray(influenceResult.include_elements)) {
+            fileInput.dataset.referenceIncludeElements = JSON.stringify(influenceResult.include_elements);
+          }
+        } catch (eInf) {}
         if (_modalPurpose === 'remix') {
           delete fileInput.dataset.parentDesignId;
           delete fileInput.dataset.remixDesignId;
@@ -986,8 +1000,13 @@
             ? strength <= 1 && strength >= 0
               ? Math.round(strength * 100)
               : Math.round(strength)
-            : 80;
-        window.eazShopStudioRefsAdd(sectionId, imageUrl, stPct);
+            : 60;
+        var addOpts = {};
+        if (influenceResult && influenceResult.inspiration_mode) addOpts.inspiration_mode = influenceResult.inspiration_mode;
+        if (influenceResult && influenceResult.elements) addOpts.elements = influenceResult.elements;
+        if (influenceResult && influenceResult.include_elements) addOpts.include_elements = influenceResult.include_elements;
+        if (influenceResult && influenceResult.exclude_elements) addOpts.exclude_elements = influenceResult.exclude_elements;
+        window.eazShopStudioRefsAdd(sectionId, imageUrl, stPct, Object.keys(addOpts).length ? addOpts : undefined);
       }
       console.log('[Inspiration Modal] Design loaded into upload zone:', design.id);
     }
@@ -996,16 +1015,15 @@
       close();
       window.ReferenceInfluenceModal.open({
         imageUrl: imageUrl,
-        initialStep: 4,
         onApply: function(result) {
           if (result && typeof result.strength === 'number') {
-            applyToUploadZone(result.strength);
+            applyToUploadZone(result.strength, result);
           }
         }
       });
     } else {
       close();
-      applyToUploadZone(0.8);
+      applyToUploadZone(0.6);
     }
   }
 

@@ -1044,7 +1044,6 @@
     if (window.ReferenceInfluenceModal && typeof window.ReferenceInfluenceModal.open === 'function') {
       window.ReferenceInfluenceModal.open({
         imageUrl: imageUrl,
-        initialStep: 4,
         onApply: function (result) {
           if (!result) {
             done(null);
@@ -1058,13 +1057,17 @@
           }
           done({
             dataUrl: outUrl || imageUrl,
-            similarity: typeof result.strength === 'number' ? result.strength : 0.8
+            similarity: typeof result.strength === 'number' ? result.strength : 0.6,
+            inspiration_mode: result.inspiration_mode || null,
+            elements: result.elements || null,
+            include_elements: result.include_elements || null,
+            exclude_elements: result.exclude_elements || null
           });
         }
       });
       return;
     }
-    done({ dataUrl: imageUrl, similarity: 0.8 });
+    done({ dataUrl: imageUrl, similarity: 0.6 });
   }
 
   function withSimilarityForFileAuto(file, done) {
@@ -1073,12 +1076,11 @@
       return;
     }
     if (!(window.ReferenceInfluenceModal && typeof window.ReferenceInfluenceModal.open === 'function')) {
-      done({ file: file, similarity: 0.8 });
+      done({ file: file, similarity: 0.6 });
       return;
     }
     window.ReferenceInfluenceModal.open({
       file: file,
-      initialStep: 4,
       onApply: function (result) {
         if (!result || !result.file) {
           done(null);
@@ -1086,7 +1088,11 @@
         }
         done({
           file: result.file,
-          similarity: typeof result.strength === 'number' ? result.strength : 0.8
+          similarity: typeof result.strength === 'number' ? result.strength : 0.6,
+          inspiration_mode: result.inspiration_mode || null,
+          elements: result.elements || null,
+          include_elements: result.include_elements || null,
+          exclude_elements: result.exclude_elements || null
         });
       }
     });
@@ -1140,7 +1146,8 @@
     if (!window.ReferenceInfluenceModal || typeof window.ReferenceInfluenceModal.open !== 'function') return;
     window.ReferenceInfluenceModal.open({
       imageUrl: item.dataUrl,
-      initialStep: similarityStepFromValue(item.similarity),
+      initialStrength: typeof item.similarity === 'number' ? item.similarity : 0.6,
+      initialMode: item.inspiration_mode || undefined,
       onApply: function (res) {
         if (!res || !res.file) return;
         var reader = new FileReader();
@@ -1149,7 +1156,11 @@
             file: res.file,
             dataUrl: reader.result,
             similarity: typeof res.strength === 'number' ? res.strength : item.similarity,
-            canvasStrokes: item.canvasStrokes
+            canvasStrokes: item.canvasStrokes,
+            inspiration_mode: res.inspiration_mode || null,
+            elements: res.elements || null,
+            include_elements: res.include_elements || null,
+            exclude_elements: res.exclude_elements || null
           };
           renderAutoRefGrid();
         };
@@ -1270,7 +1281,11 @@
                       file: result.blob,
                       dataUrl: picked.dataUrl,
                       similarity: picked.similarity,
-                      canvasStrokes: result.strokes || null
+                      canvasStrokes: result.strokes || null,
+                      inspiration_mode: picked.inspiration_mode || null,
+                      elements: picked.elements || null,
+                      include_elements: picked.include_elements || null,
+                      exclude_elements: picked.exclude_elements || null
                     });
                   });
                 };
@@ -1282,7 +1297,11 @@
                     file: null,
                     dataUrl: picked.dataUrl,
                     similarity: picked.similarity,
-                    canvasStrokes: result.strokes || null
+                    canvasStrokes: result.strokes || null,
+                    inspiration_mode: picked.inspiration_mode || null,
+                    elements: picked.elements || null,
+                    include_elements: picked.include_elements || null,
+                    exclude_elements: picked.exclude_elements || null
                   });
                 });
               }
@@ -1316,7 +1335,11 @@
             file: picked.file,
             dataUrl: reader.result,
             similarity: picked.similarity,
-            canvasStrokes: null
+            canvasStrokes: null,
+            inspiration_mode: picked.inspiration_mode || null,
+            elements: picked.elements || null,
+            include_elements: picked.include_elements || null,
+            exclude_elements: picked.exclude_elements || null
           });
           processNext(idx + 1);
         };
@@ -1340,14 +1363,18 @@
         file: null,
         dataUrl: picked.dataUrl,
         similarity: picked.similarity,
-        canvasStrokes: null
+        canvasStrokes: null,
+        inspiration_mode: picked.inspiration_mode || null,
+        elements: picked.elements || null,
+        include_elements: picked.include_elements || null,
+        exclude_elements: picked.exclude_elements || null
       });
     });
   }
 
   function serializeAutoReferenceAssets() {
     return autoRefImages.map(function (it, i) {
-      var sim = typeof it.similarity === 'number' ? it.similarity : 0.8;
+      var sim = typeof it.similarity === 'number' ? it.similarity : 0.6;
       var pct = sim <= 1 && sim >= 0 ? Math.round(sim * 100) : Math.max(0, Math.min(100, Math.round(sim)));
       var row = {
         url: it.dataUrl,
@@ -1355,6 +1382,10 @@
         strength: pct
       };
       if (it.canvasStrokes && it.canvasStrokes.length) row.canvas_strokes = it.canvasStrokes;
+      if (it.inspiration_mode) row.inspiration_mode = it.inspiration_mode;
+      if (it.elements) row.elements = it.elements;
+      if (it.include_elements) row.include_elements = it.include_elements;
+      if (it.exclude_elements) row.exclude_elements = it.exclude_elements;
       return row;
     });
   }
@@ -1510,7 +1541,11 @@
                             file: result.blob,
                             dataUrl: picked.dataUrl,
                             similarity: picked.similarity,
-                            canvasStrokes: result.strokes || null
+                            canvasStrokes: result.strokes || null,
+                            inspiration_mode: picked.inspiration_mode || null,
+                            elements: picked.elements || null,
+                            include_elements: picked.include_elements || null,
+                            exclude_elements: picked.exclude_elements || null
                           };
                           renderAutoRefGrid();
                         });
@@ -1523,7 +1558,11 @@
                           file: null,
                           dataUrl: picked.dataUrl,
                           similarity: picked.similarity,
-                          canvasStrokes: result.strokes || null
+                          canvasStrokes: result.strokes || null,
+                          inspiration_mode: picked.inspiration_mode || null,
+                          elements: picked.elements || null,
+                          include_elements: picked.include_elements || null,
+                          exclude_elements: picked.exclude_elements || null
                         };
                         renderAutoRefGrid();
                       });

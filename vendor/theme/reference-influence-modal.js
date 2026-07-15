@@ -1,17 +1,28 @@
 /**
  * Reference Influence Modal
- * Slider 5/20/40/60/80/100. Strength = right-side gradient on the image; crop = frame + darkening outside selection (same canvas).
- * Apply commits the cropped region as File + blob URL for generation.
+ * Inspiration mode (Faithful/Inspired/Creative/Innovative) maps to strength.
+ * Design element include/exclude toggles. Crop = frame + darkening outside selection.
+ * Apply commits cropped File + blob URL + strength + inspiration_mode + elements.
  */
 (function () {
   'use strict';
 
   var MODAL_ID = 'reference-influence-modal';
-  var STEPS = [0.05, 0.2, 0.4, 0.6, 0.8, 1.0];
+  var STORAGE_KEY = 'eaz_ref_influence_mode';
+  var ELEMENT_KEYS = ['style', 'theme', 'colors', 'layout', 'elements', 'typography', 'details'];
+  var MODE_STRENGTH = {
+    faithful: 1.0,
+    inspired: 0.6,
+    creative: 0.2,
+    innovative: 0.05
+  };
+  var MODE_ORDER = ['faithful', 'inspired', 'creative', 'innovative'];
+  /** Legacy slider steps → closest mode */
+  var LEGACY_STEP_TO_MODE = ['innovative', 'creative', 'inspired', 'inspired', 'faithful', 'faithful'];
 
   var pendingFile = null;
   var pendingCallback = null;
-  var currentStepIndex = 4;
+  var currentMode = 'inspired';
   /** @type {string|null} blob: URL we must revoke when replacing preview */
   var previewBlobUrl = null;
   /** @type {null|function()} restore DOM parent after automation-layer reparent */
@@ -27,13 +38,58 @@
     return document.getElementById(MODAL_ID);
   }
 
-  function getStepLabel(stepValue) {
-    var container = document.getElementById('reference-influence-step-texts');
-    if (container) {
-      var el = container.querySelector('[data-step="' + stepValue + '"]');
-      if (el) return el.textContent;
+  function getIncludeLabel() {
+    var el = document.querySelector('#reference-influence-elements .reference-influence-modal__element-toggle[data-state="include"] .reference-influence-modal__element-toggle-text');
+    if (el && el.textContent) return el.textContent.trim();
+    return (window.CreatorI18n && window.CreatorI18n.reference_influence_include) || 'Include';
+  }
+
+  function getExcludeLabel() {
+    var sample = document.querySelector('#reference-influence-elements .reference-influence-modal__element-toggle');
+    if (sample) {
+      var includeText = sample.getAttribute('data-include-label');
+      var excludeText = sample.getAttribute('data-exclude-label');
+      if (excludeText) return excludeText;
+      if (!includeText) {
+        /* Labels come from Liquid; fall back to i18n / English */
+      }
     }
-    return '';
+    return (window.CreatorI18n && window.CreatorI18n.reference_influence_exclude) || 'Exclude';
+  }
+
+  function resolveToggleLabels() {
+    var include =
+      (window.CreatorI18n && (window.CreatorI18n['creator.reference_influence.include'] || window.CreatorI18n.reference_influence_include)) ||
+      'Include';
+    var exclude =
+      (window.CreatorI18n && (window.CreatorI18n['creator.reference_influence.exclude'] || window.CreatorI18n.reference_influence_exclude)) ||
+      'Exclude';
+    var firstToggle = document.querySelector('#reference-influence-elements .reference-influence-modal__element-toggle');
+    if (firstToggle) {
+      var span = firstToggle.querySelector('.reference-influence-modal__element-toggle-text');
+      if (span && firstToggle.getAttribute('data-state') === 'include' && span.textContent) {
+        include = span.textContent.trim() || include;
+      }
+    }
+    /* Prefer Liquid-rendered include text from first button; exclude from a hidden data attr if present */
+    var controls = document.getElementById('reference-influence-controls');
+    if (controls) {
+      if (!controls.dataset.includeLabel) controls.dataset.includeLabel = include;
+      if (!controls.dataset.excludeLabel) {
+        /* Will be set from Liquid via a data attribute on the section if available */
+        var section = document.getElementById('reference-influence-elements');
+        if (section && section.getAttribute('data-exclude-label')) {
+          controls.dataset.excludeLabel = section.getAttribute('data-exclude-label');
+        } else {
+          controls.dataset.excludeLabel = exclude;
+        }
+      }
+      return {
+        include: controls.dataset.includeLabel || include,
+        exclude: controls.dataset.excludeLabel || exclude
+      };
+    }
+    return { include: include, exclude: exclude };
   }
 
   function revokePreviewBlob() {
@@ -45,20 +101,90 @@
     }
   }
 
-  function updateUI() {
-    var slider = document.getElementById('reference-influence-slider');
-    var stepText = document.getElementById('reference-influence-step-text');
-    var thumb = document.getElementById('reference-influence-thumb');
-    var thumbPct = document.getElementById('reference-influence-thumb-pct');
+  function strengthForMode(mode) {
+    return MODE_STRENGTH[mode] != null ? MODE_STRENGTH[mode] : MODE_STRENGTH.inspired;
+  }
 
-    var strength = STEPS[currentStepIndex];
-    var pct = Math.round(strength * 100);
+  function modeFromStrength(strength) {
+    var s = typeof strength === 'number' ? strength : parseFloat(strength);
+    if (!isFinite(s)) return 'inspired';
+    if (s > 1) s = s / 100;
+    var best = 'inspired';
+    var bestD = 2;
+    for (var i = 0; i < MODE_ORDER.length; i++) {
+      var m = MODE_ORDER[i];
+      var d = Math.abs(MODE_STRENGTH[m] - s);
+      if (d < bestD) {
+        bestD = d;
+        best = m;
+      }
+    }
+    return best;
+  }
 
-    if (slider) slider.value = currentStepIndex;
-    if (stepText) stepText.textContent = getStepLabel(pct);
-    if (thumbPct) thumbPct.textContent = String(pct);
-    if (thumb) thumb.style.left = (currentStepIndex / 5 * 100) + '%';
+  function readStoredMode() {
+    try {
+      var v = localStorage.getItem(STORAGE_KEY);
+      if (v && MODE_STRENGTH[v] != null) return v;
+    } catch (e) {}
+    return null;
+  }
+
+  function writeStoredMode(mode) {
+    try {
+      if (MODE_STRENGTH[mode] != null) localStorage.setItem(STORAGE_KEY, mode);
+    } catch (e) {}
+  }
+
+  function setModeUI(mode) {
+    currentMode = MODE_STRENGTH[mode] != null ? mode : 'inspired';
+    var radios = document.querySelectorAll('input[name="reference-influence-mode"]');
+    for (var i = 0; i < radios.length; i++) {
+      radios[i].checked = radios[i].value === currentMode;
+    }
     if (cropState) drawCropCanvas();
+  }
+
+  function resetElementsToInclude() {
+    var labels = resolveToggleLabels();
+    var toggles = document.querySelectorAll('#reference-influence-elements .reference-influence-modal__element-toggle');
+    for (var i = 0; i < toggles.length; i++) {
+      var btn = toggles[i];
+      btn.setAttribute('data-state', 'include');
+      btn.setAttribute('aria-pressed', 'true');
+      var text = btn.querySelector('.reference-influence-modal__element-toggle-text');
+      if (text) text.textContent = labels.include;
+    }
+  }
+
+  function collectElementsResult() {
+    var elements = {};
+    var include_elements = [];
+    var exclude_elements = [];
+    var rows = document.querySelectorAll('#reference-influence-elements .reference-influence-modal__element');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var key = row.getAttribute('data-element');
+      if (!key) continue;
+      var btn = row.querySelector('.reference-influence-modal__element-toggle');
+      var state = btn && btn.getAttribute('data-state') === 'exclude' ? 'exclude' : 'include';
+      elements[key] = state;
+      if (state === 'exclude') exclude_elements.push(key);
+      else include_elements.push(key);
+    }
+    /* Ensure all known keys present */
+    for (var k = 0; k < ELEMENT_KEYS.length; k++) {
+      var ek = ELEMENT_KEYS[k];
+      if (!elements[ek]) {
+        elements[ek] = 'include';
+        if (include_elements.indexOf(ek) < 0) include_elements.push(ek);
+      }
+    }
+    return { elements: elements, include_elements: include_elements, exclude_elements: exclude_elements };
+  }
+
+  function updateUI() {
+    setModeUI(currentMode);
   }
 
   function teardownInlineCrop() {
@@ -200,8 +326,8 @@
     ctx.fillRect(0, 0, cw, ch);
     ctx.drawImage(img, ox, oy, dw, dh);
 
-    /* Strength hint (same idea as former .reference-influence-dim): gradient from the right over the image only */
-    var strength = STEPS[currentStepIndex];
+    /* Strength hint: gradient from the right over the image only */
+    var strength = strengthForMode(currentMode);
     var pct = Math.round(strength * 100);
     if (pct < 100 && dw > 1 && dh > 1) {
       var wStrip = (dw * (100 - pct)) / 100;
@@ -250,7 +376,6 @@
   function layoutCropFromWrap() {
     if (!cropState) return;
     var wrap = cropState.wrap;
-    var img = cropState.img;
     var nw = cropState.nw;
     var nh = cropState.nh;
     var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -523,6 +648,23 @@
     );
   }
 
+  function resolveInitialMode(options) {
+    if (options && typeof options.initialMode === 'string' && MODE_STRENGTH[options.initialMode] != null) {
+      return options.initialMode;
+    }
+    if (options && options.initialStrength != null) {
+      return modeFromStrength(options.initialStrength);
+    }
+    /* Prefer last user choice over legacy default initialStep */
+    var stored = readStoredMode();
+    if (stored) return stored;
+    if (options && typeof options.initialStep === 'number') {
+      var idx = Math.max(0, Math.min(5, options.initialStep));
+      return LEGACY_STEP_TO_MODE[idx] || 'inspired';
+    }
+    return 'inspired';
+  }
+
   function open(options) {
     var modal = getModal();
     if (!modal) return;
@@ -531,7 +673,9 @@
     teardownInlineCrop();
     pendingFile = options.file || null;
     pendingCallback = options.onApply || null;
-    currentStepIndex = typeof options.initialStep === 'number' ? Math.max(0, Math.min(5, options.initialStep)) : 4;
+    currentMode = resolveInitialMode(options || {});
+    resetElementsToInclude();
+    updateUI();
 
     var source = pendingFile || options.imageUrl || null;
     if (!source) {
@@ -539,7 +683,6 @@
       return;
     }
 
-    updateUI();
     automationLayerRestore = null;
     if (typeof window.eazReparentIntoCreatorAutomationLayer === 'function') {
       automationLayerRestore = window.eazReparentIntoCreatorAutomationLayer(modal);
@@ -556,6 +699,20 @@
       });
   }
 
+  function buildApplyResult(file, imageUrl) {
+    var el = collectElementsResult();
+    var strength = strengthForMode(currentMode);
+    return {
+      strength: strength,
+      inspiration_mode: currentMode,
+      elements: el.elements,
+      include_elements: el.include_elements,
+      exclude_elements: el.exclude_elements,
+      file: file,
+      imageUrl: imageUrl
+    };
+  }
+
   function handleApply() {
     exportCroppedFile(function (err, file) {
       if (err || !file) {
@@ -564,7 +721,8 @@
       }
       revokePreviewBlob();
       var nu = URL.createObjectURL(file);
-      var strength = STEPS[currentStepIndex];
+      writeStoredMode(currentMode);
+      var result = buildApplyResult(file, nu);
       var cb = pendingCallback;
       pendingCallback = null;
       pendingFile = null;
@@ -574,7 +732,7 @@
       if (modal && modal.close) modal.close();
       restoreAutomationLayer();
       if (cb) {
-        cb({ strength: strength, file: file, imageUrl: nu });
+        cb(result);
       }
     });
   }
@@ -584,6 +742,27 @@
       pendingCallback(null);
     }
     close();
+  }
+
+  function onModeChange(ev) {
+    var t = ev.target;
+    if (!t || t.name !== 'reference-influence-mode') return;
+    if (!t.checked) return;
+    if (MODE_STRENGTH[t.value] == null) return;
+    currentMode = t.value;
+    if (cropState) drawCropCanvas();
+  }
+
+  function onElementToggleClick(ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.reference-influence-modal__element-toggle') : null;
+    if (!btn) return;
+    ev.preventDefault();
+    var labels = resolveToggleLabels();
+    var next = btn.getAttribute('data-state') === 'exclude' ? 'include' : 'exclude';
+    btn.setAttribute('data-state', next);
+    btn.setAttribute('aria-pressed', next === 'include' ? 'true' : 'false');
+    var text = btn.querySelector('.reference-influence-modal__element-toggle-text');
+    if (text) text.textContent = next === 'exclude' ? labels.exclude : labels.include;
   }
 
   function bind() {
@@ -599,12 +778,21 @@
     });
     modal.addEventListener('cancel', handleCancel);
 
-    var slider = document.getElementById('reference-influence-slider');
-    if (slider) {
-      slider.addEventListener('input', function () {
-        currentStepIndex = parseInt(slider.value, 10);
-        updateUI();
-      });
+    var modes = document.getElementById('reference-influence-controls');
+    if (modes) {
+      modes.addEventListener('change', onModeChange);
+    }
+    var elements = document.getElementById('reference-influence-elements');
+    if (elements) {
+      elements.addEventListener('click', onElementToggleClick);
+      /* Seed exclude label from Liquid if a template node exists */
+      var excludeSeed = document.getElementById('reference-influence-exclude-label');
+      var includeSeed = document.getElementById('reference-influence-include-label');
+      var controls = document.getElementById('reference-influence-controls');
+      if (controls) {
+        if (includeSeed && includeSeed.textContent) controls.dataset.includeLabel = includeSeed.textContent.trim();
+        if (excludeSeed && excludeSeed.textContent) controls.dataset.excludeLabel = excludeSeed.textContent.trim();
+      }
     }
   }
 
@@ -614,8 +802,20 @@
     bind();
   }
 
+  function copyInfluenceFields(from, to) {
+    if (!from || !to) return to;
+    if (from.inspiration_mode) to.inspiration_mode = from.inspiration_mode;
+    if (from.elements && typeof from.elements === 'object') to.elements = from.elements;
+    if (Array.isArray(from.include_elements)) to.include_elements = from.include_elements.slice();
+    if (Array.isArray(from.exclude_elements)) to.exclude_elements = from.exclude_elements.slice();
+    return to;
+  }
+
   window.ReferenceInfluenceModal = {
     open: open,
-    close: close
+    close: close,
+    MODE_STRENGTH: MODE_STRENGTH,
+    modeFromStrength: modeFromStrength,
+    copyInfluenceFields: copyInfluenceFields
   };
 })();

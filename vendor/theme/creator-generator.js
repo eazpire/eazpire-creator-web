@@ -162,7 +162,6 @@
       if (window.ReferenceInfluenceModal && typeof window.ReferenceInfluenceModal.open === 'function') {
         window.ReferenceInfluenceModal.open({
           imageUrl: imageUrl,
-          initialStep: 4,
           onApply: function (result) {
             if (!result) {
               done(null);
@@ -176,13 +175,17 @@
             }
             done({
               dataUrl: outUrl || imageUrl,
-              similarity: typeof result.strength === 'number' ? result.strength : 0.8
+              similarity: typeof result.strength === 'number' ? result.strength : 0.6,
+              inspiration_mode: result.inspiration_mode || null,
+              elements: result.elements || null,
+              include_elements: result.include_elements || null,
+              exclude_elements: result.exclude_elements || null
             });
           }
         });
         return;
       }
-      done({ dataUrl: imageUrl, similarity: 0.8 });
+      done({ dataUrl: imageUrl, similarity: 0.6 });
     }
 
     function normalizeDesignTypeSlug(raw) {
@@ -225,12 +228,11 @@
         return;
       }
       if (!(window.ReferenceInfluenceModal && typeof window.ReferenceInfluenceModal.open === 'function')) {
-        done({ file: file, similarity: 0.8 });
+        done({ file: file, similarity: 0.6 });
         return;
       }
       window.ReferenceInfluenceModal.open({
         file: file,
-        initialStep: 4,
         onApply: function (result) {
           if (!result || !result.file) {
             done(null);
@@ -238,7 +240,11 @@
           }
           done({
             file: result.file,
-            similarity: typeof result.strength === 'number' ? result.strength : 0.8
+            similarity: typeof result.strength === 'number' ? result.strength : 0.6,
+            inspiration_mode: result.inspiration_mode || null,
+            elements: result.elements || null,
+            include_elements: result.include_elements || null,
+            exclude_elements: result.exclude_elements || null
           });
         }
       });
@@ -325,7 +331,7 @@
                   reader.onload = function () {
                     withSimilarityForImageUrl(reader.result, function (picked) {
                       if (!picked) return;
-                      selectedImages.push({ file: result.blob, dataUrl: picked.dataUrl, similarity: picked.similarity, canvasStrokes: result.strokes || null });
+                      selectedImages.push(attachInfluenceFromPicked({ file: result.blob, dataUrl: picked.dataUrl, canvasStrokes: result.strokes || null }, picked));
                       renderSelectedGrid();
                     });
                   };
@@ -333,7 +339,7 @@
                 } else {
                   withSimilarityForImageUrl(dataUrl, function (picked) {
                     if (!picked) return;
-                    selectedImages.push({ file: null, dataUrl: picked.dataUrl, similarity: picked.similarity, canvasStrokes: result.strokes || null });
+                    selectedImages.push(attachInfluenceFromPicked({ file: null, dataUrl: picked.dataUrl, canvasStrokes: result.strokes || null }, picked));
                     renderSelectedGrid();
                   });
                 }
@@ -344,6 +350,16 @@
         }
         navigateFallback(card);
       }
+    }
+
+    function attachInfluenceFromPicked(row, picked) {
+      if (!row || !picked) return row;
+      if (typeof picked.similarity === 'number') row.similarity = picked.similarity;
+      if (picked.inspiration_mode) row.inspiration_mode = picked.inspiration_mode;
+      if (picked.elements) row.elements = picked.elements;
+      if (picked.include_elements) row.include_elements = picked.include_elements;
+      if (picked.exclude_elements) row.exclude_elements = picked.exclude_elements;
+      return row;
     }
 
     function updateUploadText() {
@@ -409,7 +425,7 @@
           }
           var reader = new FileReader();
           reader.onload = function () {
-            selectedImages.push({ file: picked.file, dataUrl: reader.result, similarity: picked.similarity, canvasStrokes: null });
+            selectedImages.push(attachInfluenceFromPicked({ file: picked.file, dataUrl: reader.result, canvasStrokes: null }, picked));
             processNext(idx + 1);
           };
           reader.readAsDataURL(picked.file);
@@ -444,7 +460,8 @@
       if (!window.ReferenceInfluenceModal || typeof window.ReferenceInfluenceModal.open !== 'function') return;
       window.ReferenceInfluenceModal.open({
         imageUrl: item.dataUrl,
-        initialStep: similarityStepFromValue(item.similarity),
+        initialStrength: typeof item.similarity === 'number' ? item.similarity : 0.6,
+        initialMode: item.inspiration_mode || undefined,
         onApply: function (res) {
           if (!res || !res.file) return;
           var reader = new FileReader();
@@ -453,7 +470,13 @@
               file: res.file,
               dataUrl: reader.result,
               similarity: typeof res.strength === 'number' ? res.strength : item.similarity,
-              canvasStrokes: item.canvasStrokes
+              canvasStrokes: item.canvasStrokes,
+              inspiration_mode: res.inspiration_mode || item.inspiration_mode || null,
+              elements: res.elements || null,
+              include_elements: res.include_elements || null,
+              exclude_elements: res.exclude_elements || null,
+              source: item.source,
+              quickInspirationId: item.quickInspirationId
             };
             renderSelectedGrid();
           };
@@ -526,14 +549,13 @@
             window.__creatorGenQuickInspirationId = quickInspirationId || null;
           } catch (_eQi) {}
         }
-        selectedImages.push({
+        selectedImages.push(attachInfluenceFromPicked({
           file: null,
           dataUrl: picked.dataUrl,
-          similarity: picked.similarity,
           canvasStrokes: null,
           source: quickInspiration ? 'quick_inspiration' : picked.source || null,
           quickInspirationId: quickInspiration ? quickInspirationId || null : null
-        });
+        }, picked));
         renderSelectedGrid();
       }
       if (quickInspiration) {
@@ -638,7 +660,7 @@
                       reader.onload = function () {
                         withSimilarityForImageUrl(reader.result, function (picked) {
                           if (!picked) return;
-                          selectedImages[idx] = { file: result.blob, dataUrl: picked.dataUrl, similarity: picked.similarity, canvasStrokes: result.strokes || null };
+                          selectedImages[idx] = attachInfluenceFromPicked({ file: result.blob, dataUrl: picked.dataUrl, canvasStrokes: result.strokes || null }, picked);
                           renderSelectedGrid();
                         });
                       };
@@ -646,7 +668,7 @@
                     } else {
                       withSimilarityForImageUrl(result.image_url, function (picked) {
                         if (!picked) return;
-                        selectedImages[idx] = { file: null, dataUrl: picked.dataUrl, similarity: picked.similarity, canvasStrokes: result.strokes || null };
+                        selectedImages[idx] = attachInfluenceFromPicked({ file: null, dataUrl: picked.dataUrl, canvasStrokes: result.strokes || null }, picked);
                         renderSelectedGrid();
                       });
                     }
@@ -1158,18 +1180,25 @@
             if (!resolved) return null;
             var entry = {
               url: resolved,
-              similarity: typeof item.similarity === 'number' ? item.similarity : 0.8,
+              similarity: typeof item.similarity === 'number' ? item.similarity : 0.6,
               label: String.fromCharCode(65 + index)
             };
             if (item.source) entry.source = item.source;
             if (item.source === 'quick_inspiration') {
               entry.strength = 5;
               entry.similarity = 0.05;
+              entry.inspiration_mode = 'innovative';
             }
             if (item.quickInspirationId) {
               entry.quick_inspiration_id = String(item.quickInspirationId);
               entry.asset_id = String(item.quickInspirationId);
             }
+            if (item.inspiration_mode && item.source !== 'quick_inspiration') {
+              entry.inspiration_mode = item.inspiration_mode;
+            }
+            if (item.elements) entry.elements = item.elements;
+            if (item.include_elements) entry.include_elements = item.include_elements;
+            if (item.exclude_elements) entry.exclude_elements = item.exclude_elements;
             return entry;
           });
         })

@@ -194,25 +194,109 @@
       </svg>
     </button>
   </div>
-  <div class="creator-base-modal__body">
-    <div class="reference-influence-modal__preview-wrap" id="reference-influence-preview-wrap">
-      <canvas id="reference-influence-crop-canvas" class="reference-influence-modal__crop-canvas" aria-hidden="true"></canvas>
-      <img id="reference-influence-preview" class="reference-influence-modal__preview" alt="" />
-    </div>
-    <div id="reference-influence-step-texts" style="display:none;">
-      <span data-step="5">5% Inspiration — Only take the idea, create freely.</span>
-      <span data-step="20">20% Direction — Mood and rough direction.</span>
-      <span data-step="40">40% Style — Similar look and technique.</span>
-      <span data-step="60">60% Layout — Similar arrangement, new details.</span>
-      <span data-step="80">80% Template — Very close to upload, but not 1:1.</span>
-      <span data-step="100">100% Maximum — Maximum orientation, but unique.</span>
-    </div>
-    <div class="reference-influence-modal__slider-wrap">
-      <div class="reference-influence-modal__slider-track">
-        <input type="range" id="reference-influence-slider" class="reference-influence-modal__slider" min="0" max="5" step="1" value="4" aria-label="Reference image influence" />
-        <div id="reference-influence-thumb" class="reference-influence-modal__thumb"><span id="reference-influence-thumb-pct">80</span>%</div>
+  <div class="creator-base-modal__body reference-influence-modal__body">
+    <div class="reference-influence-modal__layout">
+      <div class="reference-influence-modal__preview-col">
+        <div class="reference-influence-modal__preview-wrap" id="reference-influence-preview-wrap">
+          <canvas id="reference-influence-crop-canvas" class="reference-influence-modal__crop-canvas" aria-hidden="true"></canvas>
+          <img id="reference-influence-preview" class="reference-influence-modal__preview" alt="" />
+        </div>
       </div>
-      <p id="reference-influence-step-text" class="reference-influence-modal__step-text"></p>
+      <div class="reference-influence-modal__controls-col" id="reference-influence-controls">
+        <section class="reference-influence-modal__section" aria-labelledby="reference-influence-inspiration-heading">
+          <h4 id="reference-influence-inspiration-heading" class="reference-influence-modal__section-title">
+            Inspiration
+          </h4>
+          <div class="reference-influence-modal__modes" role="radiogroup" aria-labelledby="reference-influence-inspiration-heading">
+            <label class="reference-influence-modal__mode">
+              <input type="radio" name="reference-influence-mode" value="faithful" data-strength="1" />
+              <span class="reference-influence-modal__mode-card">
+                <span class="reference-influence-modal__mode-label">Faithful</span>
+                <span class="reference-influence-modal__mode-desc">As close as possible to the original</span>
+              </span>
+            </label>
+            <label class="reference-influence-modal__mode">
+              <input type="radio" name="reference-influence-mode" value="inspired" data-strength="0.6" checked />
+              <span class="reference-influence-modal__mode-card">
+                <span class="reference-influence-modal__mode-label">Inspired</span>
+                <span class="reference-influence-modal__mode-desc">Clearly based on the reference</span>
+              </span>
+            </label>
+            <label class="reference-influence-modal__mode">
+              <input type="radio" name="reference-influence-mode" value="creative" data-strength="0.2" />
+              <span class="reference-influence-modal__mode-card">
+                <span class="reference-influence-modal__mode-label">Creative</span>
+                <span class="reference-influence-modal__mode-desc">Many new ideas</span>
+              </span>
+            </label>
+            <label class="reference-influence-modal__mode">
+              <input type="radio" name="reference-influence-mode" value="innovative" data-strength="0.05" />
+              <span class="reference-influence-modal__mode-card">
+                <span class="reference-influence-modal__mode-label">Innovative</span>
+                <span class="reference-influence-modal__mode-desc">Only loose inspiration from the reference</span>
+              </span>
+            </label>
+          </div>
+        </section>
+        <section class="reference-influence-modal__section" aria-labelledby="reference-influence-elements-heading">
+          <h4 id="reference-influence-elements-heading" class="reference-influence-modal__section-title">
+            Design elements
+          </h4>
+          <span id="reference-influence-include-label" hidden>Include</span>
+          <span id="reference-influence-exclude-label" hidden>Exclude</span>
+          <div class="reference-influence-modal__elements" id="reference-influence-elements">
+            <div class="reference-influence-modal__element" data-element="style">
+              <span class="reference-influence-modal__element-emoji" aria-hidden="true">🎨</span>
+              <span class="reference-influence-modal__element-label">Style</span>
+              <button type="button" class="reference-influence-modal__element-toggle" data-state="include" aria-pressed="true">
+                <span class="reference-influence-modal__element-toggle-text">Include</span>
+              </button>
+            </div>
+            <div class="reference-influence-modal__element" data-element="theme">
+              <span class="reference-influence-modal__element-emoji" aria-hidden="true">💡</span>
+              <span class="reference-influence-modal__element-label">Theme</span>
+              <button type="button" class="reference-influence-modal__element-toggle" data-state="include" aria-pressed="true">
+                <span class="reference-influence-modal__element-toggle-text">Include</span>
+              </button>
+            </div>
+            <div class="reference-influence-modal__element" data-element="colors">
+              <span class="reference-influence-modal__element-emoji" aria-hidden="true">🌈</span>
+              <span class="reference-influence-modal__element-label">Colors</span>
+              <button type="button" class="reference-influence-modal__element-toggle" data-state="include" aria-pressed="true">
+                <span class="reference-influence-modal__element-toggle-text">Include</span>
+              </button>
+            </div>
+            <div class="reference-influence-modal__element" data-element="layout">
+              <span class="reference-influence-modal__element-emoji" aria-hidden="true">📐</span>
+              <span class="reference-influence-modal__element-label">Layout</span>
+              <button type="button" class="reference-influence-modal__element-toggle" data-state="include" aria-pressed="true">
+                <span class="reference-influence-modal__element-toggle-text">Include</span>
+              </button>
+            </div>
+            <div class="reference-influence-modal__element" data-element="elements">
+              <span class="reference-influence-modal__element-emoji" aria-hidden="true">🧩</span>
+              <span class="reference-influence-modal__element-label">Elements</span>
+              <button type="button" class="reference-influence-modal__element-toggle" data-state="include" aria-pressed="true">
+                <span class="reference-influence-modal__element-toggle-text">Include</span>
+              </button>
+            </div>
+            <div class="reference-influence-modal__element" data-element="typography">
+              <span class="reference-influence-modal__element-emoji" aria-hidden="true">🔤</span>
+              <span class="reference-influence-modal__element-label">Typography</span>
+              <button type="button" class="reference-influence-modal__element-toggle" data-state="include" aria-pressed="true">
+                <span class="reference-influence-modal__element-toggle-text">Include</span>
+              </button>
+            </div>
+            <div class="reference-influence-modal__element" data-element="details">
+              <span class="reference-influence-modal__element-emoji" aria-hidden="true">✨</span>
+              <span class="reference-influence-modal__element-label">Details</span>
+              <button type="button" class="reference-influence-modal__element-toggle" data-state="include" aria-pressed="true">
+                <span class="reference-influence-modal__element-toggle-text">Include</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
   <div class="creator-base-modal__footer">
@@ -226,15 +310,49 @@
 </dialog>
 
 <style>
+  .reference-influence-modal.creator-base-modal {
+    max-width: 880px;
+  }
+  .reference-influence-modal__body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+  }
+  .reference-influence-modal__layout {
+    display: flex;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .reference-influence-modal__preview-col {
+    flex: 1 1 48%;
+    min-width: 0;
+    padding: 16px 12px 16px 20px;
+    display: flex;
+    align-items: stretch;
+  }
+  .reference-influence-modal__controls-col {
+    flex: 1 1 52%;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 16px 20px 16px 12px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .reference-influence-modal__controls-col::-webkit-scrollbar {
+    display: none;
+  }
   .reference-influence-modal__preview-wrap {
     position: relative;
     width: 100%;
     aspect-ratio: 1 / 1;
-    max-height: 320px;
+    max-height: min(420px, 55vh);
     border-radius: 12px;
     overflow: hidden;
     background: #f3f4f6;
-    margin-bottom: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -259,86 +377,107 @@
     object-fit: contain;
     display: none;
   }
-  .reference-influence-modal__slider-wrap {
-    margin-bottom: 8px;
-    padding: 0 28px;
-    overflow-x: hidden;
+  .reference-influence-modal__section {
+    margin-bottom: 18px;
   }
-  .reference-influence-modal__slider-track {
-    position: relative;
-    padding: 16px 0 24px;
-    min-height: 44px;
+  .reference-influence-modal__section:last-child {
+    margin-bottom: 0;
   }
-  .reference-influence-modal__slider {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
+  .reference-influence-modal__section-title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #6b7280;
+  }
+  .reference-influence-modal__modes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .reference-influence-modal__mode {
+    display: block;
     cursor: pointer;
-    z-index: 1;
+    margin: 0;
   }
-  .reference-influence-modal__slider::-webkit-slider-runnable-track {
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
-  }
-  .reference-influence-modal__slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 44px;
-    height: 44px;
-    background: transparent;
-    border: none;
-    cursor: grab;
-  }
-  .reference-influence-modal__slider::-webkit-slider-thumb:active {
-    cursor: grabbing;
-  }
-  .reference-influence-modal__slider::-moz-range-thumb {
-    width: 44px;
-    height: 44px;
-    background: transparent;
-    border: none;
-    cursor: grab;
-  }
-  .reference-influence-modal__slider::-moz-range-thumb:active {
-    cursor: grabbing;
-  }
-  .reference-influence-modal__slider::-moz-range-track {
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
-  }
-  .reference-influence-modal__thumb {
+  .reference-influence-modal__mode input {
     position: absolute;
-    top: 50%;
-    margin-top: -22px;
-    width: 44px;
-    height: 44px;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    background: #F59E0B;
-    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .reference-influence-modal__mode-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .reference-influence-modal__mode input:checked + .reference-influence-modal__mode-card {
+    border-color: #F59E0B;
+    background: #fffbeb;
+    box-shadow: 0 0 0 1px #F59E0B;
+  }
+  .reference-influence-modal__mode input:focus-visible + .reference-influence-modal__mode-card {
+    outline: 2px solid #F59E0B;
+    outline-offset: 2px;
+  }
+  .reference-influence-modal__mode-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+  }
+  .reference-influence-modal__mode-desc {
+    font-size: 12px;
+    line-height: 1.35;
+    color: #6b7280;
+  }
+  .reference-influence-modal__elements {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .reference-influence-modal__element {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+  }
+  .reference-influence-modal__element-emoji {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .reference-influence-modal__element-label {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+  }
+  .reference-influence-modal__element-toggle {
+    flex-shrink: 0;
+    min-width: 88px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #ecfdf5;
+    color: #065f46;
     font-size: 12px;
     font-weight: 600;
-    pointer-events: none;
-    z-index: 2;
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
-  .reference-influence-modal__step-text {
-    font-size: 13px;
-    color: #6b7280;
-    margin: 0;
-    margin-top: 4px;
+  .reference-influence-modal__element-toggle[data-state="exclude"] {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
   }
   .reference-influence-modal__btn {
     padding: 10px 20px;
@@ -359,5 +498,74 @@
   body.creator-mode .reference-influence-modal__preview-wrap,
   body[data-creator-mode="true"] .reference-influence-modal__preview-wrap {
     background: #111827;
+  }
+  body.creator-mode .reference-influence-modal__section-title,
+  body[data-creator-mode="true"] .reference-influence-modal__section-title {
+    color: #9ca3af;
+  }
+  body.creator-mode .reference-influence-modal__mode-card,
+  body[data-creator-mode="true"] .reference-influence-modal__mode-card {
+    background: rgba(2, 6, 23, 0.35);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  body.creator-mode .reference-influence-modal__mode input:checked + .reference-influence-modal__mode-card,
+  body[data-creator-mode="true"] .reference-influence-modal__mode input:checked + .reference-influence-modal__mode-card {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: #F59E0B;
+  }
+  body.creator-mode .reference-influence-modal__mode-label,
+  body[data-creator-mode="true"] .reference-influence-modal__mode-label {
+    color: #f3f4f6;
+  }
+  body.creator-mode .reference-influence-modal__mode-desc,
+  body[data-creator-mode="true"] .reference-influence-modal__mode-desc {
+    color: #9ca3af;
+  }
+  body.creator-mode .reference-influence-modal__element,
+  body[data-creator-mode="true"] .reference-influence-modal__element {
+    background: rgba(2, 6, 23, 0.35);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  body.creator-mode .reference-influence-modal__element-label,
+  body[data-creator-mode="true"] .reference-influence-modal__element-label {
+    color: #e5e7eb;
+  }
+  body.creator-mode .reference-influence-modal__btn--secondary,
+  body[data-creator-mode="true"] .reference-influence-modal__btn--secondary {
+    background: rgba(2, 6, 23, 0.35);
+    color: #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  body.creator-mode .reference-influence-modal__btn--primary,
+  body[data-creator-mode="true"] .reference-influence-modal__btn--primary {
+    background: #F59E0B;
+    color: #111827;
+  }
+
+  @media (max-width: 749px) {
+    .reference-influence-modal.creator-base-modal {
+      max-width: 100vw;
+    }
+    .reference-influence-modal__layout {
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .reference-influence-modal__preview-col {
+      flex: 0 0 auto;
+      padding: 12px 16px 8px;
+    }
+    .reference-influence-modal__preview-wrap {
+      max-height: min(42vw, 220px);
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+      width: min(100%, 220px);
+    }
+    .reference-influence-modal__controls-col {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 8px 16px 16px;
+      -webkit-overflow-scrolling: touch;
+    }
   }
 </style>
