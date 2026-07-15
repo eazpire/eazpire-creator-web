@@ -4175,7 +4175,7 @@
     return x.indexOf(y) !== -1 || y.indexOf(x) !== -1;
   }
 
-  /** Admin global-shipping pool from Variants tab (`in_admin_pool`). */
+  /** Admin global-shipping pool from Variants tab (`in_admin_pool`). Exact keys only. */
   function adminPoolColorMeta() {
     var map = {};
     var groups = (ctxData && ctxData.variant_groups) || {};
@@ -4196,60 +4196,77 @@
     return map;
   }
 
-  function findAdminPoolMetaForColor(colorKey, label) {
-    var pool = adminPoolColorMeta();
-    var keys = Object.keys(pool);
-    if (!keys.length) return null;
+  /** Exact normalized membership — never substring ("navy" ≠ "heather_navy"). */
+  function exactAdminPoolKey(colorKey, label, allowedSet) {
+    if (!allowedSet || !allowedSet.size) return null;
     var ck = normColorKey(colorKey);
     var lk = normColorKey(label);
-    if (ck && pool[ck]) return pool[ck];
-    if (lk && pool[lk]) return pool[lk];
-    for (var i = 0; i < keys.length; i++) {
-      var pk = keys[i];
-      if (previewColorKeysMatch(pk, ck) || previewColorKeysMatch(pk, lk)) return pool[pk];
-    }
+    if (ck && allowedSet.has(ck)) return ck;
+    if (lk && allowedSet.has(lk)) return lk;
     return null;
   }
 
-  function isPreviewColorInAdminPool(c) {
-    if (!c) return false;
+  function resolvePreviewAdminAllowedSet(apiAllowedKeys) {
     var pool = adminPoolColorMeta();
-    if (!Object.keys(pool).length) return false;
-    return !!findAdminPoolMetaForColor(c.color_key, c.label);
+    var localKeys = Object.keys(pool);
+    if (localKeys.length) return new Set(localKeys);
+    var api = Array.isArray(apiAllowedKeys) ? apiAllowedKeys : [];
+    var set = new Set();
+    for (var i = 0; i < api.length; i++) {
+      var k = normColorKey(api[i]);
+      if (k) set.add(k);
+    }
+    return set;
+  }
+
+  function findAdminPoolMetaForColor(colorKey, label) {
+    var pool = adminPoolColorMeta();
+    var hit = exactAdminPoolKey(colorKey, label, new Set(Object.keys(pool)));
+    return hit ? pool[hit] : null;
+  }
+
+  function isPreviewColorInAdminPool(c, allowedSet) {
+    if (!c) return false;
+    return !!exactAdminPoolKey(c.color_key, c.label, allowedSet);
   }
 
   function isPreviewColorUnlocked(c) {
     if (!c) return false;
     var meta = findAdminPoolMetaForColor(c.color_key, c.label);
     if (meta) return !!meta.unlocked;
-    // No pool meta: treat enabled Printify colors as selectable.
-    return c.enabled !== false;
+    // Outside admin pool: never treat Printify-only colors as unlocked.
+    return false;
   }
 
-  function filterPreviewColorsToAdminPool(colors) {
+  function filterPreviewColorsToAdminPool(colors, apiAllowedKeys) {
     var list = Array.isArray(colors) ? colors : [];
-    var poolKeys = Object.keys(adminPoolColorMeta());
-    // Local pool missing: trust server-filtered payload (do not invent extras).
-    if (!poolKeys.length) {
+    var allowedSet = resolvePreviewAdminAllowedSet(apiAllowedKeys);
+    // Fail closed: never dump the full Printify catalog when pool is unknown/empty.
+    if (!allowedSet.size) {
       try {
-        console.info('[cds-preview] local admin pool empty — trusting API colors', list.length);
+        console.info('[cds-preview] admin pool empty — showing no carousel colors');
       } catch (_) {
         /* ignore */
       }
-      return list;
+      return [];
     }
-    var filtered = list.filter(isPreviewColorInAdminPool);
+    var filtered = list.filter(function (c) {
+      return isPreviewColorInAdminPool(c, allowedSet);
+    });
     try {
+      var sample = [];
+      allowedSet.forEach(function (k) {
+        if (sample.length < 12) sample.push(k);
+      });
       console.info(
         '[cds-preview] admin-pool colors',
         filtered.length + '/' + list.length,
-        'poolKeys=' + poolKeys.length,
-        poolKeys.slice(0, 12).join(',')
+        'poolKeys=' + allowedSet.size,
+        sample.join(',')
       );
     } catch (_) {
       /* ignore */
     }
-    // Never fall back to the unfiltered Printify list when pool is known.
     return filtered;
   }
 
@@ -4705,7 +4722,7 @@
           return Object.assign({}, c, { enabled: c.enabled !== false });
         })
       : [];
-    previewColors = filterPreviewColorsToAdminPool(rawColors);
+    previewColors = filterPreviewColorsToAdminPool(rawColors, data && data.allowed_color_keys);
     previewViewsByColor =
       data && data.views_by_color && typeof data.views_by_color === 'object' ? data.views_by_color : {};
     if (!Object.keys(previewViewsByColor).length && Array.isArray(data && data.views)) {

@@ -1077,7 +1077,21 @@
   }
 
   // ── Link modal phone QR bridge — paste a link on your phone, it fills the desktop input live ──
+  /**
+   * Always hits the creator-engine worker directly (same host that serves the QR image and
+   * scan page), never the Creator Hub's own origin. On the Shopify theme `CREATOR_API_CONFIG.BASE_URL`
+   * already points at the worker, so stripping `/apps/creator-dispatch` off `API_BASE` happens to work
+   * there — but on Creator Hub (`creator-web`) `BASE_URL` is set to `window.location.origin` (see
+   * `creator-web/js/theme-bridge.js`), which is the Hub's own domain, not the worker. That made the
+   * phone-bridge fetches 404 on Creator Hub → QR box stayed empty + "Phone scan unavailable right now".
+   * `PHONE_UPLOAD_BASE_URL` is set to the worker URL on both theme and Creator Hub, so prefer it
+   * (same pattern as `apiBase()` in `creator-phone-upload-modal.js`).
+   */
   function phoneBridgeApiBase() {
+    var cfg = window.CREATOR_API_CONFIG || {};
+    if (cfg.PHONE_UPLOAD_BASE_URL) {
+      return String(cfg.PHONE_UPLOAD_BASE_URL).replace(/\/+$/, '');
+    }
     return API_BASE.replace(/\/apps\/creator-dispatch$/, '');
   }
 

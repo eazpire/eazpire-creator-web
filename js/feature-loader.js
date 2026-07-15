@@ -26,7 +26,7 @@
     var link = document.createElement("link");
     link.rel = "stylesheet";
     // Bump when creator-design-studio / portal CSS changes — stale ?v= kept old layout for users.
-    link.href = href + "?v=22";
+    link.href = href + "?v=23";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -38,7 +38,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=16";
+      s.src = src + "?v=17";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
