@@ -697,16 +697,18 @@
     const creatorSelect = modal.querySelector(`#design-upload-creator-select-${sectionId}`);
     const visibilityCheckbox = modal.querySelector(`#design-upload-visibility-${sectionId}`);
 
+    function resolveActiveCreatorName() {
+      if (window.CreatorSettings && window.CreatorSettings.creatorName != null && String(window.CreatorSettings.creatorName).trim()) {
+        return String(window.CreatorSettings.creatorName).trim();
+      }
+      if (savedUploadSettings && savedUploadSettings.creator_name) {
+        return String(savedUploadSettings.creator_name).trim();
+      }
+      return '';
+    }
+
     function applyUploadSettingsToUI(settings) {
       const s = settings || savedUploadSettings || {};
-      if (creatorSelect) {
-        const name = (s.creator_name !== undefined && s.creator_name !== null) ? String(s.creator_name).trim() : '';
-        if (name && Array.from(creatorSelect.options).some(opt => opt.value === name)) {
-          creatorSelect.value = name;
-        } else if (name) {
-          creatorSelect.value = name;
-        }
-      }
       if (visibilityCheckbox) {
         const vis = s.visibility === 'private' ? 'private' : 'public';
         visibilityCheckbox.checked = vis === 'public';
@@ -715,52 +717,8 @@
     }
 
     async function loadCreatorNamesForUploadModal() {
-      if (!creatorSelect) return;
-      const names = [];
-      let activeName = '';
-      if (window.CreatorSettings && Array.isArray(window.CreatorSettings.creatorNames)) {
-        names.push(...window.CreatorSettings.creatorNames);
-        activeName = (window.CreatorSettings.creatorName !== undefined && window.CreatorSettings.creatorName !== null)
-          ? String(window.CreatorSettings.creatorName).trim() : '';
-      }
-      if (names.length === 0 && ownerId && apiBase) {
-        try {
-          const url = new URL(`${apiBase}/creator`);
-          url.searchParams.set('op', 'get-settings');
-          url.searchParams.set('owner_id', ownerId);
-          const res = await fetch(url.toString(), { cache: 'no-store' });
-          const data = await res.json().catch(() => ({}));
-          const settings = data.settings || data;
-          const arr = Array.isArray(settings.creator_names) ? settings.creator_names : [];
-          names.push(...arr);
-          if (settings.active_creator_name !== undefined && settings.active_creator_name !== null && settings.active_creator_name !== '') {
-            activeName = String(settings.active_creator_name).trim();
-          }
-        } catch (e) {
-          console.warn('Upload modal: could not load creator names', e);
-        }
-      }
-      creatorSelect.innerHTML = '';
-      if (names.length === 0) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'Kein Creator vorhanden';
-        creatorSelect.appendChild(opt);
-        return;
-      }
-      names.forEach(function (n) {
-        const opt = document.createElement('option');
-        opt.value = n;
-        opt.textContent = n;
-        creatorSelect.appendChild(opt);
-      });
-      const fromSettings = (savedUploadSettings && savedUploadSettings.creator_name) ? String(savedUploadSettings.creator_name).trim() : '';
-      const toSelect = fromSettings || activeName;
-      if (toSelect && Array.from(creatorSelect.options).some(opt => opt.value === toSelect)) {
-        creatorSelect.value = toSelect;
-      } else if (creatorSelect.options.length) {
-        creatorSelect.selectedIndex = 0;
-      }
+      // Creator dropdown removed — upload always uses the active creator from settings.
+      return;
     }
 
     function getUploadSettings() {
@@ -777,7 +735,8 @@
         const v = (creatorSelect.value || '').trim();
         settings.creator_name = v || null;
       } else {
-        settings.creator_name = null;
+        const active = resolveActiveCreatorName();
+        settings.creator_name = active || null;
       }
       if (visibilityCheckbox) {
         settings.visibility = visibilityCheckbox.checked ? 'public' : 'private';
@@ -1078,6 +1037,8 @@
         var formatted = cat.fmtEaz ? cat.fmtEaz(cost) : formatUploadEazAmount(cost);
         if (el.classList.contains('design-upload-eaz-cost-upload--suffix')) {
           el.textContent = formatted + ' EAZ';
+        } else if (el.classList.contains('btn-cost-inline')) {
+          el.textContent = formatted;
         } else {
           el.textContent = formatted;
         }

@@ -427,30 +427,34 @@
     object-fit:contain;
   }
 
-  /* Preis-Anzeige im Primary Button (Footer) */
+  /* Primary Upload CTA: EAZV coin left of label */
   .design-upload-modal__button--primary{
-    display:flex;
+    display:inline-flex;
     align-items:center;
-    gap:8px;
+    gap:10px;
+  }
+
+  .design-upload-modal__button--primary .eaz-coin-icon--upload-cta{
+    width:22px;
+    height:22px;
+    min-width:22px;
+    flex:0 0 22px;
+    object-fit:contain;
+  }
+
+  .design-upload-modal__upload-label{
+    line-height:1.2;
   }
 
   .btn-cost-inline{
-    display:flex;
+    display:inline-flex;
     align-items:center;
-    gap:4px;
-    padding:3px 6px;
+    gap:0;
+    padding:2px 8px;
     background:rgba(255, 255, 255, 0.2);
     border-radius:4px;
-  }
-
-  .btn-cost-inline span{
     font-size:12px;
     font-weight:700;
-  }
-
-  .btn-cost-inline .eaz-coin-icon{
-    width:14px;
-    height:14px;
   }
 
   .design-upload-modal__footer{
@@ -984,10 +988,6 @@
               <path d="M8 12l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <div class="btn-label">Remove background</div>
-            <div class="btn-cost" hidden>
-              <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="EAZ" class="eaz-coin-icon">
-              <span data-eaz-cost-feature="bg_remove">0</span>
-            </div>
           </button>
 
           <button type="button" class="design-upload-action-btn" data-action="crop_image" title="Crop image" disabled>
@@ -1001,14 +1001,8 @@
       </div>
 
       
-      <!-- Creator + Sichtbarkeit (wie beim Speichern von Designs) -->
+      <!-- Sichtbarkeit (Creator = aktiver Creator aus den Settings, keine Auswahl hier) -->
       <div class="design-upload-options">
-        <div class="design-upload-options__row">
-          <label for="design-upload-creator-select-creator-mobile" class="design-upload-options__label">Creator</label>
-          <select id="design-upload-creator-select-creator-mobile" class="design-upload-creator-select" aria-label="Select Creator">
-            <option value="">Loading Creator...</option>
-          </select>
-        </div>
         <div class="design-upload-options__row">
           <span class="design-upload-options__label">Visibility</span>
           <div class="design-upload-visibility-row">
@@ -1029,11 +1023,16 @@
     <div class="design-upload-modal__footer">
       <button type="button" class="design-upload-modal__button design-upload-modal__button--secondary">Cancel</button>
       <button type="button" class="design-upload-modal__button design-upload-modal__button--primary">
-        <span>Upload Design</span>
-        <span class="btn-cost-inline">
-          <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="EAZ" class="eaz-coin-icon">
-          <span data-eaz-cost-feature="design_upload">5</span>
-        </span>
+        <img
+          src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png"
+          alt=""
+          width="22"
+          height="22"
+          class="eaz-coin-icon eaz-coin-icon--upload-cta"
+          data-eaz-coin="eazv"
+        >
+        <span class="design-upload-modal__upload-label">Upload Design</span>
+        <span class="btn-cost-inline" data-eaz-cost-feature="design_upload">5</span>
       </button>
     </div>
     
