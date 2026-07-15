@@ -73,24 +73,14 @@
   const loadingEl = modal.querySelector('#creator-inspiration-modal-loading');
   const emptyEl = modal.querySelector('#creator-inspiration-modal-empty');
   const detailImage = modal.querySelector('#creator-inspiration-modal-detail-image');
-  const detailImageMobile = modal.querySelector('#creator-inspiration-modal-detail-image-mobile');
   const closeDetailBtn = modal.querySelector('#creator-inspiration-modal-close-detail');
-  const closeDetailBtnMobile = modal.querySelector('#creator-inspiration-modal-close-detail-mobile');
   const applyBtn = modal.querySelector('#creator-inspiration-modal-apply');
-  const applyBtnMobile = modal.querySelector('#creator-inspiration-modal-apply-mobile');
   const searchInput = modal.querySelector('#creator-inspiration-modal-search');
   const remixesGrid = modal.querySelector('#creator-inspiration-modal-remixes-grid');
   const remixesLoading = modal.querySelector('#creator-inspiration-modal-remixes-loading');
   const remixesEmpty = modal.querySelector('#creator-inspiration-modal-remixes-empty');
   const remixCountEl = modal.querySelector('#creator-inspiration-modal-remix-count');
-  const remixCountElMobile = modal.querySelector('#creator-inspiration-modal-remix-count-mobile');
   const salesCountEl = modal.querySelector('#creator-inspiration-modal-sales-count');
-  const salesCountElMobile = modal.querySelector('#creator-inspiration-modal-sales-count-mobile');
-  const detailDesktop = modal.querySelector('.creator-inspiration-modal__detail-desktop');
-  const detailMobile = modal.querySelector('.creator-inspiration-modal__detail-mobile');
-  const remixesGridMobile = modal.querySelector('#creator-inspiration-modal-remixes-grid-mobile');
-  const remixesLoadingMobile = modal.querySelector('#creator-inspiration-modal-remixes-loading-mobile');
-  const remixesEmptyMobile = modal.querySelector('#creator-inspiration-modal-remixes-empty-mobile');
   const filterBtn = modal.querySelector('#creator-inspiration-filter-btn');
 
   function isModalOpen() {
@@ -115,7 +105,7 @@
   let searchDebounceTimer = null;
   const SEARCH_DEBOUNCE_MS = 300; // Wait 300ms after last keystroke
 
-  // Helper: Check if mobile
+  // Helper: Check if mobile (kept for callers; preview layout is unified)
   function isMobile() {
     return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
   }
@@ -373,11 +363,18 @@
     }
   }
 
-  // Render grid of designs (like My Creations but without title/body)
+  // Render grid of designs — card/image opens preview; Apply loads as reference
   function renderGrid() {
     if (!grid) return;
     
     grid.innerHTML = '';
+
+    const applyLabel =
+      (window.CreatorI18n && (window.CreatorI18n['creator.common.apply'] || window.CreatorI18n.common_apply)) ||
+      inspirationI18n('apply', 'Apply');
+    const noImageLabel =
+      (window.CreatorI18n && window.CreatorI18n['creator.inspiration.no_image']) ||
+      inspirationI18n('no_image', 'No image');
 
     filteredDesigns.forEach((design) => {
       const card = document.createElement('div');
@@ -385,6 +382,13 @@
       card.dataset.designId = design.id || '';
       card.dataset.designUrl = design.preview_url || '';
       card.dataset.designOriginalUrl = design.original_url || '';
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute(
+        'aria-label',
+        (window.CreatorI18n && window.CreatorI18n['creator.inspiration.preview_aria']) ||
+          inspirationI18n('preview_aria', 'Preview design')
+      );
 
       const imageWrapper = document.createElement('div');
       imageWrapper.className = 'creator-inspiration-modal__card-image-wrapper';
@@ -399,22 +403,46 @@
       } else {
         const noImage = document.createElement('div');
         noImage.className = 'creator-inspiration-modal__card-no-image';
-        noImage.textContent = 'Kein Bild';
+        noImage.textContent = noImageLabel;
         imageWrapper.appendChild(noImage);
       }
 
       card.appendChild(imageWrapper);
+
+      const applyBtnCard = document.createElement('button');
+      applyBtnCard.type = 'button';
+      applyBtnCard.className = 'creator-inspiration-modal__card-apply';
+      applyBtnCard.textContent = applyLabel;
+      applyBtnCard.setAttribute(
+        'aria-label',
+        (window.CreatorI18n && window.CreatorI18n['creator.inspiration.apply_aria']) ||
+          inspirationI18n('apply_aria', 'Apply as reference')
+      );
+      applyBtnCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        applyBtnCard.blur();
+        loadDesignIntoUploadZone(design);
+      });
+      card.appendChild(applyBtnCard);
+
       grid.appendChild(card);
 
-      // Click handler: show detail view
-      card.addEventListener('click', () => {
+      const openPreview = () => {
         console.log('[InspirationModal] Card clicked, design:', design.id);
         showDetailView(design);
+      };
+      card.addEventListener('click', openPreview);
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openPreview();
+        }
       });
     });
   }
 
-  // Fetch remixes for a design
+  // Fetch remixes for a design (op=get-remixes, parent_design_id children)
   async function fetchRemixes(designId) {
     if (!designId || isLoadingRemixes) return;
 
@@ -422,15 +450,9 @@
     remixes = [];
 
     try {
-      // Desktop loading states
       if (remixesLoading) remixesLoading.style.display = 'block';
       if (remixesEmpty) remixesEmpty.style.display = 'none';
       if (remixesGrid) remixesGrid.innerHTML = '';
-      
-      // Mobile loading states
-      if (remixesLoadingMobile) remixesLoadingMobile.style.display = 'block';
-      if (remixesEmptyMobile) remixesEmptyMobile.style.display = 'none';
-      if (remixesGridMobile) remixesGridMobile.innerHTML = '';
 
       const url = new URL(getApiBase());
       url.searchParams.set('op', 'get-remixes');
@@ -448,44 +470,25 @@
       renderRemixes();
       updateRemixCount(remixes.length);
 
-      // Desktop states
       if (remixesLoading) remixesLoading.style.display = 'none';
       if (remixesEmpty) remixesEmpty.style.display = remixes.length === 0 ? 'block' : 'none';
-      
-      // Mobile states
-      if (remixesLoadingMobile) remixesLoadingMobile.style.display = 'none';
-      if (remixesEmptyMobile) remixesEmptyMobile.style.display = remixes.length === 0 ? 'block' : 'none';
     } catch (error) {
       console.error('Error fetching remixes:', error);
       if (remixesLoading) remixesLoading.style.display = 'none';
       if (remixesEmpty) remixesEmpty.style.display = 'block';
-      if (remixesLoadingMobile) remixesLoadingMobile.style.display = 'none';
-      if (remixesEmptyMobile) remixesEmptyMobile.style.display = 'block';
       updateRemixCount(0);
     } finally {
       isLoadingRemixes = false;
     }
   }
 
-  // Render remixes grid
+  // Render remixes carousel
   function renderRemixes() {
-    // Desktop grid
-    if (remixesGrid) {
-      remixesGrid.innerHTML = '';
-      remixes.forEach((remix) => {
-        const card = createRemixCard(remix);
-        remixesGrid.appendChild(card);
-      });
-    }
-    
-    // Mobile grid (horizontal scroll, 3 visible)
-    if (remixesGridMobile) {
-      remixesGridMobile.innerHTML = '';
-      remixes.forEach((remix) => {
-        const card = createRemixCard(remix);
-        remixesGridMobile.appendChild(card);
-      });
-    }
+    if (!remixesGrid) return;
+    remixesGrid.innerHTML = '';
+    remixes.forEach((remix) => {
+      remixesGrid.appendChild(createRemixCard(remix));
+    });
   }
 
   // Helper: Create remix card
@@ -509,13 +512,15 @@
     } else {
       const noImage = document.createElement('div');
       noImage.className = 'creator-inspiration-modal__card-no-image';
-      noImage.textContent = 'Kein Bild';
+      noImage.textContent =
+        (window.CreatorI18n && window.CreatorI18n['creator.inspiration.no_image']) ||
+        inspirationI18n('no_image', 'No image');
       imageWrapper.appendChild(noImage);
     }
 
     card.appendChild(imageWrapper);
 
-    // Click handler: replace current design with remix (parent-child navigation)
+    // Click: navigate preview to this remix (parent → child)
     card.addEventListener('click', () => {
       loadDesignAsSelected(remix);
     });
@@ -525,16 +530,12 @@
 
   // Update remix count display
   function updateRemixCount(count) {
-    const countStr = String(count || 0);
-    if (remixCountEl) remixCountEl.textContent = countStr;
-    if (remixCountElMobile) remixCountElMobile.textContent = countStr;
+    if (remixCountEl) remixCountEl.textContent = String(count || 0);
   }
 
   // Update sales count display
   function updateSalesCount(count) {
-    const countStr = String(count || 0);
-    if (salesCountEl) salesCountEl.textContent = countStr;
-    if (salesCountElMobile) salesCountElMobile.textContent = countStr;
+    if (salesCountEl) salesCountEl.textContent = String(count || 0);
   }
 
   // Fetch sales count for a specific design
@@ -589,7 +590,6 @@
     const logoImg = document.querySelector('img[alt*="eazpire" i], img[src*="eazpire-creator-logo" i], .header-logo img, header img[src*="eazpire-creator" i]');
     const logoUrl = logoImg ? logoImg.src : 'https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950';
 
-    // Desktop: Ladeanimation im Bild-Container
     const desktopImageWrap = detailImage?.parentElement;
     if (desktopImageWrap) {
       const loading = document.createElement('div');
@@ -617,36 +617,6 @@
       loading.appendChild(logoElement);
       desktopImageWrap.style.position = 'relative';
       desktopImageWrap.appendChild(loading);
-    }
-
-    // Mobile: Ladeanimation im Bild-Container
-    const mobileImageWrap = detailImageMobile?.parentElement;
-    if (mobileImageWrap) {
-      const loading = document.createElement('div');
-      loading.className = 'inspiration-modal-image-loading';
-      loading.style.cssText = `
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(2, 6, 23, 0.8);
-        z-index: 10;
-        border-radius: 8px;
-      `;
-      
-      const logoElement = document.createElement('div');
-      logoElement.style.cssText = 'text-align: center;';
-      
-      const logoImgEl = document.createElement('img');
-      logoImgEl.src = logoUrl;
-      logoImgEl.alt = 'eazpire creator';
-      logoImgEl.style.cssText = 'max-width: 150px; max-height: 150px; width: auto; height: auto; animation: inspiration-modal-pulse 1.5s ease-in-out infinite; object-fit: contain;';
-      
-      logoElement.appendChild(logoImgEl);
-      loading.appendChild(logoElement);
-      mobileImageWrap.style.position = 'relative';
-      mobileImageWrap.appendChild(loading);
     }
   }
 
@@ -730,10 +700,6 @@
       detailImage.src = '';
       detailImage.alt = '';
     }
-    if (detailImageMobile) {
-      detailImageMobile.src = '';
-      detailImageMobile.alt = '';
-    }
     
     // ✅ FIX: Ladeanimation nur im Bildbereich anzeigen (nicht Fullscreen)
     showImageLoading();
@@ -744,17 +710,14 @@
       await fetchRemixes(design.id);
       
       // Warte bis Bilder geladen sind, dann entferne Ladeanimation
-      const images = [detailImage, detailImageMobile].filter(Boolean);
-      if (images.length > 0) {
-        await Promise.all(images.map(img => {
-          if (img.complete && img.src) return Promise.resolve();
-          return new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve; // Auch bei Fehler weiter
-            // Timeout nach 5 Sekunden
+      if (detailImage) {
+        if (!(detailImage.complete && detailImage.src)) {
+          await new Promise((resolve) => {
+            detailImage.onload = resolve;
+            detailImage.onerror = resolve;
             setTimeout(resolve, 5000);
           });
-        }));
+        }
       }
     } finally {
       // Entferne Ladeanimation
@@ -773,11 +736,6 @@
       detailImage.alt = design.title || 'Design';
     }
 
-    if (detailImageMobile) {
-      detailImageMobile.src = imageUrl;
-      detailImageMobile.alt = design.title || 'Design';
-    }
-
     // Load sales count from API (async)
     // Show 0 initially while loading
     updateSalesCount(0);
@@ -794,25 +752,13 @@
     }
   }
 
-  // Show detail view with selected design
+  // Show detail/preview view with selected design
   async function showDetailView(design) {
     console.log('[InspirationModal] showDetailView called with design:', design);
-    
-    // ✅ FIX: Modal sofort öffnen, dann asynchron laden
-    // Show/hide desktop or mobile layout
-    const mobile = isMobile();
     
     if (gridView) gridView.style.display = 'none';
     if (detailView) detailView.style.display = 'flex';
     if (modal) modal.classList.add('creator-inspiration-modal--detail');
-    
-    if (mobile) {
-      if (detailDesktop) detailDesktop.style.display = 'none';
-      if (detailMobile) detailMobile.style.display = 'flex';
-    } else {
-      if (detailDesktop) detailDesktop.style.display = 'flex';
-      if (detailMobile) detailMobile.style.display = 'none';
-    }
     
     // Jetzt asynchron laden (Modal ist bereits sichtbar)
     await loadDesignAsSelected(design);
@@ -1217,67 +1163,29 @@
     // Cleanup function (optional, for future use)
     window._inspirationModalEscapeHandler = handleEscape;
 
-    // Detail view: Close button (desktop)
+    // Detail view: Cancel → back to grid
     if (closeDetailBtn) {
       closeDetailBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent closing all modals
-        closeDetailBtn.blur(); // Focus entfernen
-        showGridView();
-      });
-    }
-
-    // Detail view: Close button (mobile)
-    if (closeDetailBtnMobile) {
-      closeDetailBtnMobile.addEventListener('click', (e) => {
         e.stopPropagation();
-        closeDetailBtnMobile.blur(); // Focus entfernen
+        closeDetailBtn.blur();
         showGridView();
       });
     }
 
-    // Detail view: Apply button (desktop)
+    // Detail view: Apply → same path as grid Apply
     if (applyBtn) {
       applyBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         if (selectedDesign) {
-          // WICHTIG: Focus vom Button entfernen BEVOR Modal geschlossen wird
           applyBtn.blur();
-          // Focus auf ein Element außerhalb des Modals verschieben (falls verfügbar)
           const outsideElement = document.querySelector('body');
           if (outsideElement) {
             outsideElement.setAttribute('tabindex', '-1');
             outsideElement.focus();
             outsideElement.removeAttribute('tabindex');
           }
-          // Design laden
           loadDesignIntoUploadZone(selectedDesign);
-          // Modal schließen (nach kurzer Verzögerung, damit Focus entfernt wurde)
-          requestAnimationFrame(() => {
-            close();
-          });
-        }
-      });
-    }
-
-    // Detail view: Apply button (mobile)
-    if (applyBtnMobile) {
-      applyBtnMobile.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (selectedDesign) {
-          // WICHTIG: Focus vom Button entfernen BEVOR Modal geschlossen wird
-          applyBtnMobile.blur();
-          // Focus auf ein Element außerhalb des Modals verschieben (falls verfügbar)
-          const outsideElement = document.querySelector('body');
-          if (outsideElement) {
-            outsideElement.setAttribute('tabindex', '-1');
-            outsideElement.focus();
-            outsideElement.removeAttribute('tabindex');
-          }
-          // Design laden
-          loadDesignIntoUploadZone(selectedDesign);
-          // Modal schließen (nach kurzer Verzögerung, damit Focus entfernt wurde)
           requestAnimationFrame(() => {
             close();
           });
