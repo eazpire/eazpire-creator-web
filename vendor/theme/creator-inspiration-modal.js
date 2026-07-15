@@ -17,12 +17,6 @@
   let _inspirationModalSectionId = null;
   /** 'remix' = max one design as remix source (creator generator / upload flow) */
   let _modalPurpose = null;
-  
-  // ✅ TODO 1 (Fallback): Sicherstellen dass Modal die Basis-Klasse hat
-  // (Sollte bereits im HTML sein, aber als Sicherheit)
-  if (modal && !modal.classList.contains('creator-modal')) {
-    modal.classList.add('creator-modal');
-  }
 
   /** Prefer portal/shop dispatch (CreatorWidget / CREATOR_API_CONFIG). Never hardcode workers.dev only — it can hang while /api/dispatch works. */
   function getApiBase() {
@@ -71,8 +65,8 @@
     });
   }
 
-  // DOM Elements
-  const modalClose = modal.querySelector('.creator-modal__close');
+  // DOM Elements (close uses creator-base-modal header X, same as My Designs)
+  let modalClose = modal.querySelector('#creator-inspiration-modal-close, .creator-base-modal__close');
   const gridView = modal.querySelector('#creator-inspiration-modal-grid-view');
   const detailView = modal.querySelector('#creator-inspiration-modal-detail-view');
   const grid = modal.querySelector('#creator-inspiration-modal-grid');
@@ -98,6 +92,16 @@
   const remixesLoadingMobile = modal.querySelector('#creator-inspiration-modal-remixes-loading-mobile');
   const remixesEmptyMobile = modal.querySelector('#creator-inspiration-modal-remixes-empty-mobile');
   const filterBtn = modal.querySelector('#creator-inspiration-filter-btn');
+
+  function isModalOpen() {
+    return !!(modal && (modal.open === true || modal.hasAttribute('open')));
+  }
+
+  function refreshModalCloseEl() {
+    if (!modal) return null;
+    modalClose = modal.querySelector('#creator-inspiration-modal-close, .creator-base-modal__close');
+    return modalClose;
+  }
 
   let designs = [];
   let filteredDesigns = [];
@@ -800,6 +804,7 @@
     
     if (gridView) gridView.style.display = 'none';
     if (detailView) detailView.style.display = 'flex';
+    if (modal) modal.classList.add('creator-inspiration-modal--detail');
     
     if (mobile) {
       if (detailDesktop) detailDesktop.style.display = 'none';
@@ -822,6 +827,7 @@
     // display: block würde das Flex-Layout zerstören und Scrollbars kaputt machen
     if (gridView) gridView.style.removeProperty('display');
     if (detailView) detailView.style.display = 'none';
+    if (modal) modal.classList.remove('creator-inspiration-modal--detail');
     
     // Reset remix counts
     updateRemixCount(0);
@@ -1038,51 +1044,21 @@
     
     try {
       console.log('[InspirationModal] Opening modal...', { isConnected: modal.isConnected, id: modal.id });
+      refreshModalCloseEl();
 
-      // Sicherstellen, dass die Basis-Klasse vorhanden ist
-      if (!modal.classList.contains('creator-modal')) {
-        modal.classList.add('creator-modal');
+      // Native <dialog> API — same as My Designs
+      if (typeof modal.showModal === 'function') {
+        if (!modal.open) modal.showModal();
+      } else {
+        modal.setAttribute('open', '');
       }
 
-      // ✅ Force reflow: Browser soll den closed-State einmal wirklich anwenden
-      void modal.offsetHeight;
-
-      // Open-Klasse hinzufügen
-      modal.classList.add('creator-modal--open');
-      modal.setAttribute('aria-hidden', 'false');
-      
-      // INLINE-STYLES: Sichtbarkeit GARANTIEREN, unabhängig von CSS-Cascade
-      modal.style.cssText = 'opacity:1; pointer-events:auto; display:flex; position:fixed; inset:0; z-index:2147483647; align-items:center; justify-content:center; background:rgba(2,6,23,0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);';
-
-      // TEMP DEBUG — 2-Frame-Delay für echte computed values (nach Verifikation entfernen)
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          if (!modal) return;
-          var cs = window.getComputedStyle(modal);
-          console.log('[InspirationModal] OPEN CHECK', {
-            inBody: document.body.contains(modal),
-            parentTag: modal.parentElement ? modal.parentElement.tagName : null,
-            parentId: modal.parentElement ? modal.parentElement.id : null,
-            hasOpenClass: modal.classList.contains('creator-modal--open'),
-            ariaHidden: modal.getAttribute('aria-hidden'),
-            opacity: cs.opacity,
-            display: cs.display,
-            visibility: cs.visibility,
-            pointerEvents: cs.pointerEvents,
-            zIndex: cs.zIndex,
-            rect: modal.getBoundingClientRect()
-          });
-        });
-      });
-
-      // Body locken
       lockBodyScroll();
 
       // Load designs if not already loaded
       if (designs.length === 0 && !isLoading) {
         fetchDesigns();
       } else {
-        // Reset to grid view
         showGridView();
       }
 
@@ -1093,9 +1069,9 @@
       }
     } catch (e) {
       console.error('[InspirationModal] Error opening modal:', e);
-      // Bei Fehler: Alles aufräumen
       try {
-        if (modal) modal.style.cssText = '';
+        if (modal && typeof modal.close === 'function' && modal.open) modal.close();
+        else if (modal) modal.removeAttribute('open');
       } catch (_) {}
       safeUnlockScroll();
     }
@@ -1114,20 +1090,16 @@
       }
       if (!modal) return;
 
-      // WICHTIG: Focus vom Close-Button entfernen BEVOR aria-hidden gesetzt wird
       if (document.activeElement && modal.contains(document.activeElement)) {
         document.activeElement.blur();
       }
 
-      // Sofort unsichtbar machen (kein Flicker)
-      modal.style.opacity = '0';
-      modal.style.pointerEvents = 'none';
-      
-      // Klasse entfernen
-      modal.classList.remove('creator-modal--open');
-      modal.setAttribute('aria-hidden', 'true');
-
-      // Alle Inline-Styles entfernen (Gegenstück zu open())
+      if (typeof modal.close === 'function') {
+        if (modal.open) modal.close();
+      } else {
+        modal.removeAttribute('open');
+      }
+      modal.classList.remove('creator-inspiration-modal--detail');
       modal.style.cssText = '';
 
       // Reset to grid view
@@ -1156,17 +1128,15 @@
 
   // Event Listeners
   function setupEventListeners() {
-    // Close button (X) - Only closes detail view, not entire modal
+    refreshModalCloseEl();
+    // Header close X — same behavior as before: detail → grid, else close modal
     if (modalClose) {
       modalClose.addEventListener('click', (e) => {
         e.stopPropagation();
-        // WICHTIG: Focus entfernen BEVOR Modal geschlossen wird
         modalClose.blur();
-        // If detail view is open, go back to grid
         if (detailView && detailView.style.display !== 'none') {
           showGridView();
         } else {
-          // Otherwise close entire modal
           close();
         }
       });
@@ -1178,33 +1148,44 @@
         debouncedSearch(e.target.value);
       });
 
-      // Clear search on Escape
+      // Clear search on Escape (when focused in search; dialog cancel handles modal Escape)
       searchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-          searchInput.value = '';
-          searchQuery = '';
-          clearTimeout(searchDebounceTimer);
-          fetchDesigns({ search: '', filters: activeFilterState });
-          searchInput.blur();
+          if (searchInput.value) {
+            e.preventDefault();
+            searchInput.value = '';
+            searchQuery = '';
+            clearTimeout(searchDebounceTimer);
+            fetchDesigns({ search: '', filters: activeFilterState });
+            searchInput.blur();
+          }
         }
       });
     }
 
-    // Backdrop click (handled by creator-modal-base.css)
+    // Backdrop click on <dialog> (click target === dialog itself)
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         close();
       }
     });
 
-    // Escape key
+    // Native dialog cancel (Escape)
+    modal.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      if (detailView && detailView.style.display !== 'none') {
+        showGridView();
+      } else {
+        close();
+      }
+    });
+
+    // Escape key fallback
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && modal && modal.classList && modal.classList.contains('creator-modal--open')) {
+      if (e.key === 'Escape' && isModalOpen()) {
         if (detailView && detailView.style.display !== 'none') {
-          // If detail view is open, go back to grid
           showGridView();
         } else {
-          // Otherwise close modal
           close();
         }
       }

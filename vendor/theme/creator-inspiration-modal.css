@@ -1,163 +1,144 @@
-/* Creator Inspiration Modal - Erweitert creator-modal-base.css */
-/* Seitengross wie Profil- und Creator-Settings-Modal */
+/* Public Designs (Inspiration) — same shell/layout as My Designs (creator-base-modal) */
 
-/* Overlay: voll integriert (kein extra Abstand) */
-#creator-inspiration-modal.creator-modal {
-  padding: 0;
-}
-
-/* Dialog: 95vw × 90vh wie Profil-Modal im Shop */
-#creator-inspiration-modal .creator-modal__dialog--large {
-  width: 95vw;
+/* Large dialog size (My Designs is smaller; Public Designs needs a wide grid) */
+#creator-inspiration-modal.creator-base-modal {
   max-width: 1200px;
+  width: 95vw;
   height: 90vh;
   max-height: 90vh;
-  min-height: 500px;
-  margin: 0;
-  padding: 0;
-  border-radius: 16px;
 }
 
-/* Grid View - Shows all public designs */
-.creator-inspiration-modal__grid-view {
+#creator-inspiration-modal.creator-base-modal .creator-base-modal__body {
   display: flex;
   flex-direction: column;
-  height: calc(90vh - 60px); /* Header height */
-  max-height: calc(90vh - 60px);
-  overflow: hidden;
   min-height: 0;
-}
-
-/* Fixed Search Bar */
-.creator-inspiration-modal__search-wrapper {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: #1f2937;
-  padding: 12px 20px;
-  border-bottom: 1px solid #374151;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.creator-inspiration-modal__search {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 12px 16px;
-  background: #111827;
-  border: 1px solid #374151;
-  border-radius: 8px;
-  color: #e5e7eb;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.creator-inspiration-modal__filter-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid #F59E0B;
-  background: #000000;
-  color: #F59E0B;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
-  padding: 0;
-}
-
-.creator-inspiration-modal__filter-btn:hover {
-  background: #1a1a1a;
-  border-color: #fb923c;
-  transform: scale(1.05);
-}
-
-.creator-inspiration-modal__filter-btn:active {
-  transform: scale(0.95);
-}
-
-.creator-inspiration-modal__filter-btn__icon {
-  width: 20px;
-  height: 20px;
-  display: block;
-}
-
-/* Design Count Display */
-.creator-inspiration-modal__count {
-  color: #9ca3af;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  padding: 0 8px;
-  flex-shrink: 0;
-}
-
-.creator-inspiration-modal__search::placeholder {
-  color: #6b7280;
-}
-
-.creator-inspiration-modal__search:focus {
-  border-color: #F59E0B;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-}
-
-/* Grid Container - Scrollable (scrollbar hidden, scroll still works) */
-.creator-inspiration-modal__grid-container {
-  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 20px;
-  min-height: 0;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.creator-inspiration-modal__grid-container::-webkit-scrollbar {
+#creator-inspiration-modal.creator-base-modal .creator-base-modal__body::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
 
+/* Grid view — fills body like My Designs content */
+.creator-inspiration-modal__grid-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Toolbar — match My Designs __toolbar (search + count; filter extra) */
+.creator-inspiration-modal__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.creator-inspiration-modal__search {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.creator-inspiration-modal__search:focus {
+  outline: none;
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.creator-inspiration-modal__search::placeholder {
+  color: #9ca3af;
+}
+
+.creator-inspiration-modal__count {
+  font-size: 13px;
+  color: #6b7280;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Compact filter control in toolbar (not a second header row) */
+.creator-inspiration-modal__filter-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  padding: 0;
+}
+
+.creator-inspiration-modal__filter-btn:hover {
+  border-color: #F59E0B;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.creator-inspiration-modal__filter-btn__icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* Grid — match My Designs tile sizing */
 .creator-inspiration-modal__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
   padding: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* Design Cards — match My Designs dense dark tiles */
+.creator-inspiration-modal__grid::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .creator-inspiration-modal__card {
-  border: 2px solid rgba(255, 255, 255, 0.12);
+  aspect-ratio: 1;
   border-radius: 8px;
   overflow: hidden;
-  background: rgba(31, 41, 55, 0.8);
+  border: 2px solid #e5e7eb;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.18s ease;
-  aspect-ratio: 1 / 1;
+  transition: border-color 0.2s, transform 0.2s;
+  background: #f9fafb;
 }
 
 .creator-inspiration-modal__card:hover {
-  transform: scale(1.02);
   border-color: #F59E0B;
-  box-shadow: none;
+  transform: scale(1.02);
 }
 
 .creator-inspiration-modal__card-image-wrapper {
-  aspect-ratio: 1 / 1;
-  background: #111827;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   overflow: hidden;
+  background: #f9fafb;
 }
 
 .creator-inspiration-modal__card-image {
@@ -168,45 +149,97 @@
 }
 
 .creator-inspiration-modal__card-no-image {
-  color: #9ca3af;
-  font-size: 12px;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  font-size: 12px;
+  color: #9ca3af;
 }
 
-/* Loading and Empty States */
 .creator-inspiration-modal__loading,
 .creator-inspiration-modal__empty {
   text-align: center;
-  padding: 48px 24px;
-  color: #9ca3af;
-  font-size: 16px;
+  padding: 32px 16px;
+  color: #6b7280;
+  font-size: 14px;
 }
 
-/* Detail View - Shows selected design larger with remixes */
+/* Dark mode (creator pages) — match My Designs cards/search */
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__card,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__card {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__card:hover,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__card:hover {
+  border-color: var(--creator-accent, #F59E0B);
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__card-image-wrapper,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__card-image-wrapper {
+  background: rgba(31, 41, 55, 0.8);
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__search,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__search {
+  background: rgba(31, 41, 55, 0.6);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e5e7eb;
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__search::placeholder,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__search::placeholder {
+  color: #9ca3af;
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__count,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__count {
+  color: #9ca3af;
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__filter-btn,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__filter-btn {
+  background: rgba(2, 6, 23, 0.35);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e5e7eb;
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__filter-btn:hover,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__filter-btn:hover {
+  border-color: var(--creator-accent, #F59E0B);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--creator-accent, #F59E0B);
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__loading,
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__empty,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__loading,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__empty {
+  color: #9ca3af;
+}
+
+/* Detail View */
 .creator-inspiration-modal__detail-view {
   display: flex;
   flex-direction: column;
-  height: calc(80vh - 60px);
-  max-height: calc(80vh - 60px);
-  overflow: hidden;
+  flex: 1;
   min-height: 0;
+  overflow: hidden;
+  height: 100%;
 }
 
-/* Desktop Layout */
 .creator-inspiration-modal__detail-desktop {
   display: flex;
   gap: 20px;
-  padding: 16px 20px;
   height: 100%;
   max-height: 100%;
   overflow: hidden;
   min-height: 0;
 }
 
-/* Left: Design Image + Stats + Buttons - Flexibles Layout */
 .creator-inspiration-modal__detail-left {
   flex: 0 0 380px;
   display: flex;
@@ -217,19 +250,18 @@
   overflow: hidden;
 }
 
-/* Bild-Wrapper: Flexibel, nimmt verfügbaren Platz, aber Stats/Buttons haben Priorität */
 .creator-inspiration-modal__detail-image-wrap {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 200px;
-  max-height: calc(100% - 120px); /* Platz für Stats (~50px) + Actions (~60px) + Gaps */
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-  border: 1px solid rgba(246, 246, 246, .18);
+  max-height: calc(100% - 120px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(246, 246, 246, 0.18);
   border-radius: 18px;
   padding: 16px;
-  box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
   overflow: hidden;
 }
 
@@ -243,7 +275,6 @@
   border-radius: 12px;
 }
 
-/* Stats - Immer sichtbar, nicht schrumpfen */
 .creator-inspiration-modal__detail-stats {
   flex: 0 0 auto;
   flex-shrink: 0;
@@ -274,7 +305,6 @@
   color: #F59E0B;
 }
 
-/* Right: Remixes Grid */
 .creator-inspiration-modal__detail-right {
   flex: 1;
   display: flex;
@@ -300,38 +330,21 @@
   overflow-x: hidden;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
-  /* ✅ TODO 4: Overscroll-Verhalten für Stabilität */
   overscroll-behavior: contain;
-  /* Scrollbar Styling - wie bei Prozessen */
-  scrollbar-width: thin;
-  scrollbar-color: #4b5563 #111827;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .creator-inspiration-modal__remixes-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.creator-inspiration-modal__remixes-container::-webkit-scrollbar-track {
-  background: #111827;
-}
-
-.creator-inspiration-modal__remixes-container::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
-}
-
-.creator-inspiration-modal__remixes-container::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .creator-inspiration-modal__remixes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 16px;
-}
-
-.creator-inspiration-modal__remix-card {
-  /* Same as regular card, but can be customized if needed */
 }
 
 .creator-inspiration-modal__remixes-loading,
@@ -342,7 +355,6 @@
   font-size: 14px;
 }
 
-/* Detail Actions - Immer sichtbar, nicht schrumpfen */
 .creator-inspiration-modal__detail-actions {
   flex: 0 0 auto;
   flex-shrink: 0;
@@ -351,7 +363,7 @@
   justify-content: flex-end;
   padding-top: 10px;
   border-top: 1px solid #374151;
-  margin-top: auto; /* Buttons an den unteren Rand drücken */
+  margin-top: auto;
 }
 
 .creator-inspiration-modal__btn {
@@ -385,7 +397,6 @@
   transform: translateY(-1px);
 }
 
-/* Mobile Layout */
 .creator-inspiration-modal__detail-mobile {
   display: none;
   flex-direction: column;
@@ -394,36 +405,23 @@
   gap: 16px;
 }
 
-/* Carousel 1: Main Design */
 .creator-inspiration-modal__mobile-main-carousel {
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px 16px;
+  padding: 0;
   min-height: 0;
-  max-height: calc(80vh - 220px); /* Platz für Remixe-Sektion lassen */
+  max-height: calc(80vh - 220px);
   -webkit-overflow-scrolling: touch;
-  /* ✅ TODO 4: Overscroll-Verhalten für Stabilität */
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: #4b5563 #111827;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar {
-  width: 6px;
-}
-
-.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar-track {
-  background: #111827;
-}
-
-.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 3px;
-}
-
-.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .creator-inspiration-modal__mobile-slide {
@@ -432,7 +430,6 @@
   gap: 10px;
 }
 
-/* Carousel 2: Remixes Section */
 .creator-inspiration-modal__mobile-remixes-section {
   flex-shrink: 0;
   display: flex;
@@ -442,7 +439,7 @@
 }
 
 .creator-inspiration-modal__mobile-remixes-section .creator-inspiration-modal__remixes-header {
-  padding: 0 16px 12px 16px;
+  padding: 0 0 12px 0;
   margin: 0;
 }
 
@@ -454,41 +451,26 @@
 }
 
 .creator-inspiration-modal__remixes-container-mobile {
-  padding: 0 16px 16px 16px;
+  padding: 0 0 16px 0;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  /* ✅ TODO 4: Overscroll-Verhalten für Stabilität */
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: #4b5563 #111827;
-  /* Touch-Swipe Support für horizontales Scrollen */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   touch-action: pan-x;
 }
 
 .creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar {
-  height: 6px;
-}
-
-.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar-track {
-  background: #111827;
-}
-
-.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 3px;
-}
-
-.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  display: none;
+  height: 0;
 }
 
 .creator-inspiration-modal__remixes-grid-mobile {
   display: flex;
   gap: 12px;
   min-width: min-content;
-  padding-bottom: 4px; /* Platz für Scrollbar */
-  /* Touch-Swipe Support */
+  padding-bottom: 4px;
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 }
@@ -498,82 +480,46 @@
   min-width: calc(33.333% - 8px);
   max-width: calc(33.333% - 8px);
   aspect-ratio: 1 / 1;
-  /* Verhindere Text-Selektion beim Swipen */
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
 
-/* Mobile Responsive - Vollbild wie Profil-Modal im Shop */
-@media (max-width: 768px) {
-  /* Vollbild: 100vw × 100vh/100dvh, keine Rundung */
-  #creator-inspiration-modal .creator-modal__dialog--large {
-    width: 100vw;
+/* When detail is open, body should not scroll under it */
+#creator-inspiration-modal.creator-inspiration-modal--detail .creator-base-modal__body {
+  overflow: hidden;
+}
+
+@media (max-width: 749px) {
+  #creator-inspiration-modal.creator-base-modal {
     max-width: 100vw;
-    height: 100vh;
-    max-height: 100vh;
-    min-height: 0;
-    margin: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
   }
 
-  @supports (height: 100dvh) {
-    #creator-inspiration-modal .creator-modal__dialog--large {
-      height: 100dvh;
-      max-height: 100dvh;
-    }
-  }
-
-  .creator-inspiration-modal__grid-view {
-    height: calc(100vh - 60px);
-    max-height: calc(100vh - 60px);
-  }
-
-  @supports (height: 100dvh) {
-    .creator-inspiration-modal__grid-view {
-      height: calc(100dvh - 60px);
-      max-height: calc(100dvh - 60px);
-    }
-  }
-
   .creator-inspiration-modal__grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  .creator-inspiration-modal__search-wrapper {
-    padding: 10px 12px;
+  .creator-inspiration-modal__toolbar {
     gap: 8px;
-    flex-wrap: nowrap;
+    margin-bottom: 12px;
   }
 
   .creator-inspiration-modal__search {
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: 100%;
     padding: 10px 12px;
     font-size: 13px;
   }
 
   .creator-inspiration-modal__count {
-    font-size: 11px;
-    padding: 0 4px;
-    flex-shrink: 0;
+    font-size: 12px;
   }
 
   .creator-inspiration-modal__filter-btn {
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-  }
-
-  .creator-inspiration-modal__filter-btn__icon {
-    width: 18px;
-    height: 18px;
-  }
-
-  .creator-inspiration-modal__grid-container {
-    padding: 16px;
+    width: 36px;
+    height: 36px;
   }
 
   .creator-inspiration-modal__detail-desktop {
@@ -599,10 +545,6 @@
     gap: 16px;
   }
 
-  .creator-inspiration-modal__stat {
-    gap: 2px;
-  }
-
   .creator-inspiration-modal__stat-label {
     font-size: 10px;
   }
@@ -621,24 +563,4 @@
     flex: 1;
     width: auto;
   }
-
-  .creator-inspiration-modal__grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }
-
-/* Hide scrollbars on other inspiration scroll areas (scroll still works) */
-.creator-inspiration-modal__remixes-container,
-.creator-inspiration-modal__remixes-container-mobile,
-.creator-inspiration-modal__mobile-main-carousel {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-.creator-inspiration-modal__remixes-container::-webkit-scrollbar,
-.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar,
-.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-

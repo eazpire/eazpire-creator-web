@@ -1,73 +1,317 @@
-<div
+<style>
+  /* Base modal - dialog element */
+  .creator-base-modal {
+    position: fixed;
+    z-index: 10050;
+    border: none;
+    border-radius: 16px;
+    padding: 0;
+    background: #fff;
+    max-width: 520px;
+    width: 95vw;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .creator-base-modal[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .creator-base-modal::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  /* Header - fixed, no shrink */
+  .creator-base-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  .creator-base-modal__title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .creator-base-modal__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    border-radius: 8px;
+    transition: background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .creator-base-modal__close:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .creator-base-modal__close svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Body - scrollable (scrollbar hidden, scroll still works) */
+  .creator-base-modal__body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 200px;
+    padding: 16px 20px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .creator-base-modal__body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* Footer - fixed */
+  .creator-base-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 12px 20px;
+    border-top: 1px solid #e5e7eb;
+    background: #fff;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  /* Dark Mode: Creator-Seiten */
+  body.creator-mode .creator-base-modal,
+  body[data-creator-mode="true"] .creator-base-modal {
+    background: #1f2937;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  }
+  body.creator-mode .creator-base-modal::backdrop,
+  body[data-creator-mode="true"] .creator-base-modal::backdrop {
+    background: rgba(0, 0, 0, 0.75);
+  }
+  body.creator-mode .creator-base-modal__header,
+  body[data-creator-mode="true"] .creator-base-modal__header {
+    background: #1f2937;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+  body.creator-mode .creator-base-modal__title,
+  body[data-creator-mode="true"] .creator-base-modal__title {
+    color: #f3f4f6;
+  }
+  body.creator-mode .creator-base-modal__close,
+  body[data-creator-mode="true"] .creator-base-modal__close {
+    color: #9ca3af;
+  }
+  body.creator-mode .creator-base-modal__close:hover,
+  body[data-creator-mode="true"] .creator-base-modal__close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f3f4f6;
+  }
+  body.creator-mode .creator-base-modal__body,
+  body[data-creator-mode="true"] .creator-base-modal__body {
+    color: #e5e7eb;
+  }
+  body.creator-mode .creator-base-modal__footer,
+  body[data-creator-mode="true"] .creator-base-modal__footer {
+    background: #1f2937;
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+  .creator-base-modal__btn {
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #f9fafb;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+  }
+  .creator-base-modal__btn:hover {
+    border-color: #F59E0B;
+    background: #fffbeb;
+    color: #92400e;
+  }
+  body.creator-mode .creator-base-modal__btn,
+  body[data-creator-mode="true"] .creator-base-modal__btn {
+    background: rgba(2,6,23,0.35);
+    color: #e5e7eb;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  body.creator-mode .creator-base-modal__btn:hover,
+  body[data-creator-mode="true"] .creator-base-modal__btn:hover {
+    border-color: var(--creator-accent, #F59E0B);
+    background: rgba(245,158,11,0.12);
+    color: var(--creator-accent, #F59E0B);
+  }
+
+  /* Responsive - fullscreen on mobile (Account Modal pattern) */
+  @media (max-width: 749px) {
+    .creator-base-modal {
+      max-width: 100vw;
+      width: 100vw;
+      max-height: 100dvh;
+      height: 100dvh;
+      border-radius: 0;
+      margin: 0;
+    }
+
+    .creator-base-modal__body {
+      min-height: 0;
+      padding: 12px 16px;
+    }
+
+    .creator-base-modal__footer {
+      padding: 10px 16px;
+    }
+  }
+</style>
+
+
+
+
+
+
+<dialog
+  class="creator-base-modal creator-inspiration-modal"
   id="creator-inspiration-modal"
-  class="creator-modal creator-modal--strong-backdrop"
-  aria-hidden="true"
-  role="dialog"
-  aria-modal="true"
   aria-labelledby="creator-inspiration-modal-title"
 >
-  <div class="creator-modal__dialog creator-modal__dialog--large">
-    <div class="creator-modal__header">
-      <h3 id="creator-inspiration-modal-title" class="creator-modal__title">Public Designs</h3>
-      <button
-        type="button"
-        class="creator-modal__close"
-        aria-label="Close"
-      >
-        ✕
-      </button>
+  <div class="creator-base-modal__header">
+    <h3 id="creator-inspiration-modal-title" class="creator-base-modal__title">
+      Public Designs
+    </h3>
+    <button
+      type="button"
+      class="creator-base-modal__close"
+      id="creator-inspiration-modal-close"
+      aria-label="Close dialog"
+    >
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="creator-base-modal__body">
+    <!-- Grid View: Shows all public designs -->
+    <div id="creator-inspiration-modal-grid-view" class="creator-inspiration-modal__grid-view">
+      <div class="creator-inspiration-modal__toolbar">
+        <input
+          type="search"
+          id="creator-inspiration-modal-search"
+          class="creator-inspiration-modal__search"
+          placeholder="Search designs..."
+          autocomplete="off"
+          aria-label="Search designs"
+        >
+        <span id="creator-inspiration-modal-count" class="creator-inspiration-modal__count">0 Designs</span>
+        <button
+          type="button"
+          id="creator-inspiration-filter-btn"
+          class="creator-inspiration-modal__filter-btn"
+          aria-label="Filter"
+        >
+          <svg class="creator-inspiration-modal__filter-btn__icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 5H17M6 10H14M8 15H12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="3" cy="5" r="1.5" fill="currentColor"/>
+            <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="15" r="1.5" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <div id="creator-inspiration-modal-loading" class="creator-inspiration-modal__loading" style="display: none;">
+        Loading public designs...
+      </div>
+      <div id="creator-inspiration-modal-empty" class="creator-inspiration-modal__empty" style="display: none;">
+        No public designs found.
+      </div>
+      <div id="creator-inspiration-modal-grid" class="creator-inspiration-modal__grid" data-allow-scroll="true">
+        <!-- Designs will be loaded via JavaScript -->
+      </div>
     </div>
-    <div class="creator-modal__body creator-modal__body--no-padding">
-      <!-- Grid View: Shows all public designs -->
-      <div id="creator-inspiration-modal-grid-view" class="creator-inspiration-modal__grid-view">
-        <!-- Fixed Search Bar -->
-        <div class="creator-inspiration-modal__search-wrapper">
-          <input
-            type="search"
-            id="creator-inspiration-modal-search"
-            class="creator-inspiration-modal__search"
-            placeholder="Search designs..."
-            autocomplete="off"
-            aria-label="Search designs"
-          >
-          <span id="creator-inspiration-modal-count" class="creator-inspiration-modal__count">0 Designs</span>
-          <button
-            type="button"
-            id="creator-inspiration-filter-btn"
-            class="creator-inspiration-modal__filter-btn"
-            aria-label="Filter"
-          >
-            <svg class="creator-inspiration-modal__filter-btn__icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 5H17M6 10H14M8 15H12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <circle cx="3" cy="5" r="1.5" fill="currentColor"/>
-              <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
-              <circle cx="12" cy="15" r="1.5" fill="currentColor"/>
-            </svg>
-          </button>
+
+    <!-- Detail View: Shows selected design larger with remixes -->
+    <div id="creator-inspiration-modal-detail-view" class="creator-inspiration-modal__detail-view" style="display: none;">
+      <!-- Desktop Layout: Left (Design + Stats) + Right (Remixes) -->
+      <div class="creator-inspiration-modal__detail-desktop">
+        <div class="creator-inspiration-modal__detail-left">
+          <div class="creator-inspiration-modal__detail-image-wrap">
+            <img
+              id="creator-inspiration-modal-detail-image"
+              src=""
+              alt=""
+              loading="lazy"
+            >
+          </div>
+          <div class="creator-inspiration-modal__detail-stats">
+            <div class="creator-inspiration-modal__stat">
+              <span class="creator-inspiration-modal__stat-label">Remixes</span>
+              <span id="creator-inspiration-modal-remix-count" class="creator-inspiration-modal__stat-value">0</span>
+            </div>
+            <div class="creator-inspiration-modal__stat">
+              <span class="creator-inspiration-modal__stat-label">Sales</span>
+              <span id="creator-inspiration-modal-sales-count" class="creator-inspiration-modal__stat-value">0</span>
+            </div>
+          </div>
+          <div class="creator-inspiration-modal__detail-actions">
+            <button
+              type="button"
+              id="creator-inspiration-modal-close-detail"
+              class="creator-inspiration-modal__btn creator-inspiration-modal__btn--secondary"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              id="creator-inspiration-modal-apply"
+              class="creator-inspiration-modal__btn creator-inspiration-modal__btn--primary"
+            >
+              Apply
+            </button>
+          </div>
         </div>
-        <!-- Scrollable Grid Container -->
-        <div class="creator-inspiration-modal__grid-container" data-allow-scroll="true">
-          <div id="creator-inspiration-modal-loading" class="creator-inspiration-modal__loading" style="display: none;">
-            Loading public designs...
+
+        <div class="creator-inspiration-modal__detail-right">
+          <div class="creator-inspiration-modal__remixes-header">
+            <h4>Remixes</h4>
           </div>
-          <div id="creator-inspiration-modal-empty" class="creator-inspiration-modal__empty" style="display: none;">
-            No public designs found.
-          </div>
-          <div id="creator-inspiration-modal-grid" class="creator-inspiration-modal__grid">
-            <!-- Designs will be loaded via JavaScript -->
+          <div id="creator-inspiration-modal-remixes-container" class="creator-inspiration-modal__remixes-container" data-allow-scroll="true">
+            <div id="creator-inspiration-modal-remixes-grid" class="creator-inspiration-modal__remixes-grid">
+              <!-- Remixes will be loaded via JavaScript -->
+            </div>
+            <div id="creator-inspiration-modal-remixes-loading" class="creator-inspiration-modal__remixes-loading" style="display: none;">
+              Loading remixes...
+            </div>
+            <div id="creator-inspiration-modal-remixes-empty" class="creator-inspiration-modal__remixes-empty" style="display: none;">
+              No remixes yet.
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Detail View: Shows selected design larger with remixes -->
-      <div id="creator-inspiration-modal-detail-view" class="creator-inspiration-modal__detail-view" style="display: none;">
-        <!-- Desktop Layout: Left (Design + Stats) + Right (Remixes) -->
-        <div class="creator-inspiration-modal__detail-desktop">
-          <!-- Left: Design Image + Stats -->
-          <div class="creator-inspiration-modal__detail-left">
+      <!-- Mobile Layout: 2 separate Carousels (Main Design + Remixes) -->
+      <div class="creator-inspiration-modal__detail-mobile">
+        <div class="creator-inspiration-modal__mobile-main-carousel" data-allow-scroll="true">
+          <div class="creator-inspiration-modal__mobile-slide">
             <div class="creator-inspiration-modal__detail-image-wrap">
               <img
-                id="creator-inspiration-modal-detail-image"
+                id="creator-inspiration-modal-detail-image-mobile"
                 src=""
                 alt=""
                 loading="lazy"
@@ -76,111 +320,49 @@
             <div class="creator-inspiration-modal__detail-stats">
               <div class="creator-inspiration-modal__stat">
                 <span class="creator-inspiration-modal__stat-label">Remixes</span>
-                <span id="creator-inspiration-modal-remix-count" class="creator-inspiration-modal__stat-value">0</span>
+                <span id="creator-inspiration-modal-remix-count-mobile" class="creator-inspiration-modal__stat-value">0</span>
               </div>
               <div class="creator-inspiration-modal__stat">
                 <span class="creator-inspiration-modal__stat-label">Sales</span>
-                <span id="creator-inspiration-modal-sales-count" class="creator-inspiration-modal__stat-value">0</span>
+                <span id="creator-inspiration-modal-sales-count-mobile" class="creator-inspiration-modal__stat-value">0</span>
               </div>
             </div>
             <div class="creator-inspiration-modal__detail-actions">
               <button
                 type="button"
-                id="creator-inspiration-modal-close-detail"
+                id="creator-inspiration-modal-close-detail-mobile"
                 class="creator-inspiration-modal__btn creator-inspiration-modal__btn--secondary"
               >
                 Close
               </button>
               <button
                 type="button"
-                id="creator-inspiration-modal-apply"
+                id="creator-inspiration-modal-apply-mobile"
                 class="creator-inspiration-modal__btn creator-inspiration-modal__btn--primary"
               >
                 Apply
               </button>
             </div>
           </div>
-          
-          <!-- Right: Remixes Grid -->
-          <div class="creator-inspiration-modal__detail-right">
-            <div class="creator-inspiration-modal__remixes-header">
-              <h4>Remixes</h4>
-            </div>
-            <div id="creator-inspiration-modal-remixes-container" class="creator-inspiration-modal__remixes-container" data-allow-scroll="true">
-              <div id="creator-inspiration-modal-remixes-grid" class="creator-inspiration-modal__remixes-grid">
-                <!-- Remixes will be loaded via JavaScript -->
-              </div>
-              <div id="creator-inspiration-modal-remixes-loading" class="creator-inspiration-modal__remixes-loading" style="display: none;">
-                Loading remixes...
-              </div>
-              <div id="creator-inspiration-modal-remixes-empty" class="creator-inspiration-modal__remixes-empty" style="display: none;">
-                No remixes yet.
-              </div>
-            </div>
-          </div>
         </div>
 
-        <!-- Mobile Layout: 2 separate Carousels (Main Design + Remixes) -->
-        <div class="creator-inspiration-modal__detail-mobile">
-          <!-- Carousel 1: Main Design -->
-          <div class="creator-inspiration-modal__mobile-main-carousel" data-allow-scroll="true">
-            <div class="creator-inspiration-modal__mobile-slide">
-              <div class="creator-inspiration-modal__detail-image-wrap">
-                <img
-                  id="creator-inspiration-modal-detail-image-mobile"
-                  src=""
-                  alt=""
-                  loading="lazy"
-                >
-              </div>
-              <div class="creator-inspiration-modal__detail-stats">
-                <div class="creator-inspiration-modal__stat">
-                  <span class="creator-inspiration-modal__stat-label">Remixes</span>
-                  <span id="creator-inspiration-modal-remix-count-mobile" class="creator-inspiration-modal__stat-value">0</span>
-                </div>
-                <div class="creator-inspiration-modal__stat">
-                  <span class="creator-inspiration-modal__stat-label">Sales</span>
-                  <span id="creator-inspiration-modal-sales-count-mobile" class="creator-inspiration-modal__stat-value">0</span>
-                </div>
-              </div>
-              <div class="creator-inspiration-modal__detail-actions">
-                <button
-                  type="button"
-                  id="creator-inspiration-modal-close-detail-mobile"
-                  class="creator-inspiration-modal__btn creator-inspiration-modal__btn--secondary"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  id="creator-inspiration-modal-apply-mobile"
-                  class="creator-inspiration-modal__btn creator-inspiration-modal__btn--primary"
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
+        <div class="creator-inspiration-modal__mobile-remixes-section">
+          <div class="creator-inspiration-modal__remixes-header">
+            <h4>Remixes</h4>
           </div>
-
-          <!-- Carousel 2: Remixes (horizontal scroll, max 3 visible) -->
-          <div class="creator-inspiration-modal__mobile-remixes-section">
-            <div class="creator-inspiration-modal__remixes-header">
-              <h4>Remixes</h4>
+          <div id="creator-inspiration-modal-remixes-container-mobile" class="creator-inspiration-modal__remixes-container-mobile" data-allow-scroll="true">
+            <div id="creator-inspiration-modal-remixes-grid-mobile" class="creator-inspiration-modal__remixes-grid-mobile">
+              <!-- Remixes will be loaded via JavaScript -->
             </div>
-            <div id="creator-inspiration-modal-remixes-container-mobile" class="creator-inspiration-modal__remixes-container-mobile" data-allow-scroll="true">
-              <div id="creator-inspiration-modal-remixes-grid-mobile" class="creator-inspiration-modal__remixes-grid-mobile">
-                <!-- Remixes will be loaded via JavaScript -->
-              </div>
-              <div id="creator-inspiration-modal-remixes-loading-mobile" class="creator-inspiration-modal__remixes-loading" style="display: none;">
-                Loading remixes...
-              </div>
-              <div id="creator-inspiration-modal-remixes-empty-mobile" class="creator-inspiration-modal__remixes-empty" style="display: none;">
-                No remixes yet.
-              </div>
+            <div id="creator-inspiration-modal-remixes-loading-mobile" class="creator-inspiration-modal__remixes-loading" style="display: none;">
+              Loading remixes...
+            </div>
+            <div id="creator-inspiration-modal-remixes-empty-mobile" class="creator-inspiration-modal__remixes-empty" style="display: none;">
+              No remixes yet.
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>
+</dialog>
