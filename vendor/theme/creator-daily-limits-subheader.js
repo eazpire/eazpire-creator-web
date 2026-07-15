@@ -408,7 +408,12 @@
       }
       refresh(true);
     });
-    window.addEventListener('eazCreatorContextReady', function () {
+    window.addEventListener('eazCreatorContextReady', function (e) {
+      /* Soft route/feature ensures must not flash the chrome loading state. */
+      if (e && e.detail && e.detail.soft) {
+        refresh(false);
+        return;
+      }
       refresh(true);
     });
     document.addEventListener('visibilitychange', function () {
@@ -419,16 +424,21 @@
     });
   }
 
-  function mount() {
+  function mount(opts) {
+    var soft = !!(opts && opts.soft) || !!(opts && opts.detail && opts.detail.soft);
     if (mounted) {
-      refresh(true);
+      if (!soft) refresh(true);
       return;
     }
     collectRoots();
     if (!roots.length) return;
     mounted = true;
     bindEvents();
-    pollOwnerAndRefresh(0);
+    if (soft) {
+      refresh(false);
+    } else {
+      pollOwnerAndRefresh(0);
+    }
     if (typeof ResizeObserver !== 'undefined') {
       document.querySelectorAll('.creator-header, .creator-desktop-header, [data-creator-daily-limits]').forEach(function (el) {
         new ResizeObserver(syncChromeMetrics).observe(el);
@@ -438,6 +448,7 @@
       refresh: refresh,
       syncChromeMetrics: syncChromeMetrics,
       mount: mount,
+      __mounted: true,
     };
   }
 

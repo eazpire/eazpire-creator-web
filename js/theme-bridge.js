@@ -245,37 +245,45 @@
     applyOwnerFromAuth: applyOwnerFromAuth,
     resolveOwnerId: resolveOwnerId,
     applyPortalI18n: applyPortalI18n,
-    notifyContextReady: function () {
+    /**
+     * @param {{ soft?: boolean }} [options]
+     * soft: route/feature ensure — update owner only; do not flash chrome (limits/balances).
+     */
+    notifyContextReady: function (options) {
+      options = options || {};
+      var soft = !!options.soft;
       applyOwnerFromAuth();
       if (global.CreatorWidget) global.CreatorWidget.ownerId = resolveOwnerId();
-      if (
-        global.CreatorDashboardData &&
-        typeof global.CreatorDashboardData.refreshDashboardShellData === "function"
-      ) {
-        try {
-          global.CreatorDashboardData.refreshDashboardShellData();
-        } catch (e) {}
+      if (!soft) {
+        if (
+          global.CreatorDashboardData &&
+          typeof global.CreatorDashboardData.refreshDashboardShellData === "function"
+        ) {
+          try {
+            global.CreatorDashboardData.refreshDashboardShellData();
+          } catch (e) {}
+        }
+        if (typeof global.loadCreatorBalance === "function") {
+          try {
+            global.loadCreatorBalance(0);
+          } catch (e) {}
+        }
+        if (typeof global.loadCreatorSalesBalance === "function") {
+          try {
+            global.loadCreatorSalesBalance(0);
+          } catch (e) {}
+        }
+        if (
+          global.CreatorDailyLimitsSubheader &&
+          typeof global.CreatorDailyLimitsSubheader.refresh === "function"
+        ) {
+          try {
+            global.CreatorDailyLimitsSubheader.mount();
+            global.CreatorDailyLimitsSubheader.refresh(true);
+          } catch (e) {}
+        }
       }
-      if (typeof global.loadCreatorBalance === "function") {
-        try {
-          global.loadCreatorBalance(0);
-        } catch (e) {}
-      }
-      if (typeof global.loadCreatorSalesBalance === "function") {
-        try {
-          global.loadCreatorSalesBalance(0);
-        } catch (e) {}
-      }
-      if (
-        global.CreatorDailyLimitsSubheader &&
-        typeof global.CreatorDailyLimitsSubheader.refresh === "function"
-      ) {
-        try {
-          global.CreatorDailyLimitsSubheader.mount();
-          global.CreatorDailyLimitsSubheader.refresh(true);
-        } catch (e) {}
-      }
-      global.dispatchEvent(new CustomEvent("eazCreatorContextReady"));
+      global.dispatchEvent(new CustomEvent("eazCreatorContextReady", { detail: { soft: soft } }));
     },
     assetUrl: function (file) {
       return "/vendor/theme/" + file;

@@ -154,7 +154,7 @@
     if (!requireLogin()) return null;
 
     state.creations = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
+      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
       sharedCss();
 
       await Promise.all([
@@ -224,7 +224,7 @@
     if (!requireLogin()) return null;
 
     state.generator = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
+      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
       sharedCss();
       loadCss("/vendor/theme/sales-modal.css");
 
@@ -277,7 +277,7 @@
     if (!requireLogin()) return null;
 
     state.marketing = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
+      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
       marketingCss();
 
       var host = document.getElementById("creatorMarketingHost");
@@ -329,7 +329,7 @@
     if (!requireLogin()) return null;
 
     state.automations = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
+      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
       loadCss("/vendor/theme/creator-automations.css");
 
       var host = document.getElementById("creatorAutomationsHost");
@@ -411,7 +411,7 @@
     if (state.settings) return state.settings;
 
     state.settings = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
+      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
       settingsCss();
 
       await injectPartial("creator-settings-v2-modal.html");

@@ -91,6 +91,30 @@
     }
     var wasDocked = docked;
     var below = !!(target && speechVisible && wasDocked);
+    var desiredParent = jobOverlay
+      ? defaultHost
+      : target && target.parentNode
+        ? target
+        : defaultHost;
+    var alreadyPlaced =
+      cluster.parentNode === desiredParent &&
+      cluster.classList.contains('creator-eazy-cluster--job-overlay') === !!jobOverlay &&
+      cluster.classList.contains('creator-eazy-cluster--docked-speech-below') === !!below;
+    /* Skip DOM moves on routine screen switches when cluster is already in the right place. */
+    if (alreadyPlaced && !(wasDocked && (below || jobOverlay))) {
+      if (!speechVisible || !below || jobOverlay) {
+        try {
+          localStorage.removeItem(COMPOSE_ROW_DRAG_KEY);
+        } catch (eSkip) {}
+        applyComposeRowDragTransform(0, 0);
+      }
+      try {
+        if (typeof window.syncEazyClusterFacing === 'function') window.syncEazyClusterFacing();
+        if (typeof window.reconcileComposeMode === 'function') window.reconcileComposeMode();
+      } catch (eSync) {}
+      maybeRestoreEazyDockAfterCompose(speechVisible, jobOverlay);
+      return;
+    }
     /* Docked mascot lives in header slot; cluster is speech-only — undock so #eazy-mascot joins cluster at bottom */
     if (wasDocked && (below || jobOverlay)) {
       try {
@@ -103,7 +127,7 @@
     if (jobOverlay) {
       cluster.classList.remove('creator-eazy-cluster--docked-speech-below');
       cluster.classList.add('creator-eazy-cluster--job-overlay');
-      defaultHost.appendChild(cluster);
+      if (cluster.parentNode !== defaultHost) defaultHost.appendChild(cluster);
       cluster.classList.remove('creator-eazy-cluster--speech-after');
     } else {
       cluster.classList.remove('creator-eazy-cluster--job-overlay');
@@ -111,11 +135,7 @@
       if (!speechVisible) {
         cluster.classList.remove('creator-eazy-cluster--speech-after');
       }
-      if (target && target.parentNode) {
-        target.appendChild(cluster);
-      } else {
-        defaultHost.appendChild(cluster);
-      }
+      if (cluster.parentNode !== desiredParent) desiredParent.appendChild(cluster);
     }
     if (!speechVisible || !below || jobOverlay) {
       try {

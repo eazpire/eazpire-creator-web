@@ -124,7 +124,7 @@
 
     state = (async function () {
       applyBodyClasses();
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
+      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
 
       [
         "/vendor/theme/eazy-mascot.css",

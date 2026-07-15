@@ -135,7 +135,8 @@
 
   global.loadCreatorEazBalance = global.loadCreatorBalance;
 
-  global.addEventListener("eazCreatorContextReady", function () {
+  global.addEventListener("eazCreatorContextReady", function (e) {
+    if (e && e.detail && e.detail.soft) return;
     if (typeof global.loadCreatorBalance === "function") global.loadCreatorBalance(0);
     if (typeof global.loadCreatorSalesBalance === "function") global.loadCreatorSalesBalance(0);
     if (typeof global.reloadCreatorDashboardBalances === "function") global.reloadCreatorDashboardBalances();

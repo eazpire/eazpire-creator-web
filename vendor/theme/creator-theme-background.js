@@ -471,7 +471,11 @@
     resumeAllThemeBgVideos();
   });
 
-  document.addEventListener("eazCreatorContextReady", function () {
+  document.addEventListener("eazCreatorContextReady", function (e) {
+    if (e && e.detail && e.detail.soft) {
+      resumeAllThemeBgVideos();
+      return;
+    }
     if (hasShellTargets()) {
       loadAndApply();
     } else {

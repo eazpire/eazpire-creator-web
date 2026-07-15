@@ -92,12 +92,32 @@
     );
   }
 
+  function softNavToDashboard(e) {
+    if (e) e.preventDefault();
+    if (global.CreatorDesktopShell && typeof global.CreatorDesktopShell.switchScreen === "function") {
+      global.CreatorDesktopShell.switchScreen("dashboard");
+      return;
+    }
+    if (global.CreatorPortalRouter && typeof global.CreatorPortalRouter.go === "function") {
+      global.CreatorPortalRouter.go("dashboard");
+      return;
+    }
+    if (typeof global.__creatorGoTo === "function") {
+      global.__creatorGoTo(0);
+      return;
+    }
+    global.location.assign("/dashboard");
+  }
+
   function applyShellChrome(host) {
     host.querySelectorAll('img[src*="eazpire-creator-logo"]').forEach(function (img) {
       img.src = CREATOR_LOGO;
     });
     host.querySelectorAll(".creator-desktop-header__brand").forEach(function (a) {
       a.setAttribute("href", "/dashboard");
+      if (a.dataset.softNavBound === "1") return;
+      a.dataset.softNavBound = "1";
+      a.addEventListener("click", softNavToDashboard);
     });
     if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
       global.CreatorPortalI18n.applyDataT(host);
