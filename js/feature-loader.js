@@ -26,7 +26,7 @@
     var link = document.createElement("link");
     link.rel = "stylesheet";
     // Bump when creator-design-studio / portal CSS changes — stale ?v= kept old layout for users.
-    link.href = href + "?v=26";
+    link.href = href + "?v=27";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -38,7 +38,8 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=21";
+      // Bump when upload-modal / creations JS changes — portal caches /vendor for 7d.
+      s.src = src + "?v=22";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -81,7 +82,8 @@
   async function injectPartial(name, hostEl) {
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
-    var url = "/partials/" + name;
+    // Portal serves /partials with max-age=7d — bump when modal markup/CSS in partials changes.
+    var url = "/partials/" + name + "?v=22";
     if (host.querySelector('[data-partial="' + name + '"]')) return;
     var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;

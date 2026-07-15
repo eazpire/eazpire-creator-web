@@ -1315,9 +1315,11 @@
       if (e.target.closest && (
         e.target.closest('.cdp-modal__zoom-chrome') ||
         e.target.closest('.cdp-modal__edit-viewer-chrome') ||
+        e.target.closest('.cdp-modal__edit-studio-chrome') ||
         e.target.closest('.cdp-modal__viewer-bg-btn') ||
         e.target.closest('.cdp-modal__edit-history-btn') ||
-        e.target.closest('[data-cdp-viewer-bg-open]')
+        e.target.closest('[data-cdp-viewer-bg-open]') ||
+        e.target.closest('[data-cdp-edit-studio-open]')
       )) return;
       var state = getViewerZoomState(wrap);
       if (state.scale <= 1.001) return;
@@ -1334,6 +1336,66 @@
       e.preventDefault();
       e.stopPropagation();
     }, true);
+  }
+
+  function openEditStudioFromPreview() {
+    if (!currentDesign || !currentDesign.id) {
+      alert(window.CreatorI18n?.noDesignId || 'Error: No design selected.');
+      return;
+    }
+    function doOpen() {
+      if (window.CreatorEditStudio && typeof window.CreatorEditStudio.open === 'function') {
+        window.CreatorEditStudio.open(currentDesign);
+        return true;
+      }
+      return false;
+    }
+    if (doOpen()) return;
+    // Lazy-load Edit Studio script if not present yet
+    var existing = document.querySelector('script[src*="creator-edit-studio-modal.js"]');
+    if (existing) {
+      setTimeout(function () {
+        if (!doOpen()) alert('Edit Studio is still loading. Please try again.');
+      }, 300);
+      return;
+    }
+    var url = null;
+    try {
+      if (window.CreatorPortalThemeBridge && typeof window.CreatorPortalThemeBridge.assetUrl === 'function') {
+        url = window.CreatorPortalThemeBridge.assetUrl('creator-edit-studio-modal.js');
+      }
+    } catch (_) {}
+    if (!url && window.__CREATOR_LAZY_MODAL_URLS && window.__CREATOR_LAZY_MODAL_URLS['creator-edit-studio-modal.js']) {
+      url = window.__CREATOR_LAZY_MODAL_URLS['creator-edit-studio-modal.js'];
+    }
+    if (!url) {
+      alert('Edit Studio script not found.');
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = url;
+    s.defer = true;
+    s.onload = function () {
+      setTimeout(function () {
+        if (!doOpen()) alert('Edit Studio failed to start.');
+      }, 50);
+    };
+    s.onerror = function () {
+      alert('Edit Studio failed to load.');
+    };
+    document.head.appendChild(s);
+  }
+
+  function bindEditStudioOpen() {
+    if (!modal || modal.__cdpEditStudioBound) return;
+    modal.__cdpEditStudioBound = true;
+    modal.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('[data-cdp-edit-studio-open]') : null;
+      if (!btn || !modal.contains(btn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openEditStudioFromPreview();
+    });
   }
 
   function cropRectsEqual(a, b) {
@@ -2139,6 +2201,7 @@
 
     bindSidebarControls();
     bindViewerZoomControls();
+    bindEditStudioOpen();
     bindEditDesignControls();
     setActiveTab('overview');
   }
@@ -4005,7 +4068,8 @@
       remove_bg_outside: tPreview('edit_version_remove_bg_outside', 'Remove background (outside)'),
       remove_color: tPreview('edit_version_remove_color', 'Remove color'),
       replace_color: tPreview('edit_version_replace_color', 'Replace color'),
-      remove_object: tPreview('edit_version_remove_object', 'Remove object')
+      remove_object: tPreview('edit_version_remove_object', 'Remove object'),
+      edit_studio: tPreview('edit_version_edit_studio', 'Edit Studio')
     };
     return map[t] || t || 'Version';
   }
@@ -4080,7 +4144,8 @@
     var heavyOps = {
       'design-edit-remove-object': 1,
       'design-edit-remove-background': 1,
-      'design-edit-remove-color': 1
+      'design-edit-remove-color': 1,
+      'design-edit-studio-save': 1
     };
     var timeoutMs = options.timeoutMs || (heavyOps[op] ? 75000 : (isGet ? 25000 : 45000));
     var maxAttempts = options.maxAttempts != null
@@ -7506,6 +7571,22 @@
       getDOMElements();
     }
     closeModal(!!forceClose);
+  };
+
+  /** Used by Edit Studio after save — refresh preview images + edit history. */
+  window.CreatorDesignPreviewModal.applyDesignFromEdit = function (designOut) {
+    if (!isInitialized || !modal) getDOMElements();
+    applyDesignFromEditResponse(designOut);
+    try {
+      loadEditVersions();
+    } catch (_) {}
+    try {
+      showCropSuccessToast(tPreview('edit_success', 'Design updated.'));
+    } catch (_) {}
+  };
+
+  window.CreatorDesignPreviewModal.getCurrentDesign = function () {
+    return currentDesign || null;
   };
   
   console.log('CreatorDesignPreviewModal API ready', window.CreatorDesignPreviewModal);

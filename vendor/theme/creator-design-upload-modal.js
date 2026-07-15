@@ -272,15 +272,9 @@
       .replace(/'/g, '&#039;');
   }
 
-  function updatePreviewMetaLabels(modal, file, width, height) {
-    const placeholder = modal && modal.querySelector('.design-upload-placeholder');
-    if (!placeholder) return null;
-    let metaEl = placeholder.querySelector('.design-upload-preview__meta');
-    if (!metaEl) {
-      const host = placeholder.querySelector('.design-upload-placeholder__image') || placeholder;
-      metaEl = document.createElement('div');
-      metaEl.className = 'design-upload-preview__meta';
-      metaEl.innerHTML =
+  function buildPreviewMetaMarkup() {
+    return (
+      '<div class="design-upload-preview__meta" data-upload-preview-meta="1">' +
         '<span class="design-upload-preview__meta-chip" data-upload-meta="resolution">' +
           '<strong>' + escapeUploadHtml(i18nUploadModal('uploadModalLabelResolution', 'Resolution')) + '</strong>' +
           '<span data-upload-meta-value="resolution">—</span>' +
@@ -291,15 +285,29 @@
         '</span>' +
         '<button type="button" class="design-upload-preview__meta-chip design-upload-preview__meta-chip--upscale" data-upload-meta="upscale" hidden>' +
           escapeUploadHtml(i18nUploadModal('uploadModalLabelUpscale', 'Upscale')) +
-        '</button>';
-      host.appendChild(metaEl);
+        '</button>' +
+      '</div>'
+    );
+  }
+
+  function updatePreviewMetaLabels(modal, file, width, height) {
+    const placeholder = modal && modal.querySelector('.design-upload-placeholder');
+    if (!placeholder) return null;
+    // Always host on placeholder (position:relative) so chips sit above crop frame / image.
+    let metaEl = placeholder.querySelector('.design-upload-preview__meta');
+    if (!metaEl) {
+      placeholder.insertAdjacentHTML('beforeend', buildPreviewMetaMarkup());
+      metaEl = placeholder.querySelector('.design-upload-preview__meta');
     }
+    if (!metaEl) return null;
 
     const isSvg = !!(file && (file.type === 'image/svg+xml' || /\.svg$/i.test(file.name || '')));
     const w = Number(width) || 0;
     const h = Number(height) || 0;
     const bytes = file && file.size != null ? Number(file.size) : 0;
-    const needsUpscale = !isSvg && needsUpscaleForPrintQuality(w, h);
+    const measured = w > 0 && h > 0;
+    // Only show Upscale once we have real pixel size (avoid flash before measure).
+    const needsUpscale = !isSvg && measured && needsUpscaleForPrintQuality(w, h);
 
     const resVal = metaEl.querySelector('[data-upload-meta-value="resolution"]');
     const sizeVal = metaEl.querySelector('[data-upload-meta-value="size"]');
@@ -687,21 +695,24 @@
       const imageUrl = URL.createObjectURL(file);
       console.log('📸 Object-URL erstellt:', imageUrl);
 
-      placeholder.innerHTML = `
-        <div class="design-upload-placeholder__image">
-          <button type="button" class="design-upload-preview__remove" aria-label="Design entfernen">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <div class="design-upload-preview">
-            <img src="${imageUrl}" alt="Vorschau: ${file.name}" class="design-upload-preview__full-image">
-          </div>
-        </div>
-      `;
+      placeholder.innerHTML =
+        '<div class="design-upload-placeholder__image">' +
+          '<button type="button" class="design-upload-preview__remove" aria-label="Design entfernen">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+              '<path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '</svg>' +
+          '</button>' +
+          '<div class="design-upload-preview">' +
+            '<img src="' + imageUrl + '" alt="Vorschau: ' + escapeUploadHtml(file.name) + '" class="design-upload-preview__full-image">' +
+          '</div>' +
+        '</div>' +
+        buildPreviewMetaMarkup();
 
       placeholder.style.background = '#1f2937';
       placeholder.style.borderColor = '#f97316';
+
+      // Show MB (+ provisional Upscale) immediately; resolution fills in after measure.
+      updatePreviewMetaLabels(modal, file, 0, 0);
 
       const preview = placeholder.querySelector('.design-upload-preview');
       const img = placeholder.querySelector('.design-upload-preview__full-image');
@@ -720,17 +731,21 @@
             requestAnimationFrame(tryCreate);
           });
         }
-        if (img.complete) {
+        function onPreviewReady() {
           attachFrame();
           detectImageDimensions(file, img).then(function (dim) {
             updatePreviewMetaLabels(modal, file, dim.width, dim.height);
           });
+        }
+        if (img.complete && img.naturalWidth > 0) {
+          onPreviewReady();
         } else {
-          img.addEventListener('load', function () {
-            attachFrame();
-            detectImageDimensions(file, img).then(function (dim) {
+          img.addEventListener('load', onPreviewReady);
+          // Fallback if load already fired between complete check and listener.
+          detectImageDimensions(file, null).then(function (dim) {
+            if (dim.width > 0 && dim.height > 0) {
               updatePreviewMetaLabels(modal, file, dim.width, dim.height);
-            });
+            }
           });
         }
       } else if (file) {
