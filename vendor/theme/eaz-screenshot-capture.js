@@ -81,10 +81,17 @@
     if (document.getElementById(STYLE_ID)) return;
     var style = document.createElement('style');
     style.id = STYLE_ID;
+    // Use a <dialog> root so capture/crop UI enters the browser top layer above
+    // other showModal() dialogs (Design Generator, Printify studio, upload source).
     style.textContent =
       '#' +
       ROOT_ID +
-      '{position:fixed;inset:0;z-index:2147483000;pointer-events:none;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}' +
+      '{box-sizing:border-box;position:fixed;inset:0;width:100%;max-width:100vw;height:100%;max-height:100vh;' +
+      'margin:0;padding:0;border:none;background:transparent;color:#f9fafb;pointer-events:none;' +
+      'font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}' +
+      '#' +
+      ROOT_ID +
+      '::backdrop{background:transparent;}' +
       '#' +
       ROOT_ID +
       ' *{box-sizing:border-box;}' +
@@ -117,17 +124,68 @@
 
   function getRoot() {
     var root = document.getElementById(ROOT_ID);
-    if (root) return root;
-    root = document.createElement('div');
+    if (root) {
+      // Migrate legacy div root (older theme cache) to a dialog for top-layer stacking.
+      if (root.tagName !== 'DIALOG' && root.parentNode) {
+        try {
+          root.parentNode.removeChild(root);
+        } catch (eMig) {}
+        root = null;
+      } else {
+        return root;
+      }
+    }
+    root = document.createElement('dialog');
     root.id = ROOT_ID;
     root.setAttribute('aria-live', 'polite');
+    root.setAttribute('aria-modal', 'true');
+    root.addEventListener('cancel', function (ev) {
+      // Escape: abort active capture session instead of leaving an empty dialog open.
+      try {
+        ev.preventDefault();
+      } catch (eC) {}
+      if (activeSession && typeof activeSession._eazAbort === 'function') {
+        activeSession._eazAbort();
+      } else {
+        closeRoot();
+      }
+    });
     document.body.appendChild(root);
     return root;
   }
 
-  function clearRoot() {
+  function clearRootContent() {
     var root = document.getElementById(ROOT_ID);
     if (root) root.innerHTML = '';
+  }
+
+  function closeRoot() {
+    var root = document.getElementById(ROOT_ID);
+    if (!root) return;
+    root.innerHTML = '';
+    if (root.open && typeof root.close === 'function') {
+      try {
+        root.close();
+      } catch (eClose) {}
+    }
+  }
+
+  /** @deprecated use clearRootContent / closeRoot; kept as alias for content-only clear while dialog stays open */
+  function clearRoot() {
+    clearRootContent();
+  }
+
+  function ensureRootOpen() {
+    ensureStyles();
+    var root = getRoot();
+    if (typeof root.showModal === 'function' && !root.open) {
+      try {
+        root.showModal();
+      } catch (eOpen) {
+        // Already open or not allowed — keep using the element.
+      }
+    }
+    return root;
   }
 
   function stopStream(stream) {
@@ -142,16 +200,15 @@
   }
 
   function showMessage(text, ms) {
-    ensureStyles();
-    var root = getRoot();
-    clearRoot();
+    var root = ensureRootOpen();
+    clearRootContent();
     var el = document.createElement('div');
     el.className = 'eaz-ss-msg';
     el.textContent = text;
     root.appendChild(el);
     setTimeout(function () {
       if (el.parentNode) el.parentNode.removeChild(el);
-      if (root && !root.children.length) clearRoot();
+      if (root && !root.children.length) closeRoot();
     }, typeof ms === 'number' ? ms : 3200);
   }
 
@@ -296,9 +353,8 @@
 
   function openCropUi(sourceCanvas) {
     return new Promise(function (resolve) {
-      ensureStyles();
-      var root = getRoot();
-      clearRoot();
+      var root = ensureRootOpen();
+      clearRootContent();
 
       var crop = document.createElement('div');
       crop.className = 'eaz-ss-crop';
@@ -443,7 +499,7 @@
 
       function finish(file) {
         window.removeEventListener('resize', paintRect);
-        clearRoot();
+        closeRoot();
         resolve(file || null);
       }
 
@@ -503,10 +559,17 @@
   }
 
   /**
-   * Show floating “Take Screenshot” control, then capture + crop.
+   * Capture + crop. When options.immediate is true (caller already had a click
+   * gesture, e.g. Upload Source → Screenshot), skip the intermediate float panel
+   * and open getDisplayMedia right away — critical inside nested <dialog> flows.
+   * @param {{ immediate?: boolean }|boolean} [options]
    * @returns {Promise<File|Blob|null>}
    */
-  function start() {
+  function start(options) {
+    var immediate = false;
+    if (options === true) immediate = true;
+    else if (options && typeof options === 'object' && options.immediate) immediate = true;
+
     if (activeSession) {
       return activeSession;
     }
@@ -517,83 +580,111 @@
       return Promise.resolve(null);
     }
 
-    ensureStyles();
-    var root = getRoot();
-    clearRoot();
+    var settle = null;
+    var settled = false;
+
+    function finishSession(file) {
+      if (settled) return;
+      settled = true;
+      activeSession = null;
+      closeRoot();
+      if (settle) settle(file || null);
+    }
+
+    function handleCaptureError(err) {
+      activeSession = null;
+      closeRoot();
+      var name = err && err.name ? String(err.name) : '';
+      if (name === 'NotAllowedError' || name === 'AbortError') {
+        showMessage(t('screenshot_denied', 'Screen capture was cancelled or blocked'));
+      } else if (String(err && err.message) === 'unsupported') {
+        showMessage(
+          t('screenshot_unsupported', 'Screenshot is not available on this device or browser')
+        );
+      } else {
+        showMessage(t('screenshot_failed', 'Could not capture screenshot. Please try again.'));
+      }
+      if (!settled) {
+        settled = true;
+        if (settle) settle(null);
+      }
+    }
+
+    function runCaptureThenCrop() {
+      runDisplayCapture()
+        .then(function (canvas) {
+          clearRootContent();
+          return openCropUi(canvas);
+        })
+        .then(function (file) {
+          // openCropUi already closed the root
+          if (settled) return;
+          settled = true;
+          activeSession = null;
+          if (settle) settle(file || null);
+        })
+        .catch(function (err) {
+          handleCaptureError(err);
+        });
+    }
 
     activeSession = new Promise(function (resolve) {
-      var panel = document.createElement('div');
-      panel.className = 'eaz-ss-float';
-      panel.setAttribute('role', 'dialog');
-      panel.setAttribute('aria-label', t('screenshot_take', 'Take Screenshot'));
+      settle = resolve;
+    });
+    activeSession._eazAbort = function () {
+      finishSession(null);
+    };
 
-      var hint = document.createElement('p');
-      hint.className = 'eaz-ss-float__hint';
-      hint.textContent = t(
-        'screenshot_hint',
-        'Pick a browser tab, window, or entire screen. Then mark the region to use as your reference image.'
-      );
+    if (immediate) {
+      // Keep a top-layer dialog open so crop UI can mount after the OS picker.
+      ensureRootOpen();
+      clearRootContent();
+      runCaptureThenCrop();
+      return activeSession;
+    }
 
-      var actions = document.createElement('div');
-      actions.className = 'eaz-ss-float__actions';
+    var root = ensureRootOpen();
+    clearRootContent();
 
-      var btnTake = document.createElement('button');
-      btnTake.type = 'button';
-      btnTake.className = 'eaz-ss-btn eaz-ss-btn--primary';
-      btnTake.textContent = t('screenshot_take', 'Take Screenshot');
+    var panel = document.createElement('div');
+    panel.className = 'eaz-ss-float';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', t('screenshot_take', 'Take Screenshot'));
 
-      var btnCancel = document.createElement('button');
-      btnCancel.type = 'button';
-      btnCancel.className = 'eaz-ss-btn eaz-ss-btn--ghost';
-      btnCancel.textContent = t('screenshot_cancel', 'Cancel');
+    var hint = document.createElement('p');
+    hint.className = 'eaz-ss-float__hint';
+    hint.textContent = t(
+      'screenshot_hint',
+      'Pick a browser tab, window, or entire screen. Then mark the region to use as your reference image.'
+    );
 
-      actions.appendChild(btnCancel);
-      actions.appendChild(btnTake);
-      panel.appendChild(hint);
-      panel.appendChild(actions);
-      root.appendChild(panel);
+    var actions = document.createElement('div');
+    actions.className = 'eaz-ss-float__actions';
 
-      function done(file) {
-        activeSession = null;
-        clearRoot();
-        resolve(file || null);
-      }
+    var btnTake = document.createElement('button');
+    btnTake.type = 'button';
+    btnTake.className = 'eaz-ss-btn eaz-ss-btn--primary';
+    btnTake.textContent = t('screenshot_take', 'Take Screenshot');
 
-      btnCancel.addEventListener('click', function () {
-        done(null);
-      });
+    var btnCancel = document.createElement('button');
+    btnCancel.type = 'button';
+    btnCancel.className = 'eaz-ss-btn eaz-ss-btn--ghost';
+    btnCancel.textContent = t('screenshot_cancel', 'Cancel');
 
-      btnTake.addEventListener('click', function () {
-        btnTake.disabled = true;
-        btnCancel.disabled = true;
-        runDisplayCapture()
-          .then(function (canvas) {
-            clearRoot();
-            return openCropUi(canvas);
-          })
-          .then(function (file) {
-            done(file);
-          })
-          .catch(function (err) {
-            activeSession = null;
-            clearRoot();
-            var name = err && err.name ? String(err.name) : '';
-            if (name === 'NotAllowedError' || name === 'AbortError') {
-              showMessage(
-                t('screenshot_denied', 'Screen capture was cancelled or blocked')
-              );
-            } else if (String(err && err.message) === 'unsupported') {
-              showMessage(
-                t('screenshot_unsupported', 'Screenshot is not available on this device or browser')
-              );
-            } else {
-              showMessage(
-                t('screenshot_failed', 'Could not capture screenshot. Please try again.')
-              );
-            }
-            resolve(null);
-          });
-      });
+    actions.appendChild(btnCancel);
+    actions.appendChild(btnTake);
+    panel.appendChild(hint);
+    panel.appendChild(actions);
+    root.appendChild(panel);
+
+    btnCancel.addEventListener('click', function () {
+      finishSession(null);
+    });
+
+    btnTake.addEventListener('click', function () {
+      btnTake.disabled = true;
+      btnCancel.disabled = true;
+      runCaptureThenCrop();
     });
 
     return activeSession;

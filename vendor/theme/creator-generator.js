@@ -297,6 +297,15 @@
         navigateFallback(card);
         return;
       }
+      if (source === 'quick-inspirations') {
+        if (window.QuickInspirationsModal && typeof window.QuickInspirationsModal.open === 'function') {
+          window.__CREATOR_MOBILE_GEN_UPLOAD_ACTIVE = true;
+          window.QuickInspirationsModal.open({});
+          return;
+        }
+        navigateFallback(card);
+        return;
+      }
       if (source === 'designs') {
         if (window.GenMyDesignsModal && typeof window.GenMyDesignsModal.open === 'function') {
           window.GenMyDesignsModal.open();
@@ -492,19 +501,53 @@
       if (!imageUrl) return;
       applyDesignTypeFromDetail(e.detail || {});
       var remixPick = !!(e.detail && (e.detail.remixMode || window.__creatorInspirationRemixMode));
+      var quickInspiration = !!(e.detail && e.detail.quickInspiration);
+      var quickInspirationId =
+        e.detail && e.detail.quickInspirationId != null
+          ? String(e.detail.quickInspirationId).trim()
+          : '';
       var parentDesignId =
         e.detail && e.detail.parentDesignId != null ? String(e.detail.parentDesignId).trim() : '';
-      withSimilarityForImageUrl(imageUrl, function (picked) {
+      function pushPicked(picked) {
         if (!picked) return;
         if (remixPick) {
           selectedImages.length = 0;
           try {
             window.__creatorGenParentDesignId = parentDesignId || null;
           } catch (_ePd) {}
+        } else if (quickInspiration) {
+          for (var qi = selectedImages.length - 1; qi >= 0; qi--) {
+            if (selectedImages[qi] && selectedImages[qi].source === 'quick_inspiration') {
+              selectedImages.splice(qi, 1);
+            }
+          }
+          try {
+            window.__creatorGenParentDesignId = null;
+            window.__creatorGenQuickInspirationId = quickInspirationId || null;
+          } catch (_eQi) {}
         }
-        selectedImages.push({ file: null, dataUrl: picked.dataUrl, similarity: picked.similarity, canvasStrokes: null });
+        selectedImages.push({
+          file: null,
+          dataUrl: picked.dataUrl,
+          similarity: picked.similarity,
+          canvasStrokes: null,
+          source: quickInspiration ? 'quick_inspiration' : picked.source || null,
+          quickInspirationId: quickInspiration ? quickInspirationId || null : null
+        });
         renderSelectedGrid();
-      });
+      }
+      if (quickInspiration) {
+        var sim =
+          e.detail.similarity != null
+            ? e.detail.similarity
+            : e.detail.referenceStrength != null
+              ? e.detail.referenceStrength
+              : 0.05;
+        if (sim > 1) sim = sim / 100;
+        pushPicked({ dataUrl: imageUrl, similarity: sim, source: 'quick_inspiration' });
+        return;
+      }
+      withSimilarityForImageUrl(imageUrl, pushPicked);
     });
 
     function applyShopRegenerateJob(job) {
@@ -1113,11 +1156,21 @@
           if (!url) return Promise.resolve(null);
           return resolveReferenceUrlForSubmit(url).then(function (resolved) {
             if (!resolved) return null;
-            return {
+            var entry = {
               url: resolved,
               similarity: typeof item.similarity === 'number' ? item.similarity : 0.8,
               label: String.fromCharCode(65 + index)
             };
+            if (item.source) entry.source = item.source;
+            if (item.source === 'quick_inspiration') {
+              entry.strength = 5;
+              entry.similarity = 0.05;
+            }
+            if (item.quickInspirationId) {
+              entry.quick_inspiration_id = String(item.quickInspirationId);
+              entry.asset_id = String(item.quickInspirationId);
+            }
+            return entry;
           });
         })
       )
@@ -1155,6 +1208,24 @@
                 : '';
             return id || null;
           } catch (_pid) {
+            return null;
+          }
+        })(),
+        quickInspirationId: (function () {
+          try {
+            var fromImgs = (refImages || []).find(function (r) {
+              return r && (r.quick_inspiration_id || (r.source === 'quick_inspiration' && r.asset_id));
+            });
+            if (fromImgs) {
+              return String(fromImgs.quick_inspiration_id || fromImgs.asset_id).trim() || null;
+            }
+            var id =
+              typeof window.__creatorGenQuickInspirationId !== 'undefined' &&
+              window.__creatorGenQuickInspirationId != null
+                ? String(window.__creatorGenQuickInspirationId).trim()
+                : '';
+            return id || null;
+          } catch (_qid) {
             return null;
           }
         })(),

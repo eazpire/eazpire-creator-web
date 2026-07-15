@@ -1305,7 +1305,24 @@
   function hydrateProductThumb(mediaEl, handle) {
     var key = String(handle || '').trim().toLowerCase();
     if (!key || !mediaEl) return;
-    fetch('/products/' + encodeURIComponent(key) + '.js', { credentials: 'same-origin' })
+    var storeJsUrl;
+    try {
+      var h = window.location && window.location.hostname;
+      if (
+        window.__CREATOR_PORTAL_HOST__ ||
+        h === 'creator.eazpire.com' ||
+        (h && h.indexOf('creator.') === 0)
+      ) {
+        storeJsUrl = 'https://www.eazpire.com/products/' + encodeURIComponent(key) + '.js';
+      } else if (h === 'www.eazpire.com' || h === 'eazpire.com' || (h && h.indexOf('.myshopify.com') > 0)) {
+        storeJsUrl = '/products/' + encodeURIComponent(key) + '.js';
+      } else {
+        storeJsUrl = 'https://www.eazpire.com/products/' + encodeURIComponent(key) + '.js';
+      }
+    } catch (_e) {
+      storeJsUrl = 'https://www.eazpire.com/products/' + encodeURIComponent(key) + '.js';
+    }
+    fetch(storeJsUrl, { credentials: 'omit', mode: 'cors' })
       .then(function (res) {
         return res.ok ? res.json() : null;
       })
@@ -1319,6 +1336,7 @@
         if (!imgUrl) return;
         var img = document.createElement('img');
         img.src = typeof imgUrl === 'string' ? imgUrl : imgUrl.src || imgUrl.url || '';
+        if (img.src.indexOf('//') === 0) img.src = 'https:' + img.src;
         img.alt = payload.title || '';
         img.loading = 'lazy';
         mediaEl.innerHTML = '';

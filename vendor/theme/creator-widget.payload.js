@@ -61,6 +61,7 @@
       if (typeof ref.similarity === 'number') out.similarity = ref.similarity;
       if (ref.source) out.source = ref.source;
       if (ref.asset_id) out.asset_id = ref.asset_id;
+      if (ref.quick_inspiration_id) out.quick_inspiration_id = ref.quick_inspiration_id;
       return out;
     }).filter(Boolean);
   }
@@ -139,6 +140,7 @@
       prompt: prompt || '',
       image_url: imageUrl,
       parent_design_id: (s.parentDesignId && String(s.parentDesignId).trim()) || null,
+      quick_inspiration_id: (s.quickInspirationId && String(s.quickInspirationId).trim()) || null,
       design_type: designType,
       target_product: (s.targetProduct && String(s.targetProduct).trim()) || 'tshirt',
       ratio: ratio,
@@ -202,6 +204,7 @@
       prompt: payload.prompt,
       image_url: payload.image_url || null,
       parent_design_id: payload.parent_design_id || null,
+      quick_inspiration_id: payload.quick_inspiration_id || null,
       design_type: payload.design_type,
       target_product: payload.target_product,
       ratio: payload.ratio,

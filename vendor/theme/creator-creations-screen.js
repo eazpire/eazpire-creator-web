@@ -806,22 +806,26 @@
 
   function toImageString(value) {
     if (!value) return null;
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object') {
-      return value.src || value.url || value.image_url || value.preview_url || null;
+    var raw = null;
+    if (typeof value === 'string') raw = value;
+    else if (typeof value === 'object') {
+      raw = value.src || value.url || value.image_url || value.preview_url || null;
     }
-    return null;
+    if (!raw || typeof raw !== 'string') return null;
+    var s = raw.trim();
+    if (!s) return null;
+    if (s.indexOf('//') === 0) s = 'https:' + s;
+    return s;
   }
 
   function resolveProductImageUrl(product) {
     if (!product) return null;
-    var printifyImgs = product.printify_images;
-    if (Array.isArray(printifyImgs) && printifyImgs.length) {
-      var first = toImageString(printifyImgs[0]);
-      if (first) return first;
-    }
-    return toImageString(product.image_url) ||
+    // Prefer Shopify/catalog/design fallbacks over Printify CDN (often expired).
+    var primary =
+      toImageString(product.image_url) ||
       toImageString(product.featured_image) ||
+      toImageString(product.mockup_image) ||
+      toImageString(product.preview_image) ||
       toImageString(product.preview_url) ||
       toImageString(product.thumbnail_url) ||
       toImageString(product.main_image) ||
@@ -829,6 +833,15 @@
       toImageString(Array.isArray(product.images) ? product.images[0] : null) ||
       toImageString(product.variants && product.variants[0] && (product.variants[0].image || product.variants[0].image_url)) ||
       null;
+    if (primary) return primary;
+    var printifyImgs = product.printify_images;
+    if (Array.isArray(printifyImgs) && printifyImgs.length) {
+      for (var i = 0; i < printifyImgs.length; i++) {
+        var first = toImageString(printifyImgs[i]);
+        if (first) return first;
+      }
+    }
+    return null;
   }
 
   function isReviewRejected(design) {
@@ -893,14 +906,29 @@
 
   function getProductCarouselImages(product) {
     if (!product) return [];
-    var imgs = product.printify_images;
-    if (Array.isArray(imgs) && imgs.length) {
-      return imgs.map(function (x) {
-        return toImageString(x);
-      }).filter(Boolean);
+    var out = [];
+    var seen = {};
+    function push(u) {
+      var url = toImageString(u);
+      if (!url || seen[url]) return;
+      seen[url] = true;
+      out.push(url);
     }
-    var single = resolveProductImageUrl(product);
-    return single ? [single] : [];
+    push(product.featured_image);
+    push(product.image_url);
+    push(product.mockup_image);
+    push(product.preview_image);
+    var imgs = product.printify_images;
+    if (Array.isArray(imgs)) {
+      imgs.forEach(function (x) {
+        push(x);
+      });
+    }
+    if (!out.length) {
+      var single = resolveProductImageUrl(product);
+      if (single) out.push(single);
+    }
+    return out;
   }
 
   function appendProductImageCarousel(container, product, index) {
@@ -1163,29 +1191,111 @@
     startLibrarySaveWatchIfNeeded();
   }
 
+  function getStorefrontProductJsUrl(handle) {
+    var key = String(handle || '').trim().toLowerCase();
+    if (!key) return null;
+    try {
+      var h = window.location && window.location.hostname;
+      // Creator portal is not the Shopify storefront — never hit relative /products/*.js there.
+      if (
+        window.__CREATOR_PORTAL_HOST__ ||
+        h === 'creator.eazpire.com' ||
+        (h && h.indexOf('creator.') === 0)
+      ) {
+        return 'https://www.eazpire.com/products/' + encodeURIComponent(key) + '.js';
+      }
+      if (h === 'www.eazpire.com' || h === 'eazpire.com' || (h && h.indexOf('.myshopify.com') > 0)) {
+        return '/products/' + encodeURIComponent(key) + '.js';
+      }
+    } catch (_e) {}
+    return 'https://www.eazpire.com/products/' + encodeURIComponent(key) + '.js';
+  }
+
   function getProductImageFromStoreHandle(handle) {
     var key = String(handle || '').trim().toLowerCase();
     if (!key) return Promise.resolve(null);
     if (productHandleImageCache.has(key)) {
       return Promise.resolve(productHandleImageCache.get(key));
     }
-    return fetch('/products/' + encodeURIComponent(key) + '.js', { credentials: 'same-origin' })
-      .then(function (res) { return res.ok ? res.json() : null; })
-      .then(function (payload) {
-        var image = null;
-        if (payload) {
-          image = toImageString(payload.featured_image) ||
-            toImageString(Array.isArray(payload.images) ? payload.images[0] : null) ||
-            toImageString(payload.image) ||
-            null;
-        }
-        productHandleImageCache.set(key, image || null);
-        return image || null;
+    var shop = (window.Shopify && window.Shopify.shop) || 'allyoucanpink.myshopify.com';
+    var storeJsUrl = getStorefrontProductJsUrl(key);
+    var workerUrl =
+      API_BASE +
+      '?op=get-product-image&shop=' +
+      encodeURIComponent(shop) +
+      '&handle=' +
+      encodeURIComponent(key);
+    var onPortal = false;
+    try {
+      var hn = window.location && window.location.hostname;
+      onPortal = !!(
+        window.__CREATOR_PORTAL_HOST__ ||
+        hn === 'creator.eazpire.com' ||
+        (hn && hn.indexOf('creator.') === 0)
+      );
+    } catch (_e) {}
+
+    function fromPayload(payload) {
+      if (!payload) return null;
+      return (
+        toImageString(payload.featured_image) ||
+        toImageString(Array.isArray(payload.images) ? payload.images[0] : null) ||
+        toImageString(payload.image) ||
+        toImageString(payload.image_url) ||
+        null
+      );
+    }
+
+    function fromWorker() {
+      return fetch(workerUrl, { credentials: 'include' })
+        .then(function (res) {
+          return res.ok ? res.json() : null;
+        })
+        .then(function (data) {
+          var img = data && data.ok ? toImageString(data.image_url) : null;
+          productHandleImageCache.set(key, img || null);
+          return img || null;
+        })
+        .catch(function () {
+          productHandleImageCache.set(key, null);
+          return null;
+        });
+    }
+
+    function fromStoreJs() {
+      return fetch(storeJsUrl, {
+        credentials: onPortal ? 'omit' : 'same-origin',
+        mode: onPortal ? 'cors' : 'same-origin',
       })
-      .catch(function () {
-        productHandleImageCache.set(key, null);
-        return null;
+        .then(function (res) {
+          return res.ok ? res.json() : null;
+        })
+        .then(function (payload) {
+          return fromPayload(payload);
+        })
+        .catch(function () {
+          return null;
+        });
+    }
+
+    // Portal: worker first (same-origin /api/dispatch). Storefront .js is cross-origin.
+    if (onPortal) {
+      return fromWorker().then(function (img) {
+        if (img) return img;
+        return fromStoreJs().then(function (storeImg) {
+          productHandleImageCache.set(key, storeImg || null);
+          return storeImg || null;
+        });
       });
+    }
+
+    return fromStoreJs().then(function (image) {
+      if (image) {
+        productHandleImageCache.set(key, image);
+        return image;
+      }
+      return fromWorker();
+    });
   }
 
   function tryHydrateProductCardImage(mediaEl, prod) {
@@ -1222,6 +1332,9 @@
         title: p.product_name || p.product_key || 'Product',
         url: p.storefront_url || null,
         image_url: productImage,
+        featured_image: toImageString(p.featured_image) || null,
+        mockup_image: toImageString(p.mockup_image) || null,
+        preview_image: toImageString(p.preview_image) || null,
         printify_images: Array.isArray(p.printify_images) ? p.printify_images : null,
         product_key: p.product_key,
         product_name: p.product_name,
