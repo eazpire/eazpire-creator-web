@@ -220,6 +220,28 @@
   <div class="creator-base-modal__body">
     <!-- Grid View: Shows all public designs -->
     <div id="creator-inspiration-modal-grid-view" class="creator-inspiration-modal__grid-view">
+      <div class="creator-inspiration-modal__tabs" role="tablist" aria-label="Inspiration sources">
+        <button
+          type="button"
+          role="tab"
+          id="creator-inspiration-tab-public"
+          class="creator-inspiration-modal__tab is-active"
+          data-inspiration-tab="public"
+          aria-selected="true"
+        >
+          Public Inspirations
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="creator-inspiration-tab-yours"
+          class="creator-inspiration-modal__tab"
+          data-inspiration-tab="yours"
+          aria-selected="false"
+        >
+          Your Inspirations
+        </button>
+      </div>
       <div class="creator-inspiration-modal__toolbar">
         <input
           type="search"

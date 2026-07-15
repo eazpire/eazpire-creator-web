@@ -72,6 +72,60 @@
   flex: 1;
 }
 
+/* Tabs: Public Inspirations | Your Inspirations */
+.creator-inspiration-modal__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.creator-inspiration-modal__tab {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.creator-inspiration-modal__tab:hover {
+  border-color: #F59E0B;
+  color: #92400e;
+}
+
+.creator-inspiration-modal__tab.is-active {
+  border-color: #F59E0B;
+  background: #fffbeb;
+  color: #92400e;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25);
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__tab,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__tab {
+  background: rgba(2, 6, 23, 0.35);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #9ca3af;
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__tab:hover,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__tab:hover {
+  border-color: var(--creator-accent, #F59E0B);
+  color: var(--creator-accent, #F59E0B);
+}
+
+body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__tab.is-active,
+body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-modal__tab.is-active {
+  border-color: var(--creator-accent, #F59E0B);
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--creator-accent, #F59E0B);
+}
+
 /* Toolbar — match My Designs __toolbar (search + count; filter extra) */
 .creator-inspiration-modal__toolbar {
   display: flex;
@@ -227,6 +281,39 @@
 
 .creator-inspiration-modal__card-apply:active {
   transform: translateY(0);
+}
+
+/* Delete (Your Inspirations only) — white X on red square, top-right */
+.creator-inspiration-modal__card-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.creator-inspiration-modal__card-delete:hover {
+  background: #ef4444;
+  transform: scale(1.05);
+}
+
+.creator-inspiration-modal__card-delete:active {
+  transform: scale(0.98);
 }
 
 body.creator-mode #creator-inspiration-modal .creator-inspiration-modal__card-apply,
@@ -534,6 +621,11 @@ body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-m
   .creator-inspiration-modal__filter-btn {
     width: 36px;
     height: 36px;
+  }
+
+  .creator-inspiration-modal__tab {
+    padding: 8px 10px;
+    font-size: 12px;
   }
 
   .creator-inspiration-modal__card-apply {

@@ -104,6 +104,41 @@
   let totalCount = 0; // Total number of matching designs from backend
   let searchDebounceTimer = null;
   const SEARCH_DEBOUNCE_MS = 300; // Wait 300ms after last keystroke
+  /** 'public' | 'yours' — default Public Inspirations */
+  let activeTab = 'public';
+
+  function resolveOwnerId() {
+    try {
+      if (typeof window.__EAZ_OWNER_ID !== 'undefined' && window.__EAZ_OWNER_ID != null && String(window.__EAZ_OWNER_ID).trim() !== '') {
+        return String(window.__EAZ_OWNER_ID).trim();
+      }
+    } catch (_e0) {}
+    try {
+      var urlParams = new URLSearchParams(window.location.search);
+      var fromUrl = urlParams.get('logged_in_customer_id') || urlParams.get('owner_id') || urlParams.get('customer_id');
+      if (fromUrl) return String(fromUrl).trim();
+    } catch (_e1) {}
+    try {
+      if (window.CreatorWidget && typeof window.CreatorWidget.getOwnerId === 'function') {
+        var oid = window.CreatorWidget.getOwnerId();
+        if (oid) return String(oid).trim();
+      }
+    } catch (_e2) {}
+    try {
+      if (window.Shopify && window.Shopify.customerId) return String(window.Shopify.customerId).trim();
+    } catch (_e3) {}
+    return '';
+  }
+
+  function setActiveTab(tab) {
+    activeTab = tab === 'yours' ? 'yours' : 'public';
+    var tabs = modal.querySelectorAll('[data-inspiration-tab]');
+    tabs.forEach(function (btn) {
+      var isOn = btn.getAttribute('data-inspiration-tab') === activeTab;
+      btn.classList.toggle('is-active', isOn);
+      btn.setAttribute('aria-selected', isOn ? 'true' : 'false');
+    });
+  }
 
   // Helper: Check if mobile (kept for callers; preview layout is unified)
   function isMobile() {
@@ -217,14 +252,36 @@
     }
   }
 
-  // Fetch public designs with optional search and filters (server-side).
-  // First page renders immediately; further pages append in the background.
+  // Fetch designs for active tab (list-public; Your tab adds owner_id)
   async function fetchDesigns(options = {}) {
     if (isLoading) return;
     isLoading = true;
 
     const { search = '', filters = {} } = options;
     const apiBase = getApiBase();
+    const ownerId = resolveOwnerId();
+
+    // Your Inspirations without login → empty state, no API call
+    if (activeTab === 'yours' && !ownerId) {
+      designs = [];
+      filteredDesigns = [];
+      totalCount = 0;
+      renderGrid();
+      updateTotalCount();
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (grid) {
+        grid.style.opacity = '1';
+        grid.style.display = 'none';
+      }
+      if (emptyEl) {
+        emptyEl.textContent =
+          (window.CreatorI18n && window.CreatorI18n['creator.inspiration.empty_yours_login']) ||
+          inspirationI18n('empty_yours_login', 'Sign in to see your inspirations.');
+        emptyEl.style.display = 'block';
+      }
+      isLoading = false;
+      return;
+    }
 
     try {
       if (loadingEl) loadingEl.style.display = 'block';
@@ -241,6 +298,9 @@
         const url = new URL(apiBase);
         url.searchParams.set('op', 'list-public');
         url.searchParams.set('limit', String(PAGE_LIMIT));
+        if (activeTab === 'yours' && ownerId) {
+          url.searchParams.set('owner_id', ownerId);
+        }
         if (search && search.trim()) {
           url.searchParams.set('search', search.trim());
         }
@@ -299,8 +359,7 @@
       // Keep any designs already shown from the first page; only show empty if nothing loaded
       if (!designs.length) {
         if (emptyEl) {
-          emptyEl.textContent = (window.CreatorI18n && (window.CreatorI18n['creator.inspiration.empty'] || window.CreatorI18n.inspiration_empty))
-            || 'No public designs found.';
+          emptyEl.textContent = emptyMessageForTab();
           emptyEl.style.display = 'block';
         }
         if (grid) grid.style.display = 'none';
@@ -311,6 +370,19 @@
     } finally {
       isLoading = false;
     }
+  }
+
+  function emptyMessageForTab() {
+    if (activeTab === 'yours') {
+      return (
+        (window.CreatorI18n && window.CreatorI18n['creator.inspiration.empty_yours']) ||
+        inspirationI18n('empty_yours', 'You have no public inspirations yet.')
+      );
+    }
+    return (
+      (window.CreatorI18n && (window.CreatorI18n['creator.inspiration.empty'] || window.CreatorI18n.inspiration_empty)) ||
+      inspirationI18n('empty', 'No public designs found.')
+    );
   }
 
   // Update total count display
@@ -350,16 +422,64 @@
     if (!grid || !emptyEl) return;
     
     if (filteredDesigns.length === 0 && designs.length > 0) {
-      emptyEl.textContent = 'No designs found.';
+      emptyEl.textContent =
+        (window.CreatorI18n && window.CreatorI18n['creator.inspiration.empty']) ||
+        inspirationI18n('empty', 'No designs found.');
       emptyEl.style.display = 'block';
       grid.style.display = 'none';
     } else if (designs.length === 0) {
-      emptyEl.textContent = 'No public designs found.';
+      emptyEl.textContent = emptyMessageForTab();
       emptyEl.style.display = 'block';
       grid.style.display = 'none';
     } else {
       emptyEl.style.display = 'none';
       grid.style.display = 'grid';
+    }
+  }
+
+  async function deleteOwnDesign(design) {
+    const ownerId = resolveOwnerId();
+    if (!design || !design.id || !ownerId) return;
+
+    const confirmMsg =
+      (window.CreatorI18n && window.CreatorI18n['creator.inspiration.delete_confirm']) ||
+      inspirationI18n('delete_confirm', 'Delete this design? This cannot be undone.');
+    if (typeof window.confirm === 'function' && !window.confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      const url = new URL(getApiBase());
+      url.searchParams.set('op', 'delete-design');
+      url.searchParams.set('design_id', String(design.id));
+      url.searchParams.set('owner_id', ownerId);
+
+      const response = await fetchWithTimeout(url.toString(), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || data.message || 'delete_failed');
+      }
+
+      designs = designs.filter(function (d) { return String(d.id) !== String(design.id); });
+      filteredDesigns = filteredDesigns.filter(function (d) { return String(d.id) !== String(design.id); });
+      totalCount = Math.max(0, (totalCount || 0) - 1);
+      renderGrid();
+      updateTotalCount();
+      updateEmptyState();
+
+      if (selectedDesign && String(selectedDesign.id) === String(design.id)) {
+        showGridView();
+      }
+    } catch (err) {
+      console.error('[InspirationModal] Delete failed:', err);
+      alert(
+        (window.CreatorI18n && window.CreatorI18n['creator.inspiration.delete_failed']) ||
+          inspirationI18n('delete_failed', 'Could not delete design.')
+      );
     }
   }
 
@@ -375,6 +495,10 @@
     const noImageLabel =
       (window.CreatorI18n && window.CreatorI18n['creator.inspiration.no_image']) ||
       inspirationI18n('no_image', 'No image');
+    const deleteAria =
+      (window.CreatorI18n && window.CreatorI18n['creator.inspiration.delete_aria']) ||
+      inspirationI18n('delete_aria', 'Delete design');
+    const showDelete = activeTab === 'yours';
 
     filteredDesigns.forEach((design) => {
       const card = document.createElement('div');
@@ -408,6 +532,21 @@
       }
 
       card.appendChild(imageWrapper);
+
+      if (showDelete) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'creator-inspiration-modal__card-delete';
+        deleteBtn.setAttribute('aria-label', deleteAria);
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteBtn.blur();
+          deleteOwnDesign(design);
+        });
+        card.appendChild(deleteBtn);
+      }
 
       const applyBtnCard = document.createElement('button');
       applyBtnCard.type = 'button';
@@ -1023,12 +1162,13 @@
 
       lockBodyScroll();
 
-      // Load designs if not already loaded
-      if (designs.length === 0 && !isLoading) {
-        fetchDesigns();
-      } else {
-        showGridView();
-      }
+      // Default tab: Public Inspirations
+      setActiveTab('public');
+      designs = [];
+      filteredDesigns = [];
+      totalCount = 0;
+      showGridView();
+      fetchDesigns({ search: '', filters: activeFilterState });
 
       // Clear search when opening modal
       if (searchInput) {
@@ -1073,6 +1213,7 @@
       // Reset to grid view
       showGridView();
       selectedDesign = null;
+      setActiveTab('public');
 
       // Clear search when closing modal (ohne neuen Fetch auszulösen)
       if (searchInput) {
@@ -1109,6 +1250,24 @@
         }
       });
     }
+
+    // Tabs: Public Inspirations | Your Inspirations
+    modal.querySelectorAll('[data-inspiration-tab]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var next = btn.getAttribute('data-inspiration-tab') === 'yours' ? 'yours' : 'public';
+        if (next === activeTab) return;
+        setActiveTab(next);
+        designs = [];
+        filteredDesigns = [];
+        totalCount = 0;
+        if (detailView && detailView.style.display !== 'none') {
+          showGridView();
+        }
+        fetchDesigns({ search: searchQuery, filters: activeFilterState });
+      });
+    });
 
     // Search input - live search with debouncing (server-side)
     if (searchInput) {
