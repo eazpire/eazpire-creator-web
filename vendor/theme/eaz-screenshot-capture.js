@@ -535,27 +535,80 @@
     });
   }
 
+  /**
+   * Keep Design Studio / shop-create focused after the user picks a tab/window.
+   * Without CaptureController, Chromium focuses the shared surface (feels like a redirect).
+   */
+  function applyNoFocusSteal(controller) {
+    if (!controller || typeof controller.setFocusBehavior !== 'function') return;
+    var behaviors = ['no-focus-change', 'focus-capturing-application'];
+    for (var i = 0; i < behaviors.length; i++) {
+      try {
+        controller.setFocusBehavior(behaviors[i]);
+        return;
+      } catch (eFocus) {}
+    }
+  }
+
+  function refocusCapturingWindow() {
+    try {
+      if (typeof window.focus === 'function') window.focus();
+    } catch (eWin) {}
+    try {
+      if (document.body && typeof document.body.focus === 'function') {
+        document.body.focus();
+      }
+    } catch (eBody) {}
+  }
+
   function runDisplayCapture() {
     if (!isSupported()) {
       return Promise.reject(new Error('unsupported'));
     }
-    return navigator.mediaDevices
-      .getDisplayMedia({
-        video: true,
-        audio: false
-      })
-      .then(function (stream) {
-        return captureFrameFromStream(stream).then(
-          function (canvas) {
-            stopStream(stream);
-            return canvas;
-          },
-          function (err) {
-            stopStream(stream);
-            throw err;
-          }
-        );
-      });
+
+    var constraints = {
+      // Prefer a browser tab; user can still pick window/screen in supported browsers.
+      video: {
+        displaySurface: 'browser'
+      },
+      audio: false,
+      // Offer the current Design Studio tab first (still allows other surfaces).
+      preferCurrentTab: true,
+      selfBrowserSurface: 'include',
+      // Avoid mid-capture surface switching UI; not needed for a single frame grab.
+      surfaceSwitching: 'exclude'
+    };
+
+    var controller = null;
+    try {
+      if (typeof CaptureController === 'function') {
+        controller = new CaptureController();
+        constraints.controller = controller;
+        // Set before the picker so Chromium does not focus the shared tab/window.
+        applyNoFocusSteal(controller);
+      }
+    } catch (eCtrl) {
+      controller = null;
+    }
+
+    return navigator.mediaDevices.getDisplayMedia(constraints).then(function (stream) {
+      // Spec allows one reinforcement call immediately after the promise resolves.
+      applyNoFocusSteal(controller);
+      refocusCapturingWindow();
+
+      return captureFrameFromStream(stream).then(
+        function (canvas) {
+          stopStream(stream);
+          refocusCapturingWindow();
+          return canvas;
+        },
+        function (err) {
+          stopStream(stream);
+          refocusCapturingWindow();
+          throw err;
+        }
+      );
+    });
   }
 
   /**

@@ -1240,6 +1240,14 @@
       }
       return;
     }
+    if (source === 'quick-inspirations') {
+      window.__automationsRefPickActive = true;
+      window.__CREATOR_MOBILE_GEN_UPLOAD_ACTIVE = true;
+      if (window.QuickInspirationsModal && typeof window.QuickInspirationsModal.open === 'function') {
+        window.QuickInspirationsModal.open({});
+      }
+      return;
+    }
     if (source === 'designs') {
       window.__automationsRefPickActive = true;
       if (window.GenMyDesignsModal && typeof window.GenMyDesignsModal.open === 'function') {

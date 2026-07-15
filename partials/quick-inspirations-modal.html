@@ -1,0 +1,108 @@
+<div
+  id="quick-inspirations-modal"
+  class="creator-modal creator-modal--strong-backdrop"
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="quick-inspirations-modal-title"
+>
+  <div class="creator-modal__dialog creator-modal__dialog--large qi-modal__dialog">
+    <div class="creator-modal__header">
+      <h3 id="quick-inspirations-modal-title" class="creator-modal__title" data-t="creator.quick_inspirations.title">Quick Inspirations</h3>
+      <button type="button" class="creator-modal__close" id="quick-inspirations-modal-close" aria-label="Close">✕</button>
+    </div>
+
+    <div class="qi-modal__subheader">
+      <button
+        type="button"
+        class="qi-modal__filter-toggle"
+        id="qi-filter-toggle"
+        aria-label="Filter"
+        aria-expanded="false"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3 5H17M6 10H14M8 15H12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="3" cy="5" r="1.5" fill="currentColor"/>
+          <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+          <circle cx="12" cy="15" r="1.5" fill="currentColor"/>
+        </svg>
+      </button>
+      <input
+        type="search"
+        id="qi-search"
+        class="qi-modal__search"
+        placeholder="Search inspirations…"
+        autocomplete="off"
+        aria-label="Search inspirations"
+      >
+      <button
+        type="button"
+        class="qi-modal__upload-btn"
+        id="qi-upload-open"
+        aria-label="Upload"
+        title="Upload"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="qi-modal__info" data-t="creator.quick_inspirations.royalty_info">When a product generated from your Quick Inspiration sells, you earn 5 royalty points from the seller's royalty skill (e.g. tier 10% → 5% seller / 5% you; tier 20% → 15% / 5%). Max 10 uploads per day. Also applies if a Shop Design Studio design later becomes a public Creator design.</p>
+
+    <div class="qi-modal__body">
+      <aside class="qi-modal__sidebar" id="qi-sidebar" aria-label="Filter">
+        <div class="qi-modal__sidebar-inner" data-allow-scroll="true">
+          <div class="qi-modal__sidebar-head">
+            <span data-t="creator.quick_inspirations.filters">Filters</span>
+            <button type="button" class="qi-modal__sidebar-reset" id="qi-filter-reset" data-t="creator.common.reset">Reset</button>
+          </div>
+          <div class="qi-filter-group">
+            <h4 class="qi-filter-group__title" data-t="creator.quick_inspirations.filter_tags">Tags</h4>
+            <div class="qi-filter-group__list" id="qi-filter-tags"></div>
+          </div>
+          <div class="qi-filter-group">
+            <h4 class="qi-filter-group__title" data-t="creator.quick_inspirations.filter_styles">Styles</h4>
+            <div class="qi-filter-group__list" id="qi-filter-styles"></div>
+          </div>
+          <div class="qi-filter-group">
+            <h4 class="qi-filter-group__title" data-t="creator.quick_inspirations.filter_moods">Moods</h4>
+            <div class="qi-filter-group__list" id="qi-filter-moods"></div>
+          </div>
+        </div>
+      </aside>
+      <div class="qi-modal__sidebar-backdrop" id="qi-sidebar-backdrop" hidden></div>
+
+      <div class="qi-modal__content" data-allow-scroll="true">
+        <div id="qi-loading" class="qi-modal__loading" style="display:none;" data-t="creator.quick_inspirations.loading">Loading…</div>
+        <div id="qi-empty" class="qi-modal__empty" style="display:none;" data-t="creator.quick_inspirations.empty">No quick inspirations yet. Be the first to upload!</div>
+        <div id="qi-grid" class="qi-modal__grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<dialog class="creator-base-modal" id="qi-upload-modal" aria-labelledby="qi-upload-modal-title">
+  <div class="creator-base-modal__header">
+    <h3 id="qi-upload-modal-title" class="creator-base-modal__title" data-t="creator.quick_inspirations.upload_title">Upload Quick Inspirations</h3>
+    <button type="button" class="creator-base-modal__close" id="qi-upload-modal-close" aria-label="Close dialog">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="creator-base-modal__body">
+    <p class="qi-upload__hint" data-t="creator.quick_inspirations.upload_hint">Upload screenshots or mood images for inspiration. They are shared with everyone and analyzed automatically. Do not upload copyrighted, nude, or otherwise prohibited content.</p>
+    <div id="qi-upload-status" class="qi-upload__status" style="display:none;" role="status"></div>
+    <div class="qi-upload__drop" id="qi-upload-drop">
+      <input type="file" id="qi-upload-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+      <button type="button" class="qi-upload__pick" id="qi-upload-pick" data-t="creator.quick_inspirations.choose_files">Choose images</button>
+      <div id="qi-upload-preview" class="qi-upload__preview"></div>
+    </div>
+    <div class="qi-upload__actions">
+      <button type="button" class="qi-upload__cancel" id="qi-upload-cancel" data-t="creator.common.cancel">Cancel</button>
+      <button type="button" class="qi-upload__submit" id="qi-upload-submit" disabled data-t="creator.quick_inspirations.upload_submit">Upload</button>
+    </div>
+  </div>
+</dialog>

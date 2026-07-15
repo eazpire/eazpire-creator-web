@@ -226,11 +226,14 @@
       await injectPartial("creator-mobile-generator-modals.html");
       await injectPartial("reference-influence-modal.html");
       await injectPartial("creator-inspiration-modal.html");
+      await injectPartial("quick-inspirations-modal.html");
       await injectPartial("creator-phone-upload-modal.html");
 
       if (typeof global.mountCreatorDesktopShellModals === "function") {
         global.mountCreatorDesktopShellModals();
       }
+
+      loadCss(asset("quick-inspirations-modal.css"));
 
       await loadScriptsSequential([
         asset("eaz-cost-catalog.js"),
@@ -244,6 +247,7 @@
         asset("creator-canvas-sketch-modal.js"),
         asset("reference-influence-modal.js"),
         asset("creator-inspiration-modal.js"),
+        asset("quick-inspirations-modal.js"),
         asset("creator-phone-upload-modal.js"),
         asset("eaz-screenshot-capture.js"),
         asset("creator-generator.js"),
@@ -329,8 +333,21 @@
         await injectPartial("creator-mobile-automations.html", host);
       }
 
+      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas)
+      await injectPartial("creator-inspiration-modal.html");
+      await injectPartial("quick-inspirations-modal.html");
+      await injectPartial("creator-phone-upload-modal.html");
+      loadCss(asset("quick-inspirations-modal.css"));
+      loadCss("/vendor/theme/creator-inspiration-modal.css");
+      loadCss("/vendor/theme/sales-modal.css");
+
       await loadScriptsSequential([
         asset("eaz-screenshot-capture.js"),
+        asset("creator-inspiration-modal.js"),
+        asset("quick-inspirations-modal.js"),
+        asset("creator-phone-upload-modal.js"),
+        asset("creator-mobile-gen-my-designs-modal.js"),
+        asset("creator-canvas-sketch-modal.js"),
         asset("creator-automations-screen.js"),
       ]);
     })();
