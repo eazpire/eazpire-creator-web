@@ -119,6 +119,13 @@
   function applyImageToCreator(sectionId, imageUrl) {
     if (!imageUrl) return;
 
+    // Quick Inspirations upload flow — consume phone image before generator/shop handlers
+    if (typeof window.__qiPhoneUploadApply === 'function') {
+      try {
+        if (window.__qiPhoneUploadApply(imageUrl)) return;
+      } catch (eQi) {}
+    }
+
     var cdmCtx = typeof window !== 'undefined' ? window.__creatorDetailPhoneContext : null;
     if (
       cdmCtx &&

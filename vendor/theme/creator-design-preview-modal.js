@@ -1351,39 +1351,111 @@
       return false;
     }
     if (doOpen()) return;
-    // Lazy-load Edit Studio script if not present yet
-    var existing = document.querySelector('script[src*="creator-edit-studio-modal.js"]');
-    if (existing) {
-      setTimeout(function () {
-        if (!doOpen()) alert('Edit Studio is still loading. Please try again.');
-      }, 300);
-      return;
-    }
-    var url = null;
-    try {
-      if (window.CreatorPortalThemeBridge && typeof window.CreatorPortalThemeBridge.assetUrl === 'function') {
-        url = window.CreatorPortalThemeBridge.assetUrl('creator-edit-studio-modal.js');
+
+    function resolveEditStudioScriptUrl() {
+      var url = null;
+      try {
+        if (window.CreatorPortalThemeBridge && typeof window.CreatorPortalThemeBridge.assetUrl === 'function') {
+          url = window.CreatorPortalThemeBridge.assetUrl('creator-edit-studio-modal.js');
+        }
+      } catch (_) {}
+      if (!url && window.__CREATOR_LAZY_MODAL_URLS && window.__CREATOR_LAZY_MODAL_URLS['creator-edit-studio-modal.js']) {
+        url = window.__CREATOR_LAZY_MODAL_URLS['creator-edit-studio-modal.js'];
       }
-    } catch (_) {}
-    if (!url && window.__CREATOR_LAZY_MODAL_URLS && window.__CREATOR_LAZY_MODAL_URLS['creator-edit-studio-modal.js']) {
-      url = window.__CREATOR_LAZY_MODAL_URLS['creator-edit-studio-modal.js'];
+      if (!url) {
+        try {
+          url = inferScriptAssetUrl('creator-edit-studio-modal.js');
+        } catch (_) {}
+      }
+      if (!url) url = '/vendor/theme/creator-edit-studio-modal.js';
+      return url;
     }
-    if (!url) {
-      alert('Edit Studio script not found.');
-      return;
+
+    function ensureEditStudioCss() {
+      if (document.querySelector('link[href*="creator-edit-studio-modal.css"]')) return;
+      var cssUrl = null;
+      try {
+        if (window.__CREATOR_EDIT_STUDIO_MODAL_CSS) cssUrl = window.__CREATOR_EDIT_STUDIO_MODAL_CSS;
+        else if (window.CreatorPortalThemeBridge && typeof window.CreatorPortalThemeBridge.assetUrl === 'function') {
+          cssUrl = window.CreatorPortalThemeBridge.assetUrl('creator-edit-studio-modal.css');
+        }
+      } catch (_) {}
+      if (!cssUrl) cssUrl = '/vendor/theme/creator-edit-studio-modal.css';
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = cssUrl;
+      document.head.appendChild(link);
     }
-    var s = document.createElement('script');
-    s.src = url;
-    s.defer = true;
-    s.onload = function () {
-      setTimeout(function () {
-        if (!doOpen()) alert('Edit Studio failed to start.');
-      }, 50);
-    };
-    s.onerror = function () {
-      alert('Edit Studio failed to load.');
-    };
-    document.head.appendChild(s);
+
+    function loadEditStudioScript(url) {
+      ensureEditStudioCss();
+      var existing = document.querySelector('script[src*="creator-edit-studio-modal.js"]');
+      if (existing) {
+        var tries = 0;
+        var timer = setInterval(function () {
+          tries += 1;
+          if (doOpen() || tries >= 20) {
+            clearInterval(timer);
+            if (!window.CreatorEditStudio) {
+              alert('Edit Studio is still loading. Please try again.');
+            }
+          }
+        }, 100);
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = function () {
+        var tries = 0;
+        var timer = setInterval(function () {
+          tries += 1;
+          if (doOpen() || tries >= 20) {
+            clearInterval(timer);
+            if (!window.CreatorEditStudio) {
+              alert('Edit Studio failed to start.');
+            }
+          }
+        }, 50);
+      };
+      s.onerror = function () {
+        alert('Edit Studio failed to load.');
+      };
+      document.head.appendChild(s);
+    }
+
+    // Prefer portal partial inject (markup) when available, then load script.
+    function ensureMarkupThenLoad() {
+      if (document.getElementById('creatorEditStudioModal')) {
+        loadEditStudioScript(resolveEditStudioScriptUrl());
+        return;
+      }
+      var partialUrl = null;
+      try {
+        if (window.CreatorPortalThemeBridge && typeof window.CreatorPortalThemeBridge.partialUrl === 'function') {
+          partialUrl = window.CreatorPortalThemeBridge.partialUrl('creator-edit-studio-modal.html');
+        }
+      } catch (_) {}
+      if (!partialUrl) partialUrl = '/partials/creator-edit-studio-modal.html';
+      fetch(partialUrl, { credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) throw new Error('partial ' + res.status);
+          return res.text();
+        })
+        .then(function (html) {
+          var wrap = document.createElement('div');
+          wrap.innerHTML = html;
+          while (wrap.firstChild) document.body.appendChild(wrap.firstChild);
+        })
+        .catch(function (err) {
+          console.warn('[CDP] Edit Studio partial inject failed', err);
+        })
+        .finally(function () {
+          loadEditStudioScript(resolveEditStudioScriptUrl());
+        });
+    }
+
+    ensureMarkupThenLoad();
   }
 
   function bindEditStudioOpen() {

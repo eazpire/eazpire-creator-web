@@ -1,0 +1,175 @@
+<div
+  id="creatorEditStudioModal"
+  class="ces-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="ces-modal-title"
+>
+  <div class="ces-modal__shell">
+    <div class="ces-modal__subheader" id="ces-subheader">
+      <button
+        type="button"
+        class="ces-modal__subheader-toggle"
+        id="ces-subheader-toggle"
+        aria-expanded="true"
+        aria-controls="ces-subheader-body"
+      >
+        <span class="ces-modal__subheader-title">
+          <span id="ces-modal-title" data-t="creator.edit_studio.title">Edit Studio</span>
+        </span>
+        <svg class="ces-modal__subheader-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+      <div class="ces-modal__subheader-body" id="ces-subheader-body">
+        <div class="ces-tool-tabs" role="tablist" aria-label="Edit tools">
+          <button type="button" class="ces-tool-tab is-active" id="ces-tool-pipette" data-ces-tool="pipette" role="tab" aria-selected="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 22l1-1h3l9-9"/>
+              <path d="M12 6l6 6"/>
+              <path d="M14 4l6 6"/>
+              <path d="M16 2l6 6-8 8H8v-6z"/>
+            </svg>
+            <span data-t="creator.edit_studio.pipette">Pipette</span>
+          </button>
+          <button type="button" class="ces-tool-tab" id="ces-tool-eraser" data-ces-tool="eraser" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 20H7L3 16l9-9 8 8-4 4z"/>
+              <path d="M7 20l5-5"/>
+            </svg>
+            <span data-t="creator.edit_studio.eraser">Eraser</span>
+          </button>
+        </div>
+        <div class="ces-tool-options">
+          <div class="ces-field" id="ces-pipette-options">
+            <label class="ces-field__label" for="ces-intensity" data-t="creator.edit_studio.intensity">Similar colors intensity</label>
+            <div class="ces-field__row">
+              <span class="ces-swatch" id="ces-color-swatch" aria-hidden="true"></span>
+              <input
+                type="range"
+                class="ces-slider"
+                id="ces-intensity"
+                min="0"
+                max="100"
+                value="30"
+                aria-label="Similar colors intensity"
+              >
+            </div>
+          </div>
+          <div class="ces-field" id="ces-eraser-options" hidden>
+            <label class="ces-field__label" for="ces-eraser-size" data-t="creator.edit_studio.eraser_size">Eraser size</label>
+            <div class="ces-field__row">
+              <input
+                type="range"
+                class="ces-slider"
+                id="ces-eraser-size"
+                min="4"
+                max="120"
+                value="28"
+                aria-label="Eraser size"
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ces-workspace">
+      <div class="ces-viewer" id="ces-viewer">
+        <div class="ces-zoom-stage" id="ces-zoom-stage">
+          <div class="ces-canvas-frame">
+            <canvas id="ces-canvas" class="ces-canvas" aria-label="Design canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="ces-chrome-top-left" role="toolbar" aria-label="Undo, redo and chronik">
+          <button type="button" class="ces-icon-btn" id="ces-btn-undo" aria-label="Undo" title="Undo" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/>
+            </svg>
+          </button>
+          <button type="button" class="ces-icon-btn" id="ces-btn-redo" aria-label="Redo" title="Redo" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 7"/>
+            </svg>
+          </button>
+          <button type="button" class="ces-icon-btn" id="ces-btn-chronik" aria-label="Chronik" title="Chronik">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="ces-chrome-top-right">
+          <button type="button" class="ces-icon-btn" id="ces-zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+          <button type="button" class="ces-icon-btn" id="ces-zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+          <button type="button" class="ces-icon-btn" id="ces-pan-toggle" aria-label="Move image" title="Move image" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 12h8M12 8v8"/>
+              <path d="M5 9l-2 3 2 3M19 9l2 3-2 3M9 5l3-2 3 2M9 19l3 2 3-2"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="ces-chrome-bottom-right">
+          <button type="button" class="ces-bg-btn" id="ces-bg-open" aria-label="Preview background" title="Preview background">
+            <span class="ces-bg-swatch" id="ces-bg-swatch" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <div class="ces-busy" id="ces-busy" hidden>
+          <span data-t="creator.edit_studio.saving">Saving…</span>
+        </div>
+      </div>
+
+      <div class="ces-overlay" id="ces-chronik-overlay" hidden>
+        <div class="ces-card" role="dialog" aria-labelledby="ces-chronik-title">
+          <div class="ces-card__header">
+            <h3 id="ces-chronik-title" data-t="creator.edit_studio.chronik_title">Chronik</h3>
+            <button type="button" class="ces-card__close" id="ces-chronik-close" aria-label="Close">&times;</button>
+          </div>
+          <div class="ces-card__body">
+            <p id="ces-chronik-empty" class="ces-chronik-empty" hidden data-t="creator.edit_studio.chronik_empty">No changes yet</p>
+            <div class="ces-chronik-grid" id="ces-chronik-grid"></div>
+          </div>
+          <div class="ces-card__footer">
+            <button type="button" class="ces-btn" id="ces-chronik-done" data-t="creator.common.close">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ces-overlay" id="ces-bg-overlay" hidden>
+        <div class="ces-card" role="dialog" aria-labelledby="ces-bg-title">
+          <div class="ces-card__header">
+            <h3 id="ces-bg-title" data-t="creator.edit_studio.bg_title">Preview background</h3>
+            <button type="button" class="ces-card__close" id="ces-bg-close" aria-label="Close">&times;</button>
+          </div>
+          <div class="ces-card__body">
+            <p style="margin:0 0 10px;font-size:0.82rem;color:rgba(255,255,255,0.65);" data-t="creator.edit_studio.bg_hint">Choose a background color to preview how the design looks.</p>
+            <div class="ces-bg-presets" id="ces-bg-presets">
+              <button type="button" class="ces-bg-preset" data-ces-bg="#37375A" style="background:#37375A">Default</button>
+              <button type="button" class="ces-bg-preset" data-ces-bg="#FFFFFF" style="background:#FFFFFF;color:#111">White</button>
+              <button type="button" class="ces-bg-preset" data-ces-bg="#000000" style="background:#000000">Black</button>
+              <button type="button" class="ces-bg-preset" data-ces-bg="#808080" style="background:#808080">Gray</button>
+              <button type="button" class="ces-bg-preset" data-ces-bg="checker">Checkerboard</button>
+            </div>
+            <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+              <input type="color" id="ces-bg-picker" value="#37375A" aria-label="Preview background">
+              <button type="button" class="ces-btn ces-btn--ghost" id="ces-bg-reset" data-t="creator.edit_studio.bg_reset">Reset</button>
+            </div>
+          </div>
+          <div class="ces-card__footer">
+            <button type="button" class="ces-btn ces-btn--primary" id="ces-bg-done" data-t="creator.edit_studio.bg_done">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="ces-footer">
+      <button type="button" class="ces-btn ces-btn--ghost" id="ces-btn-discard" data-t="creator.edit_studio.discard">Discard</button>
+      <button type="button" class="ces-btn ces-btn--primary" id="ces-btn-save" data-t="creator.edit_studio.save">Save</button>
+    </footer>
+  </div>
+</div>

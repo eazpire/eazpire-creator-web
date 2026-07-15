@@ -1,6 +1,7 @@
 /**
  * Quick Inspirations Modal — browse + upload mood/screenshot inspirations.
  * Apply: exactly one image as loose inspiration (5%) for Creator Generator / Shop DG.
+ * Upload sources: Device, Screenshot, Camera, Phone (not Public Designs / My Designs / QI / Canvas).
  */
 (function () {
   'use strict';
@@ -10,6 +11,7 @@
 
   var modal = null;
   var uploadModal = null;
+  var sourceModal = null;
   var sectionId = null;
   var selectedId = null;
   var items = [];
@@ -21,6 +23,8 @@
   var pendingFiles = [];
   var isLoading = false;
   var bound = false;
+  var screenshotBinder = null;
+  var uploading = false;
 
   function t(key, fallback) {
     try {
@@ -40,25 +44,55 @@
     return fallback || key;
   }
 
+  /** Same priority as My Designs / creator-layout-drag — missing owner_id breaks uploads. */
   function getOwnerId() {
+    try {
+      if (typeof window.__EAZ_OWNER_ID !== 'undefined' && window.__EAZ_OWNER_ID !== null && String(window.__EAZ_OWNER_ID).trim() !== '') {
+        return String(window.__EAZ_OWNER_ID).trim();
+      }
+    } catch (_e0) {}
+    try {
+      if (window.Shopify && window.Shopify.customerId) {
+        return String(window.Shopify.customerId).trim();
+      }
+    } catch (_e1) {}
     try {
       if (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.OWNER_ID) {
         return String(window.CREATOR_API_CONFIG.OWNER_ID).trim();
       }
-    } catch (_e) {}
-    try {
-      var meta = document.querySelector('meta[name="eaz-owner-id"]');
-      if (meta && meta.content) return String(meta.content).trim();
     } catch (_e2) {}
     try {
-      if (window.__EAZ_OWNER_ID) return String(window.__EAZ_OWNER_ID).trim();
+      var meta =
+        document.querySelector('meta[name="eaz-owner-id"]') ||
+        document.querySelector('meta[name="creator-owner-id"]');
+      if (meta && meta.content) return String(meta.content).trim();
     } catch (_e3) {}
+    try {
+      var sid = sectionId || resolveSectionId();
+      if (sid) {
+        var el = document.getElementById('ownerId-' + sid);
+        if (el && el.value) return String(el.value).trim();
+      }
+      var el2 = document.querySelector('input[id^="ownerId-"]');
+      if (el2 && el2.value) return String(el2.value).trim();
+    } catch (_e4) {}
+    try {
+      if (window.CreatorWidget && window.CreatorWidget.ownerId) {
+        return String(window.CreatorWidget.ownerId).trim();
+      }
+    } catch (_e5) {}
+    try {
+      var sid2 = sectionId || resolveSectionId();
+      if (sid2 && window.CreatorWidgetConfig && window.CreatorWidgetConfig[sid2] && window.CreatorWidgetConfig[sid2].owner_id != null) {
+        return String(window.CreatorWidgetConfig[sid2].owner_id).trim();
+      }
+    } catch (_e6) {}
     try {
       var shop = document.querySelector('[data-owner-id], [data-customer-id]');
       if (shop) {
         return String(shop.getAttribute('data-owner-id') || shop.getAttribute('data-customer-id') || '').trim();
       }
-    } catch (_e4) {}
+    } catch (_e7) {}
     return '';
   }
 
@@ -90,7 +124,28 @@
   function ensureEls() {
     modal = document.getElementById('quick-inspirations-modal');
     uploadModal = document.getElementById('qi-upload-modal');
+    sourceModal = document.getElementById('qi-upload-source-modal');
     return !!modal;
+  }
+
+  function showDialog(dlg) {
+    if (!dlg) return;
+    try {
+      if (typeof dlg.showModal === 'function') dlg.showModal();
+      else dlg.setAttribute('open', '');
+    } catch (_e) {
+      dlg.setAttribute('open', '');
+    }
+  }
+
+  function hideDialog(dlg) {
+    if (!dlg) return;
+    try {
+      if (typeof dlg.close === 'function' && dlg.open) dlg.close();
+      else dlg.removeAttribute('open');
+    } catch (_e) {
+      dlg.removeAttribute('open');
+    }
   }
 
   function setSidebarOpen(open) {
@@ -252,7 +307,6 @@
 
     var sid = resolveSectionId();
 
-    // Shop Design Generator modal refs
     if (typeof window.eazShopDgAddRef === 'function') {
       close();
       window.eazShopDgAddRef(imageUrl, QI_STRENGTH, {
@@ -275,7 +329,6 @@
       return;
     }
 
-    // Creator generator selectedImages via event
     close();
     window.dispatchEvent(
       new CustomEvent('gen-design-selected', {
@@ -291,7 +344,6 @@
       })
     );
 
-    // Classic upload zone fallback
     if (sid) {
       var fileInput = document.getElementById('creatorImage-' + sid);
       var previewContainer = document.getElementById('imagePreviewContainer-' + sid);
@@ -313,6 +365,13 @@
     }
   }
 
+  function hostDialogs(host) {
+    if (!host) return;
+    [sourceModal, uploadModal].forEach(function (dlg) {
+      if (dlg && dlg.parentElement !== host) host.appendChild(dlg);
+    });
+  }
+
   function open(opts) {
     opts = opts || {};
     if (!ensureEls()) return;
@@ -329,6 +388,7 @@
     }
     if (!host) host = document.body;
     if (modal.parentElement !== host) host.appendChild(modal);
+    hostDialogs(host);
 
     lockScroll();
     modal.classList.add('creator-modal--open');
@@ -339,9 +399,18 @@
     loadItems();
   }
 
+  function clearPhoneHook() {
+    try {
+      window.__qiPhoneUploadApply = null;
+    } catch (_e) {}
+  }
+
   function close() {
     if (!ensureEls()) return;
     setSidebarOpen(false);
+    closeSourcePicker();
+    closeUpload();
+    clearPhoneHook();
     modal.classList.remove('creator-modal--open');
     modal.setAttribute('aria-hidden', 'true');
     modal.style.cssText = '';
@@ -368,7 +437,7 @@
       img.src = URL.createObjectURL(file);
       wrap.appendChild(img);
     });
-    if (submit) submit.disabled = pendingFiles.length === 0;
+    if (submit) submit.disabled = pendingFiles.length === 0 || uploading;
   }
 
   async function checkBanBeforeUpload() {
@@ -399,28 +468,167 @@
     return true;
   }
 
-  function openUpload() {
+  function refreshScreenshotOption() {
+    if (!sourceModal) return;
+    var shotBtn = sourceModal.querySelector('[data-qi-source="screenshot"]');
+    if (!shotBtn) return;
+    if (!(window.EazScreenshotCapture && typeof window.EazScreenshotCapture.bindOption === 'function')) {
+      return;
+    }
+    if (!screenshotBinder) {
+      screenshotBinder = window.EazScreenshotCapture.bindOption(shotBtn);
+    } else {
+      screenshotBinder.refresh();
+    }
+  }
+
+  function openSourcePicker() {
+    if (!sourceModal) sourceModal = document.getElementById('qi-upload-source-modal');
+    if (!sourceModal) {
+      // Fallback: device file picker only
+      pickDeviceFiles(true, false);
+      return;
+    }
+    refreshScreenshotOption();
+    if (!window.EazScreenshotCapture) {
+      setTimeout(refreshScreenshotOption, 50);
+      setTimeout(refreshScreenshotOption, 250);
+    }
+    showDialog(sourceModal);
+  }
+
+  function closeSourcePicker() {
+    hideDialog(sourceModal || document.getElementById('qi-upload-source-modal'));
+  }
+
+  function openConfirmUpload() {
     if (!uploadModal) uploadModal = document.getElementById('qi-upload-modal');
     if (!uploadModal) return;
-    pendingFiles = [];
     renderPendingPreviews();
     showUploadStatus('', '');
-    checkBanBeforeUpload().then(function (ok) {
-      if (uploadModal.showModal) uploadModal.showModal();
-      else uploadModal.setAttribute('open', '');
-      if (!ok) {
-        var submit = document.getElementById('qi-upload-submit');
-        if (submit) submit.disabled = true;
-      }
-    });
+    showDialog(uploadModal);
   }
 
   function closeUpload() {
-    if (!uploadModal) return;
-    if (uploadModal.close) uploadModal.close();
-    else uploadModal.removeAttribute('open');
+    hideDialog(uploadModal || document.getElementById('qi-upload-modal'));
     pendingFiles = [];
     renderPendingPreviews();
+    uploading = false;
+  }
+
+  async function openUploadFlow() {
+    ensureEls();
+    var oid = getOwnerId();
+    if (!oid) {
+      // Show confirm dialog just for the status message
+      openConfirmUpload();
+      showUploadStatus(t('creator.quick_inspirations.login_required', 'Please sign in to upload.'), 'error');
+      var submit = document.getElementById('qi-upload-submit');
+      if (submit) submit.disabled = true;
+      return;
+    }
+    var ok = await checkBanBeforeUpload();
+    if (!ok) {
+      openConfirmUpload();
+      var submit2 = document.getElementById('qi-upload-submit');
+      if (submit2) submit2.disabled = true;
+      return;
+    }
+    openSourcePicker();
+  }
+
+  function acceptFiles(files) {
+    var list = Array.prototype.slice.call(files || [], 0).filter(Boolean).slice(0, 12);
+    if (!list.length) return;
+    pendingFiles = list;
+    closeSourcePicker();
+    openConfirmUpload();
+  }
+
+  function pickDeviceFiles(multiple, useCamera) {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    if (multiple) input.multiple = true;
+    if (useCamera) input.setAttribute('capture', 'environment');
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', function () {
+      var files = Array.prototype.slice.call(input.files || [], 0).slice(0, 12);
+      try {
+        document.body.removeChild(input);
+      } catch (_e) {}
+      acceptFiles(files);
+    });
+    // Keep picker in same user-gesture turn
+    input.click();
+  }
+
+  function handleSourceClick(source) {
+    if (source === 'screenshot') {
+      if (!(window.EazScreenshotCapture && typeof window.EazScreenshotCapture.start === 'function')) {
+        closeSourcePicker();
+        return;
+      }
+      var shotPromise = window.EazScreenshotCapture.start({ immediate: true });
+      closeSourcePicker();
+      shotPromise.then(function (file) {
+        if (!file) return;
+        acceptFiles([file]);
+      });
+      return;
+    }
+
+    if (source === 'device') {
+      closeSourcePicker();
+      pickDeviceFiles(true, false);
+      return;
+    }
+
+    if (source === 'camera') {
+      closeSourcePicker();
+      pickDeviceFiles(false, true);
+      return;
+    }
+
+    if (source === 'phone') {
+      closeSourcePicker();
+      if (!window.CreatorPhoneUploadModal || typeof window.CreatorPhoneUploadModal.open !== 'function') {
+        openConfirmUpload();
+        showUploadStatus(t('creator.quick_inspirations.phone_unavailable', 'Phone upload is not available.'), 'error');
+        return;
+      }
+      window.__qiPhoneUploadApply = function (imageUrl) {
+        fetchUrlAsFile(imageUrl)
+          .then(function (file) {
+            if (!file) {
+              openConfirmUpload();
+              showUploadStatus(t('creator.quick_inspirations.upload_failed', 'Upload failed.'), 'error');
+              return;
+            }
+            acceptFiles([file]);
+          })
+          .catch(function () {
+            openConfirmUpload();
+            showUploadStatus(t('creator.quick_inspirations.upload_failed', 'Upload failed.'), 'error');
+          })
+          .finally(function () {
+            clearPhoneHook();
+          });
+        return true;
+      };
+      window.CreatorPhoneUploadModal.open({ sectionId: sectionId || resolveSectionId() || null });
+    }
+  }
+
+  async function fetchUrlAsFile(url) {
+    if (!url) return null;
+    var res = await fetch(url, { credentials: 'omit', mode: 'cors' });
+    if (!res.ok) throw new Error('fetch_failed');
+    var blob = await res.blob();
+    var type = (blob.type || 'image/jpeg').split(';')[0].trim();
+    var ext = type.indexOf('png') !== -1 ? 'png' : type.indexOf('webp') !== -1 ? 'webp' : 'jpg';
+    return new File([blob], 'phone-upload.' + ext, { type: type || 'image/jpeg' });
   }
 
   function strikeMessage(strike) {
@@ -449,7 +657,8 @@
       showUploadStatus(t('creator.quick_inspirations.login_required', 'Please sign in to upload.'), 'error');
       return;
     }
-    if (!pendingFiles.length) return;
+    if (!pendingFiles.length || uploading) return;
+    uploading = true;
     var submit = document.getElementById('qi-upload-submit');
     if (submit) {
       submit.disabled = true;
@@ -470,6 +679,11 @@
       var data = await res.json().catch(function () {
         return {};
       });
+
+      if (data.error === 'missing_owner_id') {
+        showUploadStatus(t('creator.quick_inspirations.login_required', 'Please sign in to upload.'), 'error');
+        return;
+      }
 
       if (data.strike) {
         showUploadStatus(strikeMessage(data.strike), data.strike.status === 'clear' ? 'error' : 'warn');
@@ -501,6 +715,11 @@
             t('creator.quick_inspirations.ban_temp', 'Quick Inspiration uploads are temporarily blocked.'),
           'error'
         );
+      } else if (data.error === 'daily_upload_limit') {
+        showUploadStatus(
+          t('creator.quick_inspirations.daily_limit', 'Daily upload limit reached (10 Quick Inspirations per day).'),
+          'error'
+        );
       } else {
         var first = (data.rejected && data.rejected[0]) || {};
         showUploadStatus(
@@ -512,6 +731,7 @@
     } catch (_e) {
       showUploadStatus(t('creator.quick_inspirations.upload_failed', 'Upload failed.'), 'error');
     } finally {
+      uploading = false;
       if (submit) {
         submit.textContent = t('creator.quick_inspirations.upload_submit', 'Upload');
         submit.disabled = pendingFiles.length === 0;
@@ -520,7 +740,8 @@
   }
 
   function bind() {
-    if (bound || !ensureEls()) return;
+    if (bound) return;
+    if (!ensureEls()) return;
     bound = true;
 
     var closeBtn = document.getElementById('quick-inspirations-modal-close');
@@ -537,9 +758,11 @@
       });
     }
     var backdrop = document.getElementById('qi-sidebar-backdrop');
-    if (backdrop) backdrop.addEventListener('click', function () {
-      setSidebarOpen(false);
-    });
+    if (backdrop) {
+      backdrop.addEventListener('click', function () {
+        setSidebarOpen(false);
+      });
+    }
     var reset = document.getElementById('qi-filter-reset');
     if (reset) {
       reset.addEventListener('click', function () {
@@ -561,37 +784,76 @@
     }
 
     var uploadOpen = document.getElementById('qi-upload-open');
-    if (uploadOpen) uploadOpen.addEventListener('click', openUpload);
+    if (uploadOpen) uploadOpen.addEventListener('click', openUploadFlow);
+
+    var sourceClose = document.getElementById('qi-upload-source-close');
+    if (sourceClose) sourceClose.addEventListener('click', closeSourcePicker);
+    if (sourceModal) {
+      sourceModal.addEventListener('click', function (e) {
+        if (e.target === sourceModal) closeSourcePicker();
+      });
+      sourceModal.addEventListener('cancel', function (e) {
+        e.preventDefault();
+        closeSourcePicker();
+      });
+      sourceModal.querySelectorAll('[data-qi-source]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (btn.disabled || btn.getAttribute('aria-disabled') === 'true' || btn.classList.contains('is-disabled')) {
+            return;
+          }
+          var source = btn.getAttribute('data-qi-source');
+          if (source) handleSourceClick(source);
+        });
+      });
+    }
 
     var uploadClose = document.getElementById('qi-upload-modal-close');
     var uploadCancel = document.getElementById('qi-upload-cancel');
     if (uploadClose) uploadClose.addEventListener('click', closeUpload);
     if (uploadCancel) uploadCancel.addEventListener('click', closeUpload);
-
-    var pick = document.getElementById('qi-upload-pick');
-    var input = document.getElementById('qi-upload-input');
-    if (pick && input) {
-      pick.addEventListener('click', function () {
-        input.click();
+    if (uploadModal) {
+      uploadModal.addEventListener('click', function (e) {
+        if (e.target === uploadModal) closeUpload();
       });
-      input.addEventListener('change', function () {
-        pendingFiles = Array.prototype.slice.call(input.files || [], 0).slice(0, 12);
-        renderPendingPreviews();
-        input.value = '';
+      uploadModal.addEventListener('cancel', function (e) {
+        e.preventDefault();
+        closeUpload();
       });
     }
+
     var submit = document.getElementById('qi-upload-submit');
     if (submit) submit.addEventListener('click', submitUpload);
   }
 
+  function tryBind() {
+    ensureEls();
+    if (modal) bind();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bind);
+    document.addEventListener('DOMContentLoaded', tryBind);
   } else {
-    bind();
+    tryBind();
+  }
+
+  // Portal injects the partial after first paint — re-bind when modal appears later
+  if (typeof MutationObserver !== 'undefined') {
+    try {
+      var obs = new MutationObserver(function () {
+        if (!bound && document.getElementById('quick-inspirations-modal')) {
+          tryBind();
+          if (bound) obs.disconnect();
+        }
+      });
+      obs.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (_eObs) {}
   }
 
   window.QuickInspirationsModal = {
-    open: open,
+    open: function (opts) {
+      tryBind();
+      open(opts);
+    },
     close: close
   };
 })();

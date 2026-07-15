@@ -106,7 +106,7 @@
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 }
 
-/* Grid Container - Scrollable */
+/* Grid Container - Scrollable (scrollbar hidden, scroll still works) */
 .creator-inspiration-modal__grid-container {
   flex: 1;
   overflow-y: auto;
@@ -114,57 +114,44 @@
   padding: 16px 20px;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
-  /* ✅ TODO 4: Overscroll-Verhalten für Stabilität */
   overscroll-behavior: contain;
-  /* Scrollbar Styling - wie bei Prozessen */
-  scrollbar-width: thin;
-  scrollbar-color: #4b5563 #111827;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .creator-inspiration-modal__grid-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.creator-inspiration-modal__grid-container::-webkit-scrollbar-track {
-  background: #111827;
-}
-
-.creator-inspiration-modal__grid-container::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
-}
-
-.creator-inspiration-modal__grid-container::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .creator-inspiration-modal__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
   padding: 0;
 }
 
-/* Design Cards - Like My Creations but smaller, no title */
+/* Design Cards — match My Designs dense dark tiles */
 .creator-inspiration-modal__card {
-  border: 1px solid #374151;
-  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
   overflow: hidden;
-  background: #1f2937;
+  background: rgba(31, 41, 55, 0.8);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.15s ease, border-color 0.18s ease;
   aspect-ratio: 1 / 1;
 }
 
 .creator-inspiration-modal__card:hover {
-  transform: translateY(-2px);
+  transform: scale(1.02);
   border-color: #F59E0B;
-  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+  box-shadow: none;
 }
 
 .creator-inspiration-modal__card-image-wrapper {
   aspect-ratio: 1 / 1;
-  background: #020617;
+  background: #111827;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -174,10 +161,8 @@
 }
 
 .creator-inspiration-modal__card-image {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   display: block;
 }
@@ -636,5 +621,24 @@
     flex: 1;
     width: auto;
   }
+
+  .creator-inspiration-modal__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Hide scrollbars on other inspiration scroll areas (scroll still works) */
+.creator-inspiration-modal__remixes-container,
+.creator-inspiration-modal__remixes-container-mobile,
+.creator-inspiration-modal__mobile-main-carousel {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.creator-inspiration-modal__remixes-container::-webkit-scrollbar,
+.creator-inspiration-modal__remixes-container-mobile::-webkit-scrollbar,
+.creator-inspiration-modal__mobile-main-carousel::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 

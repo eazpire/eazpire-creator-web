@@ -66,39 +66,19 @@
     height: 20px;
   }
 
-  /* Body - scrollable */
+  /* Body - scrollable (scrollbar hidden, scroll still works) */
   .creator-base-modal__body {
     flex: 1;
     overflow-y: auto;
     min-height: 200px;
     padding: 16px 20px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
   .creator-base-modal__body::-webkit-scrollbar {
-    width: 8px;
-  }
-  .creator-base-modal__body::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.08);
-    border-radius: 4px;
-  }
-  .creator-base-modal__body::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.25);
-    border-radius: 4px;
-  }
-  .creator-base-modal__body::-webkit-scrollbar-thumb:hover {
-    background: rgba(0,0,0,0.35);
-  }
-  body.creator-mode .creator-base-modal__body::-webkit-scrollbar-track,
-  body[data-creator-mode="true"] .creator-base-modal__body::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.25);
-  }
-  body.creator-mode .creator-base-modal__body::-webkit-scrollbar-thumb,
-  body[data-creator-mode="true"] .creator-base-modal__body::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.2);
-    border-radius: 4px;
-  }
-  body.creator-mode .creator-base-modal__body::-webkit-scrollbar-thumb:hover,
-  body[data-creator-mode="true"] .creator-base-modal__body::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.3);
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   /* Footer - fixed */

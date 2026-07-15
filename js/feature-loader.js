@@ -164,11 +164,13 @@
         injectPartial("creator-design-merge-modal.html"),
         injectPartial("creator-design-preview-modal.html"),
         injectPartial("creator-design-studio-modal.html"),
+        injectPartial("creator-edit-studio-modal.html"),
       ]);
 
       global.__CREATOR_LAZY_MODAL_URLS = global.__CREATOR_LAZY_MODAL_URLS || {};
       global.__CREATOR_LAZY_MODAL_URLS["creator-mobile-filter-modal.js"] = asset("creator-mobile-filter-modal.js");
       global.__CREATOR_LAZY_MODAL_URLS["creator-design-preview-modal.js"] = asset("creator-design-preview-modal.js");
+      global.__CREATOR_LAZY_MODAL_URLS["creator-edit-studio-modal.js"] = asset("creator-edit-studio-modal.js");
       global.__CREATOR_MOCK_COMPOSITING_JS = asset("creator-mock-compositing.js");
       global.__CREATOR_PRODUCTS_MODAL_JS = asset("creator-design-products-modal.js");
 
@@ -180,11 +182,14 @@
         asset("creator-design-products-modal.js"),
         asset("eaz-shop-printify-studio-pattern.js"),
         asset("creator-design-studio-modal.js"),
+        asset("creator-edit-studio-modal.js"),
         asset("creator-design-preview-modal.js"),
         asset("creator-creations-screen.js"),
       ];
       global.__CREATOR_STUDIO_MODAL_CSS = asset("creator-design-studio-modal.css");
+      global.__CREATOR_EDIT_STUDIO_MODAL_CSS = asset("creator-edit-studio-modal.css");
       loadCss(global.__CREATOR_STUDIO_MODAL_CSS);
+      loadCss(global.__CREATOR_EDIT_STUDIO_MODAL_CSS);
 
       await loadScript(asset("creator-lazy-modals.js"));
       await loadScriptsSequential([

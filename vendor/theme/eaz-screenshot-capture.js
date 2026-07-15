@@ -541,9 +541,15 @@
    * no-focus-change (leave focus wherever the OS picker left it — often the
    * other tab in Edge/Chromium). Must pass controller into getDisplayMedia.
    *
-   * Limitation: capturing *another browser tab* may still steal focus in some
-   * browsers even with CaptureController. True silent cross-tab capture is not
-   * available to normal web pages. Prefer current tab, Window, or Entire Screen.
+   * Spec timing (Chrome Conditional Focus / WICG):
+   * - Many calls OK *before* getDisplayMedia (last wins).
+   * - At most *one* call in the same turn *immediately after* the promise
+   *   resolves; a second call or a later task throws / is ignored.
+   * - Calling after the video track is live / after ~1s does NOT help.
+   *
+   * Limitation: websites cannot reliably force another tab back if Chromium
+   * still focuses the shared tab. Prefer current tab, Window, or Entire Screen.
+   * Extensions (chrome.tabs.update) can; BroadcastChannel / SW cannot.
    */
   function applyNoFocusSteal(controller) {
     if (!controller || typeof controller.setFocusBehavior !== 'function') return false;
@@ -634,6 +640,135 @@
     } catch (eRaf) {}
   }
 
+  /**
+   * While this document is hidden (shared tab stole focus), keep trying focus
+   * on rAF for a short budget. window.focus() cannot force a background tab
+   * forward in Chromium — this only helps if the UA briefly yields focus back.
+   */
+  function scheduleHiddenFocusLoop(opts, budgetMs) {
+    var start = Date.now();
+    var maxMs = typeof budgetMs === 'number' ? budgetMs : 1200;
+    function tick() {
+      if (!document.hidden) {
+        refocusCapturingWindow(opts);
+        return;
+      }
+      refocusCapturingWindow(opts);
+      if (Date.now() - start >= maxMs) return;
+      try {
+        requestAnimationFrame(tick);
+      } catch (eTick) {}
+    }
+    try {
+      requestAnimationFrame(tick);
+    } catch (eStart) {}
+  }
+
+  /**
+   * Sticky Document PiP when Chromium left us hidden after getDisplayMedia.
+   * Chrome ~139+ confers transient activation on accept — requestWindow should
+   * run soon after that. Does not switch tabs by itself; a click in PiP is a
+   * user gesture that may allow focus() to bring Design Studio forward.
+   * @returns {Promise<Window|null>}
+   */
+  function tryOpenReturnPip(opts) {
+    if (!document.hidden) return Promise.resolve(null);
+    var dpi = null;
+    try {
+      dpi = window.documentPictureInPicture;
+    } catch (eDpi) {
+      return Promise.resolve(null);
+    }
+    if (!dpi || typeof dpi.requestWindow !== 'function') return Promise.resolve(null);
+
+    return dpi
+      .requestWindow({ width: 380, height: 168 })
+      .then(function (pipWin) {
+        if (!pipWin || !pipWin.document) return null;
+        try {
+          var doc = pipWin.document;
+          doc.title = t('screenshot_pip_title', 'Return to Design Studio');
+          var style = doc.createElement('style');
+          style.textContent =
+            'html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;' +
+            'background:#111827;color:#f9fafb;}' +
+            '.wrap{box-sizing:border-box;height:100%;padding:14px 16px;display:flex;flex-direction:column;' +
+            'align-items:stretch;justify-content:center;gap:12px;}' +
+            'p{margin:0;font-size:13px;line-height:1.4;color:#d1d5db;text-align:center;}' +
+            'button{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-size:14px;' +
+            'font-weight:700;cursor:pointer;background:#f59e0b;color:#111827;}' +
+            'button:hover{background:#fbbf24;}';
+          doc.head.appendChild(style);
+          var wrap = doc.createElement('div');
+          wrap.className = 'wrap';
+          var p = doc.createElement('p');
+          p.textContent = t(
+            'screenshot_pip_hint',
+            'The browser switched to the shared tab. Click below to return here and finish the crop.'
+          );
+          var btn = doc.createElement('button');
+          btn.type = 'button';
+          btn.textContent = t('screenshot_pip_return', 'Return to Design Studio');
+          btn.addEventListener('click', function () {
+            refocusCapturingWindow(opts);
+            scheduleAggressiveRefocus(opts);
+            try {
+              pipWin.close();
+            } catch (eClosePip) {}
+          });
+          wrap.appendChild(p);
+          wrap.appendChild(btn);
+          doc.body.appendChild(wrap);
+        } catch (eBuild) {
+          try {
+            pipWin.close();
+          } catch (eClose2) {}
+          return null;
+        }
+        return pipWin;
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
+  /** Wait briefly for a delayed focus-steal, then try Document PiP once. */
+  function tryOpenReturnPipWhenHidden(opts) {
+    if (document.hidden) return tryOpenReturnPip(opts);
+    return new Promise(function (resolve) {
+      var settled = false;
+      function finish(win) {
+        if (settled) {
+          if (win) closeReturnPip(win);
+          return;
+        }
+        settled = true;
+        try {
+          document.removeEventListener('visibilitychange', onVis);
+        } catch (eRm) {}
+        resolve(win || null);
+      }
+      function onVis() {
+        if (document.hidden) tryOpenReturnPip(opts).then(finish);
+      }
+      try {
+        document.addEventListener('visibilitychange', onVis);
+      } catch (eAdd) {}
+      setTimeout(function () {
+        if (settled) return;
+        if (document.hidden) tryOpenReturnPip(opts).then(finish);
+        else finish(null);
+      }, 180);
+    });
+  }
+
+  function closeReturnPip(pipWin) {
+    if (!pipWin) return;
+    try {
+      if (!pipWin.closed) pipWin.close();
+    } catch (eClose) {}
+  }
+
   function runDisplayCapture() {
     if (!isSupported()) {
       return Promise.reject(new Error('unsupported'));
@@ -698,35 +833,35 @@
     return navigator.mediaDevices
       .getDisplayMedia(constraints)
       .then(function (stream) {
-        // Spec: one reinforcement call immediately after the promise resolves.
-        // Prefer keeping the capturing app focused for tab/window surfaces.
-        // (monitor / entire screen: setFocusBehavior may throw — ignored.)
+        // Spec: at most ONE setFocusBehavior call immediately after resolve
+        // (same turn / microtask). Do this before any other work.
         applyNoFocusSteal(controller);
-        try {
-          var track = stream.getVideoTracks && stream.getVideoTracks()[0];
-          var surface =
-            track && track.getSettings ? String(track.getSettings().displaySurface || '') : '';
-          // Document for maintainers: other-tab (browser) may still steal focus in Edge
-          // even with CaptureController; window/monitor typically do not navigate us away.
-          if (surface === 'browser' || surface === 'window' || !surface) {
-            applyNoFocusSteal(controller);
-          }
-        } catch (eSurf) {}
 
         scheduleAggressiveRefocus(refocusOpts);
+        scheduleHiddenFocusLoop(refocusOpts, 1200);
+
+        // Parallel: sticky Document PiP if Chromium still hides us (Chrome ~139+
+        // may still have transient activation briefly after accept).
+        var pipPromise = tryOpenReturnPipWhenHidden(refocusOpts);
 
         return captureFrameFromStream(stream).then(
           function (canvas) {
             stopStream(stream);
             cleanupVis();
-            scheduleAggressiveRefocus(refocusOpts);
-            return canvas;
+            return pipPromise.then(function (pipWin) {
+              closeReturnPip(pipWin);
+              scheduleAggressiveRefocus(refocusOpts);
+              return canvas;
+            });
           },
           function (err) {
             stopStream(stream);
             cleanupVis();
-            scheduleAggressiveRefocus(refocusOpts);
-            throw err;
+            return pipPromise.then(function (pipWin) {
+              closeReturnPip(pipWin);
+              scheduleAggressiveRefocus(refocusOpts);
+              throw err;
+            });
           }
         );
       })

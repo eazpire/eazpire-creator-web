@@ -7,12 +7,16 @@
   aria-labelledby="quick-inspirations-modal-title"
 >
   <div class="creator-modal__dialog creator-modal__dialog--large qi-modal__dialog">
-    <div class="creator-modal__header">
+    <div class="creator-modal__header qi-modal__header">
       <h3 id="quick-inspirations-modal-title" class="creator-modal__title" data-t="creator.quick_inspirations.title">Quick Inspirations</h3>
-      <button type="button" class="creator-modal__close" id="quick-inspirations-modal-close" aria-label="Close">✕</button>
+      <button type="button" class="creator-modal__close qi-modal__close" id="quick-inspirations-modal-close" aria-label="Close">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
+          <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
 
-    <div class="qi-modal__subheader">
+    <div class="qi-modal__toolbar">
       <button
         type="button"
         class="qi-modal__filter-toggle"
@@ -83,21 +87,64 @@
   </div>
 </div>
 
-<dialog class="creator-base-modal" id="qi-upload-modal" aria-labelledby="qi-upload-modal-title">
-  <div class="creator-base-modal__header">
-    <h3 id="qi-upload-modal-title" class="creator-base-modal__title" data-t="creator.quick_inspirations.upload_title">Upload Quick Inspirations</h3>
-    <button type="button" class="creator-base-modal__close" id="qi-upload-modal-close" aria-label="Close dialog">
-      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<dialog class="qi-nested-dialog" id="qi-upload-source-modal" aria-labelledby="qi-upload-source-title">
+  <div class="qi-nested-dialog__header">
+    <h3 id="qi-upload-source-title" class="qi-nested-dialog__title" data-t="creator.quick_inspirations.upload_source_title">Choose upload source</h3>
+    <button type="button" class="qi-nested-dialog__close" id="qi-upload-source-close" aria-label="Close dialog">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
         <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
     </button>
   </div>
-  <div class="creator-base-modal__body">
+  <div class="qi-nested-dialog__body">
     <p class="qi-upload__hint" data-t="creator.quick_inspirations.upload_hint">Upload screenshots or mood images for inspiration. They are shared with everyone and analyzed automatically. Do not upload copyrighted, nude, or otherwise prohibited content.</p>
+    <div class="qi-upload-source__options">
+      <button type="button" class="qi-upload-source__option" data-qi-source="device">
+        <span class="qi-upload-source__option-icon" aria-hidden="true">&#128241;</span>
+        <span class="qi-upload-source__option-label" data-t="creator.upload_source.device">From device</span>
+        <small class="qi-upload-source__option-desc" data-t="creator.upload_source.device_desc">Photo or image from your device</small>
+      </button>
+      <button type="button" class="qi-upload-source__option is-disabled" data-qi-source="screenshot" disabled aria-disabled="true" id="qi-upload-source-screenshot">
+        <span class="qi-upload-source__option-icon qi-upload-source__option-icon--svg" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="12" rx="2"/>
+            <path d="M8 20h8"/>
+            <path d="M12 16v4"/>
+            <path d="M8 8h2M14 8h2M8 12h8"/>
+          </svg>
+        </span>
+        <span class="qi-upload-source__option-label" data-t="creator.upload_source.screenshot">Screenshot</span>
+        <small class="qi-upload-source__option-desc" data-t="creator.upload_source.screenshot_desc">This tab, a window, or screen — other tabs may switch focus</small>
+      </button>
+      <button type="button" class="qi-upload-source__option" data-qi-source="camera">
+        <span class="qi-upload-source__option-icon" aria-hidden="true">&#128248;</span>
+        <span class="qi-upload-source__option-label" data-t="creator.upload_source.camera">Camera</span>
+        <small class="qi-upload-source__option-desc" data-t="creator.upload_source.camera_desc">Take a photo with your camera</small>
+      </button>
+      <button type="button" class="qi-upload-source__option" data-qi-source="phone">
+        <span class="qi-upload-source__option-icon qi-upload-source__option-icon--svg" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M10 18h4" stroke-linecap="round"/></svg>
+        </span>
+        <span class="qi-upload-source__option-label" data-t="creator.upload_source.phone">Upload from phone</span>
+        <small class="qi-upload-source__option-desc" data-t="creator.upload_source.phone_desc">Scan a QR code with your phone to send a photo here</small>
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="qi-nested-dialog" id="qi-upload-modal" aria-labelledby="qi-upload-modal-title">
+  <div class="qi-nested-dialog__header">
+    <h3 id="qi-upload-modal-title" class="qi-nested-dialog__title" data-t="creator.quick_inspirations.upload_title">Upload Quick Inspirations</h3>
+    <button type="button" class="qi-nested-dialog__close" id="qi-upload-modal-close" aria-label="Close dialog">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="qi-nested-dialog__body">
     <div id="qi-upload-status" class="qi-upload__status" style="display:none;" role="status"></div>
     <div class="qi-upload__drop" id="qi-upload-drop">
       <input type="file" id="qi-upload-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
-      <button type="button" class="qi-upload__pick" id="qi-upload-pick" data-t="creator.quick_inspirations.choose_files">Choose images</button>
       <div id="qi-upload-preview" class="qi-upload__preview"></div>
     </div>
     <div class="qi-upload__actions">

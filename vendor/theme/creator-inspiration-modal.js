@@ -24,7 +24,52 @@
     modal.classList.add('creator-modal');
   }
 
-  const API_BASE_URL = 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
+  /** Prefer portal/shop dispatch (CreatorWidget / CREATOR_API_CONFIG). Never hardcode workers.dev only — it can hang while /api/dispatch works. */
+  function getApiBase() {
+    try {
+      if (window.CREATOR_API_CONFIG && typeof window.CREATOR_API_CONFIG.getDispatchUrl === 'function') {
+        var dispatchUrl = window.CREATOR_API_CONFIG.getDispatchUrl();
+        if (dispatchUrl) return String(dispatchUrl).replace(/\/$/, '');
+      }
+    } catch (_e0) {}
+    if (window.CreatorWidget && window.CreatorWidget.apiBaseUrl) {
+      return String(window.CreatorWidget.apiBaseUrl).replace(/\/$/, '');
+    }
+    try {
+      var host = (window.location && window.location.hostname) || '';
+      if (host === 'creator.eazpire.com') {
+        return String(window.location.origin).replace(/\/$/, '') + '/api/dispatch';
+      }
+      if (host === 'www.eazpire.com' || host === 'eazpire.com') {
+        return String(window.location.origin).replace(/\/$/, '') + '/__eaz/creator-dispatch';
+      }
+    } catch (_e1) {}
+    if (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) {
+      var base = String(window.CREATOR_API_CONFIG.BASE_URL).replace(/\/$/, '');
+      if (window.__CREATOR_PORTAL_HOST__) return base + '/api/dispatch';
+      return base + '/apps/creator-dispatch';
+    }
+    return 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
+  }
+
+  var FETCH_TIMEOUT_MS = 20000;
+  var PAGE_LIMIT = 100;
+
+  function fetchWithTimeout(url, options) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = null;
+    var opts = Object.assign({ credentials: 'include' }, options || {});
+    if (ctrl) opts.signal = ctrl.signal;
+    var pending = fetch(url, opts);
+    if (ctrl) {
+      timer = setTimeout(function () {
+        try { ctrl.abort(); } catch (_a) {}
+      }, FETCH_TIMEOUT_MS);
+    }
+    return pending.finally(function () {
+      if (timer) clearTimeout(timer);
+    });
+  }
 
   // DOM Elements
   const modalClose = modal.querySelector('.creator-modal__close');
@@ -127,63 +172,95 @@
     safeUnlockScroll();
   }
 
-  // Fetch public designs with optional search and filters (server-side)
+  function appendServerFilters(targetUrl, filters) {
+    filters = filters || {};
+    if (filters.design_art && filters.design_art.length > 0) {
+      targetUrl.searchParams.set('filter_design_art', filters.design_art[0]);
+    }
+    if (filters.ratio && filters.ratio.length > 0) {
+      targetUrl.searchParams.set('filter_ratio', filters.ratio[0]);
+    }
+    if (filters.content_type && filters.content_type.length > 0) {
+      targetUrl.searchParams.set('filter_content_type', filters.content_type[0]);
+    }
+    if (filters.design_type && filters.design_type.length > 0) {
+      targetUrl.searchParams.set('filter_design_type', filters.design_type[0]);
+    }
+    if (filters.design_language && filters.design_language.length > 0) {
+      targetUrl.searchParams.set('filter_design_language', filters.design_language[0]);
+    }
+    if (filters.personalizable && filters.personalizable.length > 0) {
+      targetUrl.searchParams.set('filter_personalizable', filters.personalizable[0] === 'yes' ? 'yes' : 'no');
+    } else if (filters.personalizable === true) {
+      targetUrl.searchParams.set('filter_personalizable', 'yes');
+    } else if (filters.personalizable === false) {
+      targetUrl.searchParams.set('filter_personalizable', 'no');
+    }
+  }
+
+  function applyClientExtraFilters(items, filters) {
+    if (!window.InspirationFilterModal || typeof window.InspirationFilterModal.matchesFilter !== 'function') {
+      return items;
+    }
+    const hasExtraFilters = Object.keys(filters || {}).some((key) => {
+      if (['design_art', 'ratio', 'content_type', 'design_type', 'design_language', 'personalizable'].indexOf(key) >= 0) {
+        return false;
+      }
+      return filters[key] && filters[key].length > 0;
+    });
+    if (!hasExtraFilters) return items;
+    return items.filter((design) => window.InspirationFilterModal.matchesFilter(design, filters));
+  }
+
+  function shareInspirationQueryState(search, filters) {
+    try {
+      window.__creatorInspirationActiveFilters = JSON.parse(
+        JSON.stringify(filters && Object.keys(filters).length ? filters : activeFilterState || {})
+      );
+      window.__creatorInspirationSearchQuery = typeof search === 'string' ? search : '';
+    } catch (e) {
+      window.__creatorInspirationActiveFilters = {};
+    }
+  }
+
+  // Fetch public designs with optional search and filters (server-side).
+  // First page renders immediately; further pages append in the background.
   async function fetchDesigns(options = {}) {
     if (isLoading) return;
     isLoading = true;
 
     const { search = '', filters = {} } = options;
+    const apiBase = getApiBase();
 
     try {
       if (loadingEl) loadingEl.style.display = 'block';
       if (emptyEl) emptyEl.style.display = 'none';
-      if (grid) grid.style.opacity = '0.5'; // Visual feedback during loading
-
-      function appendServerFilters(targetUrl) {
-        if (filters.design_art && filters.design_art.length > 0) {
-          targetUrl.searchParams.set('filter_design_art', filters.design_art[0]);
-        }
-        if (filters.ratio && filters.ratio.length > 0) {
-          targetUrl.searchParams.set('filter_ratio', filters.ratio[0]);
-        }
-        if (filters.content_type && filters.content_type.length > 0) {
-          targetUrl.searchParams.set('filter_content_type', filters.content_type[0]);
-        }
-        if (filters.design_type && filters.design_type.length > 0) {
-          targetUrl.searchParams.set('filter_design_type', filters.design_type[0]);
-        }
-        if (filters.design_language && filters.design_language.length > 0) {
-          targetUrl.searchParams.set('filter_design_language', filters.design_language[0]);
-        }
-        if (filters.personalizable && filters.personalizable.length > 0) {
-          targetUrl.searchParams.set('filter_personalizable', filters.personalizable[0] === 'yes' ? 'yes' : 'no');
-        } else if (filters.personalizable === true) {
-          targetUrl.searchParams.set('filter_personalizable', 'yes');
-        } else if (filters.personalizable === false) {
-          targetUrl.searchParams.set('filter_personalizable', 'no');
-        }
-      }
+      if (grid) grid.style.opacity = '0.5';
 
       let allItems = [];
       let nextCursor = null;
       let reportedTotal = 0;
       let pageGuard = 0;
+      let firstPageShown = false;
 
       do {
-        const url = new URL(API_BASE_URL);
+        const url = new URL(apiBase);
         url.searchParams.set('op', 'list-public');
-        url.searchParams.set('limit', '200');
+        url.searchParams.set('limit', String(PAGE_LIMIT));
         if (search && search.trim()) {
           url.searchParams.set('search', search.trim());
         }
-        appendServerFilters(url);
+        appendServerFilters(url, filters);
         if (nextCursor) {
           url.searchParams.set('cursor', nextCursor);
         }
 
         console.log('[InspirationModal] Fetching designs with URL:', url.toString());
 
-        const response = await fetch(url, { credentials: 'include' });
+        const response = await fetchWithTimeout(url.toString());
+        if (!response.ok) {
+          throw new Error('http_' + response.status);
+        }
         const data = await response.json();
 
         if (!data.ok) {
@@ -194,35 +271,27 @@
         allItems = allItems.concat(data.items || []);
         nextCursor = data.next_cursor || null;
         pageGuard += 1;
+
+        // Show first page ASAP so the modal never stays on infinite loading
+        if (!firstPageShown) {
+          designs = allItems;
+          filteredDesigns = applyClientExtraFilters(designs, filters);
+          totalCount = reportedTotal || designs.length;
+          shareInspirationQueryState(search, filters);
+          renderGrid();
+          updateTotalCount();
+          updateEmptyState();
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (grid) grid.style.opacity = '1';
+          firstPageShown = true;
+        }
       } while (nextCursor && pageGuard < 40);
 
       designs = allItems;
-      filteredDesigns = designs;
+      filteredDesigns = applyClientExtraFilters(designs, filters);
       totalCount = reportedTotal || designs.length;
+      shareInspirationQueryState(search, filters);
 
-      if (window.InspirationFilterModal && typeof window.InspirationFilterModal.matchesFilter === 'function') {
-        const hasExtraFilters = Object.keys(filters).some((key) => {
-          if (['design_art', 'ratio', 'content_type', 'design_type', 'design_language', 'personalizable'].indexOf(key) >= 0) {
-            return false;
-          }
-          return filters[key] && filters[key].length > 0;
-        });
-        if (hasExtraFilters) {
-          filteredDesigns = designs.filter((design) => window.InspirationFilterModal.matchesFilter(design, filters));
-        }
-      }
-
-      // Share filter/search state with Interests hub (same list-public query shape)
-      try {
-        window.__creatorInspirationActiveFilters = JSON.parse(
-          JSON.stringify(filters && Object.keys(filters).length ? filters : activeFilterState || {})
-        );
-        window.__creatorInspirationSearchQuery = typeof search === 'string' ? search : '';
-      } catch (e) {
-        window.__creatorInspirationActiveFilters = {};
-      }
-
-      // Render results
       renderGrid();
       updateTotalCount();
       updateEmptyState();
@@ -232,8 +301,19 @@
     } catch (error) {
       console.error('Error fetching public designs:', error);
       if (loadingEl) loadingEl.style.display = 'none';
-      if (emptyEl) emptyEl.style.display = 'block';
       if (grid) grid.style.opacity = '1';
+      // Keep any designs already shown from the first page; only show empty if nothing loaded
+      if (!designs.length) {
+        if (emptyEl) {
+          emptyEl.textContent = (window.CreatorI18n && (window.CreatorI18n['creator.inspiration.empty'] || window.CreatorI18n.inspiration_empty))
+            || 'No public designs found.';
+          emptyEl.style.display = 'block';
+        }
+        if (grid) grid.style.display = 'none';
+      } else {
+        updateEmptyState();
+        updateTotalCount();
+      }
     } finally {
       isLoading = false;
     }
@@ -276,17 +356,14 @@
     if (!grid || !emptyEl) return;
     
     if (filteredDesigns.length === 0 && designs.length > 0) {
-      // Search returned no results
-      emptyEl.textContent = 'Keine Designs gefunden.';
+      emptyEl.textContent = 'No designs found.';
       emptyEl.style.display = 'block';
       grid.style.display = 'none';
     } else if (designs.length === 0) {
-      // No designs loaded at all
-      emptyEl.textContent = 'Keine öffentlichen Designs gefunden.';
+      emptyEl.textContent = 'No public designs found.';
       emptyEl.style.display = 'block';
       grid.style.display = 'none';
     } else {
-      // Has results
       emptyEl.style.display = 'none';
       grid.style.display = 'grid';
     }
@@ -351,12 +428,12 @@
       if (remixesEmptyMobile) remixesEmptyMobile.style.display = 'none';
       if (remixesGridMobile) remixesGridMobile.innerHTML = '';
 
-      const url = new URL(API_BASE_URL);
+      const url = new URL(getApiBase());
       url.searchParams.set('op', 'get-remixes');
       url.searchParams.set('design_id', designId);
       url.searchParams.set('limit', '50');
 
-      const response = await fetch(url, { credentials: 'include' });
+      const response = await fetchWithTimeout(url.toString());
       const data = await response.json();
 
       if (!data.ok) {
@@ -461,11 +538,11 @@
     if (!designId) return 0;
     
     try {
-      const url = new URL(API_BASE_URL);
+      const url = new URL(getApiBase());
       url.searchParams.set('op', 'get-design-stats');
       url.searchParams.set('design_id', designId);
       
-      const response = await fetch(url, { credentials: 'include' });
+      const response = await fetchWithTimeout(url.toString());
       const data = await response.json();
       
       if (data.ok) {
