@@ -2226,19 +2226,6 @@
   color: #fff;
 }
 
-.cds-preview-view__badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  padding: 2px 5px;
-  border-radius: 6px;
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  background: rgba(249, 115, 22, 0.95);
-  color: #111;
-}
-
 .cds-preview-main {
   position: relative;
   display: flex;
@@ -2299,7 +2286,15 @@
 }
 
 .cds-preview-set-main.is-current,
-.cds-preview-set-main:disabled {
+.cds-preview-set-main.is-current:disabled {
+  opacity: 1;
+  cursor: default !important;
+  background: #f97316;
+  border-color: #f97316;
+  color: #fff;
+}
+
+.cds-preview-set-main:disabled:not(.is-current) {
   opacity: 0.55;
   cursor: default !important;
   border-color: rgba(255, 255, 255, 0.2);

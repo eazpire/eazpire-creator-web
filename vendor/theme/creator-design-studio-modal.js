@@ -4560,11 +4560,6 @@
         '<img class="cds-preview-view__img" src="' +
         String(v.preview_url || '').replace(/"/g, '&quot;') +
         '" alt="" decoding="async">' +
-        (isMain
-          ? '<span class="cds-preview-view__badge">' +
-            t('designStudioPreviewIsMain', 'Main preview') +
-            '</span>'
-          : '') +
         '<span class="cds-preview-view__label">' +
         String(v.label || v.view_key) +
         '</span></button>';
