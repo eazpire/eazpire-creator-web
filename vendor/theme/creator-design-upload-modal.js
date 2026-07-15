@@ -273,15 +273,17 @@
   }
 
   function buildPreviewMetaMarkup() {
+    // Resolution: value only. Size: "1.4 MB" (value then unit).
     return (
       '<div class="design-upload-preview__meta" data-upload-preview-meta="1">' +
         '<span class="design-upload-preview__meta-chip" data-upload-meta="resolution">' +
-          '<strong>' + escapeUploadHtml(i18nUploadModal('uploadModalLabelResolution', 'Resolution')) + '</strong>' +
           '<span data-upload-meta-value="resolution">—</span>' +
         '</span>' +
         '<span class="design-upload-preview__meta-chip" data-upload-meta="size">' +
-          '<strong>' + escapeUploadHtml(i18nUploadModal('uploadModalLabelSizeMb', 'MB')) + '</strong>' +
           '<span data-upload-meta-value="size">—</span>' +
+          '<span class="design-upload-preview__meta-unit">' +
+            escapeUploadHtml(i18nUploadModal('uploadModalLabelSizeMb', 'MB')) +
+          '</span>' +
         '</span>' +
         '<button type="button" class="design-upload-preview__meta-chip design-upload-preview__meta-chip--upscale" data-upload-meta="upscale" hidden>' +
           escapeUploadHtml(i18nUploadModal('uploadModalLabelUpscale', 'Upscale')) +

@@ -154,8 +154,11 @@
     background:#1f2937;
   }
 
+  /* Do NOT set position:relative here — absolute .design-upload-preview must
+     size against .design-upload-placeholder (definite aspect-ratio box). A
+     relative/z-index wrapper collapses under align-items:center (only absolute
+     children) and hides the preview image while meta chips still show. */
   .design-upload-placeholder__image{
-    position:relative;
     width:100%;
     height:100%;
     display:flex;
@@ -164,7 +167,6 @@
     text-align:center;
     padding:20px;
     box-sizing:border-box;
-    z-index:1;
   }
 
   .design-upload-placeholder__icon{
@@ -262,7 +264,7 @@
     color:#9ca3af;
   }
 
-  /* Top-left preview meta: Resolution / MB / Upscale — above crop frame + image */
+  /* Top-left preview meta: resolution value / size+MB / Upscale — above crop frame + image */
   .design-upload-preview__meta{
     position:absolute;
     top:8px;
@@ -273,7 +275,6 @@
     align-items:flex-start;
     gap:6px;
     pointer-events:none;
-    isolation:isolate;
   }
   .design-upload-preview__meta-chip{
     display:inline-flex;
@@ -292,8 +293,16 @@
     -webkit-backdrop-filter:blur(8px);
     max-width:min(220px,70vw);
   }
-  .design-upload-preview__meta-chip strong{
+  .design-upload-preview__meta-chip [data-upload-meta-value],
+  .design-upload-preview__meta-unit{
     font-weight:700;
+    color:#f97316;
+  }
+  .design-upload-preview__meta-chip[data-upload-meta="size"] [data-upload-meta-value]{
+    color:#e5e7eb;
+    font-weight:600;
+  }
+  .design-upload-preview__meta-unit{
     color:#f97316;
   }
   .design-upload-preview__meta-chip--upscale{
