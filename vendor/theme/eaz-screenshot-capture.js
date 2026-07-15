@@ -536,29 +536,102 @@
   }
 
   /**
-   * Keep Design Studio / shop-create focused after the user picks a tab/window.
-   * Without CaptureController, Chromium focuses the shared surface (feels like a redirect).
+   * Keep Design Studio focused after the user picks a tab/window.
+   * Prefer focus-capturing-application (actively keep us focused) over
+   * no-focus-change (leave focus wherever the OS picker left it — often the
+   * other tab in Edge/Chromium). Must pass controller into getDisplayMedia.
+   *
+   * Limitation: capturing *another browser tab* may still steal focus in some
+   * browsers even with CaptureController. True silent cross-tab capture is not
+   * available to normal web pages. Prefer current tab, Window, or Entire Screen.
    */
   function applyNoFocusSteal(controller) {
-    if (!controller || typeof controller.setFocusBehavior !== 'function') return;
-    var behaviors = ['no-focus-change', 'focus-capturing-application'];
+    if (!controller || typeof controller.setFocusBehavior !== 'function') return false;
+    // focus-capturing-application first: explicitly keep the capturing app focused.
+    var behaviors = ['focus-capturing-application', 'no-focus-change'];
     for (var i = 0; i < behaviors.length; i++) {
       try {
         controller.setFocusBehavior(behaviors[i]);
-        return;
+        return true;
       } catch (eFocus) {}
+    }
+    return false;
+  }
+
+  function snapshotOpenDialogs() {
+    var list = [];
+    try {
+      var nodes = document.querySelectorAll('dialog[open]');
+      for (var i = 0; i < nodes.length; i++) {
+        list.push(nodes[i]);
+      }
+    } catch (eSnap) {}
+    return list;
+  }
+
+  function restoreOpenDialogs(dialogs) {
+    if (!dialogs || !dialogs.length) return;
+    for (var i = 0; i < dialogs.length; i++) {
+      var d = dialogs[i];
+      if (!d || d.id === ROOT_ID) continue;
+      try {
+        if (!d.open && typeof d.showModal === 'function') {
+          d.showModal();
+        } else if (!d.open && typeof d.show === 'function') {
+          d.show();
+        }
+      } catch (eShow) {
+        try {
+          if (!d.open && typeof d.show === 'function') d.show();
+        } catch (eShow2) {}
+      }
     }
   }
 
-  function refocusCapturingWindow() {
+  function refocusCapturingWindow(opts) {
+    var previousActive = opts && opts.previousActive;
+    var dialogs = opts && opts.dialogs;
     try {
       if (typeof window.focus === 'function') window.focus();
     } catch (eWin) {}
     try {
-      if (document.body && typeof document.body.focus === 'function') {
-        document.body.focus();
+      if (window.top && window.top !== window && typeof window.top.focus === 'function') {
+        window.top.focus();
+      }
+    } catch (eTop) {}
+    restoreOpenDialogs(dialogs);
+    try {
+      ensureRootOpen();
+    } catch (eRoot) {}
+    try {
+      if (previousActive && previousActive.isConnected && typeof previousActive.focus === 'function') {
+        previousActive.focus({ preventScroll: true });
+      } else if (document.body && typeof document.body.focus === 'function') {
+        document.body.setAttribute('tabindex', '-1');
+        document.body.focus({ preventScroll: true });
       }
     } catch (eBody) {}
+  }
+
+  /** Best-effort: refocus several times after the OS picker / tab switch. */
+  function scheduleAggressiveRefocus(opts) {
+    refocusCapturingWindow(opts);
+    var delays = [0, 16, 50, 120, 250, 500, 900];
+    for (var i = 0; i < delays.length; i++) {
+      (function (ms) {
+        setTimeout(function () {
+          refocusCapturingWindow(opts);
+        }, ms);
+      })(delays[i]);
+    }
+    try {
+      requestAnimationFrame(function () {
+        refocusCapturingWindow(opts);
+        requestAnimationFrame(function () {
+          refocusCapturingWindow(opts);
+        });
+      });
+    } catch (eRaf) {}
   }
 
   function runDisplayCapture() {
@@ -566,49 +639,102 @@
       return Promise.reject(new Error('unsupported'));
     }
 
+    var previousActive = null;
+    try {
+      previousActive = document.activeElement;
+    } catch (eAct) {}
+    var openDialogs = snapshotOpenDialogs();
+    var refocusOpts = { previousActive: previousActive, dialogs: openDialogs };
+
+    // Product guidance (browser security limits true background cross-tab capture):
+    // 1) Recommended: share this Design Studio tab (preferCurrentTab) — zero navigation.
+    // 2) Other site without leaving: open it in a separate window, share Window / Screen.
+    // 3) Sharing another browser *tab* often still focuses that tab in Chromium/Edge.
     var constraints = {
-      // Prefer a browser tab; user can still pick window/screen in supported browsers.
       video: {
         displaySurface: 'browser'
       },
       audio: false,
-      // Offer the current Design Studio tab first (still allows other surfaces).
       preferCurrentTab: true,
       selfBrowserSurface: 'include',
-      // Avoid mid-capture surface switching UI; not needed for a single frame grab.
-      surfaceSwitching: 'exclude'
+      // Keep Window / Entire Screen available (best path for other sites without tab steal).
+      monitorTypeSurfaces: 'include',
+      surfaceSwitching: 'exclude',
+      systemAudio: 'exclude'
     };
 
     var controller = null;
     try {
       if (typeof CaptureController === 'function') {
         controller = new CaptureController();
+        // Required: controller must be passed into getDisplayMedia options.
         constraints.controller = controller;
-        // Set before the picker so Chromium does not focus the shared tab/window.
         applyNoFocusSteal(controller);
       }
     } catch (eCtrl) {
       controller = null;
     }
 
-    return navigator.mediaDevices.getDisplayMedia(constraints).then(function (stream) {
-      // Spec allows one reinforcement call immediately after the promise resolves.
-      applyNoFocusSteal(controller);
-      refocusCapturingWindow();
-
-      return captureFrameFromStream(stream).then(
-        function (canvas) {
-          stopStream(stream);
-          refocusCapturingWindow();
-          return canvas;
-        },
-        function (err) {
-          stopStream(stream);
-          refocusCapturingWindow();
-          throw err;
+    var onVis = null;
+    try {
+      onVis = function () {
+        if (document.visibilityState === 'visible') {
+          scheduleAggressiveRefocus(refocusOpts);
         }
-      );
-    });
+      };
+      document.addEventListener('visibilitychange', onVis);
+    } catch (eVis) {
+      onVis = null;
+    }
+
+    function cleanupVis() {
+      if (!onVis) return;
+      try {
+        document.removeEventListener('visibilitychange', onVis);
+      } catch (eRm) {}
+      onVis = null;
+    }
+
+    return navigator.mediaDevices
+      .getDisplayMedia(constraints)
+      .then(function (stream) {
+        // Spec: one reinforcement call immediately after the promise resolves.
+        // Prefer keeping the capturing app focused for tab/window surfaces.
+        // (monitor / entire screen: setFocusBehavior may throw — ignored.)
+        applyNoFocusSteal(controller);
+        try {
+          var track = stream.getVideoTracks && stream.getVideoTracks()[0];
+          var surface =
+            track && track.getSettings ? String(track.getSettings().displaySurface || '') : '';
+          // Document for maintainers: other-tab (browser) may still steal focus in Edge
+          // even with CaptureController; window/monitor typically do not navigate us away.
+          if (surface === 'browser' || surface === 'window' || !surface) {
+            applyNoFocusSteal(controller);
+          }
+        } catch (eSurf) {}
+
+        scheduleAggressiveRefocus(refocusOpts);
+
+        return captureFrameFromStream(stream).then(
+          function (canvas) {
+            stopStream(stream);
+            cleanupVis();
+            scheduleAggressiveRefocus(refocusOpts);
+            return canvas;
+          },
+          function (err) {
+            stopStream(stream);
+            cleanupVis();
+            scheduleAggressiveRefocus(refocusOpts);
+            throw err;
+          }
+        );
+      })
+      .catch(function (err) {
+        cleanupVis();
+        scheduleAggressiveRefocus(refocusOpts);
+        throw err;
+      });
   }
 
   /**
@@ -690,8 +816,17 @@
 
     if (immediate) {
       // Keep a top-layer dialog open so crop UI can mount after the OS picker.
+      // Brief stay-on-page tip while the OS picker opens (same gesture turn).
       ensureRootOpen();
       clearRootContent();
+      var tipImmediate = document.createElement('div');
+      tipImmediate.className = 'eaz-ss-msg';
+      tipImmediate.setAttribute('data-t', 'creator.generator.screenshot_hint');
+      tipImmediate.textContent = t(
+        'screenshot_hint',
+        'Recommended: share this tab (stays here). To capture another site without leaving: open it in a separate window and share that Window or Entire Screen — not another browser tab.'
+      );
+      getRoot().appendChild(tipImmediate);
       runCaptureThenCrop();
       return activeSession;
     }
@@ -706,9 +841,18 @@
 
     var hint = document.createElement('p');
     hint.className = 'eaz-ss-float__hint';
+    hint.setAttribute('data-t', 'creator.generator.screenshot_hint');
     hint.textContent = t(
       'screenshot_hint',
-      'Pick a browser tab, window, or entire screen. Then mark the region to use as your reference image.'
+      'Recommended: share this tab (stays here). To capture another site without leaving: open it in a separate window and share that Window or Entire Screen — not another browser tab.'
+    );
+
+    var tip = document.createElement('p');
+    tip.className = 'eaz-ss-float__hint';
+    tip.setAttribute('data-t', 'creator.generator.screenshot_stay_hint');
+    tip.textContent = t(
+      'screenshot_stay_hint',
+      'Sharing another browser tab may switch you to that page — browsers do this for security.'
     );
 
     var actions = document.createElement('div');
@@ -727,6 +871,7 @@
     actions.appendChild(btnCancel);
     actions.appendChild(btnTake);
     panel.appendChild(hint);
+    panel.appendChild(tip);
     panel.appendChild(actions);
     root.appendChild(panel);
 
