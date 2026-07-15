@@ -51,6 +51,14 @@
     });
   }
 
+  function loadScriptsParallel(urls) {
+    return Promise.all(
+      urls.map(function (url) {
+        return loadScript(url);
+      })
+    );
+  }
+
   function loadScriptsSequential(urls) {
     return urls.reduce(function (chain, url) {
       return chain.then(function () {
@@ -75,7 +83,7 @@
     if (!host) return;
     var url = "/partials/" + name;
     if (host.querySelector('[data-partial="' + name + '"]')) return;
-    var res = await fetch(url, { cache: "no-store" });
+    var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;
     var html = await res.text();
     var wrap = document.createElement("div");
@@ -346,7 +354,7 @@
         injectPartial("creator-level-celebration-overlay.html"),
       ]);
 
-      await loadScriptsSequential([
+      await loadScriptsParallel([
         asset("sales-modal.js"),
         asset("creator-journey-modal.js"),
         asset("creator-level-celebration.js"),
@@ -361,12 +369,7 @@
         badge_ready_aria: "Level badge ready",
       };
 
-      if (requireLogin()) {
-        if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady();
-        ensureSettings().catch(function (e) {
-          console.warn("[CreatorPortalFeatures] settings preload failed", e);
-        });
-      }
+      // Settings modal is large — load on first open only (not on dashboard boot).
     })();
 
     try {

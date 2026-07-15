@@ -64,6 +64,10 @@
     return parts.length ? parts.join(" — ") : "Could not verify your account. Please try again.";
   }
 
+  var cachedHandoff = null;
+  var cachedHandoffAt = 0;
+  var HANDOFF_CACHE_MS = 90000;
+
   function issueExchangeToken(customerId) {
     var cid = readCustomerId(customerId);
     if (!cid) {
@@ -94,15 +98,37 @@
       });
   }
 
+  function prefetchExchangeToken(opts) {
+    opts = opts || {};
+    var cid = readCustomerId(opts.customerId);
+    if (!cid) return Promise.resolve(null);
+    if (cachedHandoff && Date.now() - cachedHandoffAt < HANDOFF_CACHE_MS) {
+      return cachedHandoff;
+    }
+    cachedHandoffAt = Date.now();
+    cachedHandoff = issueExchangeToken(cid).then(function (result) {
+      if (!(result && result.ok && result.url)) {
+        cachedHandoff = null;
+        cachedHandoffAt = 0;
+      }
+      return result;
+    });
+    return cachedHandoff;
+  }
+
   function resolveTargetUrl(opts) {
     opts = opts || {};
     var cid = readCustomerId(opts.customerId);
     if (!cid) {
       return Promise.resolve(portalHomeUrl());
     }
-    return issueExchangeToken(cid).then(function (result) {
-      if (result.ok && result.url) return result.url;
-      if (result.loginUrl) return result.loginUrl;
+    var pending =
+      cachedHandoff && Date.now() - cachedHandoffAt < HANDOFF_CACHE_MS
+        ? cachedHandoff
+        : prefetchExchangeToken({ customerId: cid });
+    return pending.then(function (result) {
+      if (result && result.ok && result.url) return result.url;
+      if (result && result.loginUrl) return result.loginUrl;
       return portalHomeUrl();
     });
   }
@@ -122,6 +148,7 @@
     storefrontLoginUrl: storefrontLoginUrl,
     readCustomerId: readCustomerId,
     issueExchangeToken: issueExchangeToken,
+    prefetchExchangeToken: prefetchExchangeToken,
     resolveTargetUrl: resolveTargetUrl,
     navigateToPortal: navigateToPortal,
     completeUrl: completeUrl,

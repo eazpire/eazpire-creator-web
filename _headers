@@ -1,0 +1,12 @@
+# Cloudflare Workers Assets — long-cache versioned static files (HTML stays no-store via worker).
+/js/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/css/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/vendor/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/partials/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400

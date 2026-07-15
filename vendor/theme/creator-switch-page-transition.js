@@ -12,6 +12,9 @@
   var DOM_OVERLAY_ID = 'creator-switch-live-dom-overlay';
   var DURATION_DESKTOP_MS = 2400;
   var DURATION_MOBILE_MS = 1500;
+  /** Shop → Creator: shorter — portal still has its own boot. */
+  var DURATION_TO_CREATOR_DESKTOP_MS = 1100;
+  var DURATION_TO_CREATOR_MOBILE_MS = 800;
   var NAV_FALLBACK_MS = 5200;
   var HTML2CANVAS_SRC = (typeof window !== 'undefined' && window.__eazHtml2canvasSrc) ||
     'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
@@ -427,7 +430,9 @@
     var direction = mode === 'to-creator' ? 'ltr' : 'rtl';
     var isLikelyMobile = Math.min(window.innerWidth || 0, window.innerHeight || 0) < 900 ||
       ((navigator.maxTouchPoints || 0) > 0 && (window.innerWidth || 0) < 1200);
-    var durationMs = isLikelyMobile ? DURATION_MOBILE_MS : DURATION_DESKTOP_MS;
+    var durationMs = mode === 'to-creator'
+      ? (isLikelyMobile ? DURATION_TO_CREATOR_MOBILE_MS : DURATION_TO_CREATOR_DESKTOP_MS)
+      : (isLikelyMobile ? DURATION_MOBILE_MS : DURATION_DESKTOP_MS);
     var finishNavigate = navigateWhenReady(targetUrl, NAV_FALLBACK_MS);
     var navigated = false;
 

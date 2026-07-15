@@ -1,20 +1,41 @@
 /**
  * Assembles theme creator shell (desktop + mobile) from static partials.
+ * Critical path: dashboard shell only; secondary screens + Eazy/audio deferred.
  */
 (function (global) {
   "use strict";
 
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
+  var RUNTIME_V = "10";
+  var secondaryScreensPromise = null;
+
+  function scheduleIdle(fn, timeoutMs) {
+    var run = function () {
+      try {
+        fn();
+      } catch (e) {
+        console.warn("[CreatorPortal] idle task failed", e);
+      }
+    };
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(run, { timeout: timeoutMs || 2500 });
+    } else {
+      setTimeout(run, 1);
+    }
+  }
 
   function fetchWithTimeout(url, timeoutMs) {
     var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
     var timer = setTimeout(function () {
       if (controller) controller.abort();
     }, timeoutMs);
-    return fetch(url, { cache: "no-store", signal: controller ? controller.signal : undefined }).finally(function () {
-      clearTimeout(timer);
-    });
+    // Allow HTTP cache (server sets Cache-Control for /partials/*).
+    return fetch(url, { credentials: "same-origin", signal: controller ? controller.signal : undefined }).finally(
+      function () {
+        clearTimeout(timer);
+      }
+    );
   }
 
   async function fetchPartial(name) {
@@ -71,6 +92,19 @@
     );
   }
 
+  function applyShellChrome(host) {
+    host.querySelectorAll('img[src*="eazpire-creator-logo"]').forEach(function (img) {
+      img.src = CREATOR_LOGO;
+    });
+    host.querySelectorAll(".creator-desktop-header__brand").forEach(function (a) {
+      a.setAttribute("href", "/dashboard");
+    });
+    if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
+      global.CreatorPortalI18n.applyDataT(host);
+    }
+  }
+
+  /** Dashboard-critical shell only — enough to finish boot and show UI. */
   async function loadShell() {
     var host = document.getElementById("creatorPortalShell");
     if (!host || host.dataset.loaded === "1") return;
@@ -78,10 +112,6 @@
     var parts = await Promise.all([
       fetchPartial("creator-desktop-overview.html"),
       fetchPartial("creator-mobile-dashboard.html"),
-      fetchPartial("creator-mobile-generator.html"),
-      fetchPartial("creator-mobile-creations.html"),
-      fetchPartial("creator-mobile-marketing.html"),
-      fetchPartial("creator-mobile-automations.html"),
       fetchPartial("creator-mobile-header.html"),
       fetchPartial("creator-daily-limits-subheader.html"),
       fetchPartial("creator-mobile-drawer.html"),
@@ -95,37 +125,50 @@
       '<section class="creator-screen" data-screen="0">' +
       parts[1] +
       "</section>" +
-      '<section class="creator-screen" data-screen="1">' +
-      parts[2] +
-      "</section>" +
-      '<section class="creator-screen" data-screen="2">' +
-      parts[3] +
-      "</section>" +
-      '<section class="creator-screen" data-screen="3">' +
-      parts[4] +
-      "</section>" +
-      '<section class="creator-screen" data-screen="4">' +
-      parts[5] +
-      "</section>" +
+      '<section class="creator-screen" data-screen="1" data-portal-screen-slot="generator"></section>' +
+      '<section class="creator-screen" data-screen="2" data-portal-screen-slot="creations"></section>' +
+      '<section class="creator-screen" data-screen="3" data-portal-screen-slot="marketing"></section>' +
+      '<section class="creator-screen" data-screen="4" data-portal-screen-slot="automations"></section>' +
       "</div></div>" +
-      parts[6] +
-      parts[7] +
-      parts[8] +
+      parts[2] +
+      parts[3] +
+      parts[4] +
       mobileFooterHtml() +
       "</div>";
 
-    host.querySelectorAll('img[src*="eazpire-creator-logo"]').forEach(function (img) {
-      img.src = CREATOR_LOGO;
-    });
-    host.querySelectorAll(".creator-desktop-header__brand").forEach(function (a) {
-      a.setAttribute("href", "/dashboard");
-    });
-
-    if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
-      global.CreatorPortalI18n.applyDataT(host);
-    }
-
+    applyShellChrome(host);
     host.dataset.loaded = "1";
+  }
+
+  /** Fill generator / creations / marketing / automations after first paint. */
+  function loadShellSecondaryScreens() {
+    if (secondaryScreensPromise) return secondaryScreensPromise;
+    var host = document.getElementById("creatorPortalShell");
+    if (!host || host.dataset.secondaryScreens === "1") {
+      return Promise.resolve();
+    }
+    secondaryScreensPromise = (async function () {
+      var parts = await Promise.all([
+        fetchPartial("creator-mobile-generator.html"),
+        fetchPartial("creator-mobile-creations.html"),
+        fetchPartial("creator-mobile-marketing.html"),
+        fetchPartial("creator-mobile-automations.html"),
+      ]);
+      var slots = ["generator", "creations", "marketing", "automations"];
+      slots.forEach(function (slot, i) {
+        var el = host.querySelector('[data-portal-screen-slot="' + slot + '"]');
+        if (!el || el.dataset.filled === "1") return;
+        el.innerHTML = parts[i];
+        el.dataset.filled = "1";
+        el.removeAttribute("data-portal-screen-slot");
+      });
+      applyShellChrome(host);
+      host.dataset.secondaryScreens = "1";
+    })().catch(function (e) {
+      secondaryScreensPromise = null;
+      console.warn("[CreatorPortal] secondary screens load failed", e);
+    });
+    return secondaryScreensPromise;
   }
 
   function setupCreatorAudioI18n() {
@@ -175,8 +218,10 @@
         global.CreatorPortalI18n.applyDataT(wrap);
       }
       setupCreatorAudioI18n();
-      await loadScript("/vendor/theme/creator-audio-modal.js");
-      await loadScript("/vendor/theme/creator-audio-party.js");
+      await Promise.all([
+        loadScript("/vendor/theme/creator-audio-modal.js"),
+        loadScript("/vendor/theme/creator-audio-party.js"),
+      ]);
     } catch (e) {
       console.warn("[CreatorPortal] audio modal load failed", e);
     }
@@ -188,7 +233,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=9";
+      s.src = src + "?v=" + RUNTIME_V;
       s.defer = true;
       s.setAttribute("data-portal-runtime", src);
       s.onload = function () {
@@ -202,15 +247,18 @@
   }
 
   async function loadThemeRuntime() {
+    // Secondary swipe screens in parallel with core runtime scripts.
+    var secondary = loadShellSecondaryScreens();
+
     await loadScript("/js/portal-balances.js");
     await Promise.all([
       loadScript("/vendor/theme/eaz-coin-brand.js"),
       loadScript("/vendor/theme/creator-creator-area-api.js"),
       loadScript("/vendor/theme/creator-footer-eaz-ui.js"),
       loadScript("/vendor/theme/creator-theme-background.js"),
+      loadScript("/vendor/theme/creator-dashboard-data.js"),
+      loadScript("/vendor/theme/creator-daily-limits-subheader.js"),
     ]);
-    await loadScript("/vendor/theme/creator-dashboard-data.js");
-    await loadScript("/vendor/theme/creator-daily-limits-subheader.js");
     await Promise.all([
       loadScript("/vendor/theme/particle-reveal.js"),
       loadScript("/vendor/theme/design-particle-reveal.js"),
@@ -221,25 +269,30 @@
       loadScript("/vendor/theme/creator-mobile.js"),
       loadScript("/vendor/theme/creator-desktop.js"),
     ]);
-    await loadAudioModal();
-    if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
-      try {
-        await global.CreatorPortalEazy.ensure();
-      } catch (e) {
-        console.warn("[CreatorPortal] Eazy load failed", e);
+
+    try {
+      await secondary;
+    } catch (e) {}
+
+    // Eazy chat, audio, sales/journey modals — not needed for first interactive dashboard paint.
+    scheduleIdle(function () {
+      loadAudioModal().catch(function () {});
+      if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
+        global.CreatorPortalEazy.ensure().catch(function (e) {
+          console.warn("[CreatorPortal] Eazy load failed", e);
+        });
       }
-    }
-    if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.ensureDashboard === "function") {
-      try {
-        await global.CreatorPortalFeatures.ensureDashboard();
-      } catch (e) {
-        console.warn("[CreatorPortal] dashboard modals load failed", e);
+      if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.ensureDashboard === "function") {
+        global.CreatorPortalFeatures.ensureDashboard().catch(function (e) {
+          console.warn("[CreatorPortal] dashboard modals load failed", e);
+        });
       }
-    }
+    }, 2000);
   }
 
   global.CreatorPortalShell = {
     loadShell: loadShell,
+    loadShellSecondaryScreens: loadShellSecondaryScreens,
     loadThemeRuntime: loadThemeRuntime,
     loadAudioModal: loadAudioModal,
     ensureShellVisible: ensureShellVisible,

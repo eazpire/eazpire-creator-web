@@ -42,12 +42,12 @@
     });
   }
 
-  function loadScriptsSequential(urls) {
-    return urls.reduce(function (chain, url) {
-      return chain.then(function () {
+  function loadScriptsParallel(urls) {
+    return Promise.all(
+      urls.map(function (url) {
         return loadScript(url);
-      });
-    }, Promise.resolve());
+      })
+    );
   }
 
   function ensureHost() {
@@ -63,7 +63,7 @@
   async function injectPartial(name) {
     var host = ensureHost();
     if (host.querySelector('[data-partial="' + name + '"]')) return;
-    var res = await fetch("/partials/" + name, { cache: "no-store" });
+    var res = await fetch("/partials/" + name, { credentials: "same-origin" });
     if (!res.ok) throw new Error("Failed to load partial " + name);
     var html = await res.text();
     html = html
@@ -141,7 +141,8 @@
       wireGuideRegistry();
       configureLazyChatScripts();
 
-      await loadScriptsSequential([
+      // Parallel batches: order within a batch is independent; batches preserve soft deps.
+      await loadScriptsParallel([
         asset("eazy-mascot.js"),
         asset("eazy-messages.js"),
         asset("eazy-bot.js"),
@@ -153,8 +154,8 @@
         asset("eazy-functions.js"),
         asset("eazy-mascot-tab.js"),
         asset("creator-notifications.bootstrap.js"),
-        asset("eaz-chat-widget-loader.js"),
       ]);
+      await loadScript(asset("eaz-chat-widget-loader.js"));
 
       try {
         document.documentElement.classList.add("eazy-icon-ready");

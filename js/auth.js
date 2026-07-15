@@ -13,6 +13,7 @@
   };
 
   var uiBound = false;
+  var bootstrapApplied = false;
 
   function setAuth(loggedIn, ownerId) {
     state.loggedIn = !!loggedIn;
@@ -20,6 +21,15 @@
     document.body.dataset.role = state.loggedIn ? "owner" : "guest";
     var ownerLabel = document.getElementById("creatorOwnerLabel");
     if (ownerLabel) ownerLabel.textContent = state.loggedIn ? "Creator #" + state.ownerId : "Creator";
+  }
+
+  function applyBootstrapAuth(data) {
+    if (!data || !data.ok) return;
+    bootstrapApplied = true;
+    setAuth(!!data.logged_in, data.owner_id || null);
+    if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+      global.CreatorPortalThemeBridge.notifyContextReady();
+    }
   }
 
   function showToast(title, text) {
@@ -53,7 +63,12 @@
     } catch (e) {}
   }
 
-  async function refreshSession() {
+  async function refreshSession(opts) {
+    opts = opts || {};
+    // Skip duplicate /auth/me when bootstrap already applied session (including guest).
+    if (opts.skipIfKnown && bootstrapApplied) {
+      return { logged_in: state.loggedIn, owner_id: state.ownerId };
+    }
     try {
       var me = await global.CreatorPortalApi.me();
       setAuth(me.logged_in, me.owner_id);
@@ -144,12 +159,13 @@
   async function init() {
     bindUi();
     handleAuthQuery();
-    await refreshSession();
+    // Session comes from /api/bootstrap in app.js — avoid a parallel /auth/me on every boot.
   }
 
   global.CreatorPortalAuth = {
     init: init,
     refreshSession: refreshSession,
+    applyBootstrapAuth: applyBootstrapAuth,
     login: login,
     logout: logout,
     closeLoginModal: closeLoginModal,

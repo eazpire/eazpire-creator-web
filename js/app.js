@@ -25,6 +25,9 @@
     document.querySelectorAll("[data-shop-link]").forEach(function (a) {
       if (data.shop_url) a.href = data.shop_url;
     });
+    if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.applyBootstrapAuth === "function") {
+      global.CreatorPortalAuth.applyBootstrapAuth(data);
+    }
   }
 
   function fixBootLogo() {
@@ -88,7 +91,8 @@
       var runtimeWork = (async function () {
         if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.refreshSession === "function") {
           try {
-            await withTimeout(global.CreatorPortalAuth.refreshSession(), 8000, null);
+            // Only hit /auth/me if bootstrap did not already establish session.
+            await withTimeout(global.CreatorPortalAuth.refreshSession({ skipIfKnown: true }), 8000, null);
           } catch (e) {}
         }
 
