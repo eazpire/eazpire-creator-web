@@ -27,6 +27,14 @@
   /** Same semantics as creator-design-products-modal (eligible catalog vs excluded keys). */
   var activateProdCtx = null;
 
+  /** Match creator-design-products-modal: Skill Tree unlock flag from get-catalog-products. */
+  function isProductUnlocked(p) {
+    if (!p) return false;
+    if (typeof p.unlocked === 'boolean') return p.unlocked;
+    // Fallback when API has no unlock flags: treat as unlocked.
+    return true;
+  }
+
   /** 'direct_sell' | 'personalized_sample' — chosen in the Activate modal (fixed per design). */
   var activateListingMode = 'direct_sell';
 
@@ -401,6 +409,7 @@
     var empty = function () {
       return {
         products: [],
+        unlockedProducts: [],
         eligibleKeys: [],
         checked: {},
         metaExcludedSnapshot: [],
@@ -446,7 +455,11 @@
       });
 
       var products = (catData.ok && Array.isArray(catData.products) ? catData.products : []).slice();
-      var eligibleKeys = products
+      // Same as Edit Mode → Products: eligible / selectable = Skill Tree unlocked only.
+      var unlockedProducts = products.filter(function (x) {
+        return isProductUnlocked(x);
+      });
+      var eligibleKeys = unlockedProducts
         .map(function (x) {
           return String(x.product_key || '').trim();
         })
@@ -456,9 +469,15 @@
       var metaSnap = metaExcluded.slice();
 
       var checked = {};
-      for (var i = 0; i < eligibleKeys.length; i++) {
-        var epk = eligibleKeys[i];
-        checked[epk] = metaExcluded.indexOf(epk) === -1;
+      for (var i = 0; i < products.length; i++) {
+        var p = products[i];
+        var pk = String(p.product_key || '').trim();
+        if (!pk) continue;
+        if (!isProductUnlocked(p)) {
+          checked[pk] = false;
+          continue;
+        }
+        checked[pk] = metaExcluded.indexOf(pk) === -1;
       }
 
       var initialExcluded = computeExcludedKeys(eligibleKeys, checked, metaSnap);
@@ -478,6 +497,7 @@
 
       return {
         products: products,
+        unlockedProducts: unlockedProducts,
         eligibleKeys: eligibleKeys,
         checked: checked,
         metaExcludedSnapshot: metaSnap,
@@ -602,7 +622,7 @@
   }
 
   /**
-   * Visibility box (Public/Private) — same container style as listing mode.
+   * Visibility box — dual labels Private | switch | Public (same pattern as listing mode).
    */
   function appendVisibilitySettingsBox(parentEl, visSwitch) {
     var M = Mi();
@@ -615,15 +635,19 @@
     var row = document.createElement('div');
     row.className = 'creator-library-action-modal__listing-row';
 
-    var title = document.createElement('span');
-    title.className = 'creator-library-action-modal__listing-label is-active';
-    title.textContent = M.libraryVisibilityLabel || 'Visibility';
+    var labelPrivate = document.createElement('span');
+    labelPrivate.className = 'creator-library-action-modal__listing-label';
+    labelPrivate.setAttribute('data-creator-vis-label', 'private');
+    labelPrivate.textContent = M.libraryVisibilityPrivate || 'Private';
+
+    var labelPublic = document.createElement('span');
+    labelPublic.className = 'creator-library-action-modal__listing-label';
+    labelPublic.setAttribute('data-creator-vis-label', 'public');
+    labelPublic.textContent = M.libraryVisibilityPublic || 'Public';
 
     var track = visSwitch.querySelector('.creator-library-action-modal__vis-switch-track');
     var cap = visSwitch.querySelector('.creator-library-action-modal__vis-switch-caption');
-    if (track) {
-      track.classList.add('creator-library-action-modal__settings-vis-track');
-    }
+    if (cap) cap.setAttribute('hidden', '');
 
     var info = document.createElement('button');
     info.type = 'button';
@@ -638,9 +662,9 @@
       );
     });
 
-    row.appendChild(title);
-    if (cap) row.appendChild(cap);
+    row.appendChild(labelPrivate);
     if (track) row.appendChild(track);
+    row.appendChild(labelPublic);
     row.appendChild(info);
     wrap.appendChild(row);
 
@@ -651,7 +675,23 @@
       'Public designs can be discovered; private designs stay only in your account.';
     wrap.appendChild(hint);
 
+    visSwitch._visLabels = { private: labelPrivate, public: labelPublic };
+    if (typeof visSwitch.syncUi === 'function') visSwitch.syncUi();
+
     parentEl.appendChild(wrap);
+  }
+
+  /** Keep CDP activate host class so panel padding is not lost when content mounts. */
+  function setLibraryContentClassName(el, extraClass) {
+    if (!el) return;
+    var parts = ['creator-library-action-modal__content'];
+    if (extraClass) parts.push(extraClass);
+    var keepCdp =
+      activateEmbedActive ||
+      (el.id && String(el.id).indexOf('cdp-activate-content') === 0) ||
+      (el.classList && el.classList.contains('cdp-modal__activate-content'));
+    if (keepCdp) parts.unshift('cdp-modal__activate-content');
+    el.className = parts.join(' ');
   }
 
   /**
@@ -804,10 +844,18 @@
       return;
     }
 
+    var unlockedProducts = Array.isArray(bundle.unlockedProducts)
+      ? bundle.unlockedProducts
+      : (bundle.products || []).filter(function (x) {
+          return isProductUnlocked(x);
+        });
+
     var statusEl = document.createElement('div');
     statusEl.className = 'creator-design-products-modal__status';
     if (!bundle.products.length) {
       statusEl.textContent = M.designProductsEmpty || 'No products available for your region.';
+    } else if (!unlockedProducts.length) {
+      statusEl.textContent = M.designProductsEmptyUnlocked || 'No unlocked products.';
     }
 
     var gridEl = document.createElement('div');
@@ -820,7 +868,8 @@
 
     parentEl.appendChild(wrap);
 
-    renderActivateProductGrid(bundle.products);
+    // Quick Publish has no Locked tab — only show selectable (unlocked) products.
+    renderActivateProductGrid(unlockedProducts);
   }
 
   function normalizeNames(names) {
@@ -1047,8 +1096,7 @@
   function renderActivateSkeleton() {
     var M = Mi();
     contentEl.innerHTML = '';
-    contentEl.className =
-      'creator-library-action-modal__content creator-library-action-modal__content--skeleton';
+    setLibraryContentClassName(contentEl, 'creator-library-action-modal__content--skeleton');
 
     var intro = document.createElement('div');
     intro.className =
@@ -1231,7 +1279,7 @@
       busyEl.setAttribute('aria-hidden', 'true');
     }
     contentEl.innerHTML = '';
-    contentEl.className = 'creator-library-action-modal__content';
+    setLibraryContentClassName(contentEl);
     if (subFooterEl) {
       subFooterEl.innerHTML = '';
       subFooterEl.setAttribute('hidden', '');
@@ -1590,13 +1638,20 @@
       track.setAttribute('aria-checked', isPublic ? 'true' : 'false');
       track.classList.toggle('creator-library-action-modal__vis-switch-track--public', isPublic);
       track.classList.toggle('creator-library-action-modal__vis-switch-track--private', !isPublic);
-      cap.textContent = isPublic ? M.libraryVisibilityPublic || 'Public' : M.libraryVisibilityPrivate || 'Private';
+      if (!cap.hasAttribute('hidden')) {
+        cap.textContent = isPublic
+          ? M.libraryVisibilityPublic || 'Public'
+          : M.libraryVisibilityPrivate || 'Private';
+      }
       track.setAttribute(
         'aria-label',
-        (M.libraryVisibilityLabel || 'Visibility') +
-          ': ' +
-          (isPublic ? M.libraryVisibilityPublic || 'Public' : M.libraryVisibilityPrivate || 'Private')
+        (isPublic ? M.libraryVisibilityPublic || 'Public' : M.libraryVisibilityPrivate || 'Private')
       );
+      var labels = wrap._visLabels;
+      if (labels) {
+        if (labels.private) labels.private.classList.toggle('is-active', !isPublic);
+        if (labels.public) labels.public.classList.toggle('is-active', isPublic);
+      }
     }
 
     track.addEventListener('click', function () {
@@ -1609,6 +1664,7 @@
     wrap.appendChild(cap);
     wrap.appendChild(track);
 
+    wrap.syncUi = sync;
     wrap.getValue = function () {
       return isPublic ? 'public' : 'private';
     };
@@ -1689,7 +1745,7 @@
       console.warn('[creator-creations-library-actions] activate preload', e);
     }
 
-    contentEl.className = 'creator-library-action-modal__content';
+    setLibraryContentClassName(contentEl);
     contentEl.innerHTML = '';
     if (subFooterEl) {
       subFooterEl.innerHTML = '';

@@ -1235,8 +1235,8 @@ html.creator-library-action-modal-open {
   animation: creator-library-action-modal-sk-shimmer 1.35s ease-in-out infinite;
 }
 .creator-library-action-modal__sk-toggle {
-  width: 52px;
-  height: 28px;
+  width: 46px;
+  height: 26px;
   border-radius: 999px;
   background: linear-gradient(
     90deg,
@@ -1400,6 +1400,7 @@ html.creator-library-action-modal-open {
 .creator-library-action-modal__listing-label.is-active {
   color: #fff;
 }
+/* Shared track/knob size — listing mode, visibility, and CDP Quick/Edit mode */
 .creator-library-action-modal__listing-track {
   position: relative;
   width: 46px;
@@ -1468,13 +1469,8 @@ html.creator-library-action-modal-open {
   width: 100%;
   max-width: 100%;
 }
-.creator-library-action-modal__settings-vis-track {
-  margin-left: 8px;
-}
-.creator-library-action-modal__listing-row .creator-library-action-modal__vis-switch-caption {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.88);
+.creator-library-action-modal__listing-row .creator-library-action-modal__vis-switch-caption[hidden] {
+  display: none !important;
 }
 /* Info overlay */
 .creator-library-action-modal__info-overlay {
@@ -1623,36 +1619,33 @@ html.creator-library-action-modal-open {
 }
 .creator-library-action-modal__vis-switch-track {
   position: relative;
-  width: 72px;
-  height: 30px;
+  width: 46px;
+  height: 26px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(0, 0, 0, 0.35);
+  border: none;
+  background: rgba(255, 255, 255, 0.18);
   cursor: pointer;
   padding: 0;
+  flex: 0 0 auto;
   flex-shrink: 0;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
+  transition: background 0.15s ease;
 }
 .creator-library-action-modal__vis-switch-track--public {
-  border-color: rgba(249, 115, 22, 0.55);
-  background: rgba(249, 115, 22, 0.22);
+  background: #ff8c00;
 }
 .creator-library-action-modal__vis-switch-knob {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-  transition: transform 0.2s ease;
+  background: #fff;
+  transition: transform 0.15s ease;
   pointer-events: none;
 }
 .creator-library-action-modal__vis-switch-track--public .creator-library-action-modal__vis-switch-knob {
-  transform: translateX(42px);
+  transform: translateX(20px);
 }
 .creator-library-action-modal__footer {
   display: flex;

@@ -2544,6 +2544,7 @@
     color: #fff;
   }
 
+  /* Shared size with listing-mode + visibility switches (46×26 track, 20px knob) */
   .cdp-modal__activate-mode-track {
     position: relative;
     width: 46px;
@@ -2582,7 +2583,7 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    /* Same horizontal inset for listing-mode box and product grid */
+    /* Match CDP products grid / creations card edge inset (16px) */
     padding: 16px;
     -webkit-overflow-scrolling: touch;
   }
@@ -2594,6 +2595,17 @@
     margin-right: 0;
     max-width: 100%;
     box-sizing: border-box;
+  }
+
+  /* Nested product grid must not add a second horizontal inset */
+  .cdp-modal__activate-content .creator-design-products-modal__grid {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .cdp-modal__activate-content .creator-design-products-modal__status {
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .cdp-modal__activate-content .creator-library-action-modal__listing-mode {
