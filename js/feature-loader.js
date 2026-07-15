@@ -402,6 +402,7 @@
         asset("creator-settings-eaz-panel.js"),
         asset("creator-settings-payout-panel.js"),
         asset("creator-settings-names.js"),
+        asset("creator-settings-brand-workspace.js"),
         asset("creator-settings-wear-panel.js"),
         asset("customer-profile-settings.js"),
         asset("creator-cover-regions-ui.js"),

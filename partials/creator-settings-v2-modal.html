@@ -73,6 +73,14 @@
             <span class="csm-nav-text">Creator Names</span>
           </button>
 
+          <!-- Brand Workspace Tab -->
+          <button type="button" class="csm-nav-item" data-csm-nav="brand-workspace">
+            <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+            </svg>
+            <span class="csm-nav-text">Brand Workspace</span>
+          </button>
+
           <!-- EAZ Tab -->
           <button type="button" class="csm-nav-item" data-csm-nav="eaz">
             <svg class="csm-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -1279,6 +1287,38 @@
   }
 </style>
 
+        </section>
+
+        <!-- Brand Workspace Panel -->
+        <section class="csm-panel" data-csm-panel="brand-workspace">
+          <div class="csm-panel-header">
+            <h4 class="csm-panel-title">Brand Workspace</h4>
+            <p class="csm-panel-subtitle">Design under a brand invite. Your publish mode is set by the brand owner (review or auto publish).</p>
+          </div>
+          <div class="csm-panel-content">
+            <div id="csm-brand-workspace-mount" class="csm-brand-workspace">
+              <p class="muted">Loading…</p>
+            </div>
+          </div>
+          <style>
+            .csm-brand-workspace { display:flex; flex-direction:column; gap:12px; }
+            .csm-brand-workspace__list { display:flex; flex-direction:column; gap:8px; }
+            .csm-brand-workspace__row {
+              display:flex; align-items:center; justify-content:space-between; gap:12px;
+              padding:12px 14px; border:1px solid rgba(255,255,255,.12); border-radius:10px;
+              background: rgba(255,255,255,.04);
+            }
+            .csm-brand-workspace__meta { display:flex; flex-direction:column; gap:2px; }
+            .csm-brand-workspace__name { font-weight:600; }
+            .csm-brand-workspace__sub { opacity:.7; font-size:12px; }
+            .csm-brand-workspace__btn {
+              border:0; border-radius:8px; padding:8px 12px; cursor:pointer;
+              background:#0f766e; color:#fff; font-weight:600;
+            }
+            .csm-brand-workspace__btn.is-active { background:#134e4a; }
+            .csm-brand-workspace__btn--ghost { background:transparent; border:1px solid rgba(255,255,255,.2); color:inherit; }
+            .csm-brand-workspace__note { opacity:.75; font-size:13px; line-height:1.4; }
+          </style>
         </section>
 
         <section class="csm-panel" data-csm-panel="level" hidden aria-hidden="true" style="display:none !important">
