@@ -2423,6 +2423,117 @@
     display: none;
   }
 
+  /* Activate entry mode (from Creations Activate button) */
+  .cdp-modal__nav-item[data-cdp-tab="activate"] {
+    display: none;
+  }
+
+  .cdp-modal--activate-entry .cdp-modal__nav-item[data-cdp-tab="activate"] {
+    display: inline-flex;
+  }
+
+  .cdp-modal__btn--activate {
+    display: none !important;
+  }
+
+  .cdp-modal--activate-entry .cdp-modal__btn--activate {
+    display: inline-flex !important;
+  }
+
+  .cdp-modal--activate-entry .cdp-modal__footer > .cdp-modal__btn:not(.cdp-modal__btn--activate),
+  .cdp-modal--activate-entry .cdp-modal__footer-sep {
+    display: none !important;
+  }
+
+  .cdp-modal--activate-entry.cdp-modal--products-tab .cdp-modal__footer {
+    display: flex;
+  }
+
+  .cdp-modal--activate-quick .cdp-modal__sidebar,
+  .cdp-modal--activate-quick .cdp-modal__drawer-toggle {
+    display: none !important;
+  }
+
+  .cdp-modal--activate-quick .cdp-modal__main {
+    width: 100%;
+  }
+
+  .cdp-modal__panel--activate {
+    padding: 0;
+  }
+
+  .cdp-modal__activate-shell {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 0;
+  }
+
+  .cdp-modal__activate-mode-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(7, 11, 20, 0.55);
+    flex-shrink: 0;
+  }
+
+  .cdp-modal__activate-mode-btn {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.72);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .cdp-modal__activate-mode-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .cdp-modal__activate-mode-btn.is-active {
+    color: #fff;
+    border-color: rgba(249, 115, 22, 0.55);
+    background: rgba(249, 115, 22, 0.22);
+  }
+
+  .cdp-modal__activate-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cdp-modal__activate-subfooter {
+    flex-shrink: 0;
+    padding: 12px 20px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(7, 11, 20, 0.72);
+  }
+
+  .cdp-modal__activate-subfooter[hidden] {
+    display: none !important;
+  }
+
+  .cdp-modal__btn--activate-save {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+  }
+
+  .cdp-modal__btn--activate-cancel {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e5e7eb;
+  }
+
   .cdp-modal__products .creator-design-products-modal__card {
     position: relative;
     display: flex;
@@ -3108,6 +3219,10 @@
     <div class="cdp-modal__layout">
       <button type="button" class="cdp-modal__drawer-backdrop" id="cdp-drawer-backdrop-design-preview" aria-label="Close"></button>
       <nav class="cdp-modal__sidebar" id="cdp-sidebar-design-preview" aria-label="Design sections">
+        <button type="button" class="cdp-modal__nav-item cdp-modal__nav-item--activate" data-cdp-tab="activate" hidden aria-hidden="true" aria-label="Activate" title="Activate">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z"></path></svg>
+          <span class="cdp-modal__nav-label" data-t="creator.preview_modal.tab_activate">Activate</span>
+        </button>
         <button type="button" class="cdp-modal__nav-item is-active" data-cdp-tab="overview" aria-label="Overview" title="Overview">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
           <span class="cdp-modal__nav-label" data-t="creator.preview_modal.tab_overview">Overview</span>
@@ -3127,6 +3242,38 @@
       </nav>
 
       <div class="cdp-modal__main">
+        <div class="cdp-modal__panel cdp-modal__panel--activate" data-cdp-panel="activate" hidden>
+          <div class="cdp-modal__activate-shell">
+            <div class="cdp-modal__activate-mode-switch" role="tablist" aria-label="Quick Publish">
+              <button
+                type="button"
+                class="cdp-modal__activate-mode-btn is-active"
+                data-cdp-activate-publish-mode="quick"
+                role="tab"
+                aria-selected="true"
+                data-t="creator.preview_modal.activate_quick_publish"
+              >Quick Publish</button>
+              <button
+                type="button"
+                class="cdp-modal__activate-mode-btn"
+                data-cdp-activate-publish-mode="edit"
+                role="tab"
+                aria-selected="false"
+                data-t="creator.preview_modal.activate_edit_mode"
+              >Edit Mode</button>
+            </div>
+            <div
+              id="cdp-activate-content-design-preview"
+              class="cdp-modal__activate-content creator-library-action-modal__content"
+            ></div>
+            <div
+              id="cdp-activate-subfooter-design-preview"
+              class="cdp-modal__activate-subfooter creator-library-action-modal__subfooter"
+              hidden
+            ></div>
+          </div>
+        </div>
+
         <div class="cdp-modal__panel cdp-modal__panel--overview is-active" data-cdp-panel="overview">
     <div class="cdp-modal__body">
       <!-- Desktop: 2-Spalten Layout -->
@@ -3803,6 +3950,13 @@
           <path d="M14 11v6"/>
         </svg>
         <span class="cdp-modal__btn-text">Delete</span>
+      </button>
+
+      <button type="button" id="cdp-btn-activate-cancel-design-preview" class="cdp-modal__btn cdp-modal__btn--activate cdp-modal__btn--activate-cancel" hidden aria-hidden="true" aria-label="Cancel" title="Cancel">
+        <span class="cdp-modal__btn-text" data-t="creator.preview_modal.activate_cancel">Cancel</span>
+      </button>
+      <button type="button" id="cdp-btn-activate-save-design-preview" class="cdp-modal__btn cdp-modal__btn--activate cdp-modal__btn--activate-save" hidden aria-hidden="true" aria-label="Save" title="Save">
+        <span class="cdp-modal__btn-text" data-t="creator.preview_modal.activate_save">Save</span>
       </button>
     </div>
 

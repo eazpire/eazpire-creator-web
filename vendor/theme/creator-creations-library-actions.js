@@ -30,6 +30,13 @@
   /** 'direct_sell' | 'personalized_sample' — chosen in the Activate modal (fixed per design). */
   var activateListingMode = 'direct_sell';
 
+  /** Embedded Activate UI inside Design Preview Modal (no separate overlay). */
+  var activateEmbedActive = false;
+  var activateEmbedContentHost = null;
+  var activateEmbedSubFooterHost = null;
+  var activateEmbedSetLoading = null;
+  var pendingActivateConfirmHandler = null;
+
   function Mi() {
     return window.CreatorMobileI18n || {};
   }
@@ -734,6 +741,67 @@
     syncModalActionButtons();
   }
 
+  function setActivateBusy(busy, message) {
+    isModalBusy = !!busy;
+    if (activateEmbedActive && typeof activateEmbedSetLoading === 'function') {
+      try {
+        activateEmbedSetLoading(!!busy, message);
+      } catch (_) {}
+      return;
+    }
+    setModalBusy(busy, message);
+  }
+
+  function bindActivateConfirmHandler(fn) {
+    pendingActivateConfirmHandler = typeof fn === 'function' ? fn : null;
+    if (btnConfirm && !activateEmbedActive) {
+      btnConfirm.onclick = pendingActivateConfirmHandler;
+    }
+  }
+
+  function clearActivateEmbedHosts() {
+    if (activateEmbedContentHost) {
+      try {
+        activateEmbedContentHost.innerHTML = '';
+        activateEmbedContentHost.className = 'creator-library-action-modal__content';
+      } catch (_) {}
+    }
+    if (activateEmbedSubFooterHost) {
+      try {
+        activateEmbedSubFooterHost.innerHTML = '';
+        activateEmbedSubFooterHost.setAttribute('hidden', '');
+      } catch (_) {}
+    }
+    activateEmbedContentHost = null;
+    activateEmbedSubFooterHost = null;
+    activateEmbedSetLoading = null;
+    activateEmbedActive = false;
+    pendingActivateConfirmHandler = null;
+    refreshShellElementRefs();
+  }
+
+  function refreshShellElementRefs() {
+    if (!overlay) return;
+    modalEl = overlay.querySelector('.creator-library-action-modal');
+    panelEl = overlay.querySelector('.creator-library-action-modal__panel');
+    titleEl = overlay.querySelector('.creator-library-action-modal__title');
+    contentEl = overlay.querySelector('.creator-library-action-modal__content');
+    subFooterEl = overlay.querySelector('.creator-library-action-modal__subfooter');
+    btnCancel = overlay.querySelector('.creator-library-action-modal__cancel');
+    btnConfirm = overlay.querySelector('.creator-library-action-modal__confirm');
+    busyEl = overlay.querySelector('.creator-library-action-modal__busy');
+    busyTextEl = overlay.querySelector('.creator-library-action-modal__busy-text');
+  }
+
+  function closeDesignPreviewIfOpen() {
+    try {
+      var api = window.CreatorDesignPreviewModal;
+      if (api && typeof api.close === 'function') {
+        api.close(true);
+      }
+    } catch (_) {}
+  }
+
   function renderActivateSkeleton() {
     var M = Mi();
     contentEl.innerHTML = '';
@@ -811,6 +879,7 @@
 
   function openActivateShell() {
     ensureShell();
+    refreshShellElementRefs();
     var M = Mi();
     if (modalEl) {
       modalEl.classList.add('creator-library-action-modal--activate');
@@ -831,6 +900,7 @@
 
   function openDeactivateShell() {
     ensureShell();
+    refreshShellElementRefs();
     var M = Mi();
     if (modalEl) {
       modalEl.classList.add('creator-library-action-modal--deactivate');
@@ -850,7 +920,7 @@
   }
 
   function mountActivateSubfooter(opts) {
-    ensureShell();
+    if (!subFooterEl && !activateEmbedActive) ensureShell();
     if (!subFooterEl || !opts || !opts.visibilitySwitch) return;
     var visWrap = opts.visibilitySwitch;
     subFooterEl.innerHTML = '';
@@ -928,7 +998,7 @@
     pendingDesign = null;
     pendingDeactivateIds = [];
     resetActivateProductCtx();
-    btnConfirm.onclick = null;
+    bindActivateConfirmHandler(null);
     syncModalActionButtons();
   }
 
@@ -1066,7 +1136,7 @@
     var isSampleMode = listingMode === 'personalized_sample';
 
     if (btnConfirm) btnConfirm.disabled = true;
-    setModalBusy(true, M.libraryActivating || M.libraryLoading || 'Activating…');
+    setActivateBusy(true, M.libraryActivating || M.libraryLoading || 'Activating…');
     try {
       var json = await updateDesignPut(body);
       if (!json.ok) throw new Error(json.error || 'update_failed');
@@ -1076,8 +1146,16 @@
           ? body.metadata.publish_excluded_product_keys
           : [];
 
-      setModalBusy(false);
-      closeModal();
+      setActivateBusy(false);
+      if (activateEmbedActive) {
+        clearActivateEmbedHosts();
+        resetActivateProductCtx();
+        mode = '';
+        pendingDesign = null;
+      } else {
+        closeModal();
+      }
+      closeDesignPreviewIfOpen();
       if (creatorName && !activateWithout) writeLastCreatorPick(creatorName);
 
       var CS = window.CreationsScreen;
@@ -1108,7 +1186,7 @@
       }
     } catch (err) {
       console.warn('[creator-creations-library-actions] activate', err);
-      setModalBusy(false);
+      setActivateBusy(false);
       alert(M.libraryErrorGeneric || window.CreatorI18n?.errorSaving || 'Could not save.');
     }
   }
@@ -1217,16 +1295,56 @@
     return wrap;
   }
 
-  async function openActivateModal(design) {
+  async function fillActivateUi(opts) {
+    opts = opts || {};
+    var design = opts.design;
+    var contentHost = opts.contentHost;
+    var subFooterHost = opts.subFooterHost;
+    var includeCatalog = opts.includeCatalog !== false;
+    var setConfirmHandler =
+      typeof opts.setConfirmHandler === 'function' ? opts.setConfirmHandler : null;
+    var setLoading = typeof opts.setLoading === 'function' ? opts.setLoading : null;
+    var embedded = !!opts.embedded;
     var M = Mi();
+
+    if (!design || !contentHost) return;
+
     pendingDesign = design;
     mode = 'activate';
     var loadToken = ++activateLoadToken;
 
-    openActivateShell();
-    btnConfirm.onclick = null;
-    setContentLoading(true);
+    var prevContentEl = contentEl;
+    var prevSubFooterEl = subFooterEl;
+    contentEl = contentHost;
+    subFooterEl = subFooterHost || null;
+
+    if (embedded) {
+      activateEmbedActive = true;
+      activateEmbedContentHost = contentHost;
+      activateEmbedSubFooterHost = subFooterHost || null;
+      activateEmbedSetLoading = setLoading;
+    }
+
+    bindActivateConfirmHandler(null);
+    if (setConfirmHandler) setConfirmHandler(null);
+
+    function applyLoading(loading) {
+      if (setLoading) {
+        try {
+          setLoading(!!loading);
+        } catch (_) {}
+      }
+      if (!embedded) setContentLoading(!!loading);
+      else isContentLoading = !!loading;
+    }
+
+    applyLoading(true);
     renderActivateSkeleton();
+    if (!includeCatalog && contentEl) {
+      // Edit Mode: no product grid skeleton — keep a lighter loading block
+      var skGrid = contentEl.querySelector('.creator-library-action-modal__skeleton-grid');
+      if (skGrid && skGrid.parentNode) skGrid.parentNode.remove();
+    }
 
     var names = [];
     var catalog = {
@@ -1240,10 +1358,12 @@
       loadError: false,
     };
     try {
-      var loaded = await Promise.all([fetchCreatorNamesCached(), fetchActivateCatalogBundle(design)]);
+      var tasks = [fetchCreatorNamesCached()];
+      if (includeCatalog) tasks.push(fetchActivateCatalogBundle(design));
+      var loaded = await Promise.all(tasks);
       if (loadToken !== activateLoadToken) return;
       names = loaded[0];
-      catalog = loaded[1];
+      if (includeCatalog) catalog = loaded[1];
     } catch (e) {
       if (loadToken !== activateLoadToken) return;
       console.warn('[creator-creations-library-actions] activate preload', e);
@@ -1259,22 +1379,27 @@
 
     var sel = null;
 
-    function pushExcluded(opts) {
+    function pushExcluded(extra) {
       var ex = getActivateExcludedKeysFromCtx();
-      if (ex !== null) opts.publish_excluded_product_keys = ex;
-      opts.listing_mode = getActivateListingMode();
-      return opts;
+      if (ex !== null) extra.publish_excluded_product_keys = ex;
+      extra.listing_mode = getActivateListingMode();
+      return extra;
+    }
+
+    function wireConfirm(fn) {
+      bindActivateConfirmHandler(fn);
+      if (setConfirmHandler) setConfirmHandler(fn);
     }
 
     if (names.length === 0) {
-      intro.innerHTML =
-        '<p>' +
-        escapeHtml(M.libraryActivateNoCreatorBody || '') +
-        '</p>';
-      contentEl.appendChild(intro);
+      if (includeCatalog) {
+        intro.innerHTML =
+          '<p>' + escapeHtml(M.libraryActivateNoCreatorBody || '') + '</p>';
+        contentEl.appendChild(intro);
+      }
 
       appendListingModeSwitch(contentEl);
-      appendActivateCatalogBlock(contentEl, design, catalog);
+      if (includeCatalog) appendActivateCatalogBlock(contentEl, design, catalog);
 
       var visSw0 = renderVisibilitySwitch(true);
       mountActivateSubfooter({
@@ -1283,27 +1408,32 @@
         visibilitySwitch: visSw0,
       });
 
-      btnConfirm.onclick = function () {
-        runActivate(design, pushExcluded({
-          activate_without_creator_name: true,
-          visibility: visSw0.getValue(),
-        }));
-      };
+      wireConfirm(function () {
+        runActivate(
+          design,
+          pushExcluded({
+            activate_without_creator_name: true,
+            visibility: visSw0.getValue(),
+          })
+        );
+      });
     } else if (names.length === 1) {
       var sole = names[0];
-      intro.innerHTML =
-        '<p>' +
-        escapeHtml(
-          replacePlaceholders(M.libraryActivateScopeNamed || '', {
-            count: String(catCount),
-            name: sole,
-          })
-        ) +
-        '</p>';
-      contentEl.appendChild(intro);
+      if (includeCatalog) {
+        intro.innerHTML =
+          '<p>' +
+          escapeHtml(
+            replacePlaceholders(M.libraryActivateScopeNamed || '', {
+              count: String(catCount),
+              name: sole,
+            })
+          ) +
+          '</p>';
+        contentEl.appendChild(intro);
+      }
 
       appendListingModeSwitch(contentEl);
-      appendActivateCatalogBlock(contentEl, design, catalog);
+      if (includeCatalog) appendActivateCatalogBlock(contentEl, design, catalog);
 
       var visSw1 = renderVisibilitySwitch(true);
       mountActivateSubfooter({
@@ -1312,25 +1442,30 @@
         visibilitySwitch: visSw1,
       });
 
-      btnConfirm.onclick = function () {
-        runActivate(design, pushExcluded({
-          creator_name: sole,
-          visibility: visSw1.getValue(),
-        }));
-      };
-    } else {
-      intro.innerHTML =
-        '<p>' +
-        escapeHtml(
-          replacePlaceholders(M.libraryActivateChooseIntro || '', {
-            count: String(catCount),
+      wireConfirm(function () {
+        runActivate(
+          design,
+          pushExcluded({
+            creator_name: sole,
+            visibility: visSw1.getValue(),
           })
-        ) +
-        '</p>';
-      contentEl.appendChild(intro);
+        );
+      });
+    } else {
+      if (includeCatalog) {
+        intro.innerHTML =
+          '<p>' +
+          escapeHtml(
+            replacePlaceholders(M.libraryActivateChooseIntro || '', {
+              count: String(catCount),
+            })
+          ) +
+          '</p>';
+        contentEl.appendChild(intro);
+      }
 
       appendListingModeSwitch(contentEl);
-      appendActivateCatalogBlock(contentEl, design, catalog);
+      if (includeCatalog) appendActivateCatalogBlock(contentEl, design, catalog);
 
       var lbl = document.createElement('label');
       lbl.className = 'creator-library-action-modal__label';
@@ -1357,16 +1492,85 @@
         visibilitySwitch: visSw2,
       });
 
-      btnConfirm.onclick = function () {
+      wireConfirm(function () {
         var chosen = sel ? String(sel.value || '').trim() : '';
-        runActivate(design, pushExcluded({
-          creator_name: chosen,
-          visibility: visSw2.getValue(),
-        }));
-      };
+        runActivate(
+          design,
+          pushExcluded({
+            creator_name: chosen,
+            visibility: visSw2.getValue(),
+          })
+        );
+      });
     }
 
-    setContentLoading(false);
+    applyLoading(false);
+
+    if (!embedded) {
+      contentEl = prevContentEl || contentEl;
+      subFooterEl = prevSubFooterEl || subFooterEl;
+    }
+  }
+
+  async function openActivateModal(design) {
+    pendingDesign = design;
+    mode = 'activate';
+
+    openActivateShell();
+    bindActivateConfirmHandler(null);
+    await fillActivateUi({
+      design: design,
+      contentHost: contentEl,
+      subFooterHost: subFooterEl,
+      includeCatalog: true,
+      embedded: false,
+      setConfirmHandler: function (fn) {
+        if (btnConfirm) btnConfirm.onclick = fn;
+      },
+      setLoading: function (loading) {
+        setContentLoading(!!loading);
+      },
+    });
+  }
+
+  function mountCreatorCreationsActivateInto(opts) {
+    opts = opts || {};
+    if (!opts.design || !opts.contentHost) {
+      return Promise.resolve();
+    }
+    return fillActivateUi({
+      design: opts.design,
+      contentHost: opts.contentHost,
+      subFooterHost: opts.subFooterHost || null,
+      includeCatalog: opts.includeCatalog !== false,
+      embedded: true,
+      setConfirmHandler: opts.setConfirmHandler,
+      setLoading: opts.setLoading,
+    });
+  }
+
+  function unmountCreatorCreationsActivateInto() {
+    activateLoadToken++;
+    isContentLoading = false;
+    isModalBusy = false;
+    clearActivateEmbedHosts();
+    resetActivateProductCtx();
+    if (mode === 'activate' && (!overlay || overlay.hasAttribute('hidden'))) {
+      mode = '';
+      pendingDesign = null;
+    }
+  }
+
+  function triggerCreatorCreationsActivateConfirm() {
+    if (typeof pendingActivateConfirmHandler === 'function') {
+      pendingActivateConfirmHandler();
+      return true;
+    }
+    if (btnConfirm && typeof btnConfirm.onclick === 'function') {
+      btnConfirm.onclick();
+      return true;
+    }
+    return false;
   }
 
   async function openDeactivateModal(design) {
@@ -1465,4 +1669,7 @@
   window.openCreatorCreationsActivateModal = openActivateModal;
   window.openCreatorCreationsDeactivateModal = openDeactivateModal;
   window.closeCreatorCreationsLibraryModal = closeModal;
+  window.mountCreatorCreationsActivateInto = mountCreatorCreationsActivateInto;
+  window.unmountCreatorCreationsActivateInto = unmountCreatorCreationsActivateInto;
+  window.triggerCreatorCreationsActivateConfirm = triggerCreatorCreationsActivateConfirm;
 })();

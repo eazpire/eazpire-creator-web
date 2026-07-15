@@ -225,6 +225,8 @@
   let btnDownload = null;
   let btnSave = null;
   let btnDelete = null;
+  let btnActivateCancel = null;
+  let btnActivateSave = null;
   let currentDesign = null;
   let originalVisibility = null; // Original visibility when modal opens
   let currentVisibility = null; // Current visibility (may differ from original if changed)
@@ -277,6 +279,11 @@
   let drawerBackdrop = null;
   let sidebarNav = null;
   let activeTab = 'overview';
+  /** When true, opened via Creations Activate — shows Activate tab + Cancel/Save footer. */
+  let activateEntryMode = false;
+  /** 'quick' | 'edit' — Quick Publish hides sidebar; Edit Mode keeps Design Preview chrome. */
+  let activatePublishMode = 'quick';
+  let activateMountToken = 0;
   let draftMeta = null;
   let metaDirty = false;
   let metaSaving = false;
@@ -556,12 +563,117 @@
     }
   }
 
+  function applyActivateEntryChrome() {
+    getDOMElements();
+    if (!modal) return;
+    var actTab = modal.querySelector('[data-cdp-tab="activate"]');
+    if (actTab) {
+      if (activateEntryMode) {
+        actTab.removeAttribute('hidden');
+        actTab.setAttribute('aria-hidden', 'false');
+      } else {
+        actTab.setAttribute('hidden', '');
+        actTab.setAttribute('aria-hidden', 'true');
+      }
+    }
+    if (btnActivateCancel) {
+      if (activateEntryMode) {
+        btnActivateCancel.removeAttribute('hidden');
+        btnActivateCancel.setAttribute('aria-hidden', 'false');
+      } else {
+        btnActivateCancel.setAttribute('hidden', '');
+        btnActivateCancel.setAttribute('aria-hidden', 'true');
+      }
+    }
+    if (btnActivateSave) {
+      if (activateEntryMode) {
+        btnActivateSave.removeAttribute('hidden');
+        btnActivateSave.setAttribute('aria-hidden', 'false');
+        btnActivateSave.disabled = false;
+      } else {
+        btnActivateSave.setAttribute('hidden', '');
+        btnActivateSave.setAttribute('aria-hidden', 'true');
+        btnActivateSave.disabled = false;
+      }
+    }
+    if (modalShell) {
+      modalShell.classList.toggle('cdp-modal--activate-entry', !!activateEntryMode);
+      modalShell.classList.toggle(
+        'cdp-modal--activate-quick',
+        !!(activateEntryMode && activatePublishMode === 'quick')
+      );
+    }
+    syncActivatePublishModeButtons();
+  }
+
+  function syncActivatePublishModeButtons() {
+    if (!modal) return;
+    modal.querySelectorAll('[data-cdp-activate-publish-mode]').forEach(function (btn) {
+      var mode = String(btn.getAttribute('data-cdp-activate-publish-mode') || '');
+      var on = mode === activatePublishMode;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  function clearActivateEntryMode() {
+    activateEntryMode = false;
+    activatePublishMode = 'quick';
+    activateMountToken++;
+    if (typeof window.unmountCreatorCreationsActivateInto === 'function') {
+      try {
+        window.unmountCreatorCreationsActivateInto();
+      } catch (_) {}
+    }
+    applyActivateEntryChrome();
+  }
+
+  function mountActivatePanelIfNeeded() {
+    if (!activateEntryMode || !currentDesign) return;
+    var contentHost = document.getElementById('cdp-activate-content-' + sectionId);
+    var subFooterHost = document.getElementById('cdp-activate-subfooter-' + sectionId);
+    if (!contentHost) return;
+    if (typeof window.mountCreatorCreationsActivateInto !== 'function') {
+      console.warn('[CreatorDesignPreviewModal] mountCreatorCreationsActivateInto unavailable');
+      return;
+    }
+    var token = ++activateMountToken;
+    window
+      .mountCreatorCreationsActivateInto({
+        design: currentDesign,
+        contentHost: contentHost,
+        subFooterHost: subFooterHost,
+        includeCatalog: activatePublishMode === 'quick',
+        setLoading: function (loading) {
+          if (token !== activateMountToken) return;
+          if (btnActivateSave) btnActivateSave.disabled = !!loading;
+          if (btnActivateCancel) btnActivateCancel.disabled = !!loading;
+        },
+      })
+      .catch(function (err) {
+        console.warn('[CreatorDesignPreviewModal] activate mount failed', err);
+      });
+  }
+
+  function setActivatePublishMode(mode) {
+    var next = mode === 'edit' ? 'edit' : 'quick';
+    activatePublishMode = next;
+    applyActivateEntryChrome();
+    if (next === 'quick') {
+      setActiveTab('activate');
+      return;
+    }
+    if (activeTab === 'activate') {
+      mountActivatePanelIfNeeded();
+    }
+  }
+
   function setActiveTab(tabName) {
     getDOMElements();
     var next = String(tabName || 'overview').toLowerCase();
-    if (next !== 'overview' && next !== 'edit' && next !== 'metadata' && next !== 'products') {
-      next = 'overview';
-    }
+    var allowed = { overview: 1, edit: 1, metadata: 1, products: 1 };
+    if (activateEntryMode) allowed.activate = 1;
+    if (!allowed[next]) next = 'overview';
     var prevTab = activeTab;
     activeTab = next;
     if (!modal) return;
@@ -597,6 +709,9 @@
     } else if (prevTab === 'products') {
       unmountProductsPanel();
     }
+    if (next === 'activate') {
+      mountActivatePanelIfNeeded();
+    }
   }
 
   // Get all DOM elements
@@ -628,6 +743,8 @@
     btnDownload = document.getElementById('cdp-btn-download-' + sectionId);
     btnSave = document.getElementById('cdp-btn-save-' + sectionId);
     btnDelete = document.getElementById('cdp-btn-delete-' + sectionId);
+    btnActivateCancel = document.getElementById('cdp-btn-activate-cancel-' + sectionId);
+    btnActivateSave = document.getElementById('cdp-btn-activate-save-' + sectionId);
     modalVisibilitySwitch = document.getElementById('cdp-visibility-switch-' + sectionId);
     modalVisibilitySwitchLeft = document.getElementById('cdp-visibility-switch-left-' + sectionId);
     modalVisibilitySwitchMobile = document.getElementById('cdp-visibility-switch-mobile-slide1-' + sectionId);
@@ -2025,13 +2142,33 @@
 
     currentDesign = design;
     var opts = options && typeof options === 'object' ? options : {};
+    var wantsActivate =
+      String(opts.mode || '').toLowerCase() === 'activate' ||
+      String(opts.screen || '').toLowerCase() === 'activate' ||
+      String(opts.tab || '').toLowerCase() === 'activate';
+    activateEntryMode = !!wantsActivate;
+    activatePublishMode = 'quick';
+    activateMountToken++;
+
     var initialTab = String(opts.screen || opts.tab || 'overview').toLowerCase();
-    if (initialTab !== 'overview' && initialTab !== 'edit' && initialTab !== 'metadata' && initialTab !== 'products') {
+    if (activateEntryMode) {
+      initialTab = 'activate';
+    } else if (
+      initialTab !== 'overview' &&
+      initialTab !== 'edit' &&
+      initialTab !== 'metadata' &&
+      initialTab !== 'products'
+    ) {
       initialTab = 'overview';
     }
 
     exitManualCropMode();
     unmountProductsPanel();
+    if (typeof window.unmountCreatorCreationsActivateInto === 'function') {
+      try {
+        window.unmountCreatorCreationsActivateInto();
+      } catch (_) {}
+    }
     // Never resume a previous pick/pan session (not stored; also clear any leftover UI).
     teardownColorPickInteraction({ clearBusy: true });
 
@@ -2061,6 +2198,7 @@
     clearColorPreview();
     resetAllViewerZooms();
     resetDeleteButtonState();
+    applyActivateEntryChrome();
     setActiveTab(initialTab);
     setDrawerOpen(false);
     renderEditColorChips();
@@ -5077,6 +5215,34 @@
         setActiveTab(btn.getAttribute('data-cdp-tab'));
       });
     }
+
+    if (modal && !modal.__cdpActivateModeBound) {
+      modal.__cdpActivateModeBound = true;
+      modal.addEventListener('click', function (e) {
+        var modeBtn = e.target.closest('[data-cdp-activate-publish-mode]');
+        if (modeBtn && modal.contains(modeBtn)) {
+          e.preventDefault();
+          setActivatePublishMode(modeBtn.getAttribute('data-cdp-activate-publish-mode'));
+          return;
+        }
+      });
+    }
+
+    if (btnActivateCancel && !btnActivateCancel.__cdpBound) {
+      btnActivateCancel.__cdpBound = true;
+      btnActivateCancel.addEventListener('click', function () {
+        closeModal(true);
+      });
+    }
+    if (btnActivateSave && !btnActivateSave.__cdpBound) {
+      btnActivateSave.__cdpBound = true;
+      btnActivateSave.addEventListener('click', function () {
+        if (typeof window.triggerCreatorCreationsActivateConfirm === 'function') {
+          window.triggerCreatorCreationsActivateConfirm();
+        }
+      });
+    }
+
     bindProductsGridStudioOpen();
 
     if (!window.__cdpCreationsBundleRetryBound) {
@@ -6429,6 +6595,14 @@
 
     exitManualCropMode();
     unmountProductsPanel();
+    if (typeof window.unmountCreatorCreationsActivateInto === 'function') {
+      try {
+        window.unmountCreatorCreationsActivateInto();
+      } catch (_) {}
+    }
+    activateEntryMode = false;
+    activatePublishMode = 'quick';
+    activateMountToken++;
     if (window.CreatorDesignStudioModal && typeof window.CreatorDesignStudioModal.close === 'function') {
       window.CreatorDesignStudioModal.close(true);
     }
@@ -6455,7 +6629,12 @@
         if (on) panel.removeAttribute('hidden');
         else panel.setAttribute('hidden', '');
       });
-      if (modalShell) modalShell.classList.remove('cdp-modal--products-tab');
+      if (modalShell) {
+        modalShell.classList.remove('cdp-modal--products-tab');
+        modalShell.classList.remove('cdp-modal--activate-entry');
+        modalShell.classList.remove('cdp-modal--activate-quick');
+      }
+      applyActivateEntryChrome();
     }
     draftMeta = null;
     metaDirty = false;
@@ -7268,13 +7447,13 @@
     return div.innerHTML;
   }
 
-  window.CreatorDesignPreviewModal.close = function() {
+  window.CreatorDesignPreviewModal.close = function(forceClose) {
     // Try to initialize if not already done OR if modal element is null
     // Use || instead of && so we refresh DOM elements even if initialized but modal became null
     if (!isInitialized || !modal) {
       getDOMElements();
     }
-    closeModal();
+    closeModal(!!forceClose);
   };
   
   console.log('CreatorDesignPreviewModal API ready', window.CreatorDesignPreviewModal);

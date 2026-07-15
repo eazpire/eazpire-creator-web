@@ -1762,7 +1762,10 @@
         e.preventDefault();
         e.stopPropagation();
         if (lsBtn === 'inactive') {
-          if (typeof window.openCreatorCreationsActivateModal === 'function') {
+          var previewApiActivate = window.CreatorDesignPreviewModal;
+          if (previewApiActivate && typeof previewApiActivate.open === 'function') {
+            previewApiActivate.open(design, { screen: 'activate', mode: 'activate' });
+          } else if (typeof window.openCreatorCreationsActivateModal === 'function') {
             window.openCreatorCreationsActivateModal(design);
           }
         } else if (typeof window.openCreatorCreationsDeactivateModal === 'function') {
@@ -2247,7 +2250,10 @@
               e.preventDefault();
               e.stopPropagation();
               if (lsList === 'inactive') {
-                if (typeof window.openCreatorCreationsActivateModal === 'function') {
+                var previewApiActivateList = window.CreatorDesignPreviewModal;
+                if (previewApiActivateList && typeof previewApiActivateList.open === 'function') {
+                  previewApiActivateList.open(design, { screen: 'activate', mode: 'activate' });
+                } else if (typeof window.openCreatorCreationsActivateModal === 'function') {
                   window.openCreatorCreationsActivateModal(design);
                 }
               } else if (typeof window.openCreatorCreationsDeactivateModal === 'function') {
