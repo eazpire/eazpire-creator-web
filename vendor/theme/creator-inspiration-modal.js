@@ -1287,8 +1287,33 @@
 
   }
 
+  /**
+   * Defensive: force closed on load / Generator mount.
+   * Stale portal CSS used to force display:flex without [open]; also clears any accidental open state.
+   */
+  function ensureClosed() {
+    try {
+      if (!modal || !modal.isConnected) {
+        modal = document.getElementById('creator-inspiration-modal');
+      }
+      if (!modal) return;
+      if (typeof modal.close === 'function' && modal.open) {
+        modal.close();
+      }
+      modal.removeAttribute('open');
+      modal.classList.remove(
+        'creator-inspiration-modal--detail',
+        'creator-modal',
+        'creator-modal--open',
+        'creator-modal--strong-backdrop'
+      );
+      modal.style.cssText = '';
+    } catch (_eEnsure) {}
+  }
+
   // Initialize
   function init() {
+    ensureClosed();
     setupEventListeners();
   }
 
@@ -1303,6 +1328,7 @@
   window.CreatorInspirationModal = {
     open,
     close,
+    ensureClosed,
     // Wird vom Inspirations-Filter-Modal verwendet, um verfügbare Designs zu analysieren
     getDesigns: function() {
       return designs.slice();

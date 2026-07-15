@@ -10,6 +10,8 @@
  */
 #creator-inspiration-modal.creator-base-modal:not([open]) {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 #creator-inspiration-modal.creator-base-modal[open] {
@@ -531,6 +533,8 @@ body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-m
 @media (max-width: 749px) {
   #creator-inspiration-modal.creator-base-modal:not([open]) {
     display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 
   #creator-inspiration-modal.creator-base-modal[open] {

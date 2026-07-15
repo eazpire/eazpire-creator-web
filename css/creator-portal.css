@@ -550,6 +550,13 @@ body.creator-mobile-page #genRefImageOverlay {
   z-index: 25000 !important;
 }
 
+/* Public Designs: never paint when closed (overrides stale vendor CSS cache) */
+body.creator-mobile-page #creator-inspiration-modal.creator-base-modal:not([open]) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 body.creator-mobile-page .cj-overlay {
   position: fixed !important;
   inset: 0 !important;

@@ -25,8 +25,8 @@
     if (!href || document.querySelector('link[data-portal-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    // Bump when creator-design-studio / portal CSS changes — stale ?v= kept old layout for users.
-    link.href = href + "?v=31";
+    // Bump when portal CSS changes — /vendor is cached 7d; stale ?v= kept old Public Designs display:flex bug.
+    link.href = href + "?v=40";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -38,8 +38,8 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      // Bump when upload-modal / creations JS changes — portal caches /vendor for 7d.
-      s.src = src + "?v=26";
+      // Bump when portal JS changes — /vendor is cached 7d.
+      s.src = src + "?v=35";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -83,7 +83,7 @@
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
     // Portal serves /partials with max-age=7d — bump when modal markup/CSS in partials changes.
-    var url = "/partials/" + name + "?v=25";
+    var url = "/partials/" + name + "?v=35";
     if (host.querySelector('[data-partial="' + name + '"]')) return;
     var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;
@@ -261,6 +261,22 @@
       if (global.CreatorGenerator && typeof global.CreatorGenerator.init === "function") {
         global.CreatorGenerator.init();
       }
+      // Public Designs must never appear on Generator enter (stale CSS / accidental open).
+      try {
+        if (global.CreatorInspirationModal) {
+          if (typeof global.CreatorInspirationModal.ensureClosed === "function") {
+            global.CreatorInspirationModal.ensureClosed();
+          } else if (typeof global.CreatorInspirationModal.close === "function") {
+            global.CreatorInspirationModal.close();
+          }
+        }
+        var inspEl = document.getElementById("creator-inspiration-modal");
+        if (inspEl) {
+          if (typeof inspEl.close === "function" && inspEl.open) inspEl.close();
+          inspEl.removeAttribute("open");
+          inspEl.style.cssText = "";
+        }
+      } catch (_eInspClose) {}
     })();
 
     try {
