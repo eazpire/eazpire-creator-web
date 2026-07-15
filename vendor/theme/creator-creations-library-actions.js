@@ -36,6 +36,7 @@
   var activateEmbedSubFooterHost = null;
   var activateEmbedSetLoading = null;
   var pendingActivateConfirmHandler = null;
+  var pendingActivateSaveHandler = null;
 
   function Mi() {
     return window.CreatorMobileI18n || {};
@@ -476,6 +477,155 @@
    * Sub-header with the Direct Sell / Personalized Sample switch, short hint and info button.
    * Rendered above the product grid in the Activate modal. Resets to Direct Sell each open.
    */
+  function openSimpleInfoModal(titleText, bodyText) {
+    var M = Mi();
+    var overlayEl = document.createElement('div');
+    overlayEl.className = 'creator-library-action-modal__info-overlay';
+    overlayEl.setAttribute('role', 'dialog');
+    overlayEl.setAttribute('aria-modal', 'true');
+
+    var panel = document.createElement('div');
+    panel.className = 'creator-library-action-modal__info-panel';
+
+    var h = document.createElement('h3');
+    h.className = 'creator-library-action-modal__info-title';
+    h.textContent = titleText || '';
+    panel.appendChild(h);
+
+    var body = document.createElement('p');
+    body.className = 'creator-library-action-modal__info-body';
+    body.style.margin = '0 0 14px';
+    body.textContent = bodyText || '';
+    panel.appendChild(body);
+
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'creator-library-action-modal__info-close';
+    close.textContent = M.listingModeInfoClose || 'Got it';
+    close.addEventListener('click', function () {
+      overlayEl.remove();
+    });
+    panel.appendChild(close);
+
+    overlayEl.appendChild(panel);
+    overlayEl.addEventListener('click', function (e) {
+      if (e.target === overlayEl) overlayEl.remove();
+    });
+    document.body.appendChild(overlayEl);
+  }
+
+  /**
+   * Visibility box (Public/Private) — same container style as listing mode.
+   */
+  function appendVisibilitySettingsBox(parentEl, visSwitch) {
+    var M = Mi();
+    if (!parentEl || !visSwitch) return;
+
+    var wrap = document.createElement('div');
+    wrap.className =
+      'creator-library-action-modal__listing-mode creator-library-action-modal__settings-box';
+
+    var row = document.createElement('div');
+    row.className = 'creator-library-action-modal__listing-row';
+
+    var title = document.createElement('span');
+    title.className = 'creator-library-action-modal__listing-label is-active';
+    title.textContent = M.libraryVisibilityLabel || 'Visibility';
+
+    var track = visSwitch.querySelector('.creator-library-action-modal__vis-switch-track');
+    var cap = visSwitch.querySelector('.creator-library-action-modal__vis-switch-caption');
+    if (track) {
+      track.classList.add('creator-library-action-modal__settings-vis-track');
+    }
+
+    var info = document.createElement('button');
+    info.type = 'button';
+    info.className = 'creator-library-action-modal__listing-info';
+    info.setAttribute('aria-label', M.libraryVisibilityInfoAria || 'Learn more about visibility');
+    info.textContent = 'i';
+    info.addEventListener('click', function () {
+      openSimpleInfoModal(
+        M.libraryVisibilityInfoTitle || 'Public vs Private',
+        M.libraryVisibilityInfoBody ||
+          'Public designs can appear in the creator library and samples. Private keeps the design for you until you choose to make it public.'
+      );
+    });
+
+    row.appendChild(title);
+    if (cap) row.appendChild(cap);
+    if (track) row.appendChild(track);
+    row.appendChild(info);
+    wrap.appendChild(row);
+
+    var hint = document.createElement('p');
+    hint.className = 'creator-library-action-modal__listing-hint';
+    hint.textContent =
+      M.libraryVisibilityHint ||
+      'Public designs can be discovered; private designs stay only in your account.';
+    wrap.appendChild(hint);
+
+    parentEl.appendChild(wrap);
+  }
+
+  /**
+   * Creator name box — same container style as listing mode.
+   */
+  function appendCreatorSettingsBox(parentEl, opts) {
+    var M = Mi();
+    opts = opts || {};
+    if (!parentEl) return;
+
+    var wrap = document.createElement('div');
+    wrap.className =
+      'creator-library-action-modal__listing-mode creator-library-action-modal__settings-box';
+
+    var row = document.createElement('div');
+    row.className = 'creator-library-action-modal__listing-row creator-library-action-modal__settings-row';
+
+    var title = document.createElement('span');
+    title.className = 'creator-library-action-modal__listing-label is-active';
+    title.textContent = M.libraryActivateCreatorLabel || 'Creator name';
+
+    var info = document.createElement('button');
+    info.type = 'button';
+    info.className = 'creator-library-action-modal__listing-info';
+    info.setAttribute('aria-label', M.libraryCreatorInfoAria || 'Learn more about creator name');
+    info.textContent = 'i';
+    info.addEventListener('click', function () {
+      openSimpleInfoModal(
+        M.libraryCreatorInfoTitle || 'Creator name',
+        M.libraryCreatorInfoBody ||
+          'This name is shown on published products and samples. Choose the creator identity that should receive credit and royalties for this design.'
+      );
+    });
+
+    row.appendChild(title);
+    row.appendChild(info);
+    wrap.appendChild(row);
+
+    var controlWrap = document.createElement('div');
+    controlWrap.className = 'creator-library-action-modal__settings-control';
+    if (opts.control) {
+      controlWrap.appendChild(opts.control);
+    } else if (opts.emptyText) {
+      var empty = document.createElement('p');
+      empty.className = 'creator-library-action-modal__listing-hint';
+      empty.style.margin = '0';
+      empty.textContent = opts.emptyText;
+      controlWrap.appendChild(empty);
+    }
+    wrap.appendChild(controlWrap);
+
+    var hint = document.createElement('p');
+    hint.className = 'creator-library-action-modal__listing-hint';
+    hint.textContent =
+      M.libraryCreatorHint ||
+      'Used on product listings and sample pages for this design.';
+    wrap.appendChild(hint);
+
+    parentEl.appendChild(wrap);
+  }
+
   function appendListingModeSwitch(parentEl) {
     var M = Mi();
     activateListingMode = 'direct_sell';
@@ -759,6 +909,10 @@
     }
   }
 
+  function bindActivateSaveHandler(fn) {
+    pendingActivateSaveHandler = typeof fn === 'function' ? fn : null;
+  }
+
   function clearActivateEmbedHosts() {
     if (activateEmbedContentHost) {
       try {
@@ -777,6 +931,7 @@
     activateEmbedSetLoading = null;
     activateEmbedActive = false;
     pendingActivateConfirmHandler = null;
+    pendingActivateSaveHandler = null;
     refreshShellElementRefs();
   }
 
@@ -1191,6 +1346,66 @@
     }
   }
 
+  /** Persist listing mode / visibility / creator / exclusions without activating. */
+  async function runSaveActivateSettings(design, opts) {
+    var M = Mi();
+    var owner = getOwnerId();
+    if (!owner || !design || !design.id) return;
+
+    var visibility = opts && opts.visibility === 'private' ? 'private' : 'public';
+    var activateWithout = !!(opts && opts.activate_without_creator_name);
+    var creatorName =
+      opts && opts.creator_name != null ? String(opts.creator_name).trim() : '';
+
+    var body = {
+      design_id: design.id,
+      visibility: visibility,
+    };
+    if (activateWithout) {
+      body.activate_without_creator_name = true;
+      body.creator_name = '';
+    } else {
+      body.creator_name = creatorName;
+    }
+
+    var excludedPayload = opts && opts.publish_excluded_product_keys;
+    var listingMode = opts && opts.listing_mode === 'personalized_sample' ? 'personalized_sample' : 'direct_sell';
+    var metaOut = {};
+    if (Array.isArray(excludedPayload)) metaOut.publish_excluded_product_keys = excludedPayload;
+    metaOut.library_listing_mode = listingMode;
+    body.metadata = metaOut;
+
+    setActivateBusy(true, M.librarySaving || window.CreatorI18n?.saving || 'Saving…');
+    try {
+      var json = await updateDesignPut(body);
+      if (!json.ok) throw new Error(json.error || 'update_failed');
+
+      var excludedMeta =
+        body.metadata && Array.isArray(body.metadata.publish_excluded_product_keys)
+          ? body.metadata.publish_excluded_product_keys
+          : [];
+
+      setActivateBusy(false);
+      if (creatorName && !activateWithout) writeLastCreatorPick(creatorName);
+
+      var CS = window.CreationsScreen;
+      if (CS && typeof CS.applyDesignLibraryPatch === 'function') {
+        CS.applyDesignLibraryPatch(String(design.id), {
+          visibility: visibility,
+          creator_name: activateWithout ? '' : creatorName,
+          publish_excluded_product_keys: excludedMeta,
+        });
+      }
+      if (CS && typeof CS.loadDesigns === 'function') {
+        await CS.loadDesigns(true, { silent: true });
+      }
+    } catch (err) {
+      console.warn('[creator-creations-library-actions] save activate settings', err);
+      setActivateBusy(false);
+      alert(M.libraryErrorGeneric || window.CreatorI18n?.errorSaving || 'Could not save.');
+    }
+  }
+
   async function runDeactivate(design, publishedIds) {
     var M = Mi();
     var owner = getOwnerId();
@@ -1371,13 +1586,15 @@
 
     contentEl.className = 'creator-library-action-modal__content';
     contentEl.innerHTML = '';
-
-    var catCount = catalog.eligibleKeys.length;
-
-    var intro = document.createElement('div');
-    intro.className = 'creator-library-action-modal__intro';
+    if (subFooterEl) {
+      subFooterEl.innerHTML = '';
+      subFooterEl.setAttribute('hidden', '');
+    }
 
     var sel = null;
+    var visSwitch = renderVisibilitySwitch(true);
+    var activateWithoutCreator = names.length === 0;
+    var soleName = names.length === 1 ? names[0] : '';
 
     function pushExcluded(extra) {
       var ex = getActivateExcludedKeysFromCtx();
@@ -1386,96 +1603,42 @@
       return extra;
     }
 
+    function collectCreatorOpts() {
+      if (activateWithoutCreator) {
+        return { activate_without_creator_name: true, visibility: visSwitch.getValue() };
+      }
+      if (soleName) {
+        return { creator_name: soleName, visibility: visSwitch.getValue() };
+      }
+      var chosen = sel ? String(sel.value || '').trim() : '';
+      return { creator_name: chosen, visibility: visSwitch.getValue() };
+    }
+
     function wireConfirm(fn) {
       bindActivateConfirmHandler(fn);
       if (setConfirmHandler) setConfirmHandler(fn);
     }
 
-    if (names.length === 0) {
-      if (includeCatalog) {
-        intro.innerHTML =
-          '<p>' + escapeHtml(M.libraryActivateNoCreatorBody || '') + '</p>';
-        contentEl.appendChild(intro);
-      }
+    function wireSave(fn) {
+      bindActivateSaveHandler(fn);
+    }
 
-      appendListingModeSwitch(contentEl);
-      if (includeCatalog) appendActivateCatalogBlock(contentEl, design, catalog);
+    // Order: listing mode → visibility → creator → products (quick only)
+    appendListingModeSwitch(contentEl);
+    appendVisibilitySettingsBox(contentEl, visSwitch);
 
-      var visSw0 = renderVisibilitySwitch(true);
-      mountActivateSubfooter({
-        creatorLabel: null,
-        creatorControl: null,
-        visibilitySwitch: visSw0,
+    if (activateWithoutCreator) {
+      appendCreatorSettingsBox(contentEl, {
+        emptyText: M.libraryActivateNoCreatorBody || 'No creator name available for this design.',
       });
-
-      wireConfirm(function () {
-        runActivate(
-          design,
-          pushExcluded({
-            activate_without_creator_name: true,
-            visibility: visSw0.getValue(),
-          })
-        );
-      });
-    } else if (names.length === 1) {
-      var sole = names[0];
-      if (includeCatalog) {
-        intro.innerHTML =
-          '<p>' +
-          escapeHtml(
-            replacePlaceholders(M.libraryActivateScopeNamed || '', {
-              count: String(catCount),
-              name: sole,
-            })
-          ) +
-          '</p>';
-        contentEl.appendChild(intro);
-      }
-
-      appendListingModeSwitch(contentEl);
-      if (includeCatalog) appendActivateCatalogBlock(contentEl, design, catalog);
-
-      var visSw1 = renderVisibilitySwitch(true);
-      mountActivateSubfooter({
-        creatorLabel: null,
-        creatorControl: renderCreatorNameStatic(sole),
-        visibilitySwitch: visSw1,
-      });
-
-      wireConfirm(function () {
-        runActivate(
-          design,
-          pushExcluded({
-            creator_name: sole,
-            visibility: visSw1.getValue(),
-          })
-        );
+    } else if (soleName) {
+      appendCreatorSettingsBox(contentEl, {
+        control: renderCreatorNameStatic(soleName),
       });
     } else {
-      if (includeCatalog) {
-        intro.innerHTML =
-          '<p>' +
-          escapeHtml(
-            replacePlaceholders(M.libraryActivateChooseIntro || '', {
-              count: String(catCount),
-            })
-          ) +
-          '</p>';
-        contentEl.appendChild(intro);
-      }
-
-      appendListingModeSwitch(contentEl);
-      if (includeCatalog) appendActivateCatalogBlock(contentEl, design, catalog);
-
-      var lbl = document.createElement('label');
-      lbl.className = 'creator-library-action-modal__label';
-      lbl.setAttribute('for', 'creator-library-creator-select');
-      lbl.textContent = M.libraryActivateCreatorLabel || 'Creator name';
-
       sel = document.createElement('select');
       sel.id = 'creator-library-creator-select';
       sel.className = 'creator-library-action-modal__select';
-
       var pick = readLastCreatorPick(names) || names[0];
       for (var i = 0; i < names.length; i++) {
         var opt = document.createElement('option');
@@ -1484,25 +1647,17 @@
         if (names[i] === pick) opt.selected = true;
         sel.appendChild(opt);
       }
-
-      var visSw2 = renderVisibilitySwitch(true);
-      mountActivateSubfooter({
-        creatorLabel: lbl,
-        creatorControl: sel,
-        visibilitySwitch: visSw2,
-      });
-
-      wireConfirm(function () {
-        var chosen = sel ? String(sel.value || '').trim() : '';
-        runActivate(
-          design,
-          pushExcluded({
-            creator_name: chosen,
-            visibility: visSw2.getValue(),
-          })
-        );
-      });
+      appendCreatorSettingsBox(contentEl, { control: sel });
     }
+
+    if (includeCatalog) appendActivateCatalogBlock(contentEl, design, catalog);
+
+    wireConfirm(function () {
+      runActivate(design, pushExcluded(collectCreatorOpts()));
+    });
+    wireSave(function () {
+      runSaveActivateSettings(design, pushExcluded(collectCreatorOpts()));
+    });
 
     applyLoading(false);
 
@@ -1568,6 +1723,14 @@
     }
     if (btnConfirm && typeof btnConfirm.onclick === 'function') {
       btnConfirm.onclick();
+      return true;
+    }
+    return false;
+  }
+
+  function triggerCreatorCreationsActivateSave() {
+    if (typeof pendingActivateSaveHandler === 'function') {
+      pendingActivateSaveHandler();
       return true;
     }
     return false;
@@ -1672,4 +1835,5 @@
   window.mountCreatorCreationsActivateInto = mountCreatorCreationsActivateInto;
   window.unmountCreatorCreationsActivateInto = unmountCreatorCreationsActivateInto;
   window.triggerCreatorCreationsActivateConfirm = triggerCreatorCreationsActivateConfirm;
+  window.triggerCreatorCreationsActivateSave = triggerCreatorCreationsActivateSave;
 })();

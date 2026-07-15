@@ -1387,6 +1387,29 @@ html.creator-library-action-modal-open {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.45);
 }
+.creator-library-action-modal__settings-box {
+  margin: 0 0 14px;
+}
+.creator-library-action-modal__settings-row {
+  margin-bottom: 8px;
+}
+.creator-library-action-modal__settings-control {
+  width: 100%;
+  min-width: 0;
+}
+.creator-library-action-modal__settings-control .creator-library-action-modal__select,
+.creator-library-action-modal__settings-control .creator-library-action-modal__creator-static {
+  width: 100%;
+  max-width: 100%;
+}
+.creator-library-action-modal__settings-vis-track {
+  margin-left: 8px;
+}
+.creator-library-action-modal__listing-row .creator-library-action-modal__vis-switch-caption {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+}
 /* Info overlay */
 .creator-library-action-modal__info-overlay {
   position: fixed;

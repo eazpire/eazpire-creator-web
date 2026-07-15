@@ -227,6 +227,7 @@
   let btnDelete = null;
   let btnActivateCancel = null;
   let btnActivateSave = null;
+  let btnActivateConfirm = null;
   let currentDesign = null;
   let originalVisibility = null; // Original visibility when modal opens
   let currentVisibility = null; // Current visibility (may differ from original if changed)
@@ -585,8 +586,9 @@
         btnActivateCancel.setAttribute('aria-hidden', 'true');
       }
     }
+    // Save settings: Edit Mode only
     if (btnActivateSave) {
-      if (activateEntryMode) {
+      if (activateEntryMode && activatePublishMode === 'edit') {
         btnActivateSave.removeAttribute('hidden');
         btnActivateSave.setAttribute('aria-hidden', 'false');
         btnActivateSave.disabled = false;
@@ -596,11 +598,27 @@
         btnActivateSave.disabled = false;
       }
     }
+    // Activate primary: Quick Publish + Edit Mode
+    if (btnActivateConfirm) {
+      if (activateEntryMode) {
+        btnActivateConfirm.removeAttribute('hidden');
+        btnActivateConfirm.setAttribute('aria-hidden', 'false');
+        btnActivateConfirm.disabled = false;
+      } else {
+        btnActivateConfirm.setAttribute('hidden', '');
+        btnActivateConfirm.setAttribute('aria-hidden', 'true');
+        btnActivateConfirm.disabled = false;
+      }
+    }
     if (modalShell) {
       modalShell.classList.toggle('cdp-modal--activate-entry', !!activateEntryMode);
       modalShell.classList.toggle(
         'cdp-modal--activate-quick',
         !!(activateEntryMode && activatePublishMode === 'quick')
+      );
+      modalShell.classList.toggle(
+        'cdp-modal--activate-edit',
+        !!(activateEntryMode && activatePublishMode === 'edit')
       );
     }
     syncActivatePublishModeButtons();
@@ -635,7 +653,6 @@
   function mountActivatePanelIfNeeded() {
     if (!activateEntryMode || !currentDesign) return;
     var contentHost = document.getElementById('cdp-activate-content-' + sectionId);
-    var subFooterHost = document.getElementById('cdp-activate-subfooter-' + sectionId);
     if (!contentHost) return;
     if (typeof window.mountCreatorCreationsActivateInto !== 'function') {
       console.warn('[CreatorDesignPreviewModal] mountCreatorCreationsActivateInto unavailable');
@@ -646,12 +663,12 @@
       .mountCreatorCreationsActivateInto({
         design: currentDesign,
         contentHost: contentHost,
-        subFooterHost: subFooterHost,
         includeCatalog: activatePublishMode === 'quick',
         setLoading: function (loading) {
           if (token !== activateMountToken) return;
           if (btnActivateSave) btnActivateSave.disabled = !!loading;
           if (btnActivateCancel) btnActivateCancel.disabled = !!loading;
+          if (btnActivateConfirm) btnActivateConfirm.disabled = !!loading;
         },
       })
       .catch(function (err) {
@@ -749,6 +766,7 @@
     btnDelete = document.getElementById('cdp-btn-delete-' + sectionId);
     btnActivateCancel = document.getElementById('cdp-btn-activate-cancel-' + sectionId);
     btnActivateSave = document.getElementById('cdp-btn-activate-save-' + sectionId);
+    btnActivateConfirm = document.getElementById('cdp-btn-activate-confirm-' + sectionId);
     modalVisibilitySwitch = document.getElementById('cdp-visibility-switch-' + sectionId);
     modalVisibilitySwitchLeft = document.getElementById('cdp-visibility-switch-left-' + sectionId);
     modalVisibilitySwitchMobile = document.getElementById('cdp-visibility-switch-mobile-slide1-' + sectionId);
@@ -5247,6 +5265,14 @@
     if (btnActivateSave && !btnActivateSave.__cdpBound) {
       btnActivateSave.__cdpBound = true;
       btnActivateSave.addEventListener('click', function () {
+        if (typeof window.triggerCreatorCreationsActivateSave === 'function') {
+          window.triggerCreatorCreationsActivateSave();
+        }
+      });
+    }
+    if (btnActivateConfirm && !btnActivateConfirm.__cdpBound) {
+      btnActivateConfirm.__cdpBound = true;
+      btnActivateConfirm.addEventListener('click', function () {
         if (typeof window.triggerCreatorCreationsActivateConfirm === 'function') {
           window.triggerCreatorCreationsActivateConfirm();
         }

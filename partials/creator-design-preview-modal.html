@@ -2436,13 +2436,30 @@
     display: none !important;
   }
 
-  .cdp-modal--activate-entry .cdp-modal__btn--activate {
+  .cdp-modal--activate-entry .cdp-modal__btn--activate-cancel,
+  .cdp-modal--activate-entry .cdp-modal__btn--activate-confirm {
+    display: inline-flex !important;
+  }
+
+  .cdp-modal--activate-edit .cdp-modal__btn--activate-save {
     display: inline-flex !important;
   }
 
   .cdp-modal--activate-entry .cdp-modal__footer > .cdp-modal__btn:not(.cdp-modal__btn--activate),
   .cdp-modal--activate-entry .cdp-modal__footer-sep {
     display: none !important;
+  }
+
+  .cdp-modal__btn--activate-confirm {
+    background: #f97316 !important;
+    border-color: #f97316 !important;
+    color: #fff !important;
+  }
+
+  .cdp-modal__btn--activate-save {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important;
   }
 
   .cdp-modal--activate-entry.cdp-modal--products-tab .cdp-modal__footer {
@@ -3312,11 +3329,6 @@
               id="cdp-activate-content-design-preview"
               class="cdp-modal__activate-content creator-library-action-modal__content"
             ></div>
-            <div
-              id="cdp-activate-subfooter-design-preview"
-              class="cdp-modal__activate-subfooter creator-library-action-modal__subfooter"
-              hidden
-            ></div>
           </div>
         </div>
 
@@ -4003,6 +4015,9 @@
       </button>
       <button type="button" id="cdp-btn-activate-save-design-preview" class="cdp-modal__btn cdp-modal__btn--activate cdp-modal__btn--activate-save" hidden aria-hidden="true" aria-label="Save" title="Save">
         <span class="cdp-modal__btn-text" data-t="creator.preview_modal.activate_save">Save</span>
+      </button>
+      <button type="button" id="cdp-btn-activate-confirm-design-preview" class="cdp-modal__btn cdp-modal__btn--activate cdp-modal__btn--activate-confirm" hidden aria-hidden="true" aria-label="Activate" title="Activate">
+        <span class="cdp-modal__btn-text" data-t="creator.preview_modal.activate_confirm">Activate</span>
       </button>
     </div>
 

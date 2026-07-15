@@ -38,7 +38,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=20";
+      s.src = src + "?v=21";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
