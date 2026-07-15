@@ -618,6 +618,14 @@
       margin:0;
     }
 
+    /* Shop variant has no options column — keep a compact centered dialog */
+    .design-upload-modal.eaz-shop-design-upload-modal .design-upload-modal__dialog{
+      width:min(640px, 92vw);
+      max-width:640px;
+      height:auto;
+      max-height:min(92vh, 860px);
+    }
+
     .design-upload-modal__body{
       display:grid;
       grid-template-columns:minmax(0, 1.55fr) minmax(300px, .9fr);
@@ -631,6 +639,12 @@
       flex:1;
       -webkit-overflow-scrolling:touch;
       overscroll-behavior:contain;
+    }
+
+    .design-upload-modal.eaz-shop-design-upload-modal .design-upload-modal__body{
+      display:flex;
+      flex-direction:column;
+      grid-template-columns:none;
     }
 
     .design-upload-modal__footer{
@@ -987,36 +1001,40 @@
       </div>
 
       
+      <!-- Creator + Sichtbarkeit (wie beim Speichern von Designs) -->
+      <div class="design-upload-options">
+        <div class="design-upload-options__row">
+          <label for="design-upload-creator-select-creator-mobile" class="design-upload-options__label">Creator</label>
+          <select id="design-upload-creator-select-creator-mobile" class="design-upload-creator-select" aria-label="Select Creator">
+            <option value="">Loading Creator...</option>
+          </select>
+        </div>
+        <div class="design-upload-options__row">
+          <span class="design-upload-options__label">Visibility</span>
+          <div class="design-upload-visibility-row">
+            <label class="design-upload-visibility-switch">
+              <span class="design-upload-visibility-text design-upload-visibility-text--left">Private</span>
+              <input type="checkbox" id="design-upload-visibility-creator-mobile" data-visibility="public" checked aria-label="Visibility">
+              <span class="design-upload-visibility-slider"></span>
+              <span class="design-upload-visibility-text design-upload-visibility-text--right">Public</span>
+            </label>
+          </div>
+          <p class="design-upload-visibility-hint">With Public, your designs can be used as inspiration by other users.</p>
+        </div>
+      </div>
+      
     </div>
 
     
-    <div class="design-upload-modal__footer design-upload-modal__footer--shop-eazy">
-      <div class="eaz-shop-upload-eazy-row" data-eaz-shop-upload-cta-wrap>
-        <div class="eaz-shop-upload-eazy-speech-wrap">
-          <button type="button" class="eaz-shop-upload-eazy-speech__btn" data-eaz-shop-upload-submit aria-label="Upload design with Eazy">
-            Upload design
-          </button>
-        </div>
-        <span class="eaz-shop-upload-eazy-mascot" aria-hidden="true">
-          <svg width="44" height="44" viewBox="0 0 128 128" focusable="false">
-            <defs>
-              <linearGradient id="eaz-shop-upload-eazy-grad" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stop-color="#ff9a2a"/><stop offset="1" stop-color="#f97316"/>
-              </linearGradient>
-            </defs>
-            <path fill="url(#eaz-shop-upload-eazy-grad)" d="M30,62c0,-26 20,-44 44,-44 22,0 38,16 38,38 0,25 -19,44 -44,44 -5,0 -10,-0.8 -14.5,-2.2l-16.5,9.2 5.8,-16.8C35.7,83 30,73.2 30,62z"/>
-            <path fill="#FFFFFF" d="M56,39c-15,6 -24,20 -24,35 0,19 16,34 36,34 20,0 36,-16 36,-36 0,-21 -17,-38 -38,-38 -4.3,0 -8.4,0.7 -10,0.9z"/>
-            <circle cx="72" cy="52.5" r="5.5" fill="#F97316"/>
-            <circle cx="90" cy="45.5" r="4.5" fill="#F97316"/>
-            <ellipse cx="79" cy="72" rx="6" ry="4.5" fill="#F97316"/>
-            <circle cx="50" cy="21" r="7" fill="#FF9A2A"/>
-          </svg>
+    <div class="design-upload-modal__footer">
+      <button type="button" class="design-upload-modal__button design-upload-modal__button--secondary">Cancel</button>
+      <button type="button" class="design-upload-modal__button design-upload-modal__button--primary">
+        <span>Upload Design</span>
+        <span class="btn-cost-inline">
+          <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="EAZ" class="eaz-coin-icon">
+          <span data-eaz-cost-feature="design_upload">5</span>
         </span>
-      </div>
-      <div class="eaz-shop-upload-eazy-cost" aria-hidden="true">
-        <img src="https://pub-2ffb11d4a361463498b9a842a87a870c.r2.dev/brand/coin/eaz-coin-logo.png" alt="" width="18" height="18" class="eaz-coin-icon">
-        <span class="design-upload-eaz-cost-upload design-upload-eaz-cost-upload--suffix" data-eaz-cost-feature="design_upload">5 EAZ</span>
-      </div>
+      </button>
     </div>
     
   </div>
