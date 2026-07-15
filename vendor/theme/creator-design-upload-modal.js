@@ -163,6 +163,234 @@
 
   const FRAME_MIN_SIZE = 24;
 
+  /** Matches worker `MIN_PRINT_SIDE_PX` — uploads below this short side get Picsart upscale. */
+  const MIN_PRINT_SIDE_PX = 4096;
+  const UPSCALE_FACTOR = 4;
+
+  function formatResolutionLabel(w, h) {
+    const width = Math.round(Number(w) || 0);
+    const height = Math.round(Number(h) || 0);
+    if (width <= 0 || height <= 0) return '—';
+    return width + '\u00d7' + height;
+  }
+
+  function formatMbLabel(bytes) {
+    const n = Number(bytes) || 0;
+    if (n <= 0) return '0';
+    const mb = n / (1024 * 1024);
+    if (mb < 0.1) return mb.toFixed(2);
+    if (mb < 10) return mb.toFixed(1);
+    return String(Math.round(mb * 10) / 10);
+  }
+
+  function needsUpscaleForPrintQuality(width, height) {
+    const w = Number(width) || 0;
+    const h = Number(height) || 0;
+    if (w <= 0 || h <= 0) return true;
+    return Math.min(w, h) < MIN_PRINT_SIDE_PX;
+  }
+
+  function estimateUpscaleDimensions(width, height, bytes) {
+    const w = Math.round(Number(width) || 0);
+    const h = Math.round(Number(height) || 0);
+    const b = Number(bytes) || 0;
+    return {
+      width: w > 0 ? w * UPSCALE_FACTOR : 0,
+      height: h > 0 ? h * UPSCALE_FACTOR : 0,
+      bytes: b > 0 ? Math.round(b * UPSCALE_FACTOR * UPSCALE_FACTOR) : 0,
+      factor: UPSCALE_FACTOR
+    };
+  }
+
+  function i18nUploadModal(key, fallback) {
+    if (typeof window.getI18n === 'function') {
+      const v = window.getI18n(key, fallback);
+      if (v != null && v !== '') return v;
+    }
+    return fallback;
+  }
+
+  function showUpscaleInfoModal(meta) {
+    if (!meta || !meta.needsUpscale) return;
+    const existing = document.getElementById('creator-upload-upscale-info');
+    if (existing) existing.remove();
+
+    const est = estimateUpscaleDimensions(meta.width, meta.height, meta.bytes);
+    const overlay = document.createElement('div');
+    overlay.id = 'creator-upload-upscale-info';
+    overlay.className = 'creator-upload-upscale-info-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+
+    const dialog = document.createElement('div');
+    dialog.className = 'creator-upload-upscale-info-dialog';
+    dialog.innerHTML =
+      '<h3>' + escapeUploadHtml(i18nUploadModal('uploadModalUpscaleInfoTitle', 'Automatic upscale')) + '</h3>' +
+      '<div class="creator-upload-upscale-info-dialog__row">' +
+        '<span class="creator-upload-upscale-info-dialog__label">' +
+          escapeUploadHtml(i18nUploadModal('uploadModalUpscaleInfoOriginal', 'Original')) +
+        '</span>' +
+        '<span class="creator-upload-upscale-info-dialog__value">' +
+          escapeUploadHtml(formatResolutionLabel(meta.width, meta.height) + ' · ' + formatMbLabel(meta.bytes) + ' MB') +
+        '</span>' +
+      '</div>' +
+      '<div class="creator-upload-upscale-info-dialog__row">' +
+        '<span class="creator-upload-upscale-info-dialog__label">' +
+          escapeUploadHtml(i18nUploadModal('uploadModalUpscaleInfoEstimated', 'After upscale (estimated)')) +
+        '</span>' +
+        '<span class="creator-upload-upscale-info-dialog__value">' +
+          escapeUploadHtml(formatResolutionLabel(est.width, est.height) + ' · ~' + formatMbLabel(est.bytes) + ' MB') +
+        '</span>' +
+      '</div>' +
+      '<p class="creator-upload-upscale-info-dialog__note">' +
+        escapeUploadHtml(i18nUploadModal(
+          'uploadModalUpscaleInfoAuto',
+          'Upscale runs automatically when you upload if the image is below print quality (shorter side under 4096 px).'
+        )) +
+      '</p>' +
+      '<button type="button" class="creator-upload-upscale-info-dialog__btn">' +
+        escapeUploadHtml(i18nUploadModal('uploadModalUpscaleInfoClose', 'Got it')) +
+      '</button>';
+
+    function close() {
+      overlay.remove();
+    }
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) close();
+    });
+    dialog.querySelector('.creator-upload-upscale-info-dialog__btn').addEventListener('click', close);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+  }
+
+  function escapeUploadHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function updatePreviewMetaLabels(modal, file, width, height) {
+    const placeholder = modal && modal.querySelector('.design-upload-placeholder');
+    if (!placeholder) return null;
+    let metaEl = placeholder.querySelector('.design-upload-preview__meta');
+    if (!metaEl) {
+      const host = placeholder.querySelector('.design-upload-placeholder__image') || placeholder;
+      metaEl = document.createElement('div');
+      metaEl.className = 'design-upload-preview__meta';
+      metaEl.innerHTML =
+        '<span class="design-upload-preview__meta-chip" data-upload-meta="resolution">' +
+          '<strong>' + escapeUploadHtml(i18nUploadModal('uploadModalLabelResolution', 'Resolution')) + '</strong>' +
+          '<span data-upload-meta-value="resolution">—</span>' +
+        '</span>' +
+        '<span class="design-upload-preview__meta-chip" data-upload-meta="size">' +
+          '<strong>' + escapeUploadHtml(i18nUploadModal('uploadModalLabelSizeMb', 'MB')) + '</strong>' +
+          '<span data-upload-meta-value="size">—</span>' +
+        '</span>' +
+        '<button type="button" class="design-upload-preview__meta-chip design-upload-preview__meta-chip--upscale" data-upload-meta="upscale" hidden>' +
+          escapeUploadHtml(i18nUploadModal('uploadModalLabelUpscale', 'Upscale')) +
+        '</button>';
+      host.appendChild(metaEl);
+    }
+
+    const isSvg = !!(file && (file.type === 'image/svg+xml' || /\.svg$/i.test(file.name || '')));
+    const w = Number(width) || 0;
+    const h = Number(height) || 0;
+    const bytes = file && file.size != null ? Number(file.size) : 0;
+    const needsUpscale = !isSvg && needsUpscaleForPrintQuality(w, h);
+
+    const resVal = metaEl.querySelector('[data-upload-meta-value="resolution"]');
+    const sizeVal = metaEl.querySelector('[data-upload-meta-value="size"]');
+    const upscaleBtn = metaEl.querySelector('[data-upload-meta="upscale"]');
+    if (resVal) resVal.textContent = isSvg ? 'SVG' : formatResolutionLabel(w, h);
+    if (sizeVal) sizeVal.textContent = formatMbLabel(bytes);
+    if (upscaleBtn) {
+      if (needsUpscale) {
+        upscaleBtn.hidden = false;
+        upscaleBtn.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          showUpscaleInfoModal({ width: w, height: h, bytes: bytes, needsUpscale: true });
+        };
+      } else {
+        upscaleBtn.hidden = true;
+        upscaleBtn.onclick = null;
+      }
+    }
+
+    const meta = { width: w, height: h, bytes: bytes, needsUpscale: needsUpscale, isSvg: isSvg };
+    const api = window.CreatorDesignUploadModalInstances && window.CreatorDesignUploadModalInstances.__active;
+    if (api) api._fileMeta = meta;
+    return meta;
+  }
+
+  function detectImageDimensions(file, imgEl) {
+    return new Promise(function (resolve) {
+      if (imgEl && imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
+        resolve({ width: imgEl.naturalWidth, height: imgEl.naturalHeight });
+        return;
+      }
+      if (!file || file.type === 'image/svg+xml') {
+        resolve({ width: 0, height: 0 });
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const probe = new Image();
+      probe.onload = function () {
+        const dim = { width: probe.naturalWidth || 0, height: probe.naturalHeight || 0 };
+        URL.revokeObjectURL(url);
+        resolve(dim);
+      };
+      probe.onerror = function () {
+        URL.revokeObjectURL(url);
+        resolve({ width: 0, height: 0 });
+      };
+      probe.src = url;
+    });
+  }
+
+  function mapUploadJobStatus(data) {
+    if (!data) return 'uploading';
+    if (data.error || data.failed) return 'failed';
+    if (data.saved || data.done) return 'done';
+    const msg = String(data.message || '').toLowerCase();
+    const p = Number(data.progress) || 0;
+    if (msg.indexOf('skalier') >= 0 || msg.indexOf('upscale') >= 0 || msg.indexOf('hochskal') >= 0) {
+      return 'upscaling';
+    }
+    if (msg.indexOf('speicher') >= 0 || msg.indexOf('saving') >= 0 || msg.indexOf('gespeichert') >= 0) {
+      return 'saving';
+    }
+    if (
+      msg.indexOf('metadaten') >= 0 ||
+      msg.indexOf('metadata') >= 0 ||
+      msg.indexOf('beschneid') >= 0 ||
+      msg.indexOf('crop') >= 0 ||
+      msg.indexOf('verarbeit') >= 0
+    ) {
+      return 'processing';
+    }
+    if (msg.indexOf('lade bilder') >= 0 || (msg.indexOf('hoch') >= 0 && p >= 70)) return 'saving';
+    if (p < 15) return 'uploading';
+    if (p < 50) return 'processing';
+    if (p < 70) return 'upscaling';
+    return 'saving';
+  }
+
+  function dispatchUploadPlaceholder(detail) {
+    try {
+      window.dispatchEvent(new CustomEvent('creatorUploadPlaceholder', { detail: detail || {} }));
+    } catch (_) {}
+  }
+
+  function dispatchUploadProgress(detail) {
+    try {
+      window.dispatchEvent(new CustomEvent('creatorUploadProgress', { detail: detail || {} }));
+    } catch (_) {}
+  }
+
   function normalizePngCropName(name) {
     const base = (name || 'upload').replace(/\.[^.]+$/, '');
     return base + '-cropped.png';
@@ -494,9 +722,21 @@
         }
         if (img.complete) {
           attachFrame();
+          detectImageDimensions(file, img).then(function (dim) {
+            updatePreviewMetaLabels(modal, file, dim.width, dim.height);
+          });
         } else {
-          img.addEventListener('load', attachFrame);
+          img.addEventListener('load', function () {
+            attachFrame();
+            detectImageDimensions(file, img).then(function (dim) {
+              updatePreviewMetaLabels(modal, file, dim.width, dim.height);
+            });
+          });
         }
+      } else if (file) {
+        detectImageDimensions(file, null).then(function (dim) {
+          updatePreviewMetaLabels(modal, file, dim.width, dim.height);
+        });
       }
 
       // ✅ Bar/Buttons Zustand aktualisieren (Bar ist im Liquid, nicht im Placeholder!)
@@ -994,10 +1234,21 @@
 
           const resp = await fetch(statusUrl.toString(), { credentials: 'include', cache: 'no-store' });
           const data = await resp.json().catch(() => ({}));
+          const statusKey = mapUploadJobStatus(data);
+          dispatchUploadProgress({
+            jobId: String(jobId),
+            status: statusKey,
+            progress: data && data.progress != null ? Number(data.progress) : null,
+            message: data && data.message ? String(data.message) : null,
+            previewUrl:
+              (data && data.result && (data.result.preview_url || data.result.image_url)) ||
+              (data && (data.preview_url || data.image_url)) ||
+              null
+          });
 
-          if (data && (data.done || data.saved)) {
+          if (data && (data.done || data.saved || data.error || data.failed)) {
             window.dispatchEvent(new CustomEvent('creator-upload-finished', {
-              detail: { jobId: String(jobId), status: data }
+              detail: { jobId: String(jobId), status: data, statusKey: statusKey }
             }));
             if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
               window.CreationsScreen.loadDesigns();
@@ -1018,6 +1269,51 @@
       const base = buildDispatchBaseUrl();
       if (!base) throw new Error('missing api base');
 
+      const localId = 'local_upload_' + Date.now() + '_' + Math.random().toString(16).slice(2, 8);
+      let previewBlobUrl = null;
+      try {
+        previewBlobUrl = URL.createObjectURL(file);
+      } catch (_) {
+        previewBlobUrl = null;
+      }
+
+      let fileMeta =
+        (window.CreatorDesignUploadModalInstances &&
+          window.CreatorDesignUploadModalInstances.__active &&
+          window.CreatorDesignUploadModalInstances.__active._fileMeta) ||
+        null;
+      if (!fileMeta || !fileMeta.width) {
+        try {
+          const dim = await detectImageDimensions(file, null);
+          fileMeta = updatePreviewMetaLabels(modal, file, dim.width, dim.height) || {
+            width: dim.width,
+            height: dim.height,
+            bytes: file.size,
+            needsUpscale: needsUpscaleForPrintQuality(dim.width, dim.height)
+          };
+        } catch (_) {
+          fileMeta = {
+            width: 0,
+            height: 0,
+            bytes: file.size,
+            needsUpscale: true
+          };
+        }
+      }
+
+      dispatchUploadPlaceholder({
+        localId: localId,
+        jobId: null,
+        previewUrl: previewBlobUrl,
+        title: (file.name || 'Upload').replace(/\.[^.]+$/, ''),
+        filename: file.name || 'Upload',
+        status: 'uploading',
+        needsUpscale: !!(fileMeta && fileMeta.needsUpscale),
+        width: fileMeta && fileMeta.width,
+        height: fileMeta && fileMeta.height,
+        bytes: fileMeta && fileMeta.bytes
+      });
+
       const formData = new FormData();
       formData.append('image', file);
       formData.append('owner_id', String(oid));
@@ -1036,11 +1332,29 @@
       const data = await resp.json().catch(() => ({}));
 
       if (!(resp.ok || resp.status === 202)) {
+        dispatchUploadProgress({
+          localId: localId,
+          jobId: null,
+          status: 'failed',
+          error: (data && (data.message || data.error)) ? String(data.message || data.error) : 'upload_failed'
+        });
         throw new Error((data && (data.message || data.error)) ? String(data.message || data.error) : 'upload_failed');
       }
 
       const jobId = data.jobId || data.job_id || null;
       if (jobId) {
+        dispatchUploadPlaceholder({
+          localId: localId,
+          jobId: String(jobId),
+          previewUrl: previewBlobUrl,
+          title: (file.name || 'Upload').replace(/\.[^.]+$/, ''),
+          filename: file.name || 'Upload',
+          status: 'processing',
+          needsUpscale: !!(fileMeta && fileMeta.needsUpscale),
+          width: fileMeta && fileMeta.width,
+          height: fileMeta && fileMeta.height,
+          bytes: fileMeta && fileMeta.bytes
+        });
         window.dispatchEvent(new CustomEvent('creatorSaveJobStarted', { detail: { jobId: String(jobId) } }));
         pollUploadStatus(jobId);
       } else {
@@ -1127,6 +1441,9 @@
 
       tempSelectedFile = null;
       originalSelectedFile = null;
+      if (window.CreatorDesignUploadModalInstances && window.CreatorDesignUploadModalInstances.__active) {
+        window.CreatorDesignUploadModalInstances.__active._fileMeta = null;
+      }
 
       // Reset remove-bg button active state
       const removeBgBtn = modal.querySelector('.design-upload-action-btn[data-action="remove_background"]');
@@ -1253,31 +1570,47 @@
       return map[key] != null && map[key] !== '' ? map[key] : fallback;
     }
 
-    /** Critical confirm-dialog CSS (loads with JS — base.css img{width:100%} breaks coin icons). */
+    /** Critical confirm-dialog CSS (loads with JS — base.css img{width:100%} breaks coin icons). Dark default; --shop = light. */
     function ensureUploadConfirmStyles() {
       if (document.getElementById('creator-upload-confirm-styles')) return;
       var style = document.createElement('style');
       style.id = 'creator-upload-confirm-styles';
       style.textContent = [
-        '.creator-upload-confirm-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000050;display:flex;align-items:center;justify-content:center;overflow-x:hidden;overflow-y:auto;padding:max(12px,env(safe-area-inset-top,0)) 16px max(12px,env(safe-area-inset-bottom,0));box-sizing:border-box}',
-        '.creator-upload-confirm-dialog{display:block;flex-shrink:0;text-align:left;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:20px 22px;max-width:400px;width:min(400px,calc(100vw - 32px));box-shadow:0 16px 48px rgba(0,0,0,.12)}',
-        '.creator-upload-confirm-dialog h3{color:#111827;font-size:18px;font-weight:600;margin:0 0 14px;text-align:center}',
-        '.creator-upload-confirm-dialog__summary{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px}',
+        '.creator-upload-confirm-overlay{position:fixed;inset:0;background:rgba(2,6,23,.72);z-index:10000050;display:flex;align-items:center;justify-content:center;overflow-x:hidden;overflow-y:auto;padding:max(12px,env(safe-area-inset-top,0)) 16px max(12px,env(safe-area-inset-bottom,0));box-sizing:border-box}',
+        '.creator-upload-confirm-dialog{display:block;flex-shrink:0;text-align:left;background:#111827;border:1px solid #374151;border-radius:16px;padding:20px 22px;max-width:400px;width:min(400px,calc(100vw - 32px));box-shadow:0 16px 48px rgba(0,0,0,.45);color:#e5e7eb}',
+        '.creator-upload-confirm-dialog h3{color:#e5e7eb;font-size:18px;font-weight:600;margin:0 0 14px;text-align:center}',
+        '.creator-upload-confirm-dialog__summary{background:#0f172a;border:1px solid #374151;border-radius:12px;padding:14px;margin-bottom:12px}',
         '.creator-upload-confirm-dialog__row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;font-size:14px;flex-wrap:nowrap}',
         '.creator-upload-confirm-dialog__row:last-child,.creator-upload-confirm-dialog__row--last{margin-bottom:0}',
-        '.creator-upload-confirm-dialog__label{color:#6b7280;flex-shrink:0}',
-        '.creator-upload-confirm-dialog__value{color:#111827;font-weight:500;text-align:right;flex-shrink:0;white-space:nowrap}',
+        '.creator-upload-confirm-dialog__label{color:#9ca3af;flex-shrink:0}',
+        '.creator-upload-confirm-dialog__value{color:#e5e7eb;font-weight:500;text-align:right;flex-shrink:0;white-space:nowrap}',
         '.creator-upload-confirm-dialog__value--wrap{flex-shrink:1;white-space:normal;overflow-wrap:anywhere;min-width:0}',
-        '.creator-upload-confirm-dialog__value--cost{display:inline-flex;align-items:center;gap:6px;color:#c2410c;width:fit-content;max-width:100%;margin-left:auto}',
-        '.creator-upload-confirm-dialog__value--xp{color:#15803d}',
-        '.creator-upload-confirm-dialog__cost{background:linear-gradient(135deg,rgba(249,115,22,.12),rgba(251,191,36,.08));border:1px solid rgba(249,115,22,.25);border-radius:12px;padding:12px 14px;margin-bottom:14px}',
+        '.creator-upload-confirm-dialog__value--cost{display:inline-flex;align-items:center;gap:6px;color:#fb923c;width:fit-content;max-width:100%;margin-left:auto}',
+        '.creator-upload-confirm-dialog__value--xp{color:#4ade80}',
+        '.creator-upload-confirm-dialog__cost{background:linear-gradient(135deg,rgba(249,115,22,.18),rgba(15,23,42,.9));border:1px solid rgba(249,115,22,.35);border-radius:12px;padding:12px 14px;margin-bottom:14px}',
         '.creator-upload-confirm-dialog__actions{display:flex;flex-direction:column;gap:10px;width:100%}',
         '@media(min-width:380px){.creator-upload-confirm-dialog__actions{flex-direction:row}.creator-upload-confirm-dialog__btn{flex:1;min-width:0}}',
         '.creator-upload-confirm-dialog__btn{padding:12px 18px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:inherit;box-sizing:border-box;min-height:44px;line-height:1.2}',
-        '.creator-upload-confirm-dialog__btn--cancel{background:#f3f4f6;color:#374151}',
-        '.creator-upload-confirm-dialog__btn--primary{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#f97316,#fbbf24);color:#0f172a}',
+        '.creator-upload-confirm-dialog__btn--cancel{background:transparent;color:#9ca3af;border:1px solid #4b5563}',
+        '.creator-upload-confirm-dialog__btn--cancel:hover{background:#1f2937;color:#e5e7eb;border-color:#6b7280}',
+        '.creator-upload-confirm-dialog__btn--primary{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#f97316;color:#fff}',
+        '.creator-upload-confirm-dialog__btn--primary:hover{background:#fb923c}',
         '.creator-upload-confirm-dialog .eaz-coin-icon{display:inline-block;width:18px!important;height:18px!important;max-width:18px!important;min-width:18px!important;flex:0 0 18px!important;object-fit:contain}',
-        '.creator-upload-confirm-dialog__btn .eaz-coin-icon{width:14px!important;height:14px!important;max-width:14px!important;min-width:14px!important;flex:0 0 14px!important}'
+        '.creator-upload-confirm-dialog__btn .eaz-coin-icon{width:14px!important;height:14px!important;max-width:14px!important;min-width:14px!important;flex:0 0 14px!important}',
+        /* Shop light skin */
+        '.creator-upload-confirm-overlay--shop{background:rgba(15,23,42,.55)}',
+        '.creator-upload-confirm-dialog--shop{background:#fff;border:1px solid #e5e7eb;box-shadow:0 16px 48px rgba(0,0,0,.12);color:#111827}',
+        '.creator-upload-confirm-dialog--shop h3{color:#111827}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__summary{background:#f9fafb;border:1px solid #e5e7eb}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__label{color:#6b7280}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__value{color:#111827}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__value--cost{color:#c2410c}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__value--xp{color:#15803d}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__cost{background:linear-gradient(135deg,rgba(249,115,22,.12),rgba(251,191,36,.08));border:1px solid rgba(249,115,22,.25)}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__btn--cancel{background:#f3f4f6;color:#374151;border:none}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__btn--cancel:hover{background:#e5e7eb;color:#374151;border:none}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__btn--primary{background:linear-gradient(135deg,#f97316,#fbbf24);color:#0f172a}',
+        '.creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__btn--primary:hover{filter:brightness(1.03)}'
       ].join('');
       document.head.appendChild(style);
     }
@@ -1306,8 +1639,9 @@
       var bgCost = getUploadDisplayCost('bg_remove');
       var totalCost = uploadCost + (isRemoveBgActive ? bgCost : 0);
 
+      const shopConfirm = isShopDesignUploadModal(modal);
       const modalOverlay = document.createElement('div');
-      modalOverlay.className = 'creator-upload-confirm-overlay';
+      modalOverlay.className = 'creator-upload-confirm-overlay' + (shopConfirm ? ' creator-upload-confirm-overlay--shop' : '');
       modalOverlay.setAttribute('role', 'presentation');
 
       const creatorName = settings.creator_name || '—';
@@ -1317,7 +1651,7 @@
       const eazvCoinSrc = resolveEazvCoinUrl();
 
       const modalBox = document.createElement('div');
-      modalBox.className = 'creator-upload-confirm-dialog';
+      modalBox.className = 'creator-upload-confirm-dialog' + (shopConfirm ? ' creator-upload-confirm-dialog--shop' : '');
       modalBox.innerHTML = `
         <h3>${escapeHtml(i18nUploadConfirm('uploadConfirmTitle', 'Upload this design?'))}</h3>
 
@@ -1512,6 +1846,9 @@
     const placeholder = modal.querySelector('.design-upload-placeholder');
     if (placeholder) {
       placeholder.addEventListener('click', function (e) {
+        if (e.target.closest('.design-upload-preview__meta')) {
+          return;
+        }
         const removeBtn = e.target.closest('.design-upload-preview__remove');
         if (removeBtn) {
           e.preventDefault();

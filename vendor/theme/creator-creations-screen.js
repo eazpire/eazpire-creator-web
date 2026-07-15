@@ -150,6 +150,8 @@
   var bulkSaveWatchTickBusy = false;
   /** Wall-clock deadline extended on each finishBulkSave so overlapping bulk saves do not drop earlier job_ids. */
   var BULK_SAVE_WATCH_WINDOW_MS = 240000;
+  /** In-progress Creations uploads keyed by localId or jobId — shown first on Inactive. */
+  var pendingUploadByKey = {};
   var currentTab = 'designs';
   /** Library filter: active = saved in library (creations); inactive = generated, not saved yet (generated_designs / jobs). */
   var designsActivityFilter = 'active';
@@ -182,6 +184,7 @@
   }
 
   function isBulkSelectableDesign(d) {
+    if (d && (d.upload_pending || d._pendingUploadKey)) return false;
     if (designsActivityFilter === 'active') return bulkEligibleSavedDesign(d);
     return bulkEligibleInactiveSavedLibrary(d) || bulkEligibleInactiveUnsavedGenerated(d);
   }
@@ -404,6 +407,8 @@
         item.library_status === 'inactive' || item.library_status === 'active'
           ? item.library_status
           : 'active',
+      shop_locked:
+        meta.shop_locked === true || meta.shop_locked === 'yes' || meta.shop_locked === 1,
       review_status: item.review_status || null,
       review_item_id: item.review_item_id != null ? item.review_item_id : null
     };
@@ -536,25 +541,38 @@
     var items = !data.ok || !Array.isArray(data.items) ? [] : data.items;
     var savingJobIds = new Set();
     var savingJobs = [];
+    var uploadPendingJobs = [];
     items.forEach(function (j) {
       if (!j || !j.job_id) return;
       var jid = String(j.job_id).trim();
       if (!jid) return;
+      var jobType = String(j.type || j.action || '')
+        .trim()
+        .toLowerCase();
       if (j.saving && !j.saved) {
         savingJobIds.add(jid);
         if (j.done && !isHeroGenerateListJob(j)) {
           var sr = j.result || {};
-          if (sr.preview_url || sr.image_url || j.preview_url) savingJobs.push(j);
+          if (sr.preview_url || sr.image_url || j.preview_url || j.image_url) savingJobs.push(j);
         }
+      }
+      // In-progress upload-design: show in Inactive even before done/saved
+      if (jobType === 'upload-design' && !j.saved && !j.done && !isHeroGenerateListJob(j)) {
+        uploadPendingJobs.push(j);
       }
     });
     var kvDone = items.filter(function (j) {
       if (!j || !j.job_id || !j.done || j.saved || j.saving) return false;
       if (isHeroGenerateListJob(j)) return false;
       var r = j.result || {};
-      return !!(r.preview_url || r.image_url || j.preview_url);
+      return !!(r.preview_url || r.image_url || j.preview_url || j.image_url);
     });
-    return { kvDone: kvDone, savingJobIds: savingJobIds, savingJobs: savingJobs };
+    return {
+      kvDone: kvDone,
+      savingJobIds: savingJobIds,
+      savingJobs: savingJobs,
+      uploadPendingJobs: uploadPendingJobs
+    };
   }
 
   function normalizeGeneratedFromListJobs(j) {
@@ -605,7 +623,7 @@
         return { ok: false, items: [] };
       });
     var listJobsBundlePromise = fetchListJobsDesignMergeBundle(owner).catch(function () {
-      return { kvDone: [], savingJobIds: new Set(), savingJobs: [] };
+      return { kvDone: [], savingJobIds: new Set(), savingJobs: [], uploadPendingJobs: [] };
     });
 
     var results = await Promise.all([savedPromise, generatedPromise, listJobsBundlePromise]);
@@ -616,6 +634,7 @@
     var kvDone = listJobsBundle.kvDone;
     var savingJobIds = listJobsBundle.savingJobIds;
     var savingJobs = listJobsBundle.savingJobs || [];
+    var uploadPendingJobs = listJobsBundle.uploadPendingJobs || [];
 
     saved.forEach(function (s) {
       if (s.job_id != null && String(s.job_id).trim() !== '') {
@@ -660,6 +679,39 @@
       var savingNorm = normalizeGeneratedFromListJobs(j);
       savingNorm.saving_to_library = true;
       merged.push(savingNorm);
+      mergedJobIds.add(jid);
+    });
+
+    uploadPendingJobs.forEach(function (j) {
+      var jid = j.job_id != null ? String(j.job_id) : '';
+      if (!jid || savedJobIds.has(jid) || d1JobIds.has(jid)) return;
+      if (suppressedGeneratedJobIds.has(jid)) return;
+      if (mergedJobIds.has(jid)) return;
+      var preview = j.image_url || j.preview_url || (j.result && (j.result.preview_url || j.result.image_url)) || null;
+      var uploadNorm = normalizeGeneratedFromListJobs(j);
+      uploadNorm.preview_url = preview || uploadNorm.preview_url;
+      uploadNorm.image_url = preview || uploadNorm.image_url;
+      uploadNorm.original_url = preview || uploadNorm.original_url;
+      uploadNorm.source = 'uploaded';
+      uploadNorm.design_source = 'Uploaded';
+      uploadNorm.upload_pending = true;
+      uploadNorm.saving_to_library = true;
+      uploadNorm.title = (j.upload_filename || uploadNorm.title || 'Upload').toString().replace(/\.[^.]+$/, '');
+      var msg = String(j.message || '').toLowerCase();
+      var p = Number(j.progress) || 0;
+      var status = 'processing';
+      if (msg.indexOf('skalier') >= 0 || msg.indexOf('upscale') >= 0) status = 'upscaling';
+      else if (msg.indexOf('speicher') >= 0) status = 'saving';
+      else if (p < 15) status = 'uploading';
+      else if (p < 50) status = 'processing';
+      else if (p < 70) status = 'upscaling';
+      else status = 'saving';
+      uploadNorm.upload_status = status;
+      if (uploadNorm.metadata) {
+        uploadNorm.metadata.design_source = 'Uploaded';
+        uploadNorm.metadata.upload_pending = true;
+      }
+      merged.push(uploadNorm);
       mergedJobIds.add(jid);
     });
 
@@ -795,6 +847,36 @@
     return '';
   }
 
+  function isShopLockedDesign(design) {
+    if (!design) return false;
+    if (design.shop_locked === true) return true;
+    var meta = design.metadata || {};
+    if (typeof meta === 'string') {
+      try {
+        meta = JSON.parse(meta || '{}') || {};
+      } catch (_) {
+        meta = {};
+      }
+    }
+    return meta.shop_locked === true || meta.shop_locked === 'yes' || meta.shop_locked === 1;
+  }
+
+  function appendShopLockBadges(container, design) {
+    if (!container || !isShopLockedDesign(design)) return;
+    var Mi = window.CreatorMobileI18n || {};
+    var wrap = document.createElement('div');
+    wrap.className = 'creator-creations-card-shop-badges';
+    var shop = document.createElement('span');
+    shop.className = 'creator-creations-card-shop-badge creator-creations-card-shop-badge--shop';
+    shop.textContent = Mi.libraryBadgeShop || 'Shop';
+    var priv = document.createElement('span');
+    priv.className = 'creator-creations-card-shop-badge creator-creations-card-shop-badge--private';
+    priv.textContent = Mi.libraryBadgePrivate || 'Private';
+    wrap.appendChild(shop);
+    wrap.appendChild(priv);
+    container.appendChild(wrap);
+  }
+
   function appendReviewStatusBadge(container, entity) {
     if (!container || !entity) return;
     var rs = String(entity.review_status || '').trim();
@@ -871,6 +953,197 @@
       dots.appendChild(dot);
     });
     container.appendChild(dots);
+  }
+
+  function resolveUploadStatusLabel(statusKey) {
+    var M = window.CreatorMobileI18n || {};
+    var key = String(statusKey || 'uploading').toLowerCase();
+    if (key === 'processing') return M.creationsUploadStatusProcessing || 'Processing';
+    if (key === 'upscaling') return M.creationsUploadStatusUpscaling || 'Upscaling';
+    if (key === 'saving') return M.creationsUploadStatusSaving || 'Saving';
+    if (key === 'failed') return M.creationsUploadStatusFailed || 'Failed';
+    if (key === 'done') return M.creationsSavingToLibrary || 'Saving…';
+    return M.creationsUploadStatusUploading || 'Uploading';
+  }
+
+  function pendingUploadEntries() {
+    return Object.keys(pendingUploadByKey).map(function (k) {
+      return pendingUploadByKey[k];
+    });
+  }
+
+  function findPendingUploadKey(detail) {
+    if (!detail) return null;
+    var jobId = detail.jobId != null ? String(detail.jobId).trim() : '';
+    var localId = detail.localId != null ? String(detail.localId).trim() : '';
+    if (jobId) {
+      var byJob = Object.keys(pendingUploadByKey).find(function (k) {
+        var row = pendingUploadByKey[k];
+        return row && String(row.job_id || '').trim() === jobId;
+      });
+      if (byJob) return byJob;
+    }
+    if (localId && pendingUploadByKey[localId]) return localId;
+    if (jobId && pendingUploadByKey[jobId]) return jobId;
+    return localId || jobId || null;
+  }
+
+  function upsertPendingUploadPlaceholder(detail) {
+    if (!detail) return;
+    var localId = detail.localId != null ? String(detail.localId).trim() : '';
+    var jobId = detail.jobId != null ? String(detail.jobId).trim() : '';
+    var key = findPendingUploadKey(detail) || localId || jobId;
+    if (!key) return;
+
+    var prev = pendingUploadByKey[key] || {};
+    if (localId && key !== localId && pendingUploadByKey[localId] && key !== localId) {
+      prev = pendingUploadByKey[localId] || prev;
+      delete pendingUploadByKey[localId];
+    }
+
+    var status = detail.status || prev.upload_status || 'uploading';
+    var previewUrl = detail.previewUrl || prev.preview_url || null;
+    var title =
+      detail.title ||
+      (detail.filename ? String(detail.filename).replace(/\.[^.]+$/, '') : null) ||
+      prev.title ||
+      'Upload';
+
+    if (prev._pendingBlobUrl && previewUrl && previewUrl !== prev._pendingBlobUrl && String(previewUrl).indexOf('blob:') !== 0) {
+      try {
+        URL.revokeObjectURL(prev._pendingBlobUrl);
+      } catch (_) {}
+      prev._pendingBlobUrl = null;
+    }
+
+    var row = {
+      id: null,
+      design_id: null,
+      job_id: jobId || prev.job_id || null,
+      image_url: previewUrl,
+      preview_url: previewUrl,
+      original_url: previewUrl,
+      title: title,
+      prompt: null,
+      design_prompt: null,
+      created_at: prev.created_at || Date.now(),
+      updated_at: Date.now(),
+      source: 'uploaded',
+      design_source: 'Uploaded',
+      library_status: 'inactive',
+      saving_to_library: status !== 'failed',
+      upload_pending: true,
+      upload_status: status,
+      needs_upscale: detail.needsUpscale != null ? !!detail.needsUpscale : !!prev.needs_upscale,
+      _pendingUploadKey: key,
+      _pendingBlobUrl: previewUrl && String(previewUrl).indexOf('blob:') === 0 ? previewUrl : prev._pendingBlobUrl || null,
+      metadata: {
+        design_source: 'Uploaded',
+        upload_pending: true,
+        upload_status: status
+      }
+    };
+
+    // Prefer stable key by job id once known
+    if (jobId && key !== jobId) {
+      delete pendingUploadByKey[key];
+      key = jobId;
+      row._pendingUploadKey = key;
+    }
+    pendingUploadByKey[key] = row;
+
+    if (designsActivityFilter !== 'inactive') {
+      setDesignsActivityFilter('inactive');
+    } else {
+      filterDesigns((document.getElementById('creatorDesignsSearch') || {}).value || '');
+      renderDesignsGrid();
+    }
+    startLibrarySaveWatchIfNeeded();
+  }
+
+  function updatePendingUploadProgress(detail) {
+    if (!detail) return;
+    var key = findPendingUploadKey(detail);
+    if (!key || !pendingUploadByKey[key]) {
+      if (detail.jobId || detail.localId) upsertPendingUploadPlaceholder(detail);
+      return;
+    }
+    var row = pendingUploadByKey[key];
+    if (detail.status) row.upload_status = detail.status;
+    if (detail.previewUrl) {
+      if (row._pendingBlobUrl && String(detail.previewUrl).indexOf('blob:') !== 0) {
+        try {
+          URL.revokeObjectURL(row._pendingBlobUrl);
+        } catch (_) {}
+        row._pendingBlobUrl = null;
+      }
+      row.preview_url = detail.previewUrl;
+      row.image_url = detail.previewUrl;
+      row.original_url = detail.previewUrl;
+    }
+    if (detail.jobId) row.job_id = String(detail.jobId);
+    row.saving_to_library = row.upload_status !== 'failed';
+    if (row.metadata) row.metadata.upload_status = row.upload_status;
+    row.updated_at = Date.now();
+
+    if (detail.status === 'done') {
+      // Keep until loadDesigns merges the real row; overlay shows Saving…
+      row.saving_to_library = true;
+    }
+    if (detail.status === 'failed') {
+      row.saving_to_library = false;
+    }
+
+    if (designsActivityFilter === 'inactive') {
+      filterDesigns((document.getElementById('creatorDesignsSearch') || {}).value || '');
+      renderDesignsGrid();
+    }
+  }
+
+  function clearPendingUpload(detailOrJobId) {
+    var detail =
+      detailOrJobId && typeof detailOrJobId === 'object'
+        ? detailOrJobId
+        : { jobId: detailOrJobId };
+    var key = findPendingUploadKey(detail);
+    if (!key) return;
+    var row = pendingUploadByKey[key];
+    if (row && row._pendingBlobUrl) {
+      try {
+        URL.revokeObjectURL(row._pendingBlobUrl);
+      } catch (_) {}
+    }
+    delete pendingUploadByKey[key];
+  }
+
+  function prunePendingUploadsAgainstDesigns(list) {
+    var jobIds = {};
+    (list || []).forEach(function (d) {
+      if (!d || d._pendingUploadKey) return;
+      var jid = d.job_id != null ? String(d.job_id).trim() : '';
+      if (jid) jobIds[jid] = true;
+    });
+    Object.keys(pendingUploadByKey).forEach(function (k) {
+      var row = pendingUploadByKey[k];
+      var jid = row && row.job_id != null ? String(row.job_id).trim() : '';
+      if (jid && jobIds[jid]) clearPendingUpload({ jobId: jid, localId: k });
+    });
+  }
+
+  function mergePendingUploadsIntoList(list) {
+    prunePendingUploadsAgainstDesigns(list);
+    var out = Array.isArray(list) ? list.slice() : [];
+    var existingJobs = {};
+    out.forEach(function (d) {
+      var jid = d && d.job_id != null ? String(d.job_id).trim() : '';
+      if (jid) existingJobs[jid] = true;
+    });
+    pendingUploadEntries().forEach(function (row) {
+      var jid = row.job_id != null ? String(row.job_id).trim() : '';
+      if (jid && existingJobs[jid]) return;
+      out.unshift(row);
+    });
+    return out;
   }
 
   function insertOptimisticInactiveDesignFromJob(job) {
@@ -987,6 +1260,9 @@
 
   function getDesignsBaseForActivityAndModalFilters() {
     var base = designs.filter(designsMatchingActivity);
+    if (designsActivityFilter === 'inactive') {
+      base = mergePendingUploadsIntoList(base);
+    }
     if (lastDesignFilters && typeof window.matchesDesignFilter === 'function') {
       base = base.filter(function (d) {
         return window.matchesDesignFilter(d, lastDesignFilters);
@@ -1153,6 +1429,19 @@
           ? patch.publish_excluded_product_keys.slice()
           : [];
       }
+      if (patch.shop_locked === false) {
+        d.shop_locked = false;
+        delete meta.shop_locked;
+        if (patch.metadata && typeof patch.metadata === 'object') {
+          Object.keys(patch.metadata).forEach(function (k) {
+            if (k === 'shop_locked') return;
+            meta[k] = patch.metadata[k];
+          });
+        }
+      } else if (patch.shop_locked === true) {
+        d.shop_locked = true;
+        meta.shop_locked = true;
+      }
       d.metadata = meta;
       break;
     }
@@ -1232,6 +1521,11 @@
   }
 
   function hasSavingDesignsInList() {
+    if (pendingUploadEntries().some(function (d) {
+      return d && d.upload_pending && d.upload_status !== 'failed';
+    })) {
+      return true;
+    }
     return designs.some(function (d) {
       return d && d.saving_to_library;
     });
@@ -1251,7 +1545,9 @@
   }
 
   function appendSavingToLibraryOverlay(container, design) {
-    if (!container || !design || !design.saving_to_library) return;
+    if (!container || !design) return;
+    var uploadPending = !!design.upload_pending;
+    if (!uploadPending && !design.saving_to_library) return;
     var overlay = document.createElement('div');
     overlay.className = 'creator-creations-saving-overlay';
     overlay.setAttribute('aria-hidden', 'true');
@@ -1260,12 +1556,17 @@
     overlay.appendChild(spinner);
     var label = document.createElement('span');
     label.className = 'creator-creations-saving-overlay__label';
-    label.textContent =
-      (window.CreatorMobileI18n && window.CreatorMobileI18n.creationsSavingToLibrary) || 'Saving…';
+    if (uploadPending) {
+      label.textContent = resolveUploadStatusLabel(design.upload_status);
+    } else {
+      label.textContent =
+        (window.CreatorMobileI18n && window.CreatorMobileI18n.creationsSavingToLibrary) || 'Saving…';
+    }
     overlay.appendChild(label);
     container.appendChild(overlay);
     if (container.classList) {
       container.classList.add('creator-creations-card--saving');
+      if (uploadPending) container.classList.add('creator-creations-card--upload-pending');
     }
   }
 
@@ -1633,6 +1934,7 @@
   }
 
   function openCreationsDesignDetailModal(design) {
+    if (design && design.upload_pending) return;
     if (isInactiveLibraryDesign(design)) {
       console.info('[CreationsScreen] Inactive (unsaved generated) → job preview modal', {
         job_id: design.job_id || null
@@ -1719,7 +2021,17 @@
     }
 
     var idStr = design.id != null ? String(design.id).trim() : '';
-    if (idStr) {
+    var uploadPending = !!design.upload_pending;
+    if (uploadPending) {
+      var statusBtn = document.createElement('button');
+      statusBtn.type = 'button';
+      statusBtn.className = 'creator-creations-card-library-btn creator-creations-card-library-btn--status';
+      statusBtn.textContent = resolveUploadStatusLabel(design.upload_status);
+      statusBtn.setAttribute('aria-label', statusBtn.textContent);
+      statusBtn.disabled = true;
+      card.appendChild(statusBtn);
+      card.classList.add('creator-creations-card--upload-pending');
+    } else if (idStr) {
       var badgeBtn = document.createElement('button');
       badgeBtn.type = 'button';
       badgeBtn.className = 'creator-creations-card-products-badge';
@@ -1751,7 +2063,12 @@
       libBtn.className = 'creator-creations-card-library-btn';
       var lsBtn = resolveLibraryStatus(design);
       var Mi = window.CreatorMobileI18n || {};
-      if (lsBtn === 'inactive') {
+      var shopLocked = isShopLockedDesign(design);
+      if (shopLocked) {
+        libBtn.textContent = Mi.libraryUnlockShopBtn || 'Unlock';
+        libBtn.setAttribute('aria-label', Mi.libraryUnlockShopAria || 'Unlock Shop design with EAZV');
+        libBtn.classList.add('creator-creations-card-library-btn--unlock');
+      } else if (lsBtn === 'inactive') {
         libBtn.textContent = Mi.libraryActivateBtn || 'Activate';
         libBtn.setAttribute('aria-label', Mi.libraryActivateAria || 'Activate design');
       } else {
@@ -1761,6 +2078,12 @@
       libBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
+        if (shopLocked) {
+          if (typeof window.unlockShopStudioDesign === 'function') {
+            window.unlockShopStudioDesign(design);
+          }
+          return;
+        }
         if (lsBtn === 'inactive') {
           var previewApiActivate = window.CreatorDesignPreviewModal;
           if (previewApiActivate && typeof previewApiActivate.open === 'function') {
@@ -1775,6 +2098,7 @@
       card.appendChild(libBtn);
     }
 
+    appendShopLockBadges(card, design);
     appendReviewStatusBadge(card, design);
 
     if (isBulkSelectableDesign(design)) {
@@ -2232,14 +2556,26 @@
           rightActions.appendChild(prodBadge);
 
           var idStrList = design.id != null ? String(design.id).trim() : '';
-          if (idStrList) {
+          if (design.upload_pending) {
+            var statusBtnList = document.createElement('button');
+            statusBtnList.type = 'button';
+            statusBtnList.className =
+              'creator-creations-list-item-library-btn creator-creations-list-item-badge creator-creations-list-item-badge--library creator-creations-list-item-library-btn--status';
+            statusBtnList.textContent = resolveUploadStatusLabel(design.upload_status);
+            statusBtnList.disabled = true;
+            rightActions.appendChild(statusBtnList);
+          } else if (idStrList) {
             var libBtnList = document.createElement('button');
             libBtnList.type = 'button';
             libBtnList.className =
               'creator-creations-list-item-library-btn creator-creations-list-item-badge creator-creations-list-item-badge--library';
             var lsList = resolveLibraryStatus(design);
             var MiL = window.CreatorMobileI18n || {};
-            if (lsList === 'inactive') {
+            var shopLockedList = isShopLockedDesign(design);
+            if (shopLockedList) {
+              libBtnList.textContent = MiL.libraryUnlockShopBtn || 'Unlock';
+              libBtnList.setAttribute('aria-label', MiL.libraryUnlockShopAria || 'Unlock Shop design with EAZV');
+            } else if (lsList === 'inactive') {
               libBtnList.textContent = MiL.libraryActivateBtn || 'Activate';
               libBtnList.setAttribute('aria-label', MiL.libraryActivateAria || 'Activate design');
             } else {
@@ -2249,6 +2585,12 @@
             libBtnList.addEventListener('click', function (e) {
               e.preventDefault();
               e.stopPropagation();
+              if (shopLockedList) {
+                if (typeof window.unlockShopStudioDesign === 'function') {
+                  window.unlockShopStudioDesign(design);
+                }
+                return;
+              }
               if (lsList === 'inactive') {
                 var previewApiActivateList = window.CreatorDesignPreviewModal;
                 if (previewApiActivateList && typeof previewApiActivateList.open === 'function') {
@@ -2261,6 +2603,18 @@
               }
             });
             rightActions.appendChild(libBtnList);
+            if (shopLockedList) {
+              var shopBadgeList = document.createElement('span');
+              shopBadgeList.className =
+                'creator-creations-list-item-badge creator-creations-list-item-badge--shop';
+              shopBadgeList.textContent = MiL.libraryBadgeShop || 'Shop';
+              leftBadges.appendChild(shopBadgeList);
+              var privBadgeList = document.createElement('span');
+              privBadgeList.className =
+                'creator-creations-list-item-badge creator-creations-list-item-badge--private';
+              privBadgeList.textContent = MiL.libraryBadgePrivate || 'Private';
+              leftBadges.appendChild(privBadgeList);
+            }
           }
 
           bottom.appendChild(rightActions);
@@ -2472,6 +2826,7 @@
     designsLoadPromise = fetchDesigns()
       .then(function (designList) {
         designs = designList || [];
+        prunePendingUploadsAgainstDesigns(designs);
         designsLoadError = null;
         designsLoadedOnce = true;
         designsOwnerRetryAttempts = 0;
@@ -2744,6 +3099,30 @@
       var job = ev && ev.detail && ev.detail.job;
       if (job) insertOptimisticInactiveDesignFromJob(job);
       if (job && !job.saved && (job.saving || job.done)) refreshDesignsOnSaveProgress();
+    });
+    window.addEventListener('creatorUploadPlaceholder', function (ev) {
+      upsertPendingUploadPlaceholder((ev && ev.detail) || {});
+    });
+    window.addEventListener('creatorUploadProgress', function (ev) {
+      updatePendingUploadProgress((ev && ev.detail) || {});
+    });
+    window.addEventListener('creator-upload-finished', function (ev) {
+      var detail = (ev && ev.detail) || {};
+      var jobId = detail.jobId != null ? String(detail.jobId).trim() : '';
+      var statusKey = detail.statusKey || (detail.status && detail.status.error ? 'failed' : 'done');
+      updatePendingUploadProgress({
+        jobId: jobId,
+        localId: detail.localId,
+        status: statusKey === 'failed' ? 'failed' : 'done',
+        previewUrl:
+          (detail.status && detail.status.result && (detail.status.result.preview_url || detail.status.result.image_url)) ||
+          (detail.status && (detail.status.preview_url || detail.status.image_url)) ||
+          null
+      });
+      if (statusKey !== 'failed' && jobId) {
+        // Real row replaces placeholder after loadDesigns prune
+        loadDesigns(true, { silent: true }).catch(function () {});
+      }
     });
 
     window.addEventListener('creator-filter-applied', function (e) {

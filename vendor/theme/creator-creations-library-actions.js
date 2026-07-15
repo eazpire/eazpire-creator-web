@@ -42,6 +42,93 @@
     return window.CreatorMobileI18n || {};
   }
 
+  function isShopStudioLockedDesign(design) {
+    if (!design) return false;
+    var meta = design.metadata || {};
+    if (typeof meta === 'string') {
+      try {
+        meta = JSON.parse(meta || '{}') || {};
+      } catch (_) {
+        meta = {};
+      }
+    }
+    if (design.shop_locked === true) return true;
+    return meta.shop_locked === true || meta.shop_locked === 'yes' || meta.shop_locked === 1;
+  }
+
+  function formatUnlockConfirm(cost) {
+    var M = Mi();
+    var tpl =
+      M.libraryUnlockShopConfirm ||
+      'Unlock this Shop design for {{ cost }} EAZV? This uses one generation slot and one design slot.';
+    return String(tpl).replace(/\{\{\s*cost\s*\}\}/g, String(cost != null ? cost : 15));
+  }
+
+  async function unlockShopStudioDesign(design) {
+    var M = Mi();
+    var owner = getOwnerId();
+    if (!owner || !design || !design.id) return { ok: false, error: 'missing' };
+    var cost = 15;
+    try {
+      var limUrl =
+        apiBase() +
+        '?op=check-shop-studio-generate-limit&owner_id=' +
+        encodeURIComponent(owner) +
+        '&logged_in_customer_id=' +
+        encodeURIComponent(owner);
+      var limRes = await fetch(limUrl, { credentials: 'include' });
+      var limJson = await limRes.json().catch(function () {
+        return {};
+      });
+      if (limJson && limJson.unlock_cost_eaz != null) cost = Number(limJson.unlock_cost_eaz) || 15;
+    } catch (_) {}
+
+    if (!window.confirm(formatUnlockConfirm(cost))) {
+      return { ok: false, cancelled: true };
+    }
+
+    var url =
+      apiBase() +
+      '?op=unlock-shop-studio-design&logged_in_customer_id=' +
+      encodeURIComponent(owner);
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ owner_id: owner, design_id: Number(design.id) }),
+    });
+    var json = await res.json().catch(function () {
+      return { ok: false };
+    });
+    if (!json || !json.ok) {
+      var msg =
+        (json && (json.message || json.error)) || M.libraryUnlockShopFailed || 'Could not unlock design.';
+      window.alert(String(msg));
+      return { ok: false, error: json && json.error };
+    }
+    if (design.metadata && typeof design.metadata === 'object') {
+      delete design.metadata.shop_locked;
+      design.metadata.origin = design.metadata.origin || 'shop_studio';
+    }
+    design.shop_locked = false;
+    design.library_status = 'active';
+    design.visibility = 'private';
+    if (window.CreationsScreen && typeof window.CreationsScreen.applyDesignLibraryPatch === 'function') {
+      window.CreationsScreen.applyDesignLibraryPatch(design.id, {
+        library_status: 'active',
+        visibility: 'private',
+        shop_locked: false,
+        metadata: design.metadata,
+      });
+    } else {
+      try {
+        window.dispatchEvent(new CustomEvent('eaz-creations-refresh'));
+      } catch (_) {}
+    }
+    window.alert(M.libraryUnlockShopSuccess || 'Design unlocked.');
+    return { ok: true, cost_eaz: json.cost_eaz };
+  }
+
   function getActivateListingMode() {
     return activateListingMode === 'personalized_sample' ? 'personalized_sample' : 'direct_sell';
   }
@@ -1668,6 +1755,10 @@
   }
 
   async function openActivateModal(design) {
+    if (isShopStudioLockedDesign(design)) {
+      await unlockShopStudioDesign(design);
+      return;
+    }
     pendingDesign = design;
     mode = 'activate';
 
@@ -1836,4 +1927,6 @@
   window.unmountCreatorCreationsActivateInto = unmountCreatorCreationsActivateInto;
   window.triggerCreatorCreationsActivateConfirm = triggerCreatorCreationsActivateConfirm;
   window.triggerCreatorCreationsActivateSave = triggerCreatorCreationsActivateSave;
+  window.unlockShopStudioDesign = unlockShopStudioDesign;
+  window.isShopStudioLockedDesign = isShopStudioLockedDesign;
 })();

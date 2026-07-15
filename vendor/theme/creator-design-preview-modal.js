@@ -2110,6 +2110,22 @@
         
         // Update current visibility state
         const newVisibility = switchEl.checked ? 'public' : 'private';
+        if (
+          newVisibility === 'public' &&
+          typeof window.isShopStudioLockedDesign === 'function' &&
+          window.isShopStudioLockedDesign(currentDesign)
+        ) {
+          switchEl.checked = false;
+          allVisibilitySwitches.forEach(function (otherSwitch) {
+            otherSwitch.checked = false;
+          });
+          currentVisibility = 'private';
+          window.alert(
+            (window.CreatorMobileI18n && window.CreatorMobileI18n.libraryUnlockShopConfirm) ||
+              'Unlock this Shop design with EAZV before making it public.'
+          );
+          return;
+        }
         currentVisibility = newVisibility;
         
         // Check if changed from original

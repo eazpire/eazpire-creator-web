@@ -260,6 +260,120 @@
     color:#9ca3af;
   }
 
+  /* Top-left preview meta: Resolution / MB / Upscale */
+  .design-upload-preview__meta{
+    position:absolute;
+    top:8px;
+    left:8px;
+    z-index:12;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:6px;
+    pointer-events:none;
+  }
+  .design-upload-preview__meta-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:5px 9px;
+    border-radius:8px;
+    background:rgba(15,23,42,0.82);
+    border:1px solid rgba(75,85,99,0.85);
+    color:#e5e7eb;
+    font-size:11px;
+    font-weight:600;
+    line-height:1.2;
+    letter-spacing:0.01em;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    max-width:min(220px,70vw);
+  }
+  .design-upload-preview__meta-chip strong{
+    font-weight:700;
+    color:#f97316;
+  }
+  .design-upload-preview__meta-chip--upscale{
+    pointer-events:auto;
+    cursor:pointer;
+    border-color:rgba(249,115,22,0.55);
+    color:#fdba74;
+    background:rgba(249,115,22,0.14);
+  }
+  .design-upload-preview__meta-chip--upscale:hover{
+    background:rgba(249,115,22,0.28);
+    color:#fed7aa;
+  }
+  .design-upload-preview__meta-chip--upscale[hidden]{
+    display:none !important;
+  }
+
+  .creator-upload-upscale-info-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(2,6,23,0.72);
+    z-index:10000060;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:max(12px,env(safe-area-inset-top,0)) 16px max(12px,env(safe-area-inset-bottom,0));
+    box-sizing:border-box;
+  }
+  .creator-upload-upscale-info-dialog{
+    background:#111827;
+    border:1px solid #374151;
+    border-radius:16px;
+    padding:20px 22px;
+    max-width:400px;
+    width:min(400px,calc(100vw - 32px));
+    box-shadow:0 16px 48px rgba(0,0,0,0.45);
+    color:#e5e7eb;
+  }
+  .creator-upload-upscale-info-dialog h3{
+    margin:0 0 12px;
+    font-size:18px;
+    font-weight:600;
+    text-align:center;
+    color:#e5e7eb;
+  }
+  .creator-upload-upscale-info-dialog__row{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+    font-size:14px;
+  }
+  .creator-upload-upscale-info-dialog__label{
+    color:#9ca3af;
+    flex-shrink:0;
+  }
+  .creator-upload-upscale-info-dialog__value{
+    color:#e5e7eb;
+    font-weight:500;
+    text-align:right;
+  }
+  .creator-upload-upscale-info-dialog__note{
+    margin:12px 0 16px;
+    font-size:13px;
+    line-height:1.45;
+    color:#9ca3af;
+  }
+  .creator-upload-upscale-info-dialog__btn{
+    width:100%;
+    min-height:44px;
+    border:none;
+    border-radius:10px;
+    background:#f97316;
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .creator-upload-upscale-info-dialog__btn:hover{
+    background:#fb923c;
+  }
+
   /* Rahmen um das Design: dünner weißer Rand, verschiebbar (nur Mitte) und skalierbar (Ecken/Kanten) */
   .design-upload-frame{
     position:absolute;
@@ -788,11 +902,11 @@
     }
   }
 
-  /* Confirm step before queue upload — i18n via JS; shop-neutral light card */
+  /* Confirm step before queue upload — dark (Creator); --shop keeps light skin */
   .creator-upload-confirm-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.55);
+    background: rgba(2, 6, 23, 0.72);
     z-index: 10000050;
     display: flex;
     align-items: center;
@@ -808,14 +922,15 @@
     display: block;
     flex-shrink: 0;
     text-align: left;
-    background: #fff;
-    border: 1px solid #e5e7eb;
+    background: #111827;
+    border: 1px solid #374151;
     border-radius: 16px;
     padding: 20px 22px;
     max-width: 400px;
     width: min(400px, calc(100vw - 32px));
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
     white-space: normal;
+    color: #e5e7eb;
   }
   /* Theme base.css: img { width:100% } — feste Coin-Größen mit !important */
   .creator-upload-confirm-dialog .eaz-coin-icon {
@@ -835,15 +950,15 @@
     flex: 0 0 14px !important;
   }
   .creator-upload-confirm-dialog h3 {
-    color: #111827;
+    color: #e5e7eb;
     font-size: 18px;
     font-weight: 600;
     margin: 0 0 14px 0;
     text-align: center;
   }
   .creator-upload-confirm-dialog__summary {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: #0f172a;
+    border: 1px solid #374151;
     border-radius: 12px;
     padding: 14px;
     margin-bottom: 12px;
@@ -865,11 +980,11 @@
     margin-bottom: 0;
   }
   .creator-upload-confirm-dialog__label {
-    color: #6b7280;
+    color: #9ca3af;
     flex-shrink: 0;
   }
   .creator-upload-confirm-dialog__value {
-    color: #111827;
+    color: #e5e7eb;
     font-weight: 500;
     text-align: right;
     min-width: 0;
@@ -885,17 +1000,17 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #c2410c;
+    color: #fb923c;
     width: fit-content;
     max-width: 100%;
     margin-left: auto;
   }
   .creator-upload-confirm-dialog__value--xp {
-    color: #15803d;
+    color: #4ade80;
   }
   .creator-upload-confirm-dialog__cost {
-    background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(251, 191, 36, 0.08));
-    border: 1px solid rgba(249, 115, 22, 0.25);
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(15, 23, 42, 0.9));
+    border: 1px solid rgba(249, 115, 22, 0.35);
     border-radius: 12px;
     padding: 12px 14px;
     margin-bottom: 14px;
@@ -933,21 +1048,76 @@
     line-height: 1.2;
   }
   .creator-upload-confirm-dialog__btn--cancel {
-    background: #f3f4f6;
-    color: #374151;
+    background: transparent;
+    color: #9ca3af;
+    border: 1px solid #4b5563;
   }
   .creator-upload-confirm-dialog__btn--cancel:hover {
-    background: #e5e7eb;
+    background: #1f2937;
+    color: #e5e7eb;
+    border-color: #6b7280;
   }
   .creator-upload-confirm-dialog__btn--primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
+    background: #f97316;
+    color: #ffffff;
+  }
+  .creator-upload-confirm-dialog__btn--primary:hover {
+    background: #fb923c;
+  }
+
+  /* Shop light skin (eaz-shop design upload) */
+  .creator-upload-confirm-overlay--shop {
+    background: rgba(15, 23, 42, 0.55);
+  }
+  .creator-upload-confirm-dialog--shop {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+    color: #111827;
+  }
+  .creator-upload-confirm-dialog--shop h3 {
+    color: #111827;
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__summary {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__label {
+    color: #6b7280;
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__value {
+    color: #111827;
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__value--cost {
+    color: #c2410c;
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__value--xp {
+    color: #15803d;
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__cost {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(251, 191, 36, 0.08));
+    border: 1px solid rgba(249, 115, 22, 0.25);
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__btn--cancel {
+    background: #f3f4f6;
+    color: #374151;
+    border: none;
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__btn--cancel:hover {
+    background: #e5e7eb;
+    color: #374151;
+    border: none;
+  }
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__btn--primary {
     background: linear-gradient(135deg, #f97316, #fbbf24);
     color: #0f172a;
   }
-  .creator-upload-confirm-dialog__btn--primary:hover {
+  .creator-upload-confirm-dialog--shop .creator-upload-confirm-dialog__btn--primary:hover {
+    background: linear-gradient(135deg, #f97316, #fbbf24);
     filter: brightness(1.03);
   }
 </style>

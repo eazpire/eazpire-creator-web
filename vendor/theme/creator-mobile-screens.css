@@ -991,6 +991,24 @@
   max-width: calc(100% - 16px);
   pointer-events: auto;
 }
+.creator-creations-card--upload-pending {
+  border-color: rgba(249, 115, 22, 0.45);
+}
+.creator-creations-card-library-btn--status,
+.creator-creations-list-item-library-btn--status {
+  pointer-events: none;
+  cursor: default;
+  border-color: rgba(249, 115, 22, 0.55);
+  color: #fdba74;
+  background: rgba(15, 23, 42, 0.88);
+  text-transform: none;
+}
+.creator-creations-card-library-btn--status:hover,
+.creator-creations-list-item-library-btn--status:hover {
+  border-color: rgba(249, 115, 22, 0.55);
+  background: rgba(15, 23, 42, 0.88);
+  color: #fdba74;
+}
 .creator-creations-card-library-btn {
   position: absolute;
   bottom: 8px;
@@ -1019,6 +1037,54 @@
 .creator-creations-card-library-btn:hover {
   border-color: rgba(249, 115, 22, 0.75);
   background: rgba(249, 115, 22, 0.32);
+}
+.creator-creations-card-library-btn--unlock {
+  border-color: rgba(167, 139, 250, 0.55);
+  background: rgba(124, 58, 237, 0.28);
+}
+.creator-creations-card-library-btn--unlock:hover {
+  border-color: rgba(196, 181, 253, 0.8);
+  background: rgba(139, 92, 246, 0.4);
+}
+.creator-creations-card-shop-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: calc(100% - 16px);
+  pointer-events: none;
+}
+.creator-creations-card-shop-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+}
+.creator-creations-card-shop-badge--shop {
+  border-color: rgba(167, 139, 250, 0.55);
+  background: rgba(124, 58, 237, 0.45);
+}
+.creator-creations-card-shop-badge--private {
+  border-color: rgba(148, 163, 184, 0.45);
+  background: rgba(71, 85, 105, 0.55);
+}
+.creator-creations-list-item-badge--shop {
+  border-color: rgba(167, 139, 250, 0.45);
+  color: #c4b5fd;
+}
+.creator-creations-list-item-badge--private {
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #cbd5e1;
 }
 .creator-creations-card-products-badge:hover {
   border-color: rgba(249, 115, 22, 0.55);
