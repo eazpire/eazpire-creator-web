@@ -1046,6 +1046,10 @@
       console.log('[InspirationModal] Opening modal...', { isConnected: modal.isConnected, id: modal.id });
       refreshModalCloseEl();
 
+      // Clear any leftover overlay inline styles from pre-migration open path
+      modal.style.cssText = '';
+      modal.classList.remove('creator-modal', 'creator-modal--open', 'creator-modal--strong-backdrop');
+
       // Native <dialog> API — same as My Designs
       if (typeof modal.showModal === 'function') {
         if (!modal.open) modal.showModal();
@@ -1099,7 +1103,7 @@
       } else {
         modal.removeAttribute('open');
       }
-      modal.classList.remove('creator-inspiration-modal--detail');
+      modal.classList.remove('creator-inspiration-modal--detail', 'creator-modal', 'creator-modal--open', 'creator-modal--strong-backdrop');
       modal.style.cssText = '';
 
       // Reset to grid view

@@ -1,19 +1,53 @@
 /* Public Designs (Inspiration) — same shell/layout as My Designs (creator-base-modal) */
 
-/* Large dialog size (My Designs is smaller; Public Designs needs a wide grid) */
-#creator-inspiration-modal.creator-base-modal {
+/*
+ * CRITICAL shell layout
+ * Bug after dialog migration: leftover overlay rules (or missing base [open] column)
+ * can leave the <dialog> as display:flex with default flex-direction:row +
+ * align-items:center → title/X shrink into a left mid box, toolbar+grid sit on the right.
+ * Force column + stretch here so layout cannot collapse into a side panel.
+ */
+#creator-inspiration-modal.creator-base-modal,
+#creator-inspiration-modal.creator-base-modal[open] {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  box-sizing: border-box;
+  /* Large dialog (My Designs uses default 520px; Public Designs needs a wide grid) */
   max-width: 1200px;
   width: 95vw;
   height: 90vh;
   max-height: 90vh;
+  /* Kill old .creator-modal overlay positioning if anything still applies it */
+  inset: unset;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 0;
+}
+
+#creator-inspiration-modal.creator-base-modal .creator-base-modal__header {
+  width: 100%;
+  flex: 0 0 auto;
+  align-self: stretch;
+  box-sizing: border-box;
 }
 
 #creator-inspiration-modal.creator-base-modal .creator-base-modal__body {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  box-sizing: border-box;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -491,12 +525,24 @@ body[data-creator-mode="true"] #creator-inspiration-modal .creator-inspiration-m
 }
 
 @media (max-width: 749px) {
-  #creator-inspiration-modal.creator-base-modal {
+  #creator-inspiration-modal.creator-base-modal,
+  #creator-inspiration-modal.creator-base-modal[open] {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
     max-width: 100vw;
     width: 100vw;
     height: 100dvh;
     max-height: 100dvh;
     border-radius: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    inset: 0;
+    margin: 0;
   }
 
   .creator-inspiration-modal__grid {
