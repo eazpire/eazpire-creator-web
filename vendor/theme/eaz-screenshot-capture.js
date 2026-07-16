@@ -547,9 +547,10 @@
    *   resolves; a second call or a later task throws / is ignored.
    * - Calling after the video track is live / after ~1s does NOT help.
    *
-   * Limitation: websites cannot reliably force another tab back if Chromium
-   * still focuses the shared tab. Prefer current tab, Window, or Entire Screen.
-   * Extensions (chrome.tabs.update) can; BroadcastChannel / SW cannot.
+   * Do NOT set preferCurrentTab — that locks Chrome/Edge to a current-tab-only
+   * picker. Full surface choice (tabs + windows + screens) stays available.
+   * Limitation: sharing another *tab* may still focus that tab; Window/Screen
+   * is better for other sites. Extensions can force tab focus; pages cannot.
    */
   function applyNoFocusSteal(controller) {
     if (!controller || typeof controller.setFocusBehavior !== 'function') return false;
@@ -781,18 +782,15 @@
     var openDialogs = snapshotOpenDialogs();
     var refocusOpts = { previousActive: previousActive, dialogs: openDialogs };
 
-    // Product guidance (browser security limits true background cross-tab capture):
-    // 1) Recommended: share this Design Studio tab (preferCurrentTab) — zero navigation.
-    // 2) Other site without leaving: open it in a separate window, share Window / Screen.
-    // 3) Sharing another browser *tab* often still focuses that tab in Chromium/Edge.
+    // Full picker: Chrome tabs + application windows + entire screen.
+    // Never set preferCurrentTab — that forces the current-tab-only UX
+    // ("Allow … to show this tab?"). CaptureController focus stays best-effort.
+    // Guidance: Window / Entire Screen is better for other sites; sharing
+    // another browser *tab* often still focuses that tab in Chromium/Edge.
     var constraints = {
-      video: {
-        displaySurface: 'browser'
-      },
+      video: true,
       audio: false,
-      preferCurrentTab: true,
       selfBrowserSurface: 'include',
-      // Keep Window / Entire Screen available (best path for other sites without tab steal).
       monitorTypeSurfaces: 'include',
       surfaceSwitching: 'exclude',
       systemAudio: 'exclude'
