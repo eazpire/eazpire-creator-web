@@ -2,7 +2,8 @@
  * Quick Inspirations Modal — browse + upload mood/screenshot inspirations.
  * Apply: pick one image, then Reference Influence for inspiration settings
  * (Generator / Automations / Shop DG / Shop Studio).
- * Upload sources: Device, Screenshot, Camera, Phone (not Public Designs / My Designs / QI / Canvas).
+ * Upload sources: Device, Screenshot, Camera, Paste from Clipboard, Phone
+ * (not Public Designs / My Designs / QI / Canvas).
  */
 (function () {
   'use strict';
@@ -28,6 +29,7 @@
   var isLoading = false;
   var bound = false;
   var screenshotBinder = null;
+  var pasteBinder = null;
   var uploading = false;
   /** 'public' | 'yours' — default Public Inspirations */
   var activeTab = 'public';
@@ -832,6 +834,36 @@
     }
   }
 
+  function getPasteBtn() {
+    return sourceModal ? sourceModal.querySelector('[data-qi-source="paste"]') : null;
+  }
+
+  function clearPasteInlineMsg() {
+    var pasteBtn = getPasteBtn();
+    if (pasteBtn && window.EazClipboardImage && typeof window.EazClipboardImage.clearInlineMessage === 'function') {
+      window.EazClipboardImage.clearInlineMessage(pasteBtn);
+    }
+  }
+
+  function refreshPasteOption() {
+    if (!sourceModal) return;
+    var pasteBtn = getPasteBtn();
+    if (!pasteBtn) return;
+    if (!(window.EazClipboardImage && typeof window.EazClipboardImage.bindOption === 'function')) {
+      return;
+    }
+    if (!pasteBinder) {
+      pasteBinder = window.EazClipboardImage.bindOption(pasteBtn, {
+        isOpen: function () {
+          var m = sourceModal || document.getElementById('qi-upload-source-modal');
+          return !!(m && m.open);
+        }
+      });
+    } else {
+      pasteBinder.refresh();
+    }
+  }
+
   function openSourcePicker() {
     if (!sourceModal) sourceModal = document.getElementById('qi-upload-source-modal');
     if (!sourceModal) {
@@ -839,10 +871,16 @@
       pickDeviceFiles(true, false);
       return;
     }
+    clearPasteInlineMsg();
     refreshScreenshotOption();
+    refreshPasteOption();
     if (!window.EazScreenshotCapture) {
       setTimeout(refreshScreenshotOption, 50);
       setTimeout(refreshScreenshotOption, 250);
+    }
+    if (!window.EazClipboardImage) {
+      setTimeout(refreshPasteOption, 50);
+      setTimeout(refreshPasteOption, 250);
     }
     showDialog(sourceModal);
   }
@@ -914,6 +952,31 @@
     input.click();
   }
 
+  function handlePasteFromClipboard() {
+    var pasteBtn = getPasteBtn();
+    if (!(window.EazClipboardImage && typeof window.EazClipboardImage.start === 'function')) {
+      if (pasteBtn && window.EazClipboardImage && window.EazClipboardImage.showInlineMessage) {
+        window.EazClipboardImage.showInlineMessage(
+          pasteBtn,
+          window.EazClipboardImage.messageForError
+            ? window.EazClipboardImage.messageForError('unsupported')
+            : t(
+                'creator.upload_source.paste_unsupported',
+                'Paste from clipboard is not available in this browser. Use HTTPS with Chrome or Edge, or upload from your device.'
+              )
+        );
+      }
+      return;
+    }
+
+    // Keep picker open until clipboard yields an image (preserves user-gesture for clipboard.read).
+    window.EazClipboardImage.start({ pasteBtn: pasteBtn, toast: false }).then(function (file) {
+      if (!file) return;
+      clearPasteInlineMsg();
+      acceptFiles([file]);
+    });
+  }
+
   function handleSourceClick(source) {
     if (source === 'screenshot') {
       if (!(window.EazScreenshotCapture && typeof window.EazScreenshotCapture.start === 'function')) {
@@ -926,6 +989,11 @@
         if (!file) return;
         acceptFiles([file]);
       });
+      return;
+    }
+
+    if (source === 'paste') {
+      handlePasteFromClipboard();
       return;
     }
 

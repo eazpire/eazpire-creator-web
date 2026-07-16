@@ -2,6 +2,8 @@
 
 #quick-inspirations-modal.creator-modal {
   padding: 0;
+  /* Above Shop Design Studio shell (~999999), Eazy (~1000003), and studio dialogs */
+  z-index: 2147483000;
 }
 
 #quick-inspirations-modal .qi-modal__dialog {
@@ -766,8 +768,15 @@
   100% { background-position: -100% 0; }
 }
 
-/* Nested dialogs (source picker + confirm) — dark Creator look */
+/* Nested dialogs (source picker + confirm) — dark Creator look.
+   Explicit fixed + inset + margin:auto restores centering when theme resets
+   strip the UA dialog margin (otherwise the picker sticks top-left). */
 .qi-nested-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: min(90vh, 720px);
   max-width: 440px;
   width: calc(100vw - 32px);
   border: 1px solid #374151;
@@ -776,6 +785,14 @@
   background: #111827;
   color: #e5e7eb;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+  /* Above QI modal when open-attribute fallback (no top layer) */
+  z-index: 2147483001;
+  overflow: hidden;
+}
+
+.qi-nested-dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 .qi-nested-dialog::backdrop {
