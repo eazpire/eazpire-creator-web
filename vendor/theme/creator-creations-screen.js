@@ -311,14 +311,42 @@
   }
 
   function normalizeGenerated(item) {
-    var prompt = item.prompt || item.design_prompt || item.final_prompt || null;
+    var designPrompt = item.design_prompt || item.final_prompt || null;
+    var userPrompt = '';
+    if (item.user_prompt != null && String(item.user_prompt).trim()) {
+      userPrompt = String(item.user_prompt).trim();
+    } else if (item.prompt != null && String(item.prompt).trim()) {
+      userPrompt = String(item.prompt).trim();
+    }
+    // Never treat assembled Replicate wrappers as the user prompt
+    if (userPrompt) {
+      var upLower = userPrompt.toLowerCase();
+      var looksAssembled =
+        upLower.indexOf('reference influence') === 0 ||
+        upLower.indexOf('quick inspiration mode') === 0 ||
+        upLower.indexOf('target product:') === 0 ||
+        (upLower.indexOf('reference influence') !== -1 && upLower.indexOf('user prompt:') === -1) ||
+        (upLower.indexOf('quick inspiration mode') !== -1 && upLower.indexOf('user prompt:') === -1);
+      if (looksAssembled) {
+        var marker = 'user prompt:';
+        var idx = upLower.lastIndexOf(marker);
+        userPrompt = idx !== -1 ? userPrompt.slice(idx + marker.length).trim() : '';
+      }
+    }
+    if (!userPrompt && designPrompt) {
+      var dp = String(designPrompt);
+      var dpLower = dp.toLowerCase();
+      var mIdx = dpLower.lastIndexOf('user prompt:');
+      if (mIdx !== -1) userPrompt = dp.slice(mIdx + 'user prompt:'.length).trim();
+    }
+
     var aidRaw = item.automation_id != null ? item.automation_id : (item.metadata && item.metadata.automation_id);
     var aidNum = aidRaw != null && aidRaw !== '' ? Number(aidRaw) : NaN;
     var hasAutomation = !isNaN(aidNum) && aidNum > 0;
     var meta = {
       design_source: hasAutomation ? 'Automation' : 'Generated',
-      design_prompt: item.design_prompt || item.final_prompt || prompt || '',
-      user_prompt: (item.user_prompt || prompt || '').toString()
+      design_prompt: designPrompt || '',
+      user_prompt: userPrompt
     };
     if (hasAutomation) meta.automation_id = aidNum;
 
@@ -329,9 +357,10 @@
       image_url: item.image_url || null,
       preview_url: item.preview_url || item.image_url || null,
       original_url: item.image_url || null,
-      title: item.prompt || item.design_prompt || ('Design ' + (item.job_id || '')),
-      prompt: item.prompt || null,
-      design_prompt: item.design_prompt || item.final_prompt || null,
+      title: userPrompt || ('Design ' + (item.job_id || '')),
+      prompt: userPrompt || null,
+      user_prompt: userPrompt || null,
+      design_prompt: designPrompt,
       created_at: item.created_at || item.finished || 0,
       updated_at: null,
       source: hasAutomation ? 'automation' : 'generated',
@@ -583,7 +612,8 @@
     return normalizeGenerated({
       job_id: j.job_id,
       prompt: j.prompt || null,
-      design_prompt: j.final_prompt || j.system_prompt || null,
+      user_prompt: j.user_prompt || j.prompt || null,
+      design_prompt: j.effective_prompt || j.design_prompt || null,
       final_prompt: j.final_prompt || null,
       image_url: image,
       preview_url: preview || image,

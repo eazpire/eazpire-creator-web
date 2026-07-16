@@ -52,29 +52,84 @@
         bestLen = m.length;
       }
     }
-    if (bestIdx < 0) return text.trim();
+    if (bestIdx < 0) return '';
     var tail = text.slice(bestIdx + bestLen).trim();
-    return tail || text.trim();
+    return tail;
   }
 
-  function pickEffectiveImagePrompt(metadata, design) {
+  /** Assembled Replicate wrappers (Reference influence, QUICK INSPIRATION, …) — not user-facing. */
+  function looksLikeAssembledPrompt(text) {
+    if (!text || typeof text !== 'string') return false;
+    var t = text.trim().toLowerCase();
+    if (!t) return false;
+    var prefixes = [
+      'reference influence',
+      'quick inspiration mode',
+      'target product:',
+      'target products:',
+      'reference images provided',
+      'reference image provided',
+      'reference element guidance',
+      'portrait format',
+      'square format',
+      'landscape format',
+      'style:',
+      'design colors:',
+      'background colors:',
+      'text language:'
+    ];
+    for (var i = 0; i < prefixes.length; i++) {
+      if (t.indexOf(prefixes[i]) === 0) return true;
+    }
+    var hasWrapper =
+      t.indexOf('quick inspiration mode') !== -1 ||
+      t.indexOf('reference influence') !== -1 ||
+      t.indexOf('reference images provided by the user') !== -1;
+    var hasUserMarker = t.indexOf('user prompt:') !== -1;
+    return hasWrapper && !hasUserMarker;
+  }
+
+  function pick(v) {
+    if (v == null) return '';
+    var s = String(v).trim();
+    return s && s !== '-' ? s : '';
+  }
+
+  /**
+   * User-facing creation prompt only (what the creator typed / intended).
+   * Never returns internal instruction wrappers alone.
+   */
+  function pickUserFacingCreationPrompt(metadata, design) {
     var m = metadata || {};
     var d = design || {};
-    function pick(v) {
-      if (v == null) return '';
-      var s = String(v).trim();
-      return s || '';
+    var direct = pick(m.user_prompt) || pick(d.user_prompt) || '';
+    if (direct && !looksLikeAssembledPrompt(direct)) return direct;
+
+    var blobs = [
+      pick(m.effective_prompt),
+      pick(d.effective_prompt),
+      pick(m.design_prompt),
+      pick(d.design_prompt),
+      pick(m.final_prompt),
+      pick(d.final_prompt),
+      pick(d.prompt),
+      pick(m.prompt)
+    ];
+    for (var i = 0; i < blobs.length; i++) {
+      var raw = blobs[i];
+      if (!raw) continue;
+      var tail = extractTailAfterUserPromptMarker(raw);
+      if (tail && !looksLikeAssembledPrompt(tail)) return tail;
     }
-    var raw =
-      pick(m.final_prompt) ||
-      pick(m.effective_prompt) ||
-      pick(d.final_prompt) ||
-      pick(d.effective_prompt) ||
-      pick(m.design_prompt) ||
-      pick(d.prompt);
-    if (!raw) return '';
-    var tail = extractTailAfterUserPromptMarker(raw);
-    return tail.length < raw.length ? tail : raw;
+
+    var plain = pick(d.prompt) || pick(m.prompt);
+    if (plain && !looksLikeAssembledPrompt(plain)) return plain;
+    return '';
+  }
+
+  /** @deprecated Use pickUserFacingCreationPrompt — kept name for call sites. */
+  function pickEffectiveImagePrompt(metadata, design) {
+    return pickUserFacingCreationPrompt(metadata, design);
   }
 
   const CREATOR_DISPATCH_FALLBACK = 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
@@ -2388,12 +2443,12 @@
     // Lock body scroll BEFORE showing modal
     preventBodyScroll(true);
 
-    // Set title: metadata title > user_prompt > design_prompt/final_prompt > fallback. Always truncated.
+    // Set title: metadata title > user-facing prompt > fallback. Always truncated.
     var metadata = null;
     try {
       metadata = design.metadata ? (typeof design.metadata === 'string' ? JSON.parse(design.metadata) : design.metadata) : null;
     } catch (_) {}
-    var rawTitle = design.title || (metadata && metadata.title) || (metadata && metadata.user_prompt) || (metadata && (metadata.design_prompt || metadata.final_prompt)) || 'Design';
+    var rawTitle = design.title || (metadata && metadata.title) || pickUserFacingCreationPrompt(metadata, design) || 'Design';
     const title = truncateTitle(String(rawTitle || 'Design'), 80);
     if (modalTitle) modalTitle.textContent = title;
 
@@ -3022,13 +3077,13 @@
       }
     }
 
-    const designPrompt = pickEffectiveImagePrompt(metadata, design);
+    const designPrompt = pickUserFacingCreationPrompt(metadata, design);
     setPromptBoxContent(modalDesignPrompt, designPrompt);
     setPromptBoxContent(modalDesignPromptMobile, designPrompt);
 
     // User Prompt (from metadata) - only for generated designs
-    // WICHTIG: user_prompt wird immer in metadata.user_prompt gespeichert, kein Fallback nötig
-    const userPrompt = metadata?.user_prompt || '';
+    // Prefer user_prompt; extract from assembled blobs; never show instruction wrappers alone.
+    const userPrompt = pickUserFacingCreationPrompt(metadata, design);
     if (modalUserPrompt) {
       modalUserPrompt.textContent = userPrompt || '–';
       if (modalUserPrompt.classList) {

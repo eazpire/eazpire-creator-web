@@ -723,7 +723,12 @@
           cell.appendChild(img);
           cell.addEventListener('click', function () {
             if (tab === 'generated') {
-              var ptext = item.design_prompt || item.prompt || '';
+              var ptext = item.prompt || item.user_prompt || '';
+              if (!ptext && item.design_prompt) {
+                var dp = String(item.design_prompt);
+                var m = dp.toLowerCase().lastIndexOf('user prompt:');
+                ptext = m !== -1 ? dp.slice(m + 'user prompt:'.length).trim() : '';
+              }
               var titleSlice = String(ptext || '').trim().slice(0, 80) || 'Design';
               if (window.CreatorDesignModal && typeof window.CreatorDesignModal.open === 'function') {
                 void window.CreatorDesignModal.open({
