@@ -38,6 +38,24 @@
     return document.getElementById(MODAL_ID);
   }
 
+  function isShopDarkReferenceContext() {
+    try {
+      if (document.body.classList.contains('eaz-shop-printify-studio-open')) return true;
+      if (document.body.classList.contains('eaz-shop-studio-open')) return true;
+      if (document.querySelector('[data-eaz-dg-dialog][open], dialog.eaz-dg-modal[open]')) return true;
+    } catch (e) {}
+    return false;
+  }
+
+  function syncShopDarkClass(modal) {
+    if (!modal) return;
+    if (isShopDarkReferenceContext()) {
+      modal.classList.add('eaz-reference-influence--dg');
+    } else {
+      modal.classList.remove('eaz-reference-influence--dg');
+    }
+  }
+
   function getIncludeLabel() {
     var el = document.querySelector(
       '#reference-influence-elements .reference-influence-modal__element-toggle-option[data-side="include"], #reference-influence-elements .reference-influence-modal__element-toggle-text'
@@ -224,8 +242,9 @@
 
   function close() {
     var modal = getModal();
-    if (modal && modal.close) {
-      modal.close();
+    if (modal) {
+      modal.classList.remove('eaz-reference-influence--dg');
+      if (modal.close) modal.close();
     }
     restoreAutomationLayer();
     pendingFile = null;
@@ -688,6 +707,8 @@
       window.alert('No image.');
       return;
     }
+
+    syncShopDarkClass(modal);
 
     automationLayerRestore = null;
     if (typeof window.eazReparentIntoCreatorAutomationLayer === 'function') {

@@ -1,15 +1,92 @@
 /**
  * Shared clipboard image helpers for upload / reference-image source modals.
- * Best-effort: Clipboard API when available; paste-event cache for mobile.
+ * Option stays always enabled; click reads clipboard (or paste-event cache).
  */
 (function (global) {
   'use strict';
 
+  var STYLE_ID = 'eaz-clipboard-image-styles';
+  var TOAST_ID = 'eaz-clipboard-image-toast';
   var cachedFile = null;
   var changeListeners = [];
+  var toastTimer = null;
+
+  function t(key, fallback) {
+    var full = 'creator.generator.' + key;
+    var fullUpload = 'creator.upload_source.' + key;
+    try {
+      if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.t === 'function') {
+        var v0 = global.CreatorPortalI18n.t(full) || global.CreatorPortalI18n.t(fullUpload);
+        if (v0) return v0;
+      }
+    } catch (e0) {}
+    try {
+      if (global.CreatorI18n) {
+        if (global.CreatorI18n[full]) return global.CreatorI18n[full];
+        if (global.CreatorI18n[fullUpload]) return global.CreatorI18n[fullUpload];
+        if (global.CreatorI18n[key]) return global.CreatorI18n[key];
+      }
+    } catch (e) {}
+    try {
+      var flat = global.__locale;
+      if (flat) {
+        if (flat[full]) return flat[full];
+        if (flat[fullUpload]) return flat[fullUpload];
+      }
+    } catch (e2) {}
+    return fallback;
+  }
+
+  function ensureStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    var style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent =
+      '#' +
+      TOAST_ID +
+      '{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147483000;' +
+      'max-width:min(420px,calc(100vw - 32px));padding:12px 16px;border-radius:12px;' +
+      'background:rgba(17,24,39,0.96);color:#f9fafb;font:600 14px/1.4 system-ui,sans-serif;' +
+      'box-shadow:0 10px 30px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.12);' +
+      'pointer-events:none;opacity:0;transition:opacity .2s ease}' +
+      '#' +
+      TOAST_ID +
+      '.is-visible{opacity:1}';
+    document.head.appendChild(style);
+  }
+
+  function showMessage(text, ms) {
+    if (!text) return;
+    ensureStyles();
+    var el = document.getElementById(TOAST_ID);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = TOAST_ID;
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.add('is-visible');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      el.classList.remove('is-visible');
+    }, typeof ms === 'number' ? ms : 3600);
+  }
 
   function isImageMime(type) {
     return !!(type && String(type).indexOf('image/') === 0);
+  }
+
+  function isApiAvailable() {
+    try {
+      if (typeof window !== 'undefined' && window.isSecureContext === false) return false;
+    } catch (e) {}
+    return !!(
+      typeof navigator !== 'undefined' &&
+      navigator.clipboard &&
+      typeof navigator.clipboard.read === 'function'
+    );
   }
 
   function fileFromBlob(blob, nameHint) {
@@ -60,8 +137,8 @@
 
       // ClipboardItem (navigator.clipboard.read)
       if (item.types && typeof item.getType === 'function') {
-        for (var t = 0; t < item.types.length; t++) {
-          var type = item.types[t];
+        for (var tIdx = 0; tIdx < item.types.length; tIdx++) {
+          var type = item.types[tIdx];
           if (isImageMime(type)) {
             return item
               .getType(type)
@@ -80,10 +157,15 @@
     return tryIndex(0);
   }
 
-  function probe() {
-    if (cachedFile) return Promise.resolve(true);
-    if (!navigator.clipboard || typeof navigator.clipboard.read !== 'function') {
-      return Promise.resolve(false);
+  /**
+   * @returns {Promise<{ file: File|Blob|null, error: null|'empty'|'denied'|'unsupported' }>}
+   */
+  function readImageWithStatus() {
+    if (cachedFile) {
+      return Promise.resolve({ file: cachedFile, error: null });
+    }
+    if (!isApiAvailable()) {
+      return Promise.resolve({ file: null, error: 'unsupported' });
     }
     return navigator.clipboard
       .read()
@@ -91,24 +173,66 @@
         return extractImageFromClipboardItems(items);
       })
       .then(function (file) {
-        if (file) setCachedFile(file);
-        return !!file;
+        if (file) {
+          setCachedFile(file);
+          return { file: file, error: null };
+        }
+        return { file: null, error: 'empty' };
       })
-      .catch(function () {
-        return !!cachedFile;
+      .catch(function (err) {
+        if (cachedFile) return { file: cachedFile, error: null };
+        var name = err && err.name ? String(err.name) : '';
+        if (name === 'NotAllowedError' || name === 'SecurityError') {
+          return { file: null, error: 'denied' };
+        }
+        // Some browsers throw when clipboard has no image / empty
+        return { file: null, error: 'empty' };
       });
   }
 
+  function messageForError(error) {
+    if (error === 'denied') {
+      return t(
+        'paste_denied',
+        'Clipboard access was blocked. Allow clipboard permission, or paste with Ctrl+V / Cmd+V while this page is focused.'
+      );
+    }
+    if (error === 'unsupported') {
+      return t(
+        'paste_unsupported',
+        'Paste from clipboard is not available in this browser. Use HTTPS with Chrome or Edge, or upload from your device.'
+      );
+    }
+    return t('paste_empty', 'No image found in the clipboard. Copy an image first, then try again.');
+  }
+
+  /**
+   * Read clipboard image; show toast on failure. Resolves to File/Blob or null.
+   */
+  function start() {
+    return readImageWithStatus().then(function (result) {
+      if (result && result.file) return result.file;
+      showMessage(messageForError(result && result.error));
+      return null;
+    });
+  }
+
+  function probe() {
+    return readImageWithStatus().then(function (result) {
+      return !!(result && result.file);
+    });
+  }
+
   function readImageFile() {
-    if (cachedFile) return Promise.resolve(cachedFile);
-    return probe().then(function () {
-      return cachedFile || null;
+    return readImageWithStatus().then(function (result) {
+      return (result && result.file) || null;
     });
   }
 
   function setButtonEnabled(btn, enabled) {
     if (!btn) return;
-    var on = !!enabled;
+    // Paste option stays clickable even without a clipboard image (requirement).
+    var on = enabled !== false;
     if (on) {
       btn.removeAttribute('disabled');
       btn.setAttribute('aria-disabled', 'false');
@@ -130,9 +254,9 @@
   }
 
   /**
-   * Keep a source-option button in sync with clipboard image availability while a modal is open.
+   * Keep paste option always enabled while modal is open.
    * @param {HTMLElement} btn
-   * @param {{ isOpen: function(): boolean }} opts
+   * @param {{ isOpen?: function(): boolean }} opts
    */
   function bindOption(btn, opts) {
     if (!btn) return { refresh: function () {}, destroy: function () {} };
@@ -140,39 +264,14 @@
 
     function refresh() {
       if (!isOpen()) return;
-      setButtonEnabled(btn, !!cachedFile);
-      probe().then(function (has) {
-        if (!isOpen()) return;
-        setButtonEnabled(btn, has || !!cachedFile);
-      });
+      setButtonEnabled(btn, true);
     }
 
-    var unsub = onChange(function (has) {
-      if (!isOpen()) return;
-      setButtonEnabled(btn, has);
-    });
-
-    function onVisibility() {
-      if (document.visibilityState === 'visible' && isOpen()) refresh();
-    }
-
-    function onFocus() {
-      if (isOpen()) refresh();
-    }
-
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('focus', onFocus);
-
-    // Start disabled until we know there is an image
-    setButtonEnabled(btn, !!cachedFile);
+    refresh();
 
     return {
       refresh: refresh,
-      destroy: function () {
-        unsub();
-        document.removeEventListener('visibilitychange', onVisibility);
-        window.removeEventListener('focus', onFocus);
-      }
+      destroy: function () {}
     };
   }
 
@@ -186,8 +285,12 @@
   });
 
   global.EazClipboardImage = {
+    isSupported: isApiAvailable,
     probe: probe,
+    start: start,
+    readImageWithStatus: readImageWithStatus,
     readImageFile: readImageFile,
+    showMessage: showMessage,
     getCachedFile: function () {
       return cachedFile;
     },

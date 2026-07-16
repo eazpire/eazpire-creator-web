@@ -367,7 +367,7 @@
     }
   }
 
-  // Render grid of designs — card/image opens preview; Apply loads as reference
+  // Render grid of designs — card click / Apply → Reference Influence (inspiration settings)
   function renderGrid() {
     if (!grid) return;
     
@@ -390,8 +390,8 @@
       card.setAttribute('tabindex', '0');
       card.setAttribute(
         'aria-label',
-        (window.CreatorI18n && window.CreatorI18n['creator.inspiration.preview_aria']) ||
-          inspirationI18n('preview_aria', 'Preview design')
+        (window.CreatorI18n && window.CreatorI18n['creator.inspiration.apply_aria']) ||
+          inspirationI18n('apply_aria', 'Apply as reference')
       );
 
       const imageWrapper = document.createElement('div');
@@ -432,15 +432,15 @@
 
       grid.appendChild(card);
 
-      const openPreview = () => {
+      const selectAsReference = () => {
         console.log('[InspirationModal] Card clicked, design:', design.id);
-        showDetailView(design);
+        loadDesignIntoUploadZone(design);
       };
-      card.addEventListener('click', openPreview);
+      card.addEventListener('click', selectAsReference);
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          openPreview();
+          selectAsReference();
         }
       });
     });

@@ -1341,7 +1341,8 @@
         shopify_handle: p.shopify_handle || null,
         published_at: p.last_published_at || null,
         review_status: p.review_status || null,
-        shopify_completion_status: p.shopify_completion_status || null
+        shopify_completion_status: p.shopify_completion_status || null,
+        design_ids: Array.isArray(p.design_ids) ? p.design_ids : []
       });
     });
     items.sort(function (a, b) {
@@ -2373,6 +2374,51 @@
     }
   }
 
+  /**
+   * Open ProductDetailModal for a published Products-tab card (preview / look & feel).
+   * Falls back to storefront URL only if the modal API is unavailable.
+   */
+  function openPublishedProductPreview(prod) {
+    if (!prod) return;
+    var productKey = prod.product_key || null;
+    var productName = prod.title || prod.product_name || productKey || 'Product';
+    var imageUrl =
+      prod.image_url ||
+      prod.featured_image ||
+      prod.mockup_image ||
+      prod.preview_image ||
+      null;
+    var designIds = Array.isArray(prod.design_ids) ? prod.design_ids : [];
+    var designId = designIds.length ? designIds[0] : null;
+    var opts = {
+      productKey: productKey,
+      productName: productName,
+      ownerId: getOwnerId() || '',
+      designId: designId,
+      designUrl: null,
+      renderedSrc: imageUrl,
+      availableColors: [],
+    };
+
+    var win = window;
+    if (win.ProductDetailModal && typeof win.ProductDetailModal.open === 'function') {
+      win.ProductDetailModal.open(opts);
+      return;
+    }
+    if (win.ProductMockupModal && typeof win.ProductMockupModal.open === 'function') {
+      win.ProductMockupModal.open({
+        productKey: productKey,
+        renderedDesignSrc: imageUrl,
+      });
+      return;
+    }
+    if (prod.url) {
+      window.location.href = prod.url;
+    } else {
+      console.warn('[CreationsScreen] Product preview modal unavailable for', productKey);
+    }
+  }
+
   function createProductCard(prod, index) {
     var card = document.createElement('div');
     card.className = 'creator-creations-card';
@@ -2389,7 +2435,7 @@
     appendReviewStatusBadge(card, prod);
     card.appendChild(media);
     card.addEventListener('click', function () {
-      if (prod.url) window.location.href = prod.url;
+      openPublishedProductPreview(prod);
     });
     return card;
   }
@@ -2859,7 +2905,7 @@
           body.appendChild(bottom);
           item.appendChild(body);
           item.addEventListener('click', function () {
-            if (prod.url) window.location.href = prod.url;
+            openPublishedProductPreview(prod);
           });
           listEl.appendChild(item);
         });

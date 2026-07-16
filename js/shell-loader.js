@@ -181,8 +181,11 @@
         el.innerHTML = parts[i];
         el.dataset.filled = "1";
         el.removeAttribute("data-portal-screen-slot");
+        /* Scope i18n to the new panel only — never re-walk header/subheader chrome. */
+        if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.applyDataT === "function") {
+          global.CreatorPortalI18n.applyDataT(el);
+        }
       });
-      applyShellChrome(host);
       host.dataset.secondaryScreens = "1";
     })().catch(function (e) {
       secondaryScreensPromise = null;

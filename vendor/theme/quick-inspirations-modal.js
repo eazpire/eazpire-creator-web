@@ -1,6 +1,7 @@
 /**
  * Quick Inspirations Modal — browse + upload mood/screenshot inspirations.
- * Apply: exactly one image as loose inspiration (5%) for Creator Generator / Shop DG.
+ * Apply: pick one image, then Reference Influence for inspiration settings
+ * (Generator / Automations / Shop DG / Shop Studio).
  * Upload sources: Device, Screenshot, Camera, Phone (not Public Designs / My Designs / QI / Canvas).
  */
 (function () {
@@ -12,6 +13,8 @@
   var modal = null;
   var uploadModal = null;
   var sourceModal = null;
+  var deleteConfirmModal = null;
+  var deleteConfirmResolver = null;
   var sectionId = null;
   var selectedId = null;
   var previewItem = null;
@@ -132,6 +135,7 @@
     modal = document.getElementById('quick-inspirations-modal');
     uploadModal = document.getElementById('qi-upload-modal');
     sourceModal = document.getElementById('qi-upload-source-modal');
+    deleteConfirmModal = document.getElementById('qi-delete-confirm-modal');
     return !!modal;
   }
 
@@ -163,6 +167,59 @@
     if (body) body.classList.toggle('is-sidebar-open', !!open);
     if (backdrop) backdrop.hidden = !open;
     if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function setDesktopSidebarCollapsed(collapsed) {
+    var wrapper = document.getElementById('qi-sidebar-wrapper');
+    var rail = document.getElementById('qi-filter-rail');
+    if (!wrapper) return;
+    wrapper.classList.toggle('is-collapsed', !!collapsed);
+    if (rail) {
+      rail.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      rail.setAttribute(
+        'aria-label',
+        collapsed
+          ? t('creator.quick_inspirations.filters_expand', 'Expand filters')
+          : t('creator.quick_inspirations.filters_collapse', 'Collapse filters')
+      );
+      rail.title = t('creator.quick_inspirations.filters', 'Filters');
+    }
+  }
+
+  function setEazyTipOpen(open) {
+    var tip = document.getElementById('qi-eazy-tip');
+    var btn = document.getElementById('qi-eazy-btn');
+    if (!tip || !btn) return;
+    var show = !!open;
+    tip.classList.toggle('is-visible', show);
+    tip.hidden = !show;
+    tip.setAttribute('aria-hidden', show ? 'false' : 'true');
+    btn.setAttribute('aria-expanded', show ? 'true' : 'false');
+  }
+
+  function askDeleteConfirm() {
+    return new Promise(function (resolve) {
+      if (!deleteConfirmModal) deleteConfirmModal = document.getElementById('qi-delete-confirm-modal');
+      if (!deleteConfirmModal) {
+        resolve(false);
+        return;
+      }
+      if (deleteConfirmResolver) {
+        try {
+          deleteConfirmResolver(false);
+        } catch (_e) {}
+        deleteConfirmResolver = null;
+      }
+      deleteConfirmResolver = resolve;
+      showDialog(deleteConfirmModal);
+    });
+  }
+
+  function closeDeleteConfirm(result) {
+    var resolve = deleteConfirmResolver;
+    deleteConfirmResolver = null;
+    hideDialog(deleteConfirmModal);
+    if (typeof resolve === 'function') resolve(!!result);
   }
 
   function setActiveTab(tab) {
@@ -233,13 +290,8 @@
     if (!item || !item.id || !ownerId) return false;
     if (!isOwnedItem(item)) return false;
 
-    var confirmMsg = t(
-      'creator.quick_inspirations.delete_confirm',
-      'Delete this Quick Inspiration? This cannot be undone.'
-    );
-    if (typeof window.confirm === 'function' && !window.confirm(confirmMsg)) {
-      return false;
-    }
+    var confirmed = await askDeleteConfirm();
+    if (!confirmed) return false;
 
     try {
       var u = apiUrl('delete-quick-inspiration');
@@ -279,6 +331,8 @@
   function isOwnedItem(item) {
     var ownerId = getOwnerId();
     if (!ownerId || !item) return false;
+    if (item.is_owner === true) return true;
+    if (item.is_owner === false) return false;
     return String(item.owner_id || '') === String(ownerId);
   }
 
@@ -458,7 +512,11 @@
 
     try {
       var u = apiUrl('list-quick-inspirations');
-      if (activeTab === 'yours') u.searchParams.set('mine', '1');
+      if (activeTab === 'yours') {
+        u.searchParams.set('mine', '1');
+      } else if (getOwnerId()) {
+        u.searchParams.set('exclude_mine', '1');
+      }
       if (searchQuery) u.searchParams.set('search', searchQuery);
       if (activeTag) u.searchParams.set('tag', activeTag);
       if (activeStyle) u.searchParams.set('style', activeStyle);
@@ -497,12 +555,48 @@
     return null;
   }
 
+  function influenceMetaFromResult(result, qiId) {
+    var meta = {
+      source: 'quick_inspiration',
+      quick_inspiration_id: qiId
+    };
+    if (!result) return meta;
+    if (result.inspiration_mode) meta.inspiration_mode = result.inspiration_mode;
+    if (result.elements) meta.elements = result.elements;
+    if (result.include_elements) meta.include_elements = result.include_elements;
+    if (result.exclude_elements) meta.exclude_elements = result.exclude_elements;
+    return meta;
+  }
+
+  function strengthFromResult(result) {
+    if (result && typeof result.strength === 'number' && !isNaN(result.strength)) {
+      return result.strength;
+    }
+    return QI_STRENGTH;
+  }
+
+  function openReferenceInfluenceThen(imageUrl, onApply) {
+    if (window.ReferenceInfluenceModal && typeof window.ReferenceInfluenceModal.open === 'function') {
+      window.ReferenceInfluenceModal.open({
+        imageUrl: imageUrl,
+        initialStrength: QI_STRENGTH,
+        onApply: function (result) {
+          if (!result) return;
+          onApply(result);
+        }
+      });
+      return;
+    }
+    onApply({ strength: QI_STRENGTH, imageUrl: imageUrl });
+  }
+
   function applyItem(item) {
     var imageUrl = item.image_url || item.thumb_url;
     if (!imageUrl) return;
     var qiId = item.id ? String(item.id) : null;
 
-    if (window.__CREATOR_MOBILE_GEN_UPLOAD_ACTIVE) {
+    // Generator / Automations: hand off via event — consumers open Reference Influence
+    if (window.__CREATOR_MOBILE_GEN_UPLOAD_ACTIVE || window.__automationsRefPickActive) {
       close();
       window.dispatchEvent(
         new CustomEvent('gen-design-selected', {
@@ -510,8 +604,6 @@
             imageUrl: imageUrl,
             quickInspiration: true,
             quickInspirationId: qiId,
-            similarity: QI_STRENGTH,
-            referenceStrength: QI_STRENGTH,
             source: 'quick_inspiration'
           }
         })
@@ -522,28 +614,33 @@
 
     var sid = resolveSectionId();
 
-    if (typeof window.eazShopDgAddRef === 'function') {
+    // Shop Design Generator: Reference Influence → then add ref
+    if (typeof window.eazShopDgAddRef === 'function' && sid === 'eaz-shop-dg') {
       close();
-      window.eazShopDgAddRef(imageUrl, QI_STRENGTH, {
-        source: 'quick_inspiration',
-        quick_inspiration_id: qiId
+      openReferenceInfluenceThen(imageUrl, function (result) {
+        var outUrl = (result.imageUrl && String(result.imageUrl).trim()) || imageUrl;
+        window.eazShopDgAddRef(outUrl, strengthFromResult(result), influenceMetaFromResult(result, qiId));
       });
       return;
     }
 
+    // Shop Design Studio: Reference Influence → then add ref chip
     if (
       document.body.classList.contains('eaz-shop-studio-open') &&
       typeof window.eazShopStudioRefsAdd === 'function' &&
       sid
     ) {
       close();
-      window.eazShopStudioRefsAdd(sid, imageUrl, 5, {
-        source: 'quick_inspiration',
-        quick_inspiration_id: qiId
+      openReferenceInfluenceThen(imageUrl, function (result) {
+        var outUrl = (result.imageUrl && String(result.imageUrl).trim()) || imageUrl;
+        var st = strengthFromResult(result);
+        var pct = st <= 1 && st >= 0 ? Math.round(st * 100) : Math.round(st);
+        window.eazShopStudioRefsAdd(sid, outUrl, pct, influenceMetaFromResult(result, qiId));
       });
       return;
     }
 
+    // Fallback (widget / other): event → consumer opens Reference Influence
     close();
     window.dispatchEvent(
       new CustomEvent('gen-design-selected', {
@@ -551,38 +648,16 @@
           imageUrl: imageUrl,
           quickInspiration: true,
           quickInspirationId: qiId,
-          similarity: QI_STRENGTH,
-          referenceStrength: QI_STRENGTH,
           source: 'quick_inspiration',
           sectionId: sid
         }
       })
     );
-
-    if (sid) {
-      var fileInput = document.getElementById('creatorImage-' + sid);
-      var previewContainer = document.getElementById('imagePreviewContainer-' + sid);
-      var previewImg = document.getElementById('imagePreview-' + sid);
-      var uploadZone = document.getElementById('uploadZone-' + sid);
-      if (previewImg && previewContainer) {
-        previewImg.src = imageUrl;
-        previewContainer.style.display = 'flex';
-        if (uploadZone) uploadZone.style.display = 'none';
-      }
-      if (fileInput) {
-        fileInput.dataset.imageUrl = imageUrl;
-        fileInput.dataset.referenceStrength = String(QI_STRENGTH);
-        fileInput.dataset.refSource = 'quick_inspiration';
-        if (qiId) fileInput.dataset.quickInspirationId = qiId;
-        delete fileInput.dataset.parentDesignId;
-        delete fileInput.dataset.remixDesignId;
-      }
-    }
   }
 
   function hostDialogs(host) {
     if (!host) return;
-    [sourceModal, uploadModal].forEach(function (dlg) {
+    [sourceModal, uploadModal, deleteConfirmModal].forEach(function (dlg) {
       if (dlg && dlg.parentElement !== host) host.appendChild(dlg);
     });
   }
@@ -594,6 +669,8 @@
     selectedId = null;
     closePreview();
     setSidebarOpen(false);
+    setDesktopSidebarCollapsed(false);
+    setEazyTipOpen(false);
 
     var host = null;
     if (typeof window.eazCreatorAutomationLayerHost === 'function') {
@@ -626,6 +703,8 @@
     if (!ensureEls()) return;
     closePreview();
     setSidebarOpen(false);
+    setEazyTipOpen(false);
+    closeDeleteConfirm(false);
     closeSourcePicker();
     closeUpload();
     clearPhoneHook();
@@ -1012,7 +1091,17 @@
 
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
+      if (deleteConfirmModal && deleteConfirmModal.open) {
+        e.preventDefault();
+        closeDeleteConfirm(false);
+        return;
+      }
       if (!modal || !modal.classList.contains('creator-modal--open')) return;
+      if (document.getElementById('qi-eazy-tip') && document.getElementById('qi-eazy-tip').classList.contains('is-visible')) {
+        e.preventDefault();
+        setEazyTipOpen(false);
+        return;
+      }
       if (modal.classList.contains('is-preview')) {
         e.preventDefault();
         closePreview();
@@ -1032,6 +1121,22 @@
       });
     });
 
+    var eazyBtn = document.getElementById('qi-eazy-btn');
+    if (eazyBtn) {
+      eazyBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var tip = document.getElementById('qi-eazy-tip');
+        setEazyTipOpen(!(tip && tip.classList.contains('is-visible')));
+      });
+    }
+    document.addEventListener('click', function (e) {
+      var tip = document.getElementById('qi-eazy-tip');
+      if (!tip || !tip.classList.contains('is-visible')) return;
+      if (e.target.closest && (e.target.closest('#qi-eazy-wrap') || e.target.closest('#qi-eazy-tip'))) return;
+      setEazyTipOpen(false);
+    });
+
     var filterToggle = document.getElementById('qi-filter-toggle');
     if (filterToggle) {
       filterToggle.addEventListener('click', function () {
@@ -1039,12 +1144,49 @@
         setSidebarOpen(!(body && body.classList.contains('is-sidebar-open')));
       });
     }
+    var filterRail = document.getElementById('qi-filter-rail');
+    if (filterRail) {
+      filterRail.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var wrapper = document.getElementById('qi-sidebar-wrapper');
+        setDesktopSidebarCollapsed(!(wrapper && wrapper.classList.contains('is-collapsed')));
+      });
+    }
+    modal.querySelectorAll('[data-qi-toggle-group]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var group = btn.closest('[data-qi-filter-group]');
+        if (!group) return;
+        var openGroup = !group.classList.contains('is-open');
+        group.classList.toggle('is-open', openGroup);
+        btn.setAttribute('aria-expanded', openGroup ? 'true' : 'false');
+      });
+    });
     var backdrop = document.getElementById('qi-sidebar-backdrop');
     if (backdrop) {
       backdrop.addEventListener('click', function () {
         setSidebarOpen(false);
       });
     }
+
+    var deleteClose = document.getElementById('qi-delete-confirm-close');
+    var deleteCancel = document.getElementById('qi-delete-confirm-cancel');
+    var deleteOk = document.getElementById('qi-delete-confirm-ok');
+    if (deleteClose) deleteClose.addEventListener('click', function () { closeDeleteConfirm(false); });
+    if (deleteCancel) deleteCancel.addEventListener('click', function () { closeDeleteConfirm(false); });
+    if (deleteOk) deleteOk.addEventListener('click', function () { closeDeleteConfirm(true); });
+    if (deleteConfirmModal) {
+      deleteConfirmModal.addEventListener('click', function (e) {
+        if (e.target === deleteConfirmModal) closeDeleteConfirm(false);
+      });
+      deleteConfirmModal.addEventListener('cancel', function (e) {
+        e.preventDefault();
+        closeDeleteConfirm(false);
+      });
+    }
+
     var reset = document.getElementById('qi-filter-reset');
     if (reset) {
       reset.addEventListener('click', function () {

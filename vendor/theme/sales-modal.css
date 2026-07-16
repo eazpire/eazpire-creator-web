@@ -1453,6 +1453,10 @@
   background: rgba(168, 85, 247, 0.18);
   color: #c4b5fd;
 }
+.gen-ref-image-card__icon--paste {
+  background: rgba(20, 184, 166, 0.18);
+  color: #5eead4;
+}
 .gen-ref-image-card__icon--plus {
   background: rgba(34, 197, 94, 0.2);
   color: #22c55e;

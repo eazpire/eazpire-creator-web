@@ -26,7 +26,7 @@
     var link = document.createElement("link");
     link.rel = "stylesheet";
     // Bump when portal CSS changes — /vendor is cached 7d; stale ?v= kept old QI UI + Public Designs bugs.
-    link.href = href + "?v=qi-20260716d";
+    link.href = href + "?v=paste-20260716a";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -39,7 +39,7 @@
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
       // Bump when portal JS changes — /vendor is cached 7d.
-      s.src = src + "?v=qi-20260716d";
+      s.src = src + "?v=paste-20260716a";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -83,7 +83,7 @@
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
     // Portal serves /partials with max-age=7d — bump when modal markup/CSS in partials changes.
-    var url = "/partials/" + name + "?v=qi-20260716d";
+    var url = "/partials/" + name + "?v=paste-20260716a";
     if (host.querySelector('[data-partial="' + name + '"]')) return;
     var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;
@@ -154,7 +154,9 @@
     if (!requireLogin()) return null;
 
     state.creations = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
+      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.applyOwnerFromAuth === "function") {
+        global.CreatorPortalThemeBridge.applyOwnerFromAuth();
+      }
       sharedCss();
 
       await Promise.all([
@@ -224,7 +226,9 @@
     if (!requireLogin()) return null;
 
     state.generator = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
+      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.applyOwnerFromAuth === "function") {
+        global.CreatorPortalThemeBridge.applyOwnerFromAuth();
+      }
       sharedCss();
       loadCss("/vendor/theme/sales-modal.css");
 
@@ -255,6 +259,7 @@
         asset("quick-inspirations-modal.js"),
         asset("creator-phone-upload-modal.js"),
         asset("eaz-screenshot-capture.js"),
+        asset("eaz-clipboard-image.js"),
         asset("creator-generator.js"),
       ]);
 
@@ -293,7 +298,9 @@
     if (!requireLogin()) return null;
 
     state.marketing = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
+      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.applyOwnerFromAuth === "function") {
+        global.CreatorPortalThemeBridge.applyOwnerFromAuth();
+      }
       marketingCss();
 
       var host = document.getElementById("creatorMarketingHost");
@@ -345,7 +352,9 @@
     if (!requireLogin()) return null;
 
     state.automations = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
+      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.applyOwnerFromAuth === "function") {
+        global.CreatorPortalThemeBridge.applyOwnerFromAuth();
+      }
       loadCss("/vendor/theme/creator-automations.css");
 
       var host = document.getElementById("creatorAutomationsHost");
@@ -354,7 +363,8 @@
         await injectPartial("creator-mobile-automations.html", host);
       }
 
-      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas)
+      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas / paste→influence)
+      await injectPartial("reference-influence-modal.html");
       await injectPartial("creator-inspiration-modal.html");
       await injectPartial("quick-inspirations-modal.html");
       await injectPartial("creator-phone-upload-modal.html");
@@ -364,6 +374,8 @@
 
       await loadScriptsSequential([
         asset("eaz-screenshot-capture.js"),
+        asset("eaz-clipboard-image.js"),
+        asset("reference-influence-modal.js"),
         asset("creator-inspiration-modal.js"),
         asset("quick-inspirations-modal.js"),
         asset("creator-phone-upload-modal.js"),
@@ -427,7 +439,9 @@
     if (state.settings) return state.settings;
 
     state.settings = (async function () {
-      if (global.CreatorPortalThemeBridge) global.CreatorPortalThemeBridge.notifyContextReady({ soft: true });
+      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.applyOwnerFromAuth === "function") {
+        global.CreatorPortalThemeBridge.applyOwnerFromAuth();
+      }
       settingsCss();
 
       await injectPartial("creator-settings-v2-modal.html");

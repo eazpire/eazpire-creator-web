@@ -1183,6 +1183,7 @@
     }
     o.setAttribute('aria-hidden', 'false');
     if (autoScreenshotBinder) autoScreenshotBinder.refresh();
+    if (autoPasteBinder) autoPasteBinder.refresh();
   }
 
   function closeAutoRefOverlay() {
@@ -1206,6 +1207,7 @@
   }
 
   var autoScreenshotBinder = null;
+  var autoPasteBinder = null;
 
   function triggerAutoFileInput(useCamera) {
     var input = document.getElementById('creatorAutoImageInput');
@@ -1217,19 +1219,37 @@
   }
 
   function openAutoSource(source) {
-    closeAutoRefOverlay();
-    if (source === 'device') {
-      triggerAutoFileInput(false);
+    // Clipboard / screen capture need the user-gesture turn — start before closing.
+    if (source === 'paste') {
+      if (!(window.EazClipboardImage && typeof window.EazClipboardImage.start === 'function')) {
+        closeAutoRefOverlay();
+        return;
+      }
+      var pastePromise = window.EazClipboardImage.start();
+      closeAutoRefOverlay();
+      pastePromise.then(function (file) {
+        if (!file) return;
+        addAutoFilesFromInput([file]);
+      });
       return;
     }
     if (source === 'screenshot') {
       if (!(window.EazScreenshotCapture && typeof window.EazScreenshotCapture.start === 'function')) {
+        closeAutoRefOverlay();
         return;
       }
-      window.EazScreenshotCapture.start().then(function (file) {
+      var shotPromise = window.EazScreenshotCapture.start();
+      closeAutoRefOverlay();
+      shotPromise.then(function (file) {
         if (!file) return;
         addAutoFilesFromInput([file]);
       });
+      return;
+    }
+
+    closeAutoRefOverlay();
+    if (source === 'device') {
+      triggerAutoFileInput(false);
       return;
     }
     if (source === 'camera') {
@@ -1500,6 +1520,12 @@
       var shotBtn = overlay.querySelector('[data-auto-source="screenshot"]');
       if (shotBtn && window.EazScreenshotCapture && typeof window.EazScreenshotCapture.bindOption === 'function') {
         autoScreenshotBinder = window.EazScreenshotCapture.bindOption(shotBtn);
+      }
+      var pasteBtn = overlay.querySelector('[data-auto-source="paste"]');
+      if (pasteBtn && window.EazClipboardImage && typeof window.EazClipboardImage.bindOption === 'function') {
+        autoPasteBinder = window.EazClipboardImage.bindOption(pasteBtn, {
+          isOpen: isAutoRefOverlayOpen
+        });
       }
     }
     if (fileInput) {

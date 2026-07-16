@@ -109,7 +109,11 @@
     var screenshotCard = refImageOverlay
       ? refImageOverlay.querySelector('.gen-ref-image-card[data-source="screenshot"]')
       : null;
+    var pasteCard = refImageOverlay
+      ? refImageOverlay.querySelector('.gen-ref-image-card[data-source="paste"]')
+      : null;
     var screenshotBinder = null;
+    var pasteBinder = null;
     var selectedCard = document.getElementById('genSelectedImagesCard');
     var selectedGrid = document.getElementById('genSelectedImagesGrid');
     var selectedCount = document.getElementById('genSelectedImagesCount');
@@ -128,6 +132,16 @@
           screenshotBinder = window.EazScreenshotCapture.bindOption(screenshotCard);
         }
         screenshotBinder.refresh();
+      }
+      if (pasteCard && window.EazClipboardImage && typeof window.EazClipboardImage.bindOption === 'function') {
+        if (!pasteBinder) {
+          pasteBinder = window.EazClipboardImage.bindOption(pasteCard, {
+            isOpen: function () {
+              return !!(refImageOverlay && refImageOverlay.classList.contains('is-open'));
+            }
+          });
+        }
+        pasteBinder.refresh();
       }
     }
 
@@ -260,6 +274,16 @@
           return;
         }
         window.EazScreenshotCapture.start().then(function (file) {
+          if (!file) return;
+          addFiles([file]);
+        });
+        return;
+      }
+      if (source === 'paste') {
+        if (!(window.EazClipboardImage && typeof window.EazClipboardImage.start === 'function')) {
+          return;
+        }
+        window.EazClipboardImage.start().then(function (file) {
           if (!file) return;
           addFiles([file]);
         });
@@ -513,6 +537,12 @@
         }
         var source = card.dataset.source;
         if (!source) return;
+        // Clipboard / screen capture need the user-gesture turn — start before closing.
+        if (source === 'paste' || source === 'screenshot') {
+          openSource(source, card);
+          closeRefImageModal();
+          return;
+        }
         closeRefImageModal();
         openSource(source, card);
       });
@@ -520,6 +550,8 @@
 
     window.addEventListener('gen-design-selected', function (e) {
       if (window.__automationsRefPickActive) return;
+      // Shop Design Studio owns this event while open (opens Reference Influence itself)
+      if (document.body.classList.contains('eaz-shop-studio-open')) return;
       var imageUrl = e.detail && e.detail.imageUrl;
       if (!imageUrl) return;
       applyDesignTypeFromDetail(e.detail || {});
@@ -558,18 +590,23 @@
         }, picked));
         renderSelectedGrid();
       }
-      if (quickInspiration) {
-        var sim =
-          e.detail.similarity != null
-            ? e.detail.similarity
-            : e.detail.referenceStrength != null
-              ? e.detail.referenceStrength
-              : 0.05;
-        if (sim > 1) sim = sim / 100;
-        pushPicked({ dataUrl: imageUrl, similarity: sim, source: 'quick_inspiration' });
-        return;
-      }
-      withSimilarityForImageUrl(imageUrl, pushPicked);
+      // Always open Reference Influence after selecting a reference (incl. Quick Inspirations)
+      withSimilarityForImageUrl(imageUrl, function (picked) {
+        if (!picked) return;
+        if (quickInspiration) {
+          pushPicked({
+            dataUrl: picked.dataUrl,
+            similarity: typeof picked.similarity === 'number' ? picked.similarity : 0.05,
+            inspiration_mode: picked.inspiration_mode || null,
+            elements: picked.elements || null,
+            include_elements: picked.include_elements || null,
+            exclude_elements: picked.exclude_elements || null,
+            source: 'quick_inspiration'
+          });
+          return;
+        }
+        pushPicked(picked);
+      });
     });
 
     function applyShopRegenerateJob(job) {

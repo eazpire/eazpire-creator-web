@@ -209,19 +209,20 @@
     var c = Number(cap) || 0;
     var u = Number(used) || 0;
     var isLocked = !loadingState && !!locked;
+    var atLimit = !isLocked && !loadingState && u >= c && c > 0;
     itemEl.classList.toggle('is-locked', isLocked);
-    itemEl.classList.toggle('is-at-limit', !isLocked && !loadingState && u >= c && c > 0);
-    if (countEl) {
-      if (loadingState) {
-        countEl.textContent = '—';
-      } else if (isLocked) {
-        countEl.textContent = i18n('locked', rootEl);
-      } else {
-        countEl.textContent = u + '/' + c;
-      }
+    itemEl.classList.toggle('is-at-limit', atLimit);
+    var nextCount = '—';
+    if (!loadingState) {
+      nextCount = isLocked ? i18n('locked', rootEl) : u + '/' + c;
     }
-    if (fillEl) {
-      fillEl.style.width = loadingState || isLocked ? '0%' : pct(u, c) + '%';
+    if (countEl && countEl.textContent !== nextCount) {
+      countEl.textContent = nextCount;
+    }
+    var nextWidth = loadingState || isLocked ? '0%' : pct(u, c) + '%';
+    /* Only write width when it changes — same value restarts CSS transition and looks like a remount. */
+    if (fillEl && fillEl.style.width !== nextWidth) {
+      fillEl.style.width = nextWidth;
     }
   }
 
@@ -232,8 +233,33 @@
     if (isGuest) setCountdownVisible(false);
   }
 
+  var lastAppliedKey = '';
+
+  function payloadKey(data, loadingState) {
+    if (loadingState) return 'loading';
+    if (!data || !data.ok) return 'empty';
+    var creation = data.creation_limits_effective || {};
+    var listing = data.listing_limits_effective || {};
+    var shopify = (listing.channels && listing.channels.shopify) || {};
+    return [
+      creation.mode || 'daily',
+      creation.upload_used,
+      creation.upload_cap,
+      creation.generate_used,
+      creation.generate_cap,
+      shopify.listings_used_today,
+      shopify.listings_per_day,
+      shopify.channel_unlocked,
+    ].join('|');
+  }
+
   function applyPayload(data, loadingState) {
     if (!roots.length) return;
+    var key = payloadKey(data, loadingState);
+    /* Skip no-op paints (route soft-notify / journey echo) so bars do not re-animate. */
+    if (!loadingState && key && key === lastAppliedKey) return;
+    lastAppliedKey = key;
+
     var creation = (data && data.creation_limits_effective) || {};
     var listing = (data && data.listing_limits_effective) || {};
     var shopify = (listing.channels && listing.channels.shopify) || {};
@@ -270,7 +296,8 @@
 
       var foot = rootEl.querySelector('[data-limit-footnote]');
       if (foot && !loadingState) {
-        foot.textContent = mode === 'lifetime' ? i18n('lifetime', rootEl) : i18n('reset', rootEl);
+        var nextFoot = mode === 'lifetime' ? i18n('lifetime', rootEl) : i18n('reset', rootEl);
+        if (foot.textContent !== nextFoot) foot.textContent = nextFoot;
       }
 
       rootEl.classList.toggle('is-loading', !!loadingState);
@@ -409,11 +436,8 @@
       refresh(true);
     });
     window.addEventListener('eazCreatorContextReady', function (e) {
-      /* Soft route/feature ensures must not flash the chrome loading state. */
-      if (e && e.detail && e.detail.soft) {
-        refresh(false);
-        return;
-      }
+      /* Soft route/feature ensures must not touch chrome at all. */
+      if (e && e.detail && e.detail.soft) return;
       refresh(true);
     });
     document.addEventListener('visibilitychange', function () {
@@ -434,9 +458,8 @@
     if (!roots.length) return;
     mounted = true;
     bindEvents();
-    if (soft) {
-      refresh(false);
-    } else {
+    /* Soft only ensures mount wiring; never force a paint on route changes. */
+    if (!soft) {
       pollOwnerAndRefresh(0);
     }
     if (typeof ResizeObserver !== 'undefined') {
