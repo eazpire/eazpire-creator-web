@@ -41,12 +41,50 @@
             </svg>
             <span data-t="creator.edit_studio.eraser">Eraser</span>
           </button>
+          <button type="button" class="ces-tool-tab" id="ces-tool-brush" data-ces-tool="brush" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9.5 21l-6-6L15 3.5a3.5 3.5 0 0 1 5 5L9.5 21z"/>
+              <path d="M4.5 14L10 19.5"/>
+            </svg>
+            <span data-t="creator.edit_studio.brush">Brush</span>
+          </button>
+          <button type="button" class="ces-tool-tab" id="ces-tool-recolor" data-ces-tool="recolor" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+            </svg>
+            <span data-t="creator.edit_studio.change_color">Change Color</span>
+          </button>
+          <button type="button" class="ces-tool-tab" id="ces-tool-ignore" data-ces-tool="ignore" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M5 5l14 14"/>
+            </svg>
+            <span data-t="creator.edit_studio.color_ignore">Color Ignore</span>
+            <span class="ces-tool-tab__badge" id="ces-ignore-badge" hidden>0</span>
+          </button>
+          <button type="button" class="ces-tool-tab" id="ces-tool-genfill" data-ces-tool="genfill" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
+              <path d="M5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16z"/>
+              <path d="M18 14l.6 1.6L20 16l-1.4.6L18 18l-.6-1.4L16 16l1.4-.6L18 14z"/>
+            </svg>
+            <span data-t="creator.edit_studio.generative_fill">Generative Fill</span>
+          </button>
         </div>
         <div class="ces-tool-options">
           <div class="ces-field" id="ces-pipette-options">
             <label class="ces-field__label" for="ces-intensity" data-t="creator.edit_studio.intensity">Similar colors intensity</label>
             <div class="ces-field__row">
               <span class="ces-swatch" id="ces-color-swatch" aria-hidden="true"></span>
+              <button
+                type="button"
+                class="ces-color-clear"
+                id="ces-color-clear"
+                hidden
+                aria-label="Clear color filter"
+                title="Clear color filter"
+              >&times;</button>
               <input
                 type="range"
                 class="ces-slider"
@@ -57,6 +95,7 @@
                 aria-label="Similar colors intensity"
               >
             </div>
+            <p class="ces-color-filter-hint is-off" id="ces-color-filter-hint" data-t="creator.edit_studio.color_filter_off">All colors (no filter)</p>
           </div>
           <div class="ces-field" id="ces-eraser-options" hidden>
             <label class="ces-field__label" for="ces-eraser-size" data-t="creator.edit_studio.eraser_size">Eraser size</label>
@@ -72,6 +111,31 @@
               >
             </div>
           </div>
+          <div class="ces-field ces-brush-options" id="ces-brush-options" hidden>
+            <label class="ces-field__label" data-t="creator.edit_studio.brush_color">Brush color</label>
+            <div class="ces-field__row">
+              <span class="ces-swatch has-color" id="ces-brush-swatch" aria-hidden="true"></span>
+              <input type="color" class="ces-brush-picker" id="ces-brush-picker" value="#000000" aria-label="Brush color">
+            </div>
+            <label class="ces-field__label" for="ces-brush-size" data-t="creator.edit_studio.brush_size">Brush size</label>
+            <div class="ces-field__row">
+              <input
+                type="range"
+                class="ces-slider"
+                id="ces-brush-size"
+                min="4"
+                max="120"
+                value="28"
+                aria-label="Brush size"
+              >
+            </div>
+            <label class="ces-field__label" data-t="creator.edit_studio.design_palette">Colors from design</label>
+            <div class="ces-palette ces-palette--compact" id="ces-brush-palette" role="listbox" aria-label="Colors from design"></div>
+          </div>
+          <div class="ces-field ces-ignore-summary" id="ces-ignore-summary" hidden>
+            <label class="ces-field__label" data-t="creator.edit_studio.ignored_colors">Ignored colors</label>
+            <div class="ces-ignore-summary__row" id="ces-ignore-summary-swatches"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -81,8 +145,16 @@
         <div class="ces-zoom-stage" id="ces-zoom-stage">
           <div class="ces-canvas-frame">
             <canvas id="ces-canvas" class="ces-canvas" aria-label="Design canvas"></canvas>
+            <canvas id="ces-mask-canvas" class="ces-mask-canvas" hidden aria-hidden="true"></canvas>
           </div>
         </div>
+
+        <div
+          class="ces-eraser-brush"
+          id="ces-eraser-brush"
+          hidden
+          aria-hidden="true"
+        ></div>
 
         <div class="ces-chrome-top-left" role="toolbar" aria-label="Undo, redo and chronik">
           <button type="button" class="ces-icon-btn" id="ces-btn-undo" aria-label="Undo" title="Undo" disabled>
@@ -103,6 +175,13 @@
         </div>
 
         <div class="ces-chrome-top-right">
+          <button type="button" class="ces-icon-btn" id="ces-zoom-reset" aria-label="Reset view" title="Reset view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 1 0 3-6.7"/>
+              <path d="M3 4v5h5"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+          </button>
           <button type="button" class="ces-icon-btn" id="ces-zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
           <button type="button" class="ces-icon-btn" id="ces-zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
           <button type="button" class="ces-icon-btn" id="ces-pan-toggle" aria-label="Move image" title="Move image" aria-pressed="false">
@@ -120,7 +199,10 @@
         </div>
 
         <div class="ces-busy" id="ces-busy" hidden>
-          <span data-t="creator.edit_studio.saving">Saving…</span>
+          <div class="ces-busy__inner">
+            <span class="ces-busy__spinner" aria-hidden="true"></span>
+            <span id="ces-busy-text" data-t="creator.edit_studio.saving">Saving…</span>
+          </div>
         </div>
       </div>
 
@@ -165,11 +247,130 @@
           </div>
         </div>
       </div>
+
+      <div class="ces-overlay" id="ces-recolor-overlay" hidden>
+        <div class="ces-card ces-card--recolor" role="dialog" aria-labelledby="ces-recolor-title">
+          <div class="ces-card__header">
+            <h3 id="ces-recolor-title" data-t="creator.edit_studio.change_color_title">Change Color</h3>
+            <button type="button" class="ces-card__close" id="ces-recolor-close" aria-label="Close">&times;</button>
+          </div>
+          <div class="ces-card__body">
+            <p class="ces-recolor-hint" data-t="creator.edit_studio.change_color_hint">Replace the pipette color (and similar tones) with a new color. Intensity controls how similar colors are included.</p>
+            <div class="ces-recolor-compare" aria-hidden="true">
+              <div class="ces-recolor-compare__col">
+                <span class="ces-recolor-compare__label" data-t="creator.edit_studio.from_color">From</span>
+                <span class="ces-swatch has-color" id="ces-recolor-from"></span>
+              </div>
+              <div class="ces-recolor-compare__arrow" aria-hidden="true">→</div>
+              <div class="ces-recolor-compare__col">
+                <span class="ces-recolor-compare__label" data-t="creator.edit_studio.to_color">To</span>
+                <span class="ces-swatch has-color" id="ces-recolor-to"></span>
+              </div>
+            </div>
+            <label class="ces-field__label" for="ces-recolor-picker" data-t="creator.edit_studio.pick_new_color">New color</label>
+            <div class="ces-recolor-picker-row">
+              <input type="color" id="ces-recolor-picker" value="#ffffff" aria-label="New color">
+            </div>
+            <label class="ces-field__label" data-t="creator.edit_studio.design_palette">Colors from design</label>
+            <div class="ces-palette" id="ces-recolor-palette" role="listbox" aria-label="Colors from design"></div>
+            <p class="ces-recolor-empty" id="ces-recolor-palette-empty" hidden data-t="creator.edit_studio.palette_empty">No colors found in this design.</p>
+          </div>
+          <div class="ces-card__footer">
+            <button type="button" class="ces-btn ces-btn--ghost" id="ces-recolor-cancel" data-t="creator.common.cancel">Cancel</button>
+            <button type="button" class="ces-btn ces-btn--primary" id="ces-recolor-apply" data-t="creator.edit_studio.apply_color">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ces-overlay" id="ces-ignore-overlay" hidden>
+        <div class="ces-card ces-card--ignore" role="dialog" aria-labelledby="ces-ignore-title">
+          <div class="ces-card__header">
+            <h3 id="ces-ignore-title" data-t="creator.edit_studio.color_ignore_title">Color Ignore</h3>
+            <button type="button" class="ces-card__close" id="ces-ignore-close" aria-label="Close">&times;</button>
+          </div>
+          <div class="ces-card__body">
+            <p class="ces-recolor-hint" data-t="creator.edit_studio.color_ignore_hint">Select colors from the design to protect. Eraser and Change Color will skip these (and similar tones per intensity).</p>
+            <label class="ces-field__label" data-t="creator.edit_studio.design_palette">Colors from design</label>
+            <div class="ces-palette" id="ces-ignore-palette" role="listbox" aria-multiselectable="true" aria-label="Colors from design"></div>
+            <p class="ces-recolor-empty" id="ces-ignore-palette-empty" hidden data-t="creator.edit_studio.palette_empty">No colors found in this design.</p>
+            <label class="ces-field__label" data-t="creator.edit_studio.ignored_colors">Ignored colors</label>
+            <div class="ces-ignore-list" id="ces-ignore-list"></div>
+            <p class="ces-recolor-empty" id="ces-ignore-list-empty" data-t="creator.edit_studio.ignore_empty">No ignored colors yet. Tap a swatch above to protect it.</p>
+          </div>
+          <div class="ces-card__footer">
+            <button type="button" class="ces-btn ces-btn--ghost" id="ces-ignore-clear" data-t="creator.edit_studio.ignore_clear">Clear all</button>
+            <button type="button" class="ces-btn ces-btn--primary" id="ces-ignore-done" data-t="creator.edit_studio.ignore_done">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ces-genfill-bar" id="ces-genfill-bar" hidden>
+      <div class="ces-genfill-bar__row">
+        <button type="button" class="ces-btn ces-btn--ghost ces-genfill-mode is-active" id="ces-genfill-set-area" aria-pressed="true" data-t="creator.edit_studio.genfill_set_area">Set Area</button>
+        <label class="ces-genfill-size" for="ces-genfill-marker-size">
+          <span data-t="creator.edit_studio.genfill_marker_size">Marker size</span>
+          <input type="range" class="ces-slider" id="ces-genfill-marker-size" min="8" max="160" value="48" aria-label="Marker size">
+        </label>
+        <button type="button" class="ces-btn ces-btn--ghost" id="ces-genfill-clear" data-t="creator.edit_studio.genfill_clear_areas">Clear areas</button>
+      </div>
+      <div class="ces-genfill-bar__row ces-genfill-bar__row--prompt">
+        <input
+          type="text"
+          class="ces-genfill-prompt"
+          id="ces-genfill-prompt"
+          maxlength="500"
+          placeholder="Describe what to fill…"
+          aria-label="Describe what to fill…"
+        >
+        <button type="button" class="ces-btn ces-btn--primary" id="ces-genfill-generate" data-t="creator.edit_studio.genfill_generate">Generate</button>
+        <button type="button" class="ces-btn ces-btn--primary" id="ces-genfill-apply" hidden data-t="creator.edit_studio.genfill_apply">Apply</button>
+      </div>
     </div>
 
     <footer class="ces-footer">
       <button type="button" class="ces-btn ces-btn--ghost" id="ces-btn-discard" data-t="creator.edit_studio.discard">Discard</button>
-      <button type="button" class="ces-btn ces-btn--primary" id="ces-btn-save" data-t="creator.edit_studio.save">Save</button>
+      <div class="ces-footer__actions">
+        <button type="button" class="ces-btn ces-btn--ghost" id="ces-btn-save-copy" data-t="creator.edit_studio.save_copy">Save Copy</button>
+        <button type="button" class="ces-btn ces-btn--primary" id="ces-btn-save" data-t="creator.edit_studio.save">Save</button>
+      </div>
     </footer>
+  </div>
+</div>
+
+{# Body-level confirm/alert so it works even when the studio root is still hidden #}
+<div
+  id="ces-confirm-overlay"
+  class="ces-confirm-overlay"
+  hidden
+  aria-hidden="true"
+>
+  <div
+    class="ces-card ces-card--confirm"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="ces-confirm-title"
+    aria-describedby="ces-confirm-message"
+  >
+    <div class="ces-card__header">
+      <h3 id="ces-confirm-title" data-t="creator.edit_studio.confirm_title">Please confirm</h3>
+    </div>
+    <div class="ces-card__body">
+      <p id="ces-confirm-message" class="ces-confirm-message"></p>
+    </div>
+    <div class="ces-card__footer">
+      <button
+        type="button"
+        class="ces-btn ces-btn--ghost"
+        id="ces-confirm-cancel"
+        data-t="creator.common.cancel"
+      >Cancel</button>
+      <button
+        type="button"
+        class="ces-btn ces-btn--primary"
+        id="ces-confirm-ok"
+        data-t="creator.edit_studio.confirm_action"
+      >Confirm</button>
+    </div>
   </div>
 </div>

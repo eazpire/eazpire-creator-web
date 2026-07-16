@@ -16,6 +16,8 @@
   var root = null;
   var canvas = null;
   var ctx = null;
+  var maskCanvas = null;
+  var maskCtx = null;
   var viewer = null;
   var stage = null;
   var busyEl = null;
@@ -24,7 +26,8 @@
   var isOpen = false;
   var dirty = false;
   var busy = false;
-  var activeTool = 'pipette'; // pipette | eraser | brush
+  var settingsLocked = false;
+  var activeTool = 'pipette'; // pipette | eraser | brush | genfill
   var pickedColor = null; // { r, g, b } — null = erase all (no color filter)
   var intensity = 30;
   var eraserSize = 28;
@@ -41,6 +44,7 @@
   var panDrag = null;
   var eraseStroke = null;
   var paintStroke = null;
+  var fillStroke = null;
   var viewerBg = BG_DEFAULT;
   var brushEl = null;
   var brushVisible = false;
@@ -51,6 +55,15 @@
   var confirmPrevFocus = null;
   var confirmKeyHandler = null;
   var confirmBound = false;
+
+  // Generative Fill state
+  var genfillMarkerSize = 48;
+  var genfillMarking = true;
+  var genfillHasMask = false;
+  var genfillPending = false; // preview shown, waiting for Apply
+  var genfillHasGenerated = false;
+  var genfillBaseBlobUrl = null;
+  var genfillPreviewBlobUrl = null;
 
   function t(key, fallback) {
     try {
@@ -281,6 +294,37 @@
     return origin + '/apps/creator-dispatch';
   }
 
+  /**
+   * Large PNG saves through Shopify App Proxy / portal hop often hit ~10s limits → HTML 502.
+   * Prefer the Creator Engine URL directly (CORS is open; owner_id is passed explicitly).
+   */
+  function resolveHeavySaveDispatchBase() {
+    try {
+      if (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) {
+        var root = String(window.CREATOR_API_CONFIG.BASE_URL).replace(/\/+$/, '');
+        if (root) return root + '/apps/creator-dispatch';
+      }
+    } catch (_) {}
+    try {
+      if (window.CreatorWidget && window.CreatorWidget.apiRoot) {
+        var ar = String(window.CreatorWidget.apiRoot).replace(/\/+$/, '');
+        if (ar && /workers\.dev|creator-engine/i.test(ar)) return ar + '/apps/creator-dispatch';
+      }
+    } catch (_) {}
+    try {
+      var cfgBase = window.CreatorWidget && window.CreatorWidget.apiBaseUrl
+        ? String(window.CreatorWidget.apiBaseUrl)
+        : '';
+      if (cfgBase && /workers\.dev|creator-engine/i.test(cfgBase)) {
+        return cfgBase.indexOf('/apps/creator-dispatch') >= 0
+          ? cfgBase
+          : cfgBase.replace(/\/+$/, '') + '/apps/creator-dispatch';
+      }
+    } catch (_) {}
+    // Absolute fallback used elsewhere for heavy uploads
+    return 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
+  }
+
   function primaryImageUrl(design) {
     if (!design) return '';
     return (
@@ -468,6 +512,7 @@
   }
 
   function setActiveTool(tool) {
+    if (settingsLocked) return;
     if (tool === 'recolor') {
       openRecolorModal();
       return;
@@ -476,8 +521,14 @@
       openIgnoreModal();
       return;
     }
+
+    if (tool !== 'genfill' && activeTool === 'genfill') {
+      exitGenfillTool({ keepPending: false });
+    }
+
     if (tool === 'eraser') activeTool = 'eraser';
     else if (tool === 'brush') activeTool = 'brush';
+    else if (tool === 'genfill') activeTool = 'genfill';
     else activeTool = 'pipette';
 
     var pipetteBtn = $('ces-tool-pipette');
@@ -485,9 +536,11 @@
     var brushBtn = $('ces-tool-brush');
     var recolorBtn = $('ces-tool-recolor');
     var ignoreBtn = $('ces-tool-ignore');
+    var genfillBtn = $('ces-tool-genfill');
     var pipetteOpts = $('ces-pipette-options');
     var eraserOpts = $('ces-eraser-options');
     var brushOpts = $('ces-brush-options');
+    var genfillBar = $('ces-genfill-bar');
 
     if (pipetteBtn) {
       pipetteBtn.classList.toggle('is-active', activeTool === 'pipette');
@@ -500,6 +553,10 @@
     if (brushBtn) {
       brushBtn.classList.toggle('is-active', activeTool === 'brush');
       brushBtn.setAttribute('aria-selected', activeTool === 'brush' ? 'true' : 'false');
+    }
+    if (genfillBtn) {
+      genfillBtn.classList.toggle('is-active', activeTool === 'genfill');
+      genfillBtn.setAttribute('aria-selected', activeTool === 'genfill' ? 'true' : 'false');
     }
     if (recolorBtn) {
       recolorBtn.classList.remove('is-active');
@@ -514,7 +571,18 @@
       brushOpts.hidden = activeTool !== 'brush';
       if (activeTool === 'brush') renderBrushPalette();
     }
-    if (pipetteOpts) pipetteOpts.hidden = false;
+    if (pipetteOpts) pipetteOpts.hidden = activeTool === 'genfill';
+    if (genfillBar) {
+      if (activeTool === 'genfill') {
+        genfillBar.removeAttribute('hidden');
+        syncMaskCanvasSize();
+        showMaskOverlay(true);
+        updateGenfillUi();
+      } else {
+        genfillBar.setAttribute('hidden', '');
+        showMaskOverlay(false);
+      }
+    }
     updateViewerCursor();
     updateIgnoreSummaryUi();
   }
@@ -896,13 +964,20 @@
     if (!viewer) return;
     viewer.classList.toggle('is-eyedropper', !zoom.panMode && activeTool === 'pipette');
     viewer.classList.toggle('is-eraser', !zoom.panMode && activeTool === 'eraser');
-    viewer.classList.toggle('is-brush', !zoom.panMode && activeTool === 'brush');
+    viewer.classList.toggle('is-brush', !zoom.panMode && (activeTool === 'brush' || activeTool === 'genfill'));
     viewer.classList.toggle('is-pan-mode', !!zoom.panMode);
-    if ((activeTool !== 'eraser' && activeTool !== 'brush') || zoom.panMode) hideBrushCursor();
+    if (
+      (activeTool !== 'eraser' && activeTool !== 'brush' && activeTool !== 'genfill') ||
+      zoom.panMode
+    ) {
+      hideBrushCursor();
+    }
   }
 
   function activeBrushSize() {
-    return activeTool === 'brush' ? brushSize : eraserSize;
+    if (activeTool === 'brush') return brushSize;
+    if (activeTool === 'genfill') return genfillMarkerSize;
+    return eraserSize;
   }
 
   function brushCursorDisplayDiameter() {
@@ -928,7 +1003,7 @@
       hideBrushCursor();
       return;
     }
-    if ((activeTool !== 'eraser' && activeTool !== 'brush') || zoom.panMode || busy) {
+    if ((activeTool !== 'eraser' && activeTool !== 'brush' && activeTool !== 'genfill') || zoom.panMode || busy) {
       hideBrushCursor();
       return;
     }
@@ -1164,9 +1239,11 @@
     clearHistory();
     await pushHistory(t('original', 'Original'));
     dirty = false;
+    syncMaskCanvasSize();
+    showMaskOverlay(activeTool === 'genfill');
   }
 
-  function setBusy(on) {
+  function setBusy(on, message) {
     busy = !!on;
     if (busyEl) {
       if (busy) {
@@ -1175,10 +1252,27 @@
         busyEl.setAttribute('hidden', '');
       }
     }
+    var busyText = $('ces-busy-text');
+    if (busyText) {
+      busyText.textContent = message || t('saving', 'Saving…');
+    }
     var saveBtn = $('ces-btn-save');
+    var saveCopyBtn = $('ces-btn-save-copy');
     var discardBtn = $('ces-btn-discard');
-    if (saveBtn) saveBtn.disabled = busy;
-    if (discardBtn) discardBtn.disabled = busy;
+    if (saveBtn) saveBtn.disabled = busy || settingsLocked;
+    if (saveCopyBtn) saveCopyBtn.disabled = busy || settingsLocked;
+    if (discardBtn) discardBtn.disabled = busy || settingsLocked;
+  }
+
+  function setSettingsLocked(locked) {
+    settingsLocked = !!locked;
+    if (root) root.classList.toggle('is-locked', settingsLocked);
+    var saveBtn = $('ces-btn-save');
+    var saveCopyBtn = $('ces-btn-save-copy');
+    var discardBtn = $('ces-btn-discard');
+    if (saveBtn) saveBtn.disabled = busy || settingsLocked;
+    if (saveCopyBtn) saveCopyBtn.disabled = busy || settingsLocked;
+    if (discardBtn) discardBtn.disabled = busy || settingsLocked;
   }
 
   function openChronik() {
@@ -1236,6 +1330,281 @@
     if (toggle) toggle.setAttribute('aria-expanded', subheaderCollapsed ? 'false' : 'true');
   }
 
+  function syncMaskCanvasSize() {
+    if (!canvas || !maskCanvas) return;
+    if (maskCanvas.width !== canvas.width || maskCanvas.height !== canvas.height) {
+      maskCanvas.width = canvas.width;
+      maskCanvas.height = canvas.height;
+      if (maskCtx) {
+        maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+      }
+      genfillHasMask = false;
+    }
+  }
+
+  function showMaskOverlay(on) {
+    if (!maskCanvas) return;
+    if (on && genfillHasMask) maskCanvas.removeAttribute('hidden');
+    else if (on) maskCanvas.removeAttribute('hidden');
+    else maskCanvas.setAttribute('hidden', '');
+  }
+
+  function clearGenfillMask() {
+    if (maskCtx && maskCanvas) {
+      maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+    }
+    genfillHasMask = false;
+  }
+
+  function revokeGenfillUrls() {
+    if (genfillBaseBlobUrl) {
+      try { URL.revokeObjectURL(genfillBaseBlobUrl); } catch (_) {}
+      genfillBaseBlobUrl = null;
+    }
+    if (genfillPreviewBlobUrl) {
+      try { URL.revokeObjectURL(genfillPreviewBlobUrl); } catch (_) {}
+      genfillPreviewBlobUrl = null;
+    }
+  }
+
+  function resetGenfillState() {
+    revokeGenfillUrls();
+    genfillPending = false;
+    genfillHasGenerated = false;
+    genfillMarking = true;
+    clearGenfillMask();
+    updateGenfillUi();
+  }
+
+  function exitGenfillTool(opts) {
+    opts = opts || {};
+    if (genfillPending && genfillBaseBlobUrl && !opts.keepPending) {
+      drawBlobUrl(genfillBaseBlobUrl).catch(function () {});
+      genfillPending = false;
+    }
+    if (!opts.keepMask) clearGenfillMask();
+    showMaskOverlay(false);
+    var bar = $('ces-genfill-bar');
+    if (bar) bar.setAttribute('hidden', '');
+  }
+
+  function updateGenfillUi() {
+    var setAreaBtn = $('ces-genfill-set-area');
+    var genBtn = $('ces-genfill-generate');
+    var applyBtn = $('ces-genfill-apply');
+    if (setAreaBtn) {
+      setAreaBtn.classList.toggle('is-active', !!genfillMarking);
+      setAreaBtn.setAttribute('aria-pressed', genfillMarking ? 'true' : 'false');
+    }
+    if (genBtn) {
+      genBtn.textContent = genfillHasGenerated
+        ? t('genfill_generate_again', 'Generate again')
+        : t('genfill_generate', 'Generate');
+    }
+    if (applyBtn) {
+      if (genfillPending) applyBtn.removeAttribute('hidden');
+      else applyBtn.setAttribute('hidden', '');
+    }
+  }
+
+  function paintFillMarkerAt(cx, cy, radius) {
+    if (!maskCtx || !maskCanvas) return false;
+    syncMaskCanvasSize();
+    maskCtx.save();
+    maskCtx.globalCompositeOperation = 'source-over';
+    maskCtx.fillStyle = 'rgba(255, 80, 220, 0.85)';
+    maskCtx.beginPath();
+    maskCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+    maskCtx.fill();
+    maskCtx.restore();
+    genfillHasMask = true;
+    showMaskOverlay(true);
+    return true;
+  }
+
+  function paintFillAlongStroke(x0, y0, x1, y1, radius) {
+    var dist = Math.hypot(x1 - x0, y1 - y0);
+    var step = Math.max(1, radius * 0.35);
+    var n = Math.max(1, Math.ceil(dist / step));
+    for (var i = 0; i <= n; i++) {
+      var tt = i / n;
+      paintFillMarkerAt(x0 + (x1 - x0) * tt, y0 + (y1 - y0) * tt, radius);
+    }
+    return true;
+  }
+
+  function maskCanvasToBlob() {
+    return new Promise(function (resolve, reject) {
+      if (!maskCanvas || !canvas) return reject(new Error('no mask'));
+      // Export white-on-black mask for inpaint APIs
+      var exportCanvas = document.createElement('canvas');
+      exportCanvas.width = canvas.width;
+      exportCanvas.height = canvas.height;
+      var ex = exportCanvas.getContext('2d');
+      if (!ex) return reject(new Error('no mask ctx'));
+      ex.fillStyle = '#000000';
+      ex.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+      // Read magenta overlay → white where marked
+      var src = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+      var out = ex.createImageData(exportCanvas.width, exportCanvas.height);
+      for (var i = 0; i < src.data.length; i += 4) {
+        var a = src.data[i + 3];
+        var luma = (src.data[i] + src.data[i + 1] + src.data[i + 2]) / 3;
+        var on = a > 20 || luma > 20;
+        out.data[i] = on ? 255 : 0;
+        out.data[i + 1] = on ? 255 : 0;
+        out.data[i + 2] = on ? 255 : 0;
+        out.data[i + 3] = 255;
+      }
+      ex.putImageData(out, 0, 0);
+      exportCanvas.toBlob(function (blob) {
+        if (!blob) reject(new Error('mask toBlob failed'));
+        else resolve(blob);
+      }, 'image/png');
+    });
+  }
+
+  async function runGenerativeFill() {
+    if (busy || settingsLocked) return;
+    if (!currentDesign || !currentDesign.id) {
+      await showStudioAlert(t('no_design', 'No design selected.'));
+      return;
+    }
+    if (!genfillHasMask) {
+      await showStudioAlert(t('genfill_need_area', 'Mark at least one area to fill.'));
+      return;
+    }
+    var promptEl = $('ces-genfill-prompt');
+    var prompt = promptEl ? String(promptEl.value || '').trim() : '';
+    if (!prompt) {
+      await showStudioAlert(t('genfill_need_prompt', 'Enter a prompt for Generative Fill.'));
+      return;
+    }
+    var ownerId = resolveOwnerId(currentDesign);
+    if (!ownerId) {
+      await showStudioAlert(window.CreatorI18n?.noUserId || t('no_user', 'Error: No user ID found. Please sign in.'));
+      return;
+    }
+
+    setSettingsLocked(true);
+    setBusy(true, t('generating', 'Generating fill…'));
+    var ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var toid = null;
+    try {
+      // Snapshot base before first preview (for Generate again / cancel)
+      if (!genfillBaseBlobUrl || !genfillPending) {
+        if (genfillBaseBlobUrl) {
+          try { URL.revokeObjectURL(genfillBaseBlobUrl); } catch (_) {}
+        }
+        var baseBlob = await canvasToBlob();
+        genfillBaseBlobUrl = URL.createObjectURL(baseBlob);
+      } else if (genfillBaseBlobUrl) {
+        await drawBlobUrl(genfillBaseBlobUrl);
+      }
+
+      var imageBlob = await canvasToBlob();
+      var maskBlob = await maskCanvasToBlob();
+      var fd = new FormData();
+      fd.set('design_id', String(currentDesign.id));
+      fd.set('owner_id', String(ownerId));
+      fd.set('logged_in_customer_id', String(ownerId));
+      fd.set('prompt', prompt);
+      fd.set('image', imageBlob, 'edit-studio.png');
+      fd.set('mask', maskBlob, 'fill-mask.png');
+
+      var apiBase = resolveHeavySaveDispatchBase() || resolveDispatchBase();
+      var url = new URL(apiBase);
+      url.searchParams.set('op', 'design-edit-studio-generative-fill');
+      url.searchParams.set('path_prefix', '/apps/creator-dispatch');
+      url.searchParams.set('logged_in_customer_id', String(ownerId));
+      url.searchParams.set('owner_id', String(ownerId));
+
+      if (ac) {
+        toid = setTimeout(function () {
+          try { ac.abort(); } catch (_) {}
+        }, 180000);
+      }
+
+      var response = await fetch(url.toString(), {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'include',
+        body: fd,
+        signal: ac ? ac.signal : undefined
+      });
+      if (toid) {
+        clearTimeout(toid);
+        toid = null;
+      }
+
+      var raw = await response.text();
+      var data = null;
+      try { data = JSON.parse(raw); } catch (_) {}
+      if (!data || !data.ok || !data.image_url) {
+        var serverMsg = data && (data.message || data.error);
+        throw new Error(serverMsg || t('genfill_failed', 'Generative Fill failed.'));
+      }
+
+      await new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function () {
+          try {
+            if (!canvas || !ctx) return reject(new Error('no canvas'));
+            if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
+              // Keep canvas size; draw cover-contain into existing bounds
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            } else {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0);
+            }
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = function () { reject(new Error(t('genfill_failed', 'Generative Fill failed.'))); };
+        img.src = cacheBust(data.image_url);
+      });
+
+      if (genfillPreviewBlobUrl) {
+        try { URL.revokeObjectURL(genfillPreviewBlobUrl); } catch (_) {}
+      }
+      var previewBlob = await canvasToBlob();
+      genfillPreviewBlobUrl = URL.createObjectURL(previewBlob);
+      genfillPending = true;
+      genfillHasGenerated = true;
+      updateGenfillUi();
+    } catch (err) {
+      if (toid) clearTimeout(toid);
+      var msg = (err && err.message) || t('genfill_failed', 'Generative Fill failed.');
+      if (err && err.name === 'AbortError') {
+        msg = t('save_timeout', 'Save timed out. Please try again.');
+      }
+      console.error('[EditStudio] generative fill failed', err);
+      if (genfillBaseBlobUrl) {
+        try { await drawBlobUrl(genfillBaseBlobUrl); } catch (_) {}
+      }
+      await showStudioAlert(msg);
+    } finally {
+      setBusy(false);
+      setSettingsLocked(false);
+    }
+  }
+
+  async function applyGenerativeFill() {
+    if (!genfillPending) return;
+    await pushHistory(t('genfill_applied', 'Generative fill'));
+    dirty = true;
+    genfillPending = false;
+    revokeGenfillUrls();
+    genfillBaseBlobUrl = null;
+    genfillPreviewBlobUrl = null;
+    clearGenfillMask();
+    updateGenfillUi();
+  }
+
   async function saveStudio() {
     if (!currentDesign || !currentDesign.id) {
       await showStudioAlert(t('no_design', 'No design selected.'));
@@ -1258,31 +1627,57 @@
     }
 
     setBusy(true);
+    var ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var toid = null;
     try {
       var blob = await canvasToBlob();
+      if (!blob || !blob.size) {
+        throw new Error(t('save_failed', 'Save failed.') + ' (empty image)');
+      }
       var fd = new FormData();
       fd.set('design_id', String(currentDesign.id));
       fd.set('owner_id', String(ownerId));
       fd.set('logged_in_customer_id', String(ownerId));
       fd.set('image', blob, 'edit-studio.png');
 
-      var apiBase = resolveDispatchBase();
+      // Direct engine for heavy multipart — avoids Shopify/portal proxy 502 on large PNGs.
+      var apiBase = resolveHeavySaveDispatchBase() || resolveDispatchBase();
       var url = new URL(apiBase);
       url.searchParams.set('op', 'design-edit-studio-save');
       url.searchParams.set('path_prefix', '/apps/creator-dispatch');
       url.searchParams.set('logged_in_customer_id', String(ownerId));
+      url.searchParams.set('owner_id', String(ownerId));
+
+      if (ac) {
+        toid = setTimeout(function () {
+          try { ac.abort(); } catch (_) {}
+        }, 90000);
+      }
 
       var response = await fetch(url.toString(), {
         method: 'POST',
         mode: 'cors',
         credentials: 'include',
-        body: fd
+        body: fd,
+        signal: ac ? ac.signal : undefined
       });
+      if (toid) {
+        clearTimeout(toid);
+        toid = null;
+      }
+
       var raw = await response.text();
       var data = null;
       try { data = JSON.parse(raw); } catch (_) {}
       if (!data || !data.ok) {
-        throw new Error((data && (data.message || data.error)) || t('save_failed', 'Save failed.'));
+        var serverMsg = data && (data.message || data.error);
+        var statusHint = response.status ? ('HTTP ' + response.status) : '';
+        throw new Error(
+          serverMsg ||
+          (statusHint
+            ? t('save_failed', 'Save failed.') + ' (' + statusHint + ')'
+            : t('save_failed', 'Save failed.'))
+        );
       }
 
       if (data.design && window.CreatorDesignPreviewModal) {
@@ -1308,8 +1703,122 @@
       dirty = false;
       closeStudio({ force: true });
     } catch (err) {
+      if (toid) clearTimeout(toid);
+      var msg = (err && err.message) || t('save_failed', 'Save failed.');
+      if (err && err.name === 'AbortError') {
+        msg = t('save_timeout', 'Save timed out. Please try again.');
+      }
       console.error('[EditStudio] save failed', err);
-      await showStudioAlert((err && err.message) || t('save_failed', 'Save failed.'));
+      await showStudioAlert(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveStudioCopy() {
+    if (!currentDesign || !currentDesign.id) {
+      await showStudioAlert(t('no_design', 'No design selected.'));
+      return;
+    }
+    var ok = await showStudioConfirm(
+      t('confirm_save_copy', 'Save a copy as a new design? The current design stays unchanged. The copy uses your edited canvas.'),
+      t('confirm_save_copy_title', 'Save Copy?')
+    );
+    if (!ok) return;
+
+    var ownerId = resolveOwnerId(currentDesign);
+    if (!ownerId) {
+      await showStudioAlert(window.CreatorI18n?.noUserId || t('no_user', 'Error: No user ID found. Please sign in.'));
+      return;
+    }
+
+    setBusy(true, t('saving', 'Saving…'));
+    var ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var toid = null;
+    try {
+      // If a genfill preview is pending, include it in the copy
+      var blob = await canvasToBlob();
+      if (!blob || !blob.size) {
+        throw new Error(t('save_copy_failed', 'Save Copy failed.') + ' (empty image)');
+      }
+      var fd = new FormData();
+      fd.set('design_id', String(currentDesign.id));
+      fd.set('owner_id', String(ownerId));
+      fd.set('logged_in_customer_id', String(ownerId));
+      fd.set('image', blob, 'edit-studio-copy.png');
+
+      var apiBase = resolveHeavySaveDispatchBase() || resolveDispatchBase();
+      var url = new URL(apiBase);
+      url.searchParams.set('op', 'design-edit-studio-save-copy');
+      url.searchParams.set('path_prefix', '/apps/creator-dispatch');
+      url.searchParams.set('logged_in_customer_id', String(ownerId));
+      url.searchParams.set('owner_id', String(ownerId));
+
+      if (ac) {
+        toid = setTimeout(function () {
+          try { ac.abort(); } catch (_) {}
+        }, 90000);
+      }
+
+      var response = await fetch(url.toString(), {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'include',
+        body: fd,
+        signal: ac ? ac.signal : undefined
+      });
+      if (toid) {
+        clearTimeout(toid);
+        toid = null;
+      }
+
+      var raw = await response.text();
+      var data = null;
+      try { data = JSON.parse(raw); } catch (_) {}
+      if (!data || !data.ok) {
+        var serverMsg = data && (data.message || data.error);
+        var statusHint = response.status ? ('HTTP ' + response.status) : '';
+        throw new Error(
+          serverMsg ||
+          (statusHint
+            ? t('save_copy_failed', 'Save Copy failed.') + ' (' + statusHint + ')'
+            : t('save_copy_failed', 'Save Copy failed.'))
+        );
+      }
+
+      try {
+        if (window.CreationsScreen && typeof window.CreationsScreen.loadDesigns === 'function') {
+          window.CreationsScreen.loadDesigns(true, { silent: true });
+        }
+      } catch (_) {}
+
+      if (data.design && window.CreatorDesignPreviewModal) {
+        try {
+          if (typeof window.CreatorDesignPreviewModal.open === 'function') {
+            window.CreatorDesignPreviewModal.open(data.design);
+          }
+        } catch (e) {
+          console.warn('[EditStudio] open copy preview failed', e);
+        }
+      }
+
+      dirty = false;
+      genfillPending = false;
+      revokeGenfillUrls();
+      closeStudio({ force: true });
+      await showStudioAlert(
+        (data.title
+          ? t('save_copy_success', 'Saved as a new design.') + ' (' + data.title + ')'
+          : t('save_copy_success', 'Saved as a new design.'))
+      );
+    } catch (err) {
+      if (toid) clearTimeout(toid);
+      var msg = (err && err.message) || t('save_copy_failed', 'Save Copy failed.');
+      if (err && err.name === 'AbortError') {
+        msg = t('save_timeout', 'Save timed out. Please try again.');
+      }
+      console.error('[EditStudio] save copy failed', err);
+      await showStudioAlert(msg);
     } finally {
       setBusy(false);
     }
@@ -1338,17 +1847,23 @@
     currentDesign = null;
     eraseStroke = null;
     paintStroke = null;
+    fillStroke = null;
     panDrag = null;
     hideBrushCursor();
     setPickedColor(null);
     ignoredColors = [];
     updateIgnoreSummaryUi();
+    resetGenfillState();
+    setSettingsLocked(false);
     clearHistory();
     resetZoom();
     closeChronik();
     closeBgModal();
     closeRecolorModal({ keepTool: true });
     closeIgnoreModal({ keepTool: true });
+    var genfillBar = $('ces-genfill-bar');
+    if (genfillBar) genfillBar.setAttribute('hidden', '');
+    showMaskOverlay(false);
     activePointers = {};
     pinchGesture = null;
     if (root) {
@@ -1376,8 +1891,11 @@
     intensity = Number(($('ces-intensity') && $('ces-intensity').value) || 30);
     eraserSize = Number(($('ces-eraser-size') && $('ces-eraser-size').value) || 28);
     brushSize = Number(($('ces-brush-size') && $('ces-brush-size').value) || 28);
+    genfillMarkerSize = Number(($('ces-genfill-marker-size') && $('ces-genfill-marker-size').value) || 48);
     setBrushColor({ r: 0, g: 0, b: 0 });
     ignoredColors = [];
+    resetGenfillState();
+    setSettingsLocked(false);
     updateIgnoreSummaryUi();
     updatePipetteFilterUi();
     setActiveTool('pipette');
@@ -1436,6 +1954,9 @@
         pushHistory(t('paint', 'Paint'));
       }
       paintStroke = null;
+    }
+    if (fillStroke) {
+      fillStroke = null;
     }
     if (panDrag) {
       panDrag = null;
@@ -1501,7 +2022,7 @@
   }
 
   function onWheel(e) {
-    if (!isOpen || busy || !viewer) return;
+    if (!isOpen || busy || settingsLocked || !viewer) return;
     // Trackpad pinch / ctrl+wheel → zoom toward pointer
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -1519,12 +2040,13 @@
   }
 
   function onPointerDown(e) {
-    if (!isOpen || busy || !viewer) return;
+    if (!isOpen || busy || settingsLocked || !viewer) return;
     if (e.target.closest && (
       e.target.closest('.ces-chrome-top-left') ||
       e.target.closest('.ces-chrome-top-right') ||
       e.target.closest('.ces-chrome-bottom-right') ||
-      e.target.closest('.ces-overlay')
+      e.target.closest('.ces-overlay') ||
+      e.target.closest('.ces-genfill-bar')
     )) return;
 
     activePointers[e.pointerId] = { x: e.clientX, y: e.clientY, type: e.pointerType || 'mouse' };
@@ -1608,6 +2130,20 @@
       };
       try { viewer.setPointerCapture(e.pointerId); } catch (_) {}
       e.preventDefault();
+      return;
+    }
+
+    if (activeTool === 'genfill' && genfillMarking) {
+      var fpt = clientToCanvasPixel(e.clientX, e.clientY);
+      if (!fpt) return;
+      fillStroke = {
+        pointerId: e.pointerId,
+        lastX: fpt.x,
+        lastY: fpt.y,
+        changed: paintFillMarkerAt(fpt.x, fpt.y, genfillMarkerSize / 2)
+      };
+      try { viewer.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
     }
   }
 
@@ -1664,11 +2200,22 @@
       e.preventDefault();
       return;
     }
+    if (fillStroke && fillStroke.pointerId === e.pointerId) {
+      var fpt2 = clientToCanvasPixel(e.clientX, e.clientY);
+      if (!fpt2) return;
+      paintFillAlongStroke(fillStroke.lastX, fillStroke.lastY, fpt2.x, fpt2.y, genfillMarkerSize / 2);
+      fillStroke.changed = true;
+      fillStroke.lastX = fpt2.x;
+      fillStroke.lastY = fpt2.y;
+      updateEraserBrush(e.clientX, e.clientY);
+      e.preventDefault();
+      return;
+    }
     updateEraserBrush(e.clientX, e.clientY);
   }
 
   function onPointerLeaveViewer() {
-    if (eraseStroke || paintStroke || panDrag || pinchGesture) return;
+    if (eraseStroke || paintStroke || fillStroke || panDrag || pinchGesture) return;
     hideBrushCursor();
   }
 
@@ -1697,6 +2244,10 @@
         dirty = true;
         await pushHistory(t('paint', 'Paint'));
       }
+      return;
+    }
+    if (fillStroke && fillStroke.pointerId === e.pointerId) {
+      fillStroke = null;
     }
   }
 
@@ -1736,6 +2287,34 @@
         brushSize = Number(brushSizeEl.value) || 28;
         refreshEraserBrushSize();
       });
+    }
+    var genfillSizeEl = $('ces-genfill-marker-size');
+    if (genfillSizeEl) {
+      genfillSizeEl.addEventListener('input', function () {
+        genfillMarkerSize = Number(genfillSizeEl.value) || 48;
+        refreshEraserBrushSize();
+      });
+    }
+    var genfillSetArea = $('ces-genfill-set-area');
+    if (genfillSetArea) {
+      genfillSetArea.addEventListener('click', function () {
+        genfillMarking = true;
+        updateGenfillUi();
+      });
+    }
+    var genfillClear = $('ces-genfill-clear');
+    if (genfillClear) {
+      genfillClear.addEventListener('click', function () {
+        clearGenfillMask();
+      });
+    }
+    var genfillGenerate = $('ces-genfill-generate');
+    if (genfillGenerate) {
+      genfillGenerate.addEventListener('click', function () { runGenerativeFill(); });
+    }
+    var genfillApply = $('ces-genfill-apply');
+    if (genfillApply) {
+      genfillApply.addEventListener('click', function () { applyGenerativeFill(); });
     }
     var brushPicker = $('ces-brush-picker');
     if (brushPicker) {
@@ -1856,8 +2435,10 @@
     }
 
     var saveBtn = $('ces-btn-save');
+    var saveCopyBtn = $('ces-btn-save-copy');
     var discardBtn = $('ces-btn-discard');
     if (saveBtn) saveBtn.addEventListener('click', function () { saveStudio(); });
+    if (saveCopyBtn) saveCopyBtn.addEventListener('click', function () { saveStudioCopy(); });
     if (discardBtn) discardBtn.addEventListener('click', discardStudio);
 
     if (viewer) {
@@ -1942,12 +2523,16 @@
     ensureEditStudioCss();
     root = $('creatorEditStudioModal');
     canvas = $('ces-canvas');
+    maskCanvas = $('ces-mask-canvas');
     viewer = $('ces-viewer');
     stage = $('ces-zoom-stage');
     busyEl = $('ces-busy');
     brushEl = $('ces-eraser-brush');
     if (canvas && !ctx) {
       ctx = canvas.getContext('2d', { willReadFrequently: true });
+    }
+    if (maskCanvas && !maskCtx) {
+      maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
     }
     bindOnce();
   }

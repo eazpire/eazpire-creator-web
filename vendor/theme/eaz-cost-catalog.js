@@ -9,6 +9,8 @@
     design_generate: 15,
     design_upload: 5,
     bg_remove: 0,
+    design_remove_object: 0.5,
+    design_generative_fill: 2,
     design_edit: 0,
     design_variation: 0,
     export_high_res: 1,
