@@ -24,10 +24,14 @@
   var isOpen = false;
   var dirty = false;
   var busy = false;
-  var activeTool = 'pipette'; // pipette | eraser
-  var pickedColor = null; // { r, g, b }
+  var activeTool = 'pipette'; // pipette | eraser | brush
+  var pickedColor = null; // { r, g, b } — null = erase all (no color filter)
   var intensity = 30;
   var eraserSize = 28;
+  var brushSize = 28;
+  var brushColor = { r: 0, g: 0, b: 0 };
+  var recolorTarget = null; // { r, g, b }
+  var ignoredColors = []; // [{ id, r, g, b, intensity }]
   var subheaderCollapsed = false;
 
   var history = []; // [{ blobUrl, label }]
@@ -36,7 +40,17 @@
   var zoom = { scale: 1, x: 0, y: 0, panMode: false };
   var panDrag = null;
   var eraseStroke = null;
+  var paintStroke = null;
   var viewerBg = BG_DEFAULT;
+  var brushEl = null;
+  var brushVisible = false;
+  var activePointers = {};
+  var pinchGesture = null; // two-finger pan + pinch-zoom
+  var toolBeforeModal = 'pipette';
+  var confirmResolver = null;
+  var confirmPrevFocus = null;
+  var confirmKeyHandler = null;
+  var confirmBound = false;
 
   function t(key, fallback) {
     try {
@@ -46,6 +60,188 @@
       if (i18n[key]) return String(i18n[key]);
     } catch (_) {}
     return fallback;
+  }
+
+  function tCommon(key, fallback) {
+    try {
+      var i18n = window.CreatorI18n || {};
+      var full = 'creator.common.' + key;
+      if (i18n[full]) return String(i18n[full]);
+      if (i18n[key]) return String(i18n[key]);
+    } catch (_) {}
+    return fallback;
+  }
+
+  function isConfirmOpen() {
+    var overlay = $('ces-confirm-overlay');
+    return !!(overlay && !overlay.hasAttribute('hidden'));
+  }
+
+  function ensureConfirmDom() {
+    var overlay = $('ces-confirm-overlay');
+    if (overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.id = 'ces-confirm-overlay';
+    overlay.className = 'ces-confirm-overlay';
+    overlay.setAttribute('hidden', '');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML =
+      '<div class="ces-card ces-card--confirm" role="alertdialog" aria-modal="true" aria-labelledby="ces-confirm-title" aria-describedby="ces-confirm-message">' +
+      '<div class="ces-card__header"><h3 id="ces-confirm-title"></h3></div>' +
+      '<div class="ces-card__body"><p id="ces-confirm-message" class="ces-confirm-message"></p></div>' +
+      '<div class="ces-card__footer">' +
+      '<button type="button" class="ces-btn ces-btn--ghost" id="ces-confirm-cancel"></button>' +
+      '<button type="button" class="ces-btn ces-btn--primary" id="ces-confirm-ok"></button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function closeStudioConfirm(result) {
+    var overlay = $('ces-confirm-overlay');
+    if (overlay) {
+      overlay.setAttribute('hidden', '');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.classList.remove('is-alert', 'is-confirm');
+    }
+    if (confirmKeyHandler) {
+      document.removeEventListener('keydown', confirmKeyHandler, true);
+      confirmKeyHandler = null;
+    }
+    if (confirmPrevFocus && typeof confirmPrevFocus.focus === 'function') {
+      try { confirmPrevFocus.focus(); } catch (_) {}
+    }
+    confirmPrevFocus = null;
+    var resolve = confirmResolver;
+    confirmResolver = null;
+    if (typeof resolve === 'function') resolve(!!result);
+  }
+
+  function getConfirmFocusables() {
+    var cancelBtn = $('ces-confirm-cancel');
+    var okBtn = $('ces-confirm-ok');
+    var list = [];
+    if (cancelBtn && cancelBtn.offsetParent !== null && !cancelBtn.disabled) list.push(cancelBtn);
+    if (okBtn && !okBtn.disabled) list.push(okBtn);
+    return list;
+  }
+
+  function bindConfirmOnce() {
+    if (confirmBound) return;
+    var overlay = ensureConfirmDom();
+    var cancelBtn = $('ces-confirm-cancel');
+    var okBtn = $('ces-confirm-ok');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () { closeStudioConfirm(false); });
+    }
+    if (okBtn) {
+      okBtn.addEventListener('click', function () { closeStudioConfirm(true); });
+    }
+    if (overlay) {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeStudioConfirm(false);
+      });
+    }
+    confirmBound = true;
+  }
+
+  /**
+   * Themed confirm/alert. Returns Promise<boolean> (true = OK/Confirm).
+   * opts: { mode: 'confirm'|'alert', title, message, confirmLabel, cancelLabel }
+   */
+  function showStudioDialog(opts) {
+    opts = opts || {};
+    bindConfirmOnce();
+    var overlay = ensureConfirmDom();
+    var titleEl = $('ces-confirm-title');
+    var msgEl = $('ces-confirm-message');
+    var cancelBtn = $('ces-confirm-cancel');
+    var okBtn = $('ces-confirm-ok');
+    var mode = opts.mode === 'alert' ? 'alert' : 'confirm';
+
+    if (confirmResolver) closeStudioConfirm(false);
+
+    return new Promise(function (resolve) {
+      confirmResolver = resolve;
+      confirmPrevFocus = document.activeElement;
+
+      if (titleEl) {
+        titleEl.textContent = opts.title || (
+          mode === 'alert'
+            ? t('notice_title', 'Notice')
+            : t('confirm_title', 'Please confirm')
+        );
+      }
+      if (msgEl) msgEl.textContent = opts.message || '';
+
+      if (cancelBtn) {
+        cancelBtn.textContent = opts.cancelLabel || tCommon('cancel', 'Cancel');
+      }
+      if (okBtn) {
+        okBtn.textContent = opts.confirmLabel || (
+          mode === 'alert'
+            ? t('ok', 'OK')
+            : t('confirm_action', 'Confirm')
+        );
+      }
+
+      overlay.classList.toggle('is-alert', mode === 'alert');
+      overlay.classList.toggle('is-confirm', mode === 'confirm');
+      overlay.removeAttribute('hidden');
+      overlay.setAttribute('aria-hidden', 'false');
+
+      confirmKeyHandler = function (e) {
+        if (!isConfirmOpen()) return;
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          closeStudioConfirm(false);
+          return;
+        }
+        if (e.key === 'Tab') {
+          var focusables = getConfirmFocusables();
+          if (!focusables.length) return;
+          var first = focusables[0];
+          var last = focusables[focusables.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first || !overlay.contains(document.activeElement)) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else if (document.activeElement === last || !overlay.contains(document.activeElement)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      };
+      document.addEventListener('keydown', confirmKeyHandler, true);
+
+      setTimeout(function () {
+        try {
+          if (okBtn) okBtn.focus();
+        } catch (_) {}
+      }, 0);
+    });
+  }
+
+  function showStudioAlert(message, title) {
+    return showStudioDialog({
+      mode: 'alert',
+      title: title || t('notice_title', 'Notice'),
+      message: message || '',
+      confirmLabel: t('ok', 'OK')
+    });
+  }
+
+  function showStudioConfirm(message, title) {
+    return showStudioDialog({
+      mode: 'confirm',
+      title: title || t('confirm_title', 'Please confirm'),
+      message: message || '',
+      confirmLabel: t('confirm_action', 'Confirm'),
+      cancelLabel: tCommon('cancel', 'Cancel')
+    });
   }
 
   function $(id) {
@@ -202,28 +398,97 @@
   }
 
   function thresholdFromIntensity() {
-    return (Math.max(0, Math.min(100, Number(intensity) || 0)) / 100) * DIST_MAX;
+    return thresholdFromValue(intensity);
+  }
+
+  function thresholdFromValue(val) {
+    return (Math.max(0, Math.min(100, Number(val) || 0)) / 100) * DIST_MAX;
+  }
+
+  function colorId(rgb) {
+    return rgbToHex(rgb).toLowerCase();
+  }
+
+  function isProtectedByIgnore(r, g, b) {
+    for (var i = 0; i < ignoredColors.length; i++) {
+      var ig = ignoredColors[i];
+      if (colorDistance(r, g, b, ig.r, ig.g, ig.b) <= thresholdFromValue(ig.intensity)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function updatePipetteFilterUi() {
+    var sw = $('ces-color-swatch');
+    var clearBtn = $('ces-color-clear');
+    var filterHint = $('ces-color-filter-hint');
+    var intensityEl = $('ces-intensity');
+    if (sw) {
+      if (pickedColor) {
+        sw.classList.add('has-color');
+        sw.style.background = 'rgb(' + pickedColor.r + ',' + pickedColor.g + ',' + pickedColor.b + ')';
+      } else {
+        sw.classList.remove('has-color');
+        sw.style.background = '';
+      }
+    }
+    if (clearBtn) clearBtn.hidden = !pickedColor;
+    if (filterHint) {
+      filterHint.textContent = pickedColor
+        ? t('color_filter_on', 'Color filter on')
+        : t('color_filter_off', 'All colors (no filter)');
+      filterHint.classList.toggle('is-off', !pickedColor);
+    }
+    if (intensityEl) intensityEl.disabled = !pickedColor;
   }
 
   function setPickedColor(rgb) {
     pickedColor = rgb ? { r: rgb.r, g: rgb.g, b: rgb.b } : null;
-    var sw = $('ces-color-swatch');
-    if (!sw) return;
-    if (pickedColor) {
-      sw.classList.add('has-color');
-      sw.style.background = 'rgb(' + pickedColor.r + ',' + pickedColor.g + ',' + pickedColor.b + ')';
-    } else {
-      sw.classList.remove('has-color');
-      sw.style.background = '';
+    updatePipetteFilterUi();
+  }
+
+  function clearPickedColor() {
+    setPickedColor(null);
+  }
+
+  function setBrushColor(rgb) {
+    brushColor = rgb ? { r: rgb.r | 0, g: rgb.g | 0, b: rgb.b | 0 } : { r: 0, g: 0, b: 0 };
+    var sw = $('ces-brush-swatch');
+    var picker = $('ces-brush-picker');
+    if (sw) sw.style.background = 'rgb(' + brushColor.r + ',' + brushColor.g + ',' + brushColor.b + ')';
+    if (picker) picker.value = rgbToHex(brushColor);
+    var palette = $('ces-brush-palette');
+    if (palette) {
+      var hex = rgbToHex(brushColor).toLowerCase();
+      palette.querySelectorAll('.ces-palette__swatch').forEach(function (btn) {
+        btn.classList.toggle('is-selected', String(btn.getAttribute('data-ces-rgb') || '').toLowerCase() === hex);
+      });
     }
   }
 
   function setActiveTool(tool) {
-    activeTool = tool === 'eraser' ? 'eraser' : 'pipette';
+    if (tool === 'recolor') {
+      openRecolorModal();
+      return;
+    }
+    if (tool === 'ignore') {
+      openIgnoreModal();
+      return;
+    }
+    if (tool === 'eraser') activeTool = 'eraser';
+    else if (tool === 'brush') activeTool = 'brush';
+    else activeTool = 'pipette';
+
     var pipetteBtn = $('ces-tool-pipette');
     var eraserBtn = $('ces-tool-eraser');
+    var brushBtn = $('ces-tool-brush');
+    var recolorBtn = $('ces-tool-recolor');
+    var ignoreBtn = $('ces-tool-ignore');
     var pipetteOpts = $('ces-pipette-options');
     var eraserOpts = $('ces-eraser-options');
+    var brushOpts = $('ces-brush-options');
+
     if (pipetteBtn) {
       pipetteBtn.classList.toggle('is-active', activeTool === 'pipette');
       pipetteBtn.setAttribute('aria-selected', activeTool === 'pipette' ? 'true' : 'false');
@@ -232,18 +497,466 @@
       eraserBtn.classList.toggle('is-active', activeTool === 'eraser');
       eraserBtn.setAttribute('aria-selected', activeTool === 'eraser' ? 'true' : 'false');
     }
-    if (pipetteOpts) pipetteOpts.hidden = activeTool !== 'pipette' && activeTool !== 'eraser';
+    if (brushBtn) {
+      brushBtn.classList.toggle('is-active', activeTool === 'brush');
+      brushBtn.setAttribute('aria-selected', activeTool === 'brush' ? 'true' : 'false');
+    }
+    if (recolorBtn) {
+      recolorBtn.classList.remove('is-active');
+      recolorBtn.setAttribute('aria-selected', 'false');
+    }
+    if (ignoreBtn) {
+      ignoreBtn.classList.remove('is-active');
+      ignoreBtn.setAttribute('aria-selected', 'false');
+    }
     if (eraserOpts) eraserOpts.hidden = activeTool !== 'eraser';
-    // Intensity stays visible for both (affects erase)
+    if (brushOpts) {
+      brushOpts.hidden = activeTool !== 'brush';
+      if (activeTool === 'brush') renderBrushPalette();
+    }
     if (pipetteOpts) pipetteOpts.hidden = false;
     updateViewerCursor();
+    updateIgnoreSummaryUi();
+  }
+
+  function rgbToHex(rgb) {
+    if (!rgb) return '#ffffff';
+    function h(n) {
+      var s = Math.max(0, Math.min(255, n | 0)).toString(16);
+      return s.length === 1 ? '0' + s : s;
+    }
+    return '#' + h(rgb.r) + h(rgb.g) + h(rgb.b);
+  }
+
+  function hexToRgb(hex) {
+    if (!hex || typeof hex !== 'string') return null;
+    var m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+    if (!m) return null;
+    var n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  function setRecolorTarget(rgb) {
+    recolorTarget = rgb ? { r: rgb.r, g: rgb.g, b: rgb.b } : null;
+    var toEl = $('ces-recolor-to');
+    var picker = $('ces-recolor-picker');
+    if (toEl) {
+      if (recolorTarget) {
+        toEl.style.background = 'rgb(' + recolorTarget.r + ',' + recolorTarget.g + ',' + recolorTarget.b + ')';
+      } else {
+        toEl.style.background = '';
+      }
+    }
+    if (picker && recolorTarget) picker.value = rgbToHex(recolorTarget);
+    var palette = $('ces-recolor-palette');
+    if (palette && recolorTarget) {
+      var hex = rgbToHex(recolorTarget).toLowerCase();
+      palette.querySelectorAll('.ces-palette__swatch').forEach(function (btn) {
+        btn.classList.toggle('is-selected', String(btn.getAttribute('data-ces-rgb') || '').toLowerCase() === hex);
+      });
+    }
+  }
+
+  function extractDesignPalette(maxColors) {
+    maxColors = maxColors || 32;
+    if (!ctx || !canvas || !canvas.width || !canvas.height) return [];
+    var w = canvas.width;
+    var h = canvas.height;
+    var stride = Math.max(1, Math.floor(Math.sqrt((w * h) / 60000)));
+    var img;
+    try {
+      img = ctx.getImageData(0, 0, w, h);
+    } catch (_) {
+      return [];
+    }
+    var data = img.data;
+    var buckets = Object.create(null);
+    for (var y = 0; y < h; y += stride) {
+      for (var x = 0; x < w; x += stride) {
+        var i = (y * w + x) * 4;
+        if (data[i + 3] < 40) continue;
+        var rq = (data[i] >> 4) << 4;
+        var gq = (data[i + 1] >> 4) << 4;
+        var bq = (data[i + 2] >> 4) << 4;
+        var key = rq + ',' + gq + ',' + bq;
+        if (!buckets[key]) {
+          buckets[key] = {
+            r: Math.min(255, rq + 8),
+            g: Math.min(255, gq + 8),
+            b: Math.min(255, bq + 8),
+            count: 0
+          };
+        }
+        buckets[key].count++;
+      }
+    }
+    var list = [];
+    for (var k in buckets) {
+      if (Object.prototype.hasOwnProperty.call(buckets, k)) list.push(buckets[k]);
+    }
+    list.sort(function (a, b) { return b.count - a.count; });
+    return list.slice(0, maxColors);
+  }
+
+  function renderRecolorPalette() {
+    var palette = $('ces-recolor-palette');
+    var empty = $('ces-recolor-palette-empty');
+    if (!palette) return;
+    palette.innerHTML = '';
+    var colors = extractDesignPalette(32);
+    if (!colors.length) {
+      if (empty) empty.hidden = false;
+      return;
+    }
+    if (empty) empty.hidden = true;
+    var selectedHex = recolorTarget ? rgbToHex(recolorTarget).toLowerCase() : '';
+    colors.forEach(function (c) {
+      var hex = rgbToHex(c);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ces-palette__swatch' + (hex.toLowerCase() === selectedHex ? ' is-selected' : '');
+      btn.style.background = hex;
+      btn.setAttribute('data-ces-rgb', hex);
+      btn.setAttribute('aria-label', hex);
+      btn.setAttribute('role', 'option');
+      btn.addEventListener('click', function () {
+        setRecolorTarget({ r: c.r, g: c.g, b: c.b });
+      });
+      palette.appendChild(btn);
+    });
+  }
+
+  function recolorMatching(targetRgb) {
+    if (!pickedColor || !targetRgb || !ctx || !canvas) return false;
+    var threshold = thresholdFromIntensity();
+    var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var data = img.data;
+    var pr = pickedColor.r;
+    var pg = pickedColor.g;
+    var pb = pickedColor.b;
+    var tr = targetRgb.r | 0;
+    var tg = targetRgb.g | 0;
+    var tb = targetRgb.b | 0;
+    var changed = false;
+    for (var i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 8) continue;
+      if (isProtectedByIgnore(data[i], data[i + 1], data[i + 2])) continue;
+      if (colorDistance(data[i], data[i + 1], data[i + 2], pr, pg, pb) <= threshold) {
+        data[i] = tr;
+        data[i + 1] = tg;
+        data[i + 2] = tb;
+        changed = true;
+      }
+    }
+    if (changed) ctx.putImageData(img, 0, 0);
+    return changed;
+  }
+
+  async function openRecolorModal() {
+    if (!pickedColor) {
+      await showStudioAlert(t('pick_color_first', 'Pick a color with the pipette first.'));
+      setActiveTool('pipette');
+      return;
+    }
+    toolBeforeModal = activeTool === 'eraser' || activeTool === 'brush' ? activeTool : 'pipette';
+    var recolorBtn = $('ces-tool-recolor');
+    if (recolorBtn) {
+      recolorBtn.classList.add('is-active');
+      recolorBtn.setAttribute('aria-selected', 'true');
+    }
+    var fromEl = $('ces-recolor-from');
+    if (fromEl) {
+      fromEl.style.background = 'rgb(' + pickedColor.r + ',' + pickedColor.g + ',' + pickedColor.b + ')';
+    }
+    setRecolorTarget({ r: pickedColor.r, g: pickedColor.g, b: pickedColor.b });
+    renderRecolorPalette();
+    var overlay = $('ces-recolor-overlay');
+    if (overlay) overlay.removeAttribute('hidden');
+  }
+
+  function closeRecolorModal(opts) {
+    opts = opts || {};
+    var overlay = $('ces-recolor-overlay');
+    if (overlay) overlay.setAttribute('hidden', '');
+    var recolorBtn = $('ces-tool-recolor');
+    if (recolorBtn) {
+      recolorBtn.classList.remove('is-active');
+      recolorBtn.setAttribute('aria-selected', 'false');
+    }
+    recolorTarget = null;
+    if (!opts.keepTool) {
+      setActiveTool(toolBeforeModal || 'pipette');
+    }
+  }
+
+  async function applyRecolor() {
+    if (!pickedColor) {
+      await showStudioAlert(t('pick_color_first', 'Pick a color with the pipette first.'));
+      closeRecolorModal();
+      return;
+    }
+    if (!recolorTarget) return;
+    var changed = recolorMatching(recolorTarget);
+    if (changed) {
+      dirty = true;
+      setPickedColor(recolorTarget);
+      await pushHistory(t('recolor', 'Change color'));
+    }
+    closeRecolorModal({ keepTool: false });
+  }
+
+  function findIgnored(id) {
+    for (var i = 0; i < ignoredColors.length; i++) {
+      if (ignoredColors[i].id === id) return ignoredColors[i];
+    }
+    return null;
+  }
+
+  function toggleIgnoredColor(rgb) {
+    var id = colorId(rgb);
+    var existing = findIgnored(id);
+    if (existing) {
+      ignoredColors = ignoredColors.filter(function (c) { return c.id !== id; });
+    } else {
+      ignoredColors.push({
+        id: id,
+        r: rgb.r | 0,
+        g: rgb.g | 0,
+        b: rgb.b | 0,
+        intensity: 30
+      });
+    }
+    updateIgnoreSummaryUi();
+    renderIgnoreModalUi();
+  }
+
+  function setIgnoredIntensity(id, value) {
+    var item = findIgnored(id);
+    if (!item) return;
+    item.intensity = Math.max(0, Math.min(100, Number(value) || 0));
+  }
+
+  function removeIgnored(id) {
+    ignoredColors = ignoredColors.filter(function (c) { return c.id !== id; });
+    updateIgnoreSummaryUi();
+    renderIgnoreModalUi();
+  }
+
+  function clearIgnoredColors() {
+    ignoredColors = [];
+    updateIgnoreSummaryUi();
+    renderIgnoreModalUi();
+  }
+
+  function updateIgnoreSummaryUi() {
+    var badge = $('ces-ignore-badge');
+    var summary = $('ces-ignore-summary');
+    var row = $('ces-ignore-summary-swatches');
+    var n = ignoredColors.length;
+    if (badge) {
+      badge.textContent = String(n);
+      badge.hidden = n === 0;
+    }
+    if (summary) summary.hidden = n === 0;
+    if (!row) return;
+    row.innerHTML = '';
+    ignoredColors.forEach(function (c) {
+      var el = document.createElement('span');
+      el.className = 'ces-ignore-summary__swatch';
+      el.style.background = 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')';
+      el.title = rgbToHex(c);
+      row.appendChild(el);
+    });
+  }
+
+  function renderIgnoreModalUi() {
+    var palette = $('ces-ignore-palette');
+    var empty = $('ces-ignore-palette-empty');
+    var list = $('ces-ignore-list');
+    var listEmpty = $('ces-ignore-list-empty');
+    if (palette) {
+      palette.innerHTML = '';
+      var colors = extractDesignPalette(32);
+      if (!colors.length) {
+        if (empty) empty.hidden = false;
+      } else {
+        if (empty) empty.hidden = true;
+        colors.forEach(function (c) {
+          var hex = rgbToHex(c);
+          var id = hex.toLowerCase();
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'ces-palette__swatch' + (findIgnored(id) ? ' is-ignored is-selected' : '');
+          btn.style.background = hex;
+          btn.setAttribute('data-ces-rgb', hex);
+          btn.setAttribute('aria-label', hex);
+          btn.addEventListener('click', function () {
+            toggleIgnoredColor({ r: c.r, g: c.g, b: c.b });
+          });
+          palette.appendChild(btn);
+        });
+      }
+    }
+    if (list) {
+      list.innerHTML = '';
+      ignoredColors.forEach(function (c) {
+        var row = document.createElement('div');
+        row.className = 'ces-ignore-item';
+        row.innerHTML =
+          '<span class="ces-ignore-item__swatch" style="background:rgb(' + c.r + ',' + c.g + ',' + c.b + ')"></span>' +
+          '<div class="ces-ignore-item__controls">' +
+          '<span class="ces-ignore-item__label">' + t('ignore_intensity', 'Ignore intensity') + '</span>' +
+          '<input type="range" class="ces-slider" min="0" max="100" value="' + c.intensity + '" data-ces-ignore-id="' + c.id + '" aria-label="' + t('ignore_intensity', 'Ignore intensity') + '">' +
+          '</div>' +
+          '<button type="button" class="ces-ignore-item__remove" data-ces-ignore-remove="' + c.id + '" aria-label="' + t('ignore_remove', 'Remove') + '">&times;</button>';
+        list.appendChild(row);
+      });
+      list.querySelectorAll('input[data-ces-ignore-id]').forEach(function (input) {
+        input.addEventListener('input', function () {
+          setIgnoredIntensity(input.getAttribute('data-ces-ignore-id'), input.value);
+        });
+      });
+      list.querySelectorAll('[data-ces-ignore-remove]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          removeIgnored(btn.getAttribute('data-ces-ignore-remove'));
+        });
+      });
+    }
+    if (listEmpty) listEmpty.hidden = ignoredColors.length > 0;
+  }
+
+  function openIgnoreModal() {
+    toolBeforeModal = activeTool === 'eraser' || activeTool === 'brush' ? activeTool : 'pipette';
+    var ignoreBtn = $('ces-tool-ignore');
+    if (ignoreBtn) {
+      ignoreBtn.classList.add('is-active');
+      ignoreBtn.setAttribute('aria-selected', 'true');
+    }
+    renderIgnoreModalUi();
+    var overlay = $('ces-ignore-overlay');
+    if (overlay) overlay.removeAttribute('hidden');
+  }
+
+  function closeIgnoreModal(opts) {
+    opts = opts || {};
+    var overlay = $('ces-ignore-overlay');
+    if (overlay) overlay.setAttribute('hidden', '');
+    var ignoreBtn = $('ces-tool-ignore');
+    if (ignoreBtn) {
+      ignoreBtn.classList.remove('is-active');
+      ignoreBtn.setAttribute('aria-selected', 'false');
+    }
+    updateIgnoreSummaryUi();
+    if (!opts.keepTool) setActiveTool(toolBeforeModal || 'pipette');
+  }
+
+  function renderBrushPalette() {
+    var palette = $('ces-brush-palette');
+    if (!palette) return;
+    palette.innerHTML = '';
+    var colors = extractDesignPalette(24);
+    var selectedHex = rgbToHex(brushColor).toLowerCase();
+    colors.forEach(function (c) {
+      var hex = rgbToHex(c);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ces-palette__swatch' + (hex.toLowerCase() === selectedHex ? ' is-selected' : '');
+      btn.style.background = hex;
+      btn.setAttribute('data-ces-rgb', hex);
+      btn.addEventListener('click', function () {
+        setBrushColor({ r: c.r, g: c.g, b: c.b });
+      });
+      palette.appendChild(btn);
+    });
+  }
+
+  function paintAtPoint(cx, cy, radius) {
+    if (!ctx || !canvas) return false;
+    ctx.save();
+    ctx.fillStyle = 'rgb(' + brushColor.r + ',' + brushColor.g + ',' + brushColor.b + ')';
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return true;
+  }
+
+  function paintAlongStroke(x0, y0, x1, y1, radius) {
+    var dist = Math.hypot(x1 - x0, y1 - y0);
+    var step = Math.max(1, radius * 0.35);
+    var n = Math.max(1, Math.ceil(dist / step));
+    for (var i = 0; i <= n; i++) {
+      var t = i / n;
+      paintAtPoint(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, radius);
+    }
+    return true;
   }
 
   function updateViewerCursor() {
     if (!viewer) return;
     viewer.classList.toggle('is-eyedropper', !zoom.panMode && activeTool === 'pipette');
     viewer.classList.toggle('is-eraser', !zoom.panMode && activeTool === 'eraser');
+    viewer.classList.toggle('is-brush', !zoom.panMode && activeTool === 'brush');
     viewer.classList.toggle('is-pan-mode', !!zoom.panMode);
+    if ((activeTool !== 'eraser' && activeTool !== 'brush') || zoom.panMode) hideBrushCursor();
+  }
+
+  function activeBrushSize() {
+    return activeTool === 'brush' ? brushSize : eraserSize;
+  }
+
+  function brushCursorDisplayDiameter() {
+    var size = activeBrushSize();
+    if (!canvas || !canvas.width) return size;
+    var rect = canvas.getBoundingClientRect();
+    if (!rect.width) return size;
+    return Math.max(4, size * (rect.width / canvas.width));
+  }
+
+  function hideBrushCursor() {
+    brushVisible = false;
+    if (!brushEl) return;
+    brushEl.hidden = true;
+  }
+
+  function hideEraserBrush() {
+    hideBrushCursor();
+  }
+
+  function updateEraserBrush(clientX, clientY) {
+    if (!brushEl || !viewer || !canvas || !isOpen) {
+      hideBrushCursor();
+      return;
+    }
+    if ((activeTool !== 'eraser' && activeTool !== 'brush') || zoom.panMode || busy) {
+      hideBrushCursor();
+      return;
+    }
+    var canvasRect = canvas.getBoundingClientRect();
+    var overCanvas =
+      clientX >= canvasRect.left &&
+      clientX <= canvasRect.right &&
+      clientY >= canvasRect.top &&
+      clientY <= canvasRect.bottom;
+    if (!overCanvas && !eraseStroke && !paintStroke) {
+      hideBrushCursor();
+      return;
+    }
+    var viewerRect = viewer.getBoundingClientRect();
+    var diameter = brushCursorDisplayDiameter();
+    brushEl.style.width = diameter + 'px';
+    brushEl.style.height = diameter + 'px';
+    brushEl.style.left = clientX - viewerRect.left + 'px';
+    brushEl.style.top = clientY - viewerRect.top + 'px';
+    brushEl.hidden = false;
+    brushVisible = true;
+  }
+
+  function refreshEraserBrushSize() {
+    if (!brushVisible || !brushEl || brushEl.hidden) return;
+    var diameter = brushCursorDisplayDiameter();
+    brushEl.style.width = diameter + 'px';
+    brushEl.style.height = diameter + 'px';
   }
 
   function applyZoomTransform() {
@@ -252,13 +965,53 @@
       'translate(' + zoom.x + 'px,' + zoom.y + 'px) scale(' + zoom.scale + ')';
   }
 
-  function setZoom(scale) {
-    zoom.scale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, scale));
+  function setZoom(scale, anchorClientX, anchorClientY) {
+    var next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, scale));
+    if (
+      typeof anchorClientX === 'number' &&
+      typeof anchorClientY === 'number' &&
+      viewer &&
+      zoom.scale > 0.001
+    ) {
+      zoomTowardClient(anchorClientX, anchorClientY, next);
+      return;
+    }
+    zoom.scale = next;
     if (zoom.scale <= 1.001) {
+      zoom.scale = 1;
       zoom.x = 0;
       zoom.y = 0;
     }
     applyZoomTransform();
+    refreshEraserBrushSize();
+  }
+
+  function viewerCenter() {
+    if (!viewer) return { x: 0, y: 0 };
+    var rect = viewer.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  }
+
+  /** Zoom so the content under (clientX, clientY) stays under the pointer. */
+  function zoomTowardClient(clientX, clientY, newScale) {
+    var next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newScale));
+    var center = viewerCenter();
+    var prev = zoom.scale || 1;
+    if (next <= 1.001) {
+      zoom.scale = 1;
+      zoom.x = 0;
+      zoom.y = 0;
+      applyZoomTransform();
+      refreshEraserBrushSize();
+      return;
+    }
+    var ox = (clientX - center.x - zoom.x) / prev;
+    var oy = (clientY - center.y - zoom.y) / prev;
+    zoom.scale = next;
+    zoom.x = clientX - center.x - ox * next;
+    zoom.y = clientY - center.y - oy * next;
+    applyZoomTransform();
+    refreshEraserBrushSize();
   }
 
   function setPanMode(on) {
@@ -277,6 +1030,7 @@
     zoom.y = 0;
     setPanMode(false);
     applyZoomTransform();
+    refreshEraserBrushSize();
   }
 
   function normalizeBg(value) {
@@ -346,8 +1100,9 @@
   }
 
   function eraseAtPoint(cx, cy, radius) {
-    if (!pickedColor || !ctx || !canvas) return false;
-    var threshold = thresholdFromIntensity();
+    if (!ctx || !canvas) return false;
+    var filterOn = !!pickedColor;
+    var threshold = filterOn ? thresholdFromIntensity() : 0;
     var x0 = Math.max(0, Math.floor(cx - radius));
     var y0 = Math.max(0, Math.floor(cy - radius));
     var x1 = Math.min(canvas.width - 1, Math.ceil(cx + radius));
@@ -358,9 +1113,9 @@
     var img = ctx.getImageData(x0, y0, w, h);
     var data = img.data;
     var r2 = radius * radius;
-    var pr = pickedColor.r;
-    var pg = pickedColor.g;
-    var pb = pickedColor.b;
+    var pr = filterOn ? pickedColor.r : 0;
+    var pg = filterOn ? pickedColor.g : 0;
+    var pb = filterOn ? pickedColor.b : 0;
     var changed = false;
     for (var row = 0; row < h; row++) {
       for (var col = 0; col < w; col++) {
@@ -369,7 +1124,8 @@
         if (dx * dx + dy * dy > r2) continue;
         var i = (row * w + col) * 4;
         if (data[i + 3] < 8) continue;
-        if (colorDistance(data[i], data[i + 1], data[i + 2], pr, pg, pb) <= threshold) {
+        if (isProtectedByIgnore(data[i], data[i + 1], data[i + 2])) continue;
+        if (!filterOn || colorDistance(data[i], data[i + 1], data[i + 2], pr, pg, pb) <= threshold) {
           data[i + 3] = 0;
           changed = true;
         }
@@ -482,21 +1238,22 @@
 
   async function saveStudio() {
     if (!currentDesign || !currentDesign.id) {
-      alert(t('no_design', 'No design selected.'));
+      await showStudioAlert(t('no_design', 'No design selected.'));
       return;
     }
     if (!dirty && historyIndex <= 0) {
-      alert(t('no_changes', 'No changes to save.'));
+      await showStudioAlert(t('no_changes', 'No changes to save.'));
       return;
     }
-    var ok = window.confirm(
-      t('confirm_save', 'Save your Edit Studio changes? This creates a new version and replaces the current design.')
+    var ok = await showStudioConfirm(
+      t('confirm_save', 'Save your Edit Studio changes? This creates a new version and replaces the current design.'),
+      t('confirm_save_title', 'Save changes?')
     );
     if (!ok) return;
 
     var ownerId = resolveOwnerId(currentDesign);
     if (!ownerId) {
-      alert(window.CreatorI18n?.noUserId || t('no_user', 'Error: No user ID found. Please sign in.'));
+      await showStudioAlert(window.CreatorI18n?.noUserId || t('no_user', 'Error: No user ID found. Please sign in.'));
       return;
     }
 
@@ -552,17 +1309,18 @@
       closeStudio({ force: true });
     } catch (err) {
       console.error('[EditStudio] save failed', err);
-      alert((err && err.message) || t('save_failed', 'Save failed.'));
+      await showStudioAlert((err && err.message) || t('save_failed', 'Save failed.'));
     } finally {
       setBusy(false);
     }
   }
 
-  function discardStudio() {
+  async function discardStudio() {
     if (busy) return;
     if (dirty) {
-      var ok = window.confirm(
-        t('confirm_discard', 'Discard Edit Studio changes? Your local edits will be lost.')
+      var ok = await showStudioConfirm(
+        t('confirm_discard', 'Discard Edit Studio changes? Your local edits will be lost.'),
+        t('confirm_discard_title', 'Discard changes?')
       );
       if (!ok) return;
     }
@@ -575,15 +1333,24 @@
       discardStudio();
       return;
     }
+    if (isConfirmOpen()) closeStudioConfirm(false);
     isOpen = false;
     currentDesign = null;
     eraseStroke = null;
+    paintStroke = null;
     panDrag = null;
+    hideBrushCursor();
     setPickedColor(null);
+    ignoredColors = [];
+    updateIgnoreSummaryUi();
     clearHistory();
     resetZoom();
     closeChronik();
     closeBgModal();
+    closeRecolorModal({ keepTool: true });
+    closeIgnoreModal({ keepTool: true });
+    activePointers = {};
+    pinchGesture = null;
     if (root) {
       root.setAttribute('hidden', '');
       root.setAttribute('aria-hidden', 'true');
@@ -600,7 +1367,7 @@
       return;
     }
     if (!design || !design.id) {
-      alert(t('no_design', 'No design selected.'));
+      await showStudioAlert(t('no_design', 'No design selected.'));
       return;
     }
     currentDesign = design;
@@ -608,6 +1375,11 @@
     dirty = false;
     intensity = Number(($('ces-intensity') && $('ces-intensity').value) || 30);
     eraserSize = Number(($('ces-eraser-size') && $('ces-eraser-size').value) || 28);
+    brushSize = Number(($('ces-brush-size') && $('ces-brush-size').value) || 28);
+    setBrushColor({ r: 0, g: 0, b: 0 });
+    ignoredColors = [];
+    updateIgnoreSummaryUi();
+    updatePipetteFilterUi();
     setActiveTool('pipette');
     setSubheaderCollapsed(false);
     resetZoom();
@@ -622,12 +1394,128 @@
       await loadDesignOntoCanvas(design);
     } catch (err) {
       console.error('[EditStudio] open failed', err);
-      alert((err && err.message) || t('image_load_failed', 'Could not load design image.'));
+      await showStudioAlert((err && err.message) || t('image_load_failed', 'Could not load design image.'));
       closeStudio({ force: true });
       return;
     } finally {
       setBusy(false);
     }
+  }
+
+  function pointerCount() {
+    var n = 0;
+    for (var id in activePointers) {
+      if (Object.prototype.hasOwnProperty.call(activePointers, id)) n++;
+    }
+    return n;
+  }
+
+  function pointerList() {
+    var list = [];
+    for (var id in activePointers) {
+      if (Object.prototype.hasOwnProperty.call(activePointers, id)) {
+        list.push(activePointers[id]);
+      }
+    }
+    return list;
+  }
+
+  function beginPinchGesture() {
+    var pts = pointerList();
+    if (pts.length < 2) return false;
+    if (eraseStroke) {
+      if (eraseStroke.changed) {
+        dirty = true;
+        pushHistory(t('erase', 'Erase'));
+      }
+      eraseStroke = null;
+    }
+    if (paintStroke) {
+      if (paintStroke.changed) {
+        dirty = true;
+        pushHistory(t('paint', 'Paint'));
+      }
+      paintStroke = null;
+    }
+    if (panDrag) {
+      panDrag = null;
+    }
+    hideEraserBrush();
+    var midX = (pts[0].x + pts[1].x) / 2;
+    var midY = (pts[0].y + pts[1].y) / 2;
+    var dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    if (dist < 10) dist = 10;
+    pinchGesture = {
+      midX: midX,
+      midY: midY,
+      startDist: dist,
+      startScale: zoom.scale,
+      startX: zoom.x,
+      startY: zoom.y
+    };
+    if (viewer) viewer.classList.add('is-panning');
+    return true;
+  }
+
+  function updatePinchGesture() {
+    if (!pinchGesture) return;
+    var pts = pointerList();
+    if (pts.length < 2) return;
+    var midX = (pts[0].x + pts[1].x) / 2;
+    var midY = (pts[0].y + pts[1].y) / 2;
+    var dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    if (dist < 10) dist = 10;
+    var next = Math.max(
+      ZOOM_MIN,
+      Math.min(ZOOM_MAX, pinchGesture.startScale * (dist / pinchGesture.startDist))
+    );
+    var center = viewerCenter();
+    if (next <= 1.001) {
+      zoom.scale = 1;
+      zoom.x = 0;
+      zoom.y = 0;
+    } else {
+      var ox = (pinchGesture.midX - center.x - pinchGesture.startX) / (pinchGesture.startScale || 1);
+      var oy = (pinchGesture.midY - center.y - pinchGesture.startY) / (pinchGesture.startScale || 1);
+      zoom.scale = next;
+      // Keep the content under the original pinch midpoint under the current midpoint
+      // (also pans when both fingers move together).
+      zoom.x = midX - center.x - ox * next;
+      zoom.y = midY - center.y - oy * next;
+    }
+    applyZoomTransform();
+    refreshEraserBrushSize();
+  }
+
+  function endPinchGesture() {
+    if (!pinchGesture) return;
+    pinchGesture = null;
+    if (viewer && !panDrag) viewer.classList.remove('is-panning');
+  }
+
+  function panBy(dx, dy) {
+    if (zoom.scale <= 1.001) return;
+    zoom.x += dx;
+    zoom.y += dy;
+    applyZoomTransform();
+  }
+
+  function onWheel(e) {
+    if (!isOpen || busy || !viewer) return;
+    // Trackpad pinch / ctrl+wheel → zoom toward pointer
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      var factor = Math.exp(-e.deltaY * 0.01);
+      if (!isFinite(factor) || factor <= 0) {
+        factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+      }
+      zoomTowardClient(e.clientX, e.clientY, zoom.scale * factor);
+      return;
+    }
+    // Plain wheel / two-finger trackpad scroll → pan (when zoomed)
+    if (zoom.scale <= 1.001) return;
+    e.preventDefault();
+    panBy(-e.deltaX, -e.deltaY);
   }
 
   function onPointerDown(e) {
@@ -638,6 +1526,16 @@
       e.target.closest('.ces-chrome-bottom-right') ||
       e.target.closest('.ces-overlay')
     )) return;
+
+    activePointers[e.pointerId] = { x: e.clientX, y: e.clientY, type: e.pointerType || 'mouse' };
+
+    // Two-finger: pinch-zoom + pan (works even at 1× to zoom in)
+    if (pointerCount() >= 2) {
+      if (beginPinchGesture()) {
+        e.preventDefault();
+        return;
+      }
+    }
 
     if (zoom.panMode) {
       if (zoom.scale <= 1.001) return;
@@ -654,19 +1552,38 @@
       return;
     }
 
+    // Touch + pipette: one-finger drag pans (sample still happens on tap below).
+    if (
+      (e.pointerType === 'touch' || e.pointerType === 'pen') &&
+      activeTool === 'pipette' &&
+      zoom.scale > 1.001 &&
+      pointerCount() === 1
+    ) {
+      panDrag = {
+        pointerId: e.pointerId,
+        originX: e.clientX,
+        originY: e.clientY,
+        startX: zoom.x,
+        startY: zoom.y,
+        soft: true,
+        moved: false
+      };
+      try { viewer.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+
     if (activeTool === 'pipette') {
-      var color = sampleColorAt(e.clientX, e.clientY);
-      if (color) setPickedColor(color);
+      if (!panDrag || !panDrag.soft) {
+        var color = sampleColorAt(e.clientX, e.clientY);
+        if (color) setPickedColor(color);
+      } else {
+        var tapColor = sampleColorAt(e.clientX, e.clientY);
+        if (tapColor) setPickedColor(tapColor);
+      }
       e.preventDefault();
       return;
     }
 
     if (activeTool === 'eraser') {
-      if (!pickedColor) {
-        alert(t('pick_color_first', 'Pick a color with the pipette first.'));
-        setActiveTool('pipette');
-        return;
-      }
       var pt = clientToCanvasPixel(e.clientX, e.clientY);
       if (!pt) return;
       eraseStroke = {
@@ -677,14 +1594,49 @@
       };
       try { viewer.setPointerCapture(e.pointerId); } catch (_) {}
       e.preventDefault();
+      return;
+    }
+
+    if (activeTool === 'brush') {
+      var bpt = clientToCanvasPixel(e.clientX, e.clientY);
+      if (!bpt) return;
+      paintStroke = {
+        pointerId: e.pointerId,
+        lastX: bpt.x,
+        lastY: bpt.y,
+        changed: paintAtPoint(bpt.x, bpt.y, brushSize / 2)
+      };
+      try { viewer.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
     }
   }
 
   function onPointerMove(e) {
     if (!isOpen || busy) return;
+    if (activePointers[e.pointerId]) {
+      activePointers[e.pointerId].x = e.clientX;
+      activePointers[e.pointerId].y = e.clientY;
+    }
+
+    if (pinchGesture && pointerCount() >= 2) {
+      updatePinchGesture();
+      e.preventDefault();
+      return;
+    }
+
     if (panDrag && panDrag.pointerId === e.pointerId) {
-      zoom.x = panDrag.startX + (e.clientX - panDrag.originX);
-      zoom.y = panDrag.startY + (e.clientY - panDrag.originY);
+      var dx = e.clientX - panDrag.originX;
+      var dy = e.clientY - panDrag.originY;
+      if (panDrag.soft && !panDrag.moved) {
+        if (Math.hypot(dx, dy) < 8) {
+          updateEraserBrush(e.clientX, e.clientY);
+          return;
+        }
+        panDrag.moved = true;
+        viewer.classList.add('is-panning');
+      }
+      zoom.x = panDrag.startX + dx;
+      zoom.y = panDrag.startY + dy;
       applyZoomTransform();
       e.preventDefault();
       return;
@@ -697,14 +1649,36 @@
       }
       eraseStroke.lastX = pt.x;
       eraseStroke.lastY = pt.y;
+      updateEraserBrush(e.clientX, e.clientY);
       e.preventDefault();
+      return;
     }
+    if (paintStroke && paintStroke.pointerId === e.pointerId) {
+      var ppt = clientToCanvasPixel(e.clientX, e.clientY);
+      if (!ppt) return;
+      paintAlongStroke(paintStroke.lastX, paintStroke.lastY, ppt.x, ppt.y, brushSize / 2);
+      paintStroke.changed = true;
+      paintStroke.lastX = ppt.x;
+      paintStroke.lastY = ppt.y;
+      updateEraserBrush(e.clientX, e.clientY);
+      e.preventDefault();
+      return;
+    }
+    updateEraserBrush(e.clientX, e.clientY);
+  }
+
+  function onPointerLeaveViewer() {
+    if (eraseStroke || paintStroke || panDrag || pinchGesture) return;
+    hideBrushCursor();
   }
 
   async function onPointerUp(e) {
+    delete activePointers[e.pointerId];
+    if (pointerCount() < 2) endPinchGesture();
+
     if (panDrag && panDrag.pointerId === e.pointerId) {
       panDrag = null;
-      if (viewer) viewer.classList.remove('is-panning');
+      if (viewer && !pinchGesture) viewer.classList.remove('is-panning');
       return;
     }
     if (eraseStroke && eraseStroke.pointerId === e.pointerId) {
@@ -713,6 +1687,15 @@
       if (changed) {
         dirty = true;
         await pushHistory(t('erase', 'Erase'));
+      }
+      return;
+    }
+    if (paintStroke && paintStroke.pointerId === e.pointerId) {
+      var painted = paintStroke.changed;
+      paintStroke = null;
+      if (painted) {
+        dirty = true;
+        await pushHistory(t('paint', 'Paint'));
       }
     }
   }
@@ -744,7 +1727,36 @@
     if (sizeEl) {
       sizeEl.addEventListener('input', function () {
         eraserSize = Number(sizeEl.value) || 28;
+        refreshEraserBrushSize();
       });
+    }
+    var brushSizeEl = $('ces-brush-size');
+    if (brushSizeEl) {
+      brushSizeEl.addEventListener('input', function () {
+        brushSize = Number(brushSizeEl.value) || 28;
+        refreshEraserBrushSize();
+      });
+    }
+    var brushPicker = $('ces-brush-picker');
+    if (brushPicker) {
+      brushPicker.addEventListener('input', function () {
+        var rgb = hexToRgb(brushPicker.value);
+        if (rgb) setBrushColor(rgb);
+      });
+    }
+    var colorClear = $('ces-color-clear');
+    if (colorClear) {
+      colorClear.addEventListener('click', function () {
+        clearPickedColor();
+      });
+    }
+    var colorSwatch = $('ces-color-swatch');
+    if (colorSwatch) {
+      colorSwatch.addEventListener('click', function () {
+        if (pickedColor) clearPickedColor();
+      });
+      colorSwatch.style.cursor = 'pointer';
+      colorSwatch.title = t('clear_color', 'Clear color filter');
     }
 
     var undoBtn = $('ces-btn-undo');
@@ -766,9 +1778,11 @@
 
     var zoomIn = $('ces-zoom-in');
     var zoomOut = $('ces-zoom-out');
+    var zoomReset = $('ces-zoom-reset');
     var panToggle = $('ces-pan-toggle');
     if (zoomIn) zoomIn.addEventListener('click', function () { setZoom(zoom.scale + ZOOM_STEP); });
     if (zoomOut) zoomOut.addEventListener('click', function () { setZoom(zoom.scale - ZOOM_STEP); });
+    if (zoomReset) zoomReset.addEventListener('click', function () { resetZoom(); });
     if (panToggle) {
       panToggle.addEventListener('click', function () {
         if (!zoom.panMode && zoom.scale <= 1.001) setZoom(1 + ZOOM_STEP);
@@ -804,6 +1818,43 @@
       });
     }
 
+    var recolorClose = $('ces-recolor-close');
+    var recolorCancel = $('ces-recolor-cancel');
+    var recolorApply = $('ces-recolor-apply');
+    var recolorPicker = $('ces-recolor-picker');
+    var recolorOverlay = $('ces-recolor-overlay');
+    if (recolorClose) recolorClose.addEventListener('click', function () { closeRecolorModal(); });
+    if (recolorCancel) recolorCancel.addEventListener('click', function () { closeRecolorModal(); });
+    if (recolorApply) recolorApply.addEventListener('click', function () { applyRecolor(); });
+    if (recolorPicker) {
+      recolorPicker.addEventListener('input', function () {
+        var rgb = hexToRgb(recolorPicker.value);
+        if (rgb) setRecolorTarget(rgb);
+      });
+      recolorPicker.addEventListener('change', function () {
+        var rgb = hexToRgb(recolorPicker.value);
+        if (rgb) setRecolorTarget(rgb);
+      });
+    }
+    if (recolorOverlay) {
+      recolorOverlay.addEventListener('click', function (e) {
+        if (e.target === recolorOverlay) closeRecolorModal();
+      });
+    }
+
+    var ignoreClose = $('ces-ignore-close');
+    var ignoreDone = $('ces-ignore-done');
+    var ignoreClear = $('ces-ignore-clear');
+    var ignoreOverlay = $('ces-ignore-overlay');
+    if (ignoreClose) ignoreClose.addEventListener('click', function () { closeIgnoreModal(); });
+    if (ignoreDone) ignoreDone.addEventListener('click', function () { closeIgnoreModal(); });
+    if (ignoreClear) ignoreClear.addEventListener('click', function () { clearIgnoredColors(); });
+    if (ignoreOverlay) {
+      ignoreOverlay.addEventListener('click', function (e) {
+        if (e.target === ignoreOverlay) closeIgnoreModal();
+      });
+    }
+
     var saveBtn = $('ces-btn-save');
     var discardBtn = $('ces-btn-discard');
     if (saveBtn) saveBtn.addEventListener('click', function () { saveStudio(); });
@@ -814,13 +1865,21 @@
       viewer.addEventListener('pointermove', onPointerMove);
       viewer.addEventListener('pointerup', onPointerUp);
       viewer.addEventListener('pointercancel', onPointerUp);
+      viewer.addEventListener('pointerleave', onPointerLeaveViewer);
+      viewer.addEventListener('wheel', onWheel, { passive: false });
     }
 
     document.addEventListener('keydown', function (e) {
       if (!isOpen) return;
       if (e.key === 'Escape') {
+        if (isConfirmOpen()) {
+          // Confirm overlay owns Escape (capture handler); do not discard studio.
+          return;
+        }
         var chronik = $('ces-chronik-overlay');
         var bg = $('ces-bg-overlay');
+        var recolor = $('ces-recolor-overlay');
+        var ignore = $('ces-ignore-overlay');
         if (chronik && !chronik.hasAttribute('hidden')) {
           closeChronik();
           e.preventDefault();
@@ -828,6 +1887,16 @@
         }
         if (bg && !bg.hasAttribute('hidden')) {
           closeBgModal();
+          e.preventDefault();
+          return;
+        }
+        if (recolor && !recolor.hasAttribute('hidden')) {
+          closeRecolorModal();
+          e.preventDefault();
+          return;
+        }
+        if (ignore && !ignore.hasAttribute('hidden')) {
+          closeIgnoreModal();
           e.preventDefault();
           return;
         }
@@ -876,6 +1945,7 @@
     viewer = $('ces-viewer');
     stage = $('ces-zoom-stage');
     busyEl = $('ces-busy');
+    brushEl = $('ces-eraser-brush');
     if (canvas && !ctx) {
       ctx = canvas.getContext('2d', { willReadFrequently: true });
     }

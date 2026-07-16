@@ -421,6 +421,14 @@
         refresh(true);
       }, 1200);
     });
+    /* Main "Generate" flow (chat/content-creation widgets) never fires creatorSaveJobStarted —
+       that event only comes from explicit save actions (upload modal, chat save, bulk save).
+       creatorJobCompleted (dispatched by creator-widget.polling.js once a generate job's
+       done/failed) is the only reliable signal that daily generate/upload usage may have
+       changed, so the strip must listen for it too or it keeps showing stale (e.g. 0/2) counts. */
+    window.addEventListener('creatorJobCompleted', function () {
+      refresh(true);
+    });
     window.addEventListener('creator-journey-updated', function (e) {
       var detail = e && e.detail ? e.detail : {};
       if (detail.journey && detail.journey.ok) {
