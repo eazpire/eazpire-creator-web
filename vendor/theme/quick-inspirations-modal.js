@@ -28,6 +28,10 @@
   var uploading = false;
   /** 'public' | 'yours' — default Public Inspirations */
   var activeTab = 'public';
+  /** Cap concurrent grid image downloads (full-size R2 files are ~100–300KB each). */
+  var QI_IMG_CONCURRENCY = 4;
+  var qiImgQueue = [];
+  var qiImgActive = 0;
 
   function t(key, fallback) {
     try {
@@ -322,12 +326,47 @@
     modal.classList.remove('is-preview');
   }
 
+  function gridThumbSrc(item) {
+    if (!item) return '';
+    var thumb = item.thumb_url || '';
+    var full = item.image_url || '';
+    // Prefer real thumbs when upload created a separate smaller file.
+    if (thumb && full && thumb !== full) return thumb;
+    return thumb || full;
+  }
+
+  function pumpImgQueue() {
+    while (qiImgActive < QI_IMG_CONCURRENCY && qiImgQueue.length) {
+      var job = qiImgQueue.shift();
+      if (!job || !job.img) continue;
+      qiImgActive += 1;
+      (function (img, src, card) {
+        var done = function () {
+          qiImgActive = Math.max(0, qiImgActive - 1);
+          if (card) card.classList.add('is-loaded');
+          pumpImgQueue();
+        };
+        img.onload = done;
+        img.onerror = done;
+        img.src = src;
+      })(job.img, job.src, job.card);
+    }
+  }
+
+  function enqueueGridImage(img, src, card) {
+    if (!img || !src) return;
+    qiImgQueue.push({ img: img, src: src, card: card });
+    pumpImgQueue();
+  }
+
   function renderGrid() {
     var grid = document.getElementById('qi-grid');
     var empty = document.getElementById('qi-empty');
     var loading = document.getElementById('qi-loading');
     if (!grid) return;
     if (loading) loading.style.display = 'none';
+    qiImgQueue = [];
+    qiImgActive = 0;
     grid.innerHTML = '';
     if (!items.length) {
       if (empty) {
@@ -340,9 +379,8 @@
 
     var deleteAria = t('creator.quick_inspirations.delete_aria', 'Delete inspiration');
     var previewAria = t('creator.quick_inspirations.preview_aria', 'Preview inspiration');
-    var applyLabel = t('creator.common.apply', 'Apply');
 
-    items.forEach(function (item) {
+    items.forEach(function (item, index) {
       var card = document.createElement('div');
       card.className = 'qi-card' + (selectedId === item.id ? ' is-selected' : '');
       card.setAttribute('data-id', item.id);
@@ -350,11 +388,19 @@
       card.setAttribute('tabindex', '0');
       card.setAttribute('aria-label', previewAria);
 
+      var placeholder = document.createElement('div');
+      placeholder.className = 'qi-card__img-placeholder';
+      placeholder.setAttribute('aria-hidden', 'true');
+      card.appendChild(placeholder);
+
       var img = document.createElement('img');
-      img.src = item.thumb_url || item.image_url;
       img.alt = item.summary || 'Quick inspiration';
-      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.loading = index < 8 ? 'eager' : 'lazy';
+      if (index < 4) img.fetchPriority = 'high';
+      else img.fetchPriority = 'low';
       card.appendChild(img);
+      enqueueGridImage(img, gridThumbSrc(item), card);
 
       if (isOwnedItem(item)) {
         var deleteBtn = document.createElement('button');
@@ -371,22 +417,15 @@
         card.appendChild(deleteBtn);
       }
 
-      var apply = document.createElement('button');
-      apply.type = 'button';
-      apply.className = 'qi-card__apply';
-      apply.textContent = applyLabel;
-      apply.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        selectedId = item.id;
-        renderGrid();
-        applyItem(item);
-      });
-      card.appendChild(apply);
-
       var openItemPreview = function () {
         selectedId = item.id;
-        renderGrid();
+        var cards = grid.querySelectorAll('.qi-card');
+        for (var i = 0; i < cards.length; i++) {
+          cards[i].classList.toggle(
+            'is-selected',
+            String(cards[i].getAttribute('data-id')) === String(item.id)
+          );
+        }
         openPreview(item);
       };
       card.addEventListener('click', openItemPreview);
@@ -424,7 +463,7 @@
       if (activeTag) u.searchParams.set('tag', activeTag);
       if (activeStyle) u.searchParams.set('style', activeStyle);
       if (activeMood) u.searchParams.set('mood', activeMood);
-      u.searchParams.set('limit', '60');
+      u.searchParams.set('limit', '36');
       var res = await fetch(u.toString(), { credentials: 'omit' });
       var data = await res.json().catch(function () {
         return {};

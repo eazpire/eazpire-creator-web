@@ -39,20 +39,22 @@
   }
 
   function getIncludeLabel() {
-    var el = document.querySelector('#reference-influence-elements .reference-influence-modal__element-toggle[data-state="include"] .reference-influence-modal__element-toggle-text');
+    var el = document.querySelector(
+      '#reference-influence-elements .reference-influence-modal__element-toggle-option[data-side="include"], #reference-influence-elements .reference-influence-modal__element-toggle-text'
+    );
     if (el && el.textContent) return el.textContent.trim();
     return (window.CreatorI18n && window.CreatorI18n.reference_influence_include) || 'Include';
   }
 
   function getExcludeLabel() {
+    var el = document.querySelector(
+      '#reference-influence-elements .reference-influence-modal__element-toggle-option[data-side="exclude"]'
+    );
+    if (el && el.textContent) return el.textContent.trim();
     var sample = document.querySelector('#reference-influence-elements .reference-influence-modal__element-toggle');
     if (sample) {
-      var includeText = sample.getAttribute('data-include-label');
       var excludeText = sample.getAttribute('data-exclude-label');
       if (excludeText) return excludeText;
-      if (!includeText) {
-        /* Labels come from Liquid; fall back to i18n / English */
-      }
     }
     return (window.CreatorI18n && window.CreatorI18n.reference_influence_exclude) || 'Exclude';
   }
@@ -66,17 +68,18 @@
       'Exclude';
     var firstToggle = document.querySelector('#reference-influence-elements .reference-influence-modal__element-toggle');
     if (firstToggle) {
-      var span = firstToggle.querySelector('.reference-influence-modal__element-toggle-text');
-      if (span && firstToggle.getAttribute('data-state') === 'include' && span.textContent) {
-        include = span.textContent.trim() || include;
-      }
+      var includeSpan = firstToggle.querySelector(
+        '.reference-influence-modal__element-toggle-option[data-side="include"], .reference-influence-modal__element-toggle-text'
+      );
+      var excludeSpan = firstToggle.querySelector('.reference-influence-modal__element-toggle-option[data-side="exclude"]');
+      if (includeSpan && includeSpan.textContent) include = includeSpan.textContent.trim() || include;
+      if (excludeSpan && excludeSpan.textContent) exclude = excludeSpan.textContent.trim() || exclude;
     }
-    /* Prefer Liquid-rendered include text from first button; exclude from a hidden data attr if present */
+    /* Prefer Liquid-rendered labels from switch markup / hidden seeds */
     var controls = document.getElementById('reference-influence-controls');
     if (controls) {
       if (!controls.dataset.includeLabel) controls.dataset.includeLabel = include;
       if (!controls.dataset.excludeLabel) {
-        /* Will be set from Liquid via a data attribute on the section if available */
         var section = document.getElementById('reference-influence-elements');
         if (section && section.getAttribute('data-exclude-label')) {
           controls.dataset.excludeLabel = section.getAttribute('data-exclude-label');
@@ -90,6 +93,14 @@
       };
     }
     return { include: include, exclude: exclude };
+  }
+
+  function setToggleState(btn, state) {
+    if (!btn) return;
+    var next = state === 'exclude' ? 'exclude' : 'include';
+    btn.setAttribute('data-state', next);
+    btn.setAttribute('aria-checked', next === 'include' ? 'true' : 'false');
+    btn.setAttribute('aria-pressed', next === 'include' ? 'true' : 'false');
   }
 
   function revokePreviewBlob() {
@@ -146,14 +157,9 @@
   }
 
   function resetElementsToInclude() {
-    var labels = resolveToggleLabels();
     var toggles = document.querySelectorAll('#reference-influence-elements .reference-influence-modal__element-toggle');
     for (var i = 0; i < toggles.length; i++) {
-      var btn = toggles[i];
-      btn.setAttribute('data-state', 'include');
-      btn.setAttribute('aria-pressed', 'true');
-      var text = btn.querySelector('.reference-influence-modal__element-toggle-text');
-      if (text) text.textContent = labels.include;
+      setToggleState(toggles[i], 'include');
     }
   }
 
@@ -757,12 +763,8 @@
     var btn = ev.target && ev.target.closest ? ev.target.closest('.reference-influence-modal__element-toggle') : null;
     if (!btn) return;
     ev.preventDefault();
-    var labels = resolveToggleLabels();
     var next = btn.getAttribute('data-state') === 'exclude' ? 'include' : 'exclude';
-    btn.setAttribute('data-state', next);
-    btn.setAttribute('aria-pressed', next === 'include' ? 'true' : 'false');
-    var text = btn.querySelector('.reference-influence-modal__element-toggle-text');
-    if (text) text.textContent = next === 'exclude' ? labels.exclude : labels.include;
+    setToggleState(btn, next);
   }
 
   function bind() {
