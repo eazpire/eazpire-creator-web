@@ -17,6 +17,9 @@
   let _inspirationModalSectionId = null;
   /** 'remix' = max one design as remix source (creator generator / upload flow) */
   let _modalPurpose = null;
+  /** @type {null|function()} */
+  let _pendingOnCancel = null;
+  let _selectionInProgress = false;
 
   /** Prefer portal/shop dispatch (CreatorWidget / CREATOR_API_CONFIG). Never hardcode workers.dev only — it can hang while /api/dispatch works. */
   function getApiBase() {
@@ -852,11 +855,21 @@
           return;
         }
       }
-      close();
+      _selectionInProgress = true;
+      const returnOnCancel = _pendingOnCancel;
+      _pendingOnCancel = null;
+      close({ skipCancel: true });
       const detail = { imageUrl: imageUrl, designType: designTypeFromDesign(design) };
       if (_modalPurpose === 'remix' && design.id) {
         detail.parentDesignId = String(design.id);
         detail.remixMode = true;
+      }
+      // If Reference Influence is cancelled later, callers listen via gen flow's own onCancel;
+      // stash for generator to pick up if needed.
+      if (returnOnCancel) {
+        try {
+          window.__eazPendingRefSourceReturn = returnOnCancel;
+        } catch (_eRet) {}
       }
       window.dispatchEvent(new CustomEvent('gen-design-selected', { detail: detail }));
       window.__CREATOR_MOBILE_GEN_UPLOAD_ACTIVE = false;
@@ -961,18 +974,32 @@
       console.log('[Inspiration Modal] Design loaded into upload zone:', design.id);
     }
 
+    if (_inspirationModalSectionId === 'eaz-ref-search' && window.EazReferenceSearch && typeof window.EazReferenceSearch.startFromUrl === 'function') {
+      _selectionInProgress = true;
+      _pendingOnCancel = null;
+      close({ skipCancel: true });
+      window.EazReferenceSearch.startFromUrl(imageUrl);
+      return;
+    }
+
     if (window.ReferenceInfluenceModal && typeof window.ReferenceInfluenceModal.open === 'function') {
-      close();
+      _selectionInProgress = true;
+      const returnOnCancel = _pendingOnCancel;
+      _pendingOnCancel = null;
+      close({ skipCancel: true });
       window.ReferenceInfluenceModal.open({
         imageUrl: imageUrl,
         onApply: function(result) {
           if (result && typeof result.strength === 'number') {
             applyToUploadZone(result.strength, result);
           }
-        }
+        },
+        onCancel: returnOnCancel || undefined
       });
     } else {
-      close();
+      _selectionInProgress = true;
+      _pendingOnCancel = null;
+      close({ skipCancel: true });
       applyToUploadZone(0.6);
     }
   }
@@ -981,6 +1008,8 @@
   function open(opts) {
     opts = opts || {};
     _modalPurpose = opts.purpose === 'remix' ? 'remix' : null;
+    _pendingOnCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
+    _selectionInProgress = false;
     try {
       window.__creatorInspirationRemixMode = _modalPurpose === 'remix';
     } catch (_eOpen) {}
@@ -1049,8 +1078,9 @@
   }
 
   // Close modal
-  function close() {
+  function close(opts) {
     if (!modal) return;
+    var skipCancel = opts && opts.skipCancel;
     
     console.log('[InspirationModal] Closing modal...');
 
@@ -1094,6 +1124,17 @@
       try {
         window.__creatorInspirationRemixMode = false;
       } catch (_eCloseFin) {}
+
+      var cancelCb = _pendingOnCancel;
+      _pendingOnCancel = null;
+      if (!skipCancel && !_selectionInProgress && typeof cancelCb === 'function') {
+        setTimeout(function () {
+          try {
+            cancelCb();
+          } catch (_eCancel) {}
+        }, 0);
+      }
+      _selectionInProgress = false;
     }
   }
 

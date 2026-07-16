@@ -35,6 +35,9 @@
   var QI_IMG_CONCURRENCY = 4;
   var qiImgQueue = [];
   var qiImgActive = 0;
+  /** @type {null|function()} */
+  var pendingOnCancel = null;
+  var selectionInProgress = false;
 
   function t(key, fallback) {
     try {
@@ -575,7 +578,7 @@
     return QI_STRENGTH;
   }
 
-  function openReferenceInfluenceThen(imageUrl, onApply) {
+  function openReferenceInfluenceThen(imageUrl, onApply, onCancel) {
     if (window.ReferenceInfluenceModal && typeof window.ReferenceInfluenceModal.open === 'function') {
       window.ReferenceInfluenceModal.open({
         imageUrl: imageUrl,
@@ -583,7 +586,8 @@
         onApply: function (result) {
           if (!result) return;
           onApply(result);
-        }
+        },
+        onCancel: typeof onCancel === 'function' ? onCancel : undefined
       });
       return;
     }
@@ -594,10 +598,18 @@
     var imageUrl = item.image_url || item.thumb_url;
     if (!imageUrl) return;
     var qiId = item.id ? String(item.id) : null;
+    var returnOnCancel = pendingOnCancel;
 
     // Generator / Automations: hand off via event — consumers open Reference Influence
     if (window.__CREATOR_MOBILE_GEN_UPLOAD_ACTIVE || window.__automationsRefPickActive) {
-      close();
+      selectionInProgress = true;
+      pendingOnCancel = null;
+      if (returnOnCancel) {
+        try {
+          window.__eazPendingRefSourceReturn = returnOnCancel;
+        } catch (eRet) {}
+      }
+      close({ skipCancel: true });
       window.dispatchEvent(
         new CustomEvent('gen-design-selected', {
           detail: {
@@ -616,11 +628,26 @@
 
     // Shop Design Generator: Reference Influence → then add ref
     if (typeof window.eazShopDgAddRef === 'function' && sid === 'eaz-shop-dg') {
-      close();
-      openReferenceInfluenceThen(imageUrl, function (result) {
-        var outUrl = (result.imageUrl && String(result.imageUrl).trim()) || imageUrl;
-        window.eazShopDgAddRef(outUrl, strengthFromResult(result), influenceMetaFromResult(result, qiId));
-      });
+      selectionInProgress = true;
+      pendingOnCancel = null;
+      close({ skipCancel: true });
+      openReferenceInfluenceThen(
+        imageUrl,
+        function (result) {
+          var outUrl = (result.imageUrl && String(result.imageUrl).trim()) || imageUrl;
+          window.eazShopDgAddRef(outUrl, strengthFromResult(result), influenceMetaFromResult(result, qiId));
+        },
+        returnOnCancel
+      );
+      return;
+    }
+
+    // Reference Search: skip influence — start search directly
+    if (sid === 'eaz-ref-search' && window.EazReferenceSearch && typeof window.EazReferenceSearch.startFromUrl === 'function') {
+      selectionInProgress = true;
+      pendingOnCancel = null;
+      close({ skipCancel: true });
+      window.EazReferenceSearch.startFromUrl(imageUrl);
       return;
     }
 
@@ -630,18 +657,31 @@
       typeof window.eazShopStudioRefsAdd === 'function' &&
       sid
     ) {
-      close();
-      openReferenceInfluenceThen(imageUrl, function (result) {
-        var outUrl = (result.imageUrl && String(result.imageUrl).trim()) || imageUrl;
-        var st = strengthFromResult(result);
-        var pct = st <= 1 && st >= 0 ? Math.round(st * 100) : Math.round(st);
-        window.eazShopStudioRefsAdd(sid, outUrl, pct, influenceMetaFromResult(result, qiId));
-      });
+      selectionInProgress = true;
+      pendingOnCancel = null;
+      close({ skipCancel: true });
+      openReferenceInfluenceThen(
+        imageUrl,
+        function (result) {
+          var outUrl = (result.imageUrl && String(result.imageUrl).trim()) || imageUrl;
+          var st = strengthFromResult(result);
+          var pct = st <= 1 && st >= 0 ? Math.round(st * 100) : Math.round(st);
+          window.eazShopStudioRefsAdd(sid, outUrl, pct, influenceMetaFromResult(result, qiId));
+        },
+        returnOnCancel
+      );
       return;
     }
 
     // Fallback (widget / other): event → consumer opens Reference Influence
-    close();
+    selectionInProgress = true;
+    pendingOnCancel = null;
+    if (returnOnCancel) {
+      try {
+        window.__eazPendingRefSourceReturn = returnOnCancel;
+      } catch (eRet2) {}
+    }
+    close({ skipCancel: true });
     window.dispatchEvent(
       new CustomEvent('gen-design-selected', {
         detail: {
@@ -666,6 +706,8 @@
     opts = opts || {};
     if (!ensureEls()) return;
     sectionId = opts.sectionId != null ? String(opts.sectionId).trim() : null;
+    pendingOnCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
+    selectionInProgress = false;
     selectedId = null;
     closePreview();
     setSidebarOpen(false);
@@ -699,7 +741,8 @@
     } catch (_e) {}
   }
 
-  function close() {
+  function close(opts) {
+    var skipCancel = opts && opts.skipCancel;
     if (!ensureEls()) return;
     closePreview();
     setSidebarOpen(false);
@@ -713,6 +756,16 @@
     modal.style.cssText = '';
     unlockScroll();
     sectionId = null;
+    var cancelCb = pendingOnCancel;
+    pendingOnCancel = null;
+    if (!skipCancel && !selectionInProgress && typeof cancelCb === 'function') {
+      setTimeout(function () {
+        try {
+          cancelCb();
+        } catch (eC) {}
+      }, 0);
+    }
+    selectionInProgress = false;
   }
 
   function showUploadStatus(msg, kind) {

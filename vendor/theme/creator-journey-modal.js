@@ -4310,13 +4310,6 @@
     window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ = Date.now();
   }
 
-  function prefetchJourneyForDashboard() {
-    if (!ownerId()) return;
-    if (journeyCacheFresh()) return;
-    if (window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__) return;
-    loadJourney().catch(function () {});
-  }
-
   function journeyCacheFresh() {
     return !!(journeyData && journeyData.ok && journeyFetchedAt &&
       (Date.now() - journeyFetchedAt) < JOURNEY_CACHE_TTL_MS);
@@ -4924,13 +4917,7 @@
       renderSidebarBalance();
     });
 
-    if (document.querySelector('[data-creator-daily-limits]')) {
-      if (ownerId()) {
-        prefetchJourneyForDashboard();
-      } else {
-        document.addEventListener('eazCreatorContextReady', prefetchJourneyForDashboard, { once: true });
-      }
-    }
+    /* Full journey loads on modal open — daily-limits strip uses get-daily-limits. */
   }
 
   window.CreatorJourneyModal = {

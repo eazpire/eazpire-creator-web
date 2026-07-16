@@ -11,6 +11,9 @@
   var currentSession = null;
   /** @type {null|function()} */
   var phoneUploadAutomationRestore = null;
+  /** @type {null|function()} */
+  var pendingOnCancel = null;
+  var phoneDidApply = false;
 
   var PHONE_UPLOAD_WORKER_FALLBACK = 'https://creator-engine.eazpire.workers.dev';
 
@@ -268,11 +271,13 @@
           if (!data || !data.ok) return;
           if (data.status === 'completed' && data.image_url) {
             stopPoll();
+            phoneDidApply = true;
+            pendingOnCancel = null;
             if (window.UploadSourceModal && typeof window.UploadSourceModal.close === 'function') {
               window.UploadSourceModal.close();
             }
             applyImageToCreator(currentSectionId, data.image_url);
-            closeModalUi();
+            closeModalUi({ skipCancel: true });
           }
         })
         .catch(function () {});
@@ -281,7 +286,8 @@
     pollTimer = setInterval(tick, 2000);
   }
 
-  function closeModalUi() {
+  function closeModalUi(opts) {
+    var skipCancel = opts && opts.skipCancel;
     var modal = document.getElementById(MODAL_ID);
     stopPoll();
     setErr('');
@@ -294,6 +300,16 @@
     }
     var qr = document.getElementById(QR_IMG_ID);
     if (qr) qr.removeAttribute('src');
+    var cancelCb = pendingOnCancel;
+    pendingOnCancel = null;
+    if (!skipCancel && !phoneDidApply && typeof cancelCb === 'function') {
+      setTimeout(function () {
+        try {
+          cancelCb();
+        } catch (eC) {}
+      }, 0);
+    }
+    phoneDidApply = false;
   }
 
   /** Fallback if styled PNG fails to load (plain QR, same payload as session). */
@@ -307,6 +323,8 @@
   function open(options) {
     var sectionId = (options && options.sectionId) || null;
     currentSectionId = sectionId;
+    pendingOnCancel = options && typeof options.onCancel === 'function' ? options.onCancel : null;
+    phoneDidApply = false;
 
     var modal = document.getElementById(MODAL_ID);
     if (!modal) return;
@@ -324,6 +342,15 @@
         (window.CreatorI18n && window.CreatorI18n.phone_upload_login_required) ||
           'Please sign in to upload from your phone.'
       );
+      var cancelLogin = pendingOnCancel;
+      pendingOnCancel = null;
+      if (typeof cancelLogin === 'function') {
+        setTimeout(function () {
+          try {
+            cancelLogin();
+          } catch (eL) {}
+        }, 0);
+      }
       return;
     }
 

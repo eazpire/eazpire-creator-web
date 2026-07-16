@@ -240,6 +240,9 @@
     }
   }
 
+  /** @type {null|function()} */
+  var pendingCancelCallback = null;
+
   function close() {
     var modal = getModal();
     if (modal) {
@@ -249,6 +252,7 @@
     restoreAutomationLayer();
     pendingFile = null;
     pendingCallback = null;
+    pendingCancelCallback = null;
     revokePreviewBlob();
     teardownInlineCrop();
   }
@@ -698,6 +702,7 @@
     teardownInlineCrop();
     pendingFile = options.file || null;
     pendingCallback = options.onApply || null;
+    pendingCancelCallback = typeof options.onCancel === 'function' ? options.onCancel : null;
     currentMode = resolveInitialMode(options || {});
     resetElementsToInclude();
     updateUI();
@@ -705,6 +710,8 @@
     var source = pendingFile || options.imageUrl || null;
     if (!source) {
       window.alert('No image.');
+      pendingCancelCallback = null;
+      pendingCallback = null;
       return;
     }
 
@@ -722,7 +729,7 @@
       })
       .catch(function () {
         window.alert('Could not load image. If it is from another site, download it and upload from your device.');
-        close();
+        handleCancel();
       });
   }
 
@@ -752,6 +759,7 @@
       var result = buildApplyResult(file, nu);
       var cb = pendingCallback;
       pendingCallback = null;
+      pendingCancelCallback = null;
       pendingFile = null;
       previewBlobUrl = null;
       teardownInlineCrop();
@@ -765,10 +773,22 @@
   }
 
   function handleCancel() {
-    if (pendingCallback) {
-      pendingCallback(null);
-    }
+    var cancelCb = pendingCancelCallback;
+    var applyCb = pendingCallback;
+    pendingCancelCallback = null;
+    pendingCallback = null;
+    pendingFile = null;
     close();
+    if (cancelCb) {
+      try {
+        cancelCb();
+      } catch (eC) {}
+    } else if (applyCb) {
+      // Backward compat: callers that only used onApply(null) for cancel
+      try {
+        applyCb(null);
+      } catch (eA) {}
+    }
   }
 
   function onModeChange(ev) {

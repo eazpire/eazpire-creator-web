@@ -379,6 +379,8 @@
   }
 
   var activeCallback = null;
+  var activeCancelCallback = null;
+  var canvasConfirmed = false;
   var drawEl = null;
   var bgEl = null;
   var colorInput = null;
@@ -816,6 +818,8 @@
     if (sizeLab) sizeLab.textContent = tFlat('canvasBrushSize', 'Size');
 
     activeCallback = options && typeof options.onConfirm === 'function' ? options.onConfirm : null;
+    activeCancelCallback = options && typeof options.onCancel === 'function' ? options.onCancel : null;
+    canvasConfirmed = false;
 
     var bg = bgEl;
     var draw = drawEl;
@@ -902,7 +906,11 @@
       var merged = mergedExportCanvas(bg, draw);
       var url = merged.toDataURL('image/png');
       merged.toBlob(function (blob) {
-        if (activeCallback) activeCallback({ blob: blob, image_url: url });
+        canvasConfirmed = true;
+        var cb = activeCallback;
+        activeCallback = null;
+        activeCancelCallback = null;
+        if (cb) cb({ blob: blob, image_url: url });
         close();
       }, 'image/png');
     };
@@ -921,6 +929,17 @@
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     if (historyOverlay) historyOverlay.hidden = true;
+    var cancelCb = activeCancelCallback;
+    activeCancelCallback = null;
+    activeCallback = null;
+    if (!canvasConfirmed && typeof cancelCb === 'function') {
+      setTimeout(function () {
+        try {
+          cancelCb();
+        } catch (eC) {}
+      }, 0);
+    }
+    canvasConfirmed = false;
   }
 
   window.CanvasSketchModal = { open: open, close: close };

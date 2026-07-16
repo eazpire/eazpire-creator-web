@@ -11,7 +11,7 @@
   var countdownTimer = null;
   var countdownModeDaily = false;
   var MIN_REFETCH_MS = 8000;
-  var JOURNEY_CACHE_MS = 60000;
+  var LIMITS_CACHE_MS = 60000;
   var mounted = false;
 
   function ownerId() {
@@ -155,51 +155,47 @@
     if (changed) syncChromeMetrics();
   }
 
-  function storeJourneyCache(data) {
+  function storeLimitsCache(data) {
     if (!data || !data.ok) return;
-    window.__EAZ_CREATOR_JOURNEY__ = data;
-    window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ = Date.now();
+    if (!data.creation_limits_effective && !data.listing_limits_effective) return;
+    window.__EAZ_DAILY_LIMITS__ = {
+      ok: true,
+      creation_limits_effective: data.creation_limits_effective || null,
+      listing_limits_effective: data.listing_limits_effective || null,
+    };
+    window.__EAZ_DAILY_LIMITS_FETCHED_AT__ = Date.now();
   }
 
-  function readJourneyCache() {
-    var data = window.__EAZ_CREATOR_JOURNEY__;
+  function readLimitsCache() {
+    var data = window.__EAZ_DAILY_LIMITS__;
     if (!data || !data.ok) return null;
-    var age = Date.now() - (window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ || 0);
-    if (age > JOURNEY_CACHE_MS) return null;
+    var age = Date.now() - (window.__EAZ_DAILY_LIMITS_FETCHED_AT__ || 0);
+    if (age > LIMITS_CACHE_MS) return null;
     return data;
   }
 
-  function fetchJourneyData(force) {
+  function fetchDailyLimits(force) {
     if (!force) {
-      var cached = readJourneyCache();
+      var cached = readLimitsCache();
       if (cached) return Promise.resolve(cached);
     }
-    if (window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__) {
-      return window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__;
+    if (window.__EAZ_DAILY_LIMITS_LOAD_PROMISE__) {
+      return window.__EAZ_DAILY_LIMITS_LOAD_PROMISE__;
     }
 
     var oid = ownerId();
     if (!oid) return Promise.resolve(null);
 
-    window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__ = apiGet('get-creator-journey', { owner_id: oid })
+    window.__EAZ_DAILY_LIMITS_LOAD_PROMISE__ = apiGet('get-daily-limits', { owner_id: oid })
       .then(function (data) {
-        storeJourneyCache(data);
-        if (data && data.ok) {
-          try {
-            window.dispatchEvent(
-              new CustomEvent('creator-journey-updated', {
-                detail: { source: 'daily-limits-subheader', journey: data },
-              })
-            );
-          } catch (_ev) {}
-        }
+        storeLimitsCache(data);
         return data;
       })
       .finally(function () {
-        window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__ = null;
+        window.__EAZ_DAILY_LIMITS_LOAD_PROMISE__ = null;
       });
 
-    return window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__;
+    return window.__EAZ_DAILY_LIMITS_LOAD_PROMISE__;
   }
 
   function applyItem(itemEl, used, cap, locked, rootEl, loadingState) {
@@ -366,7 +362,7 @@
     if (!force && loading) return Promise.resolve();
     if (!force && now - lastFetch < MIN_REFETCH_MS) return Promise.resolve();
 
-    var cached = !force ? readJourneyCache() : null;
+    var cached = !force ? readLimitsCache() : null;
     if (cached) {
       applyPayload(cached, false);
       lastFetch = now;
@@ -377,7 +373,7 @@
     applyPayload(null, true);
     lastFetch = now;
 
-    return fetchJourneyData(force)
+    return fetchDailyLimits(force)
       .then(function (data) {
         if (data && data.ok) applyPayload(data, false);
       })
@@ -428,7 +424,7 @@
     window.addEventListener('creator-journey-updated', function (e) {
       var detail = e && e.detail ? e.detail : {};
       if (detail.journey && detail.journey.ok) {
-        storeJourneyCache(detail.journey);
+        storeLimitsCache(detail.journey);
         applyPayload(detail.journey, false);
         lastFetch = Date.now();
         return;

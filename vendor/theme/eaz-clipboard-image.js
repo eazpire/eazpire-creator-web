@@ -74,6 +74,65 @@
     }, typeof ms === 'number' ? ms : 3600);
   }
 
+  var INLINE_MSG_CLASS = 'eaz-clipboard-inline-msg';
+
+  function ensureInlineStyles() {
+    if (document.getElementById('eaz-clipboard-inline-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'eaz-clipboard-inline-styles';
+    style.textContent =
+      '.' +
+      INLINE_MSG_CLASS +
+      '{margin:0 0 4px;padding:10px 12px;border-radius:10px;font:600 13px/1.4 system-ui,sans-serif;' +
+      'color:#991b1b;background:#fef2f2;border:1px solid #fecaca}' +
+      'body.creator-mode .' +
+      INLINE_MSG_CLASS +
+      ',body[data-creator-mode="true"] .' +
+      INLINE_MSG_CLASS +
+      ',.eaz-upload-source--dg .' +
+      INLINE_MSG_CLASS +
+      '{color:#fecaca;background:rgba(127,29,29,0.35);border-color:rgba(248,113,113,0.35)}';
+    document.head.appendChild(style);
+  }
+
+  /** Ensure an inline status node sits directly above the Paste option card. */
+  function ensureInlineMsgEl(pasteBtn) {
+    if (!pasteBtn || !pasteBtn.parentNode) return null;
+    ensureInlineStyles();
+    var prev = pasteBtn.previousElementSibling;
+    if (prev && prev.classList && prev.classList.contains(INLINE_MSG_CLASS)) return prev;
+    var byId = pasteBtn.getAttribute('data-paste-msg-id')
+      ? document.getElementById(pasteBtn.getAttribute('data-paste-msg-id'))
+      : null;
+    if (byId) return byId;
+    var el = document.createElement('p');
+    el.className = INLINE_MSG_CLASS;
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.hidden = true;
+    pasteBtn.parentNode.insertBefore(el, pasteBtn);
+    return el;
+  }
+
+  function showInlineMessage(pasteBtn, text) {
+    var el = ensureInlineMsgEl(pasteBtn);
+    if (!el) {
+      if (text) showMessage(text);
+      return;
+    }
+    if (!text) {
+      el.textContent = '';
+      el.hidden = true;
+      return;
+    }
+    el.textContent = text;
+    el.hidden = false;
+  }
+
+  function clearInlineMessage(pasteBtn) {
+    showInlineMessage(pasteBtn, '');
+  }
+
   function isImageMime(type) {
     return !!(type && String(type).indexOf('image/') === 0);
   }
@@ -207,12 +266,30 @@
   }
 
   /**
-   * Read clipboard image; show toast on failure. Resolves to File/Blob or null.
+   * Read clipboard image. Resolves to File/Blob or null.
+   * @param {{ toast?: boolean, pasteBtn?: HTMLElement, onError?: function(string, string) }} [opts]
+   *   - toast: show floating toast (default true when no pasteBtn)
+   *   - pasteBtn: show error inline above this Paste option (keeps parent modal open)
    */
-  function start() {
+  function start(opts) {
+    opts = opts || {};
     return readImageWithStatus().then(function (result) {
-      if (result && result.file) return result.file;
-      showMessage(messageForError(result && result.error));
+      if (result && result.file) {
+        if (opts.pasteBtn) clearInlineMessage(opts.pasteBtn);
+        return result.file;
+      }
+      var err = (result && result.error) || 'empty';
+      var msg = messageForError(err);
+      if (opts.pasteBtn) {
+        showInlineMessage(opts.pasteBtn, msg);
+      } else if (opts.toast !== false) {
+        showMessage(msg);
+      }
+      if (typeof opts.onError === 'function') {
+        try {
+          opts.onError(err, msg);
+        } catch (eErr) {}
+      }
       return null;
     });
   }
@@ -290,7 +367,10 @@
     start: start,
     readImageWithStatus: readImageWithStatus,
     readImageFile: readImageFile,
+    messageForError: messageForError,
     showMessage: showMessage,
+    showInlineMessage: showInlineMessage,
+    clearInlineMessage: clearInlineMessage,
     getCachedFile: function () {
       return cachedFile;
     },

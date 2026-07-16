@@ -1036,7 +1036,51 @@
     return best;
   }
 
-  function withSimilarityForImageUrlAuto(imageUrl, done) {
+  var expectReturnToAutoRefOverlay = false;
+  var autoFilePickerWatchToken = 0;
+
+  function returnToAutoRefOverlay() {
+    expectReturnToAutoRefOverlay = false;
+    try {
+      window.__eazPendingRefSourceReturn = null;
+    } catch (e) {}
+    setTimeout(function () {
+      openAutoRefOverlay();
+    }, 0);
+  }
+
+  function makeReturnToAutoRef() {
+    return function () {
+      returnToAutoRefOverlay();
+    };
+  }
+
+  function watchAutoFilePickerCancel(fileInput, onCancel) {
+    if (!fileInput || typeof onCancel !== 'function') return;
+    var token = ++autoFilePickerWatchToken;
+    var settled = false;
+    function finish(selected) {
+      if (settled || token !== autoFilePickerWatchToken) return;
+      settled = true;
+      fileInput.removeEventListener('change', onChange);
+      window.removeEventListener('focus', onWindowFocus);
+      if (!selected) onCancel();
+    }
+    function onChange() {
+      finish(!!(fileInput.files && fileInput.files.length > 0));
+    }
+    function onWindowFocus() {
+      setTimeout(function () {
+        finish(!!(fileInput.files && fileInput.files.length > 0));
+      }, 350);
+    }
+    fileInput.addEventListener('change', onChange);
+    setTimeout(function () {
+      window.addEventListener('focus', onWindowFocus);
+    }, 0);
+  }
+
+  function withSimilarityForImageUrlAuto(imageUrl, done, onCancel) {
     if (!imageUrl) {
       done(null);
       return;
@@ -1045,6 +1089,10 @@
       window.ReferenceInfluenceModal.open({
         imageUrl: imageUrl,
         onApply: function (result) {
+          expectReturnToAutoRefOverlay = false;
+          try {
+            window.__eazPendingRefSourceReturn = null;
+          } catch (eClr) {}
           if (!result) {
             done(null);
             return;
@@ -1063,6 +1111,19 @@
             include_elements: result.include_elements || null,
             exclude_elements: result.exclude_elements || null
           });
+        },
+        onCancel: function () {
+          var pending =
+            typeof window.__eazPendingRefSourceReturn === 'function'
+              ? window.__eazPendingRefSourceReturn
+              : null;
+          try {
+            window.__eazPendingRefSourceReturn = null;
+          } catch (eP) {}
+          if (typeof onCancel === 'function') onCancel();
+          else if (pending) pending();
+          else if (expectReturnToAutoRefOverlay) returnToAutoRefOverlay();
+          done(null);
         }
       });
       return;
@@ -1070,7 +1131,7 @@
     done({ dataUrl: imageUrl, similarity: 0.6 });
   }
 
-  function withSimilarityForFileAuto(file, done) {
+  function withSimilarityForFileAuto(file, done, onCancel) {
     if (!file) {
       done(null);
       return;
@@ -1082,6 +1143,10 @@
     window.ReferenceInfluenceModal.open({
       file: file,
       onApply: function (result) {
+        expectReturnToAutoRefOverlay = false;
+        try {
+          window.__eazPendingRefSourceReturn = null;
+        } catch (eClr) {}
         if (!result || !result.file) {
           done(null);
           return;
@@ -1094,6 +1159,19 @@
           include_elements: result.include_elements || null,
           exclude_elements: result.exclude_elements || null
         });
+      },
+      onCancel: function () {
+        var pending =
+          typeof window.__eazPendingRefSourceReturn === 'function'
+            ? window.__eazPendingRefSourceReturn
+            : null;
+        try {
+          window.__eazPendingRefSourceReturn = null;
+        } catch (eP) {}
+        if (typeof onCancel === 'function') onCancel();
+        else if (pending) pending();
+        else if (expectReturnToAutoRefOverlay) returnToAutoRefOverlay();
+        done(null);
       }
     });
   }
@@ -1219,47 +1297,63 @@
   }
 
   function openAutoSource(source) {
-    // Clipboard / screen capture need the user-gesture turn — start before closing.
+    var returnHere = makeReturnToAutoRef();
+    var pasteBtn =
+      document.getElementById('autoRefImageOverlay') &&
+      document.getElementById('autoRefImageOverlay').querySelector('[data-auto-source="paste"]');
+
+    // Paste: keep overlay open; show inline error above Paste when empty.
     if (source === 'paste') {
       if (!(window.EazClipboardImage && typeof window.EazClipboardImage.start === 'function')) {
-        closeAutoRefOverlay();
         return;
       }
-      var pastePromise = window.EazClipboardImage.start();
-      closeAutoRefOverlay();
-      pastePromise.then(function (file) {
+      window.EazClipboardImage.start({ pasteBtn: pasteBtn, toast: false }).then(function (file) {
         if (!file) return;
-        addAutoFilesFromInput([file]);
-      });
-      return;
-    }
-    if (source === 'screenshot') {
-      if (!(window.EazScreenshotCapture && typeof window.EazScreenshotCapture.start === 'function')) {
+        expectReturnToAutoRefOverlay = true;
         closeAutoRefOverlay();
-        return;
-      }
-      var shotPromise = window.EazScreenshotCapture.start();
-      closeAutoRefOverlay();
-      shotPromise.then(function (file) {
-        if (!file) return;
         addAutoFilesFromInput([file]);
       });
       return;
     }
 
+    if (source === 'screenshot') {
+      if (!(window.EazScreenshotCapture && typeof window.EazScreenshotCapture.start === 'function')) {
+        return;
+      }
+      var shotPromise = window.EazScreenshotCapture.start();
+      expectReturnToAutoRefOverlay = true;
+      closeAutoRefOverlay();
+      shotPromise.then(function (file) {
+        if (!file) {
+          returnHere();
+          return;
+        }
+        addAutoFilesFromInput([file]);
+      });
+      return;
+    }
+
+    expectReturnToAutoRefOverlay = true;
     closeAutoRefOverlay();
+
     if (source === 'device') {
+      var inputDev = document.getElementById('creatorAutoImageInput');
+      watchAutoFilePickerCancel(inputDev, returnHere);
       triggerAutoFileInput(false);
       return;
     }
     if (source === 'camera') {
+      var inputCam = document.getElementById('creatorAutoImageInput');
+      watchAutoFilePickerCancel(inputCam, returnHere);
       triggerAutoFileInput(true);
       return;
     }
     if (source === 'phone') {
       window.__automationsRefPickActive = true;
       if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
-        window.CreatorPhoneUploadModal.open({ sectionId: null });
+        window.CreatorPhoneUploadModal.open({ sectionId: null, onCancel: returnHere });
+      } else {
+        returnHere();
       }
       return;
     }
@@ -1267,7 +1361,9 @@
       window.__automationsRefPickActive = true;
       window.__CREATOR_MOBILE_GEN_UPLOAD_ACTIVE = true;
       if (window.CreatorInspirationModal && typeof window.CreatorInspirationModal.open === 'function') {
-        window.CreatorInspirationModal.open();
+        window.CreatorInspirationModal.open({ onCancel: returnHere });
+      } else {
+        returnHere();
       }
       return;
     }
@@ -1275,14 +1371,18 @@
       window.__automationsRefPickActive = true;
       window.__CREATOR_MOBILE_GEN_UPLOAD_ACTIVE = true;
       if (window.QuickInspirationsModal && typeof window.QuickInspirationsModal.open === 'function') {
-        window.QuickInspirationsModal.open({});
+        window.QuickInspirationsModal.open({ onCancel: returnHere });
+      } else {
+        returnHere();
       }
       return;
     }
     if (source === 'designs') {
       window.__automationsRefPickActive = true;
       if (window.GenMyDesignsModal && typeof window.GenMyDesignsModal.open === 'function') {
-        window.GenMyDesignsModal.open();
+        window.GenMyDesignsModal.open({ onCancel: returnHere });
+      } else {
+        returnHere();
       }
       return;
     }
@@ -1307,7 +1407,7 @@
                       include_elements: picked.include_elements || null,
                       exclude_elements: picked.exclude_elements || null
                     });
-                  });
+                  }, returnHere);
                 };
                 reader.readAsDataURL(result.blob);
               } else {
@@ -1323,11 +1423,14 @@
                     include_elements: picked.include_elements || null,
                     exclude_elements: picked.exclude_elements || null
                   });
-                });
+                }, returnHere);
               }
             }
-          }
+          },
+          onCancel: returnHere
         });
+      } else {
+        returnHere();
       }
     }
   }

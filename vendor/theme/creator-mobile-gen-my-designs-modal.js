@@ -9,6 +9,9 @@
   var filteredDesigns = [];
   /** @type {null|function()} */
   var myDesignsLayerRestore = null;
+  /** @type {null|function()} */
+  var pendingOnCancel = null;
+  var selectionInProgress = false;
 
   function getApiBase() {
     return window.CreatorWidget?.apiBaseUrl || 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
@@ -41,9 +44,13 @@
     return null;
   }
 
-  function open() {
+  function open(opts) {
     var overlay = document.getElementById('genMyDesignsOverlay');
     if (!overlay) return;
+
+    opts = opts || {};
+    pendingOnCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
+    selectionInProgress = false;
 
     myDesignsLayerRestore = null;
     if (typeof window.eazReparentIntoCreatorAutomationLayer === 'function') {
@@ -75,7 +82,8 @@
     });
   }
 
-  function close() {
+  function close(opts) {
+    var skipCancel = opts && opts.skipCancel;
     var overlay = document.getElementById('genMyDesignsOverlay');
     if (overlay) {
       overlay.classList.remove('is-open');
@@ -87,6 +95,16 @@
       } catch (eR) {}
       myDesignsLayerRestore = null;
     }
+    var cancelCb = pendingOnCancel;
+    pendingOnCancel = null;
+    if (!skipCancel && !selectionInProgress && typeof cancelCb === 'function') {
+      setTimeout(function () {
+        try {
+          cancelCb();
+        } catch (eC) {}
+      }, 0);
+    }
+    selectionInProgress = false;
   }
 
   function normalizeGenerated(item) {
@@ -203,6 +221,14 @@
         card.addEventListener('click', function () {
           var imageUrl = design.preview_url || design.original_url || design.image_url;
           if (imageUrl) {
+            selectionInProgress = true;
+            var returnOnCancel = pendingOnCancel;
+            pendingOnCancel = null;
+            if (returnOnCancel) {
+              try {
+                window.__eazPendingRefSourceReturn = returnOnCancel;
+              } catch (eRet) {}
+            }
             window.dispatchEvent(
               new CustomEvent('gen-design-selected', {
                 detail: {
@@ -212,7 +238,7 @@
                 }
               })
             );
-            close();
+            close({ skipCancel: true });
           }
         });
         grid.appendChild(card);
