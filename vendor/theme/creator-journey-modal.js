@@ -3833,6 +3833,376 @@
     return tpl(key, fallbacks[tier] || fallbacks[1], { pct: String(pct) });
   }
 
+  var productSkillInfoToken = 0;
+  var productSkillInfoBound = false;
+
+  function isProductSkillNode(node) {
+    return !!(node && node.category === 'product' && node.product_key);
+  }
+
+  function formatCentsPrice(cents) {
+    if (cents == null || !Number.isFinite(Number(cents))) return '';
+    var n = Number(cents) / 100;
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(n);
+    } catch (e) {
+      return '€' + n.toFixed(2);
+    }
+  }
+
+  function psiT(key, fallback, vars) {
+    return tpl('creator.journey.product_skill.' + key, fallback, vars);
+  }
+
+  function setProductSkillTab(tabKey) {
+    var tabs = document.getElementById('cjProductSkillTabs');
+    var panels = document.getElementById('cjProductSkillPanels');
+    if (!tabs || !panels) return;
+    tabs.querySelectorAll('[data-cj-psi-tab]').forEach(function (btn) {
+      var active = btn.getAttribute('data-cj-psi-tab') === tabKey;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    panels.querySelectorAll('[data-cj-psi-panel]').forEach(function (panel) {
+      var active = panel.getAttribute('data-cj-psi-panel') === tabKey;
+      panel.classList.toggle('is-active', active);
+      panel.hidden = !active;
+    });
+  }
+
+  function ensureProductSkillInfoBindings() {
+    if (productSkillInfoBound) return;
+    productSkillInfoBound = true;
+    var tabs = document.getElementById('cjProductSkillTabs');
+    if (!tabs) return;
+    tabs.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('[data-cj-psi-tab]') : null;
+      if (!btn) return;
+      var key = btn.getAttribute('data-cj-psi-tab');
+      if (key) setProductSkillTab(key);
+    });
+  }
+
+  function renderPsiKvRows(rows) {
+    if (!rows || !rows.length) {
+      return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
+    }
+    return '<div class="cj-psi-kv">' + rows.map(function (row) {
+      return '<div class="cj-psi-kv__row">' +
+        '<div class="cj-psi-kv__label">' + escapeHtml(row.label) + '</div>' +
+        '<div class="cj-psi-kv__value">' + row.valueHtml + '</div>' +
+        '</div>';
+    }).join('') + '</div>';
+  }
+
+  function renderPsiChips(items) {
+    if (!items || !items.length) return '—';
+    return '<div class="cj-psi-chips">' + items.map(function (item) {
+      return '<span class="cj-psi-chip">' + escapeHtml(item) + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function renderProductSkillOverview(data) {
+    var ov = data.overview || {};
+    var audience = Array.isArray(ov.audience) ? ov.audience : [];
+    var printAreas = Array.isArray(ov.print_areas) ? ov.print_areas : [];
+    return renderPsiKvRows([
+      {
+        label: psiT('audience', 'Audience'),
+        valueHtml: renderPsiChips(audience.length ? audience : ['—'])
+      },
+      {
+        label: psiT('shipping_country', 'Shipping country'),
+        valueHtml: escapeHtml(ov.shipping_country || '—')
+      },
+      {
+        label: psiT('base_product_model', 'Base product model'),
+        valueHtml: escapeHtml(ov.base_product_model || data.title || '—')
+      },
+      {
+        label: psiT('base_product_brand', 'Base product brand'),
+        valueHtml: escapeHtml(ov.provider_brand || '—')
+      },
+      {
+        label: psiT('print_areas', 'Print areas'),
+        valueHtml: renderPsiChips(printAreas.length ? printAreas : ['—'])
+      }
+    ]);
+  }
+
+  function renderProductSkillSkillTab(data) {
+    var skill = data.skill || {};
+    var colors = Array.isArray(skill.colors) ? skill.colors : [];
+    var variantCost = Number(skill.variant_unlock_cost_eaz) || 60;
+    var html = '';
+    html += '<div class="cj-psi-stats">';
+    html += '<div class="cj-psi-stat"><span class="cj-psi-stat__label">' +
+      escapeHtml(psiT('required_level', 'Required level')) +
+      '</span><span class="cj-psi-stat__value">' +
+      escapeHtml(String(skill.min_level != null ? skill.min_level : '—')) +
+      '</span></div>';
+    html += '<div class="cj-psi-stat"><span class="cj-psi-stat__label">' +
+      escapeHtml(psiT('unlock_cost', 'Unlock cost')) +
+      '</span><span class="cj-psi-stat__value">' +
+      escapeHtml((Number(skill.unlock_cost_eaz) || 0) + ' EAZV') +
+      '</span></div>';
+    html += '</div>';
+    html += '<p class="cj-psi-hint">' +
+      escapeHtml(psiT('variant_cost_hint', 'Each additional color or size variant costs {{ n }} EAZV after free picks.', {
+        n: String(variantCost)
+      })) +
+      '</p>';
+    if (!colors.length) {
+      html += '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
+      return html;
+    }
+    html += '<div class="cj-psi-subskills" aria-label="' + escapeHtml(psiT('subskills', 'Sub-skills')) + '">';
+    colors.forEach(function (c) {
+      var hex = c.hex || '#888888';
+      var sizes = Array.isArray(c.sizes) ? c.sizes : [];
+      html += '<details class="cj-psi-subskill">';
+      html += '<summary><span class="cj-psi-dot" style="background:' + escapeHtml(hex) + '"></span>' +
+        '<span>' + escapeHtml(c.name || '') + '</span></summary>';
+      if (sizes.length) {
+        html += '<div class="cj-psi-sizes" aria-label="' + escapeHtml(psiT('sizes', 'Sizes')) + '">';
+        sizes.forEach(function (sz) {
+          html += '<span class="cj-psi-size">' + escapeHtml(sz) + '</span>';
+        });
+        html += '</div>';
+      } else {
+        html += '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
+      }
+      html += '</details>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderProductSkillVariantsTab(data) {
+    var variants = Array.isArray(data.variants) ? data.variants : [];
+    if (!variants.length) {
+      return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
+    }
+    return '<div class="cj-psi-variant-grid">' + variants.map(function (v) {
+      var price = formatCentsPrice(v.cost_cents);
+      var priceLabel = price
+        ? psiT('purchase_price', 'From {{ price }}', { price: price })
+        : psiT('price_na', 'Price n/a');
+      var media = v.image_url
+        ? '<img src="' + escapeHtml(v.image_url) + '" alt="" loading="lazy">'
+        : '<span class="cj-psi-dot" style="width:28px;height:28px;background:' +
+          escapeHtml(v.hex || '#888') + '"></span>';
+      return '<div class="cj-psi-variant-card">' +
+        '<div class="cj-psi-variant-card__media">' + media + '</div>' +
+        '<div class="cj-psi-variant-card__body">' +
+        '<div class="cj-psi-variant-card__name">' +
+        '<span class="cj-psi-dot" style="background:' + escapeHtml(v.hex || '#888') + '"></span>' +
+        '<span>' + escapeHtml(v.name || '') + '</span></div>' +
+        '<div class="cj-psi-variant-card__price">' + escapeHtml(priceLabel) + '</div>' +
+        '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function renderProductSkillRegionsTab(data) {
+    var regions = data.regions || {};
+    var continents = Array.isArray(regions.continents) ? regions.continents : [];
+    var html = '<p class="cj-psi-hint">' +
+      escapeHtml(psiT('shipping_placeholder', 'Shipping costs will be configured in Admin.')) +
+      '</p>';
+    if (!continents.length) {
+      html += '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
+      return html;
+    }
+    continents.forEach(function (cont, idx) {
+      var countries = Array.isArray(cont.countries) ? cont.countries : [];
+      html += '<details class="cj-psi-region"' + (idx === 0 ? ' open' : '') + '>';
+      html += '<summary><span>' + escapeHtml(cont.title || cont.code || '') + '</span>' +
+        '<span class="cj-psi-region__count">' +
+        escapeHtml(psiT('countries_count', '{{ n }} countries', { n: String(countries.length) })) +
+        '</span></summary>';
+      countries.forEach(function (c) {
+        var flag = c.flag_code
+          ? '<img class="cj-psi-country__flag" src="' + FLAG_CDN + escapeHtml(c.flag_code) + '.svg" alt="" loading="lazy">'
+          : '<span class="cj-psi-country__flag" aria-hidden="true"></span>';
+        var ship = psiT('shipping_tba', 'TBA');
+        html += '<div class="cj-psi-country">' + flag +
+          '<span class="cj-psi-country__name">' + escapeHtml(c.name || c.code || '') + '</span>' +
+          '<span class="cj-psi-country__ship">' +
+          escapeHtml(psiT('shipping_first', '1st') + ': ' + ship + ' · ' + psiT('shipping_additional', 'Add.') + ': ' + ship) +
+          '</span></div>';
+      });
+      html += '</details>';
+    });
+    return html;
+  }
+
+  function renderProductSkillPrintAreasTab(data) {
+    var areas = Array.isArray(data.print_areas) ? data.print_areas : [];
+    if (!areas.length) {
+      return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
+    }
+    var uploadSvg =
+      '<svg class="cj-psi-print-zone__icon" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M12 16V6M12 6l-4 4M12 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '</svg>';
+    return '<div class="cj-psi-print-grid">' + areas.map(function (a) {
+      var frac = a.print_area_frac || { l: 0.28, t: 0.22, w: 0.44, h: 0.48 };
+      var zoneStyle =
+        'left:' + (Number(frac.l) * 100) + '%;' +
+        'top:' + (Number(frac.t) * 100) + '%;' +
+        'width:' + (Number(frac.w) * 100) + '%;' +
+        'height:' + (Number(frac.h) * 100) + '%;';
+      var img = a.shop_mock_url
+        ? '<img src="' + escapeHtml(a.shop_mock_url) + '" alt="" loading="lazy">'
+        : '';
+      return '<div class="cj-psi-print-card">' +
+        '<div class="cj-psi-print-card__label">' + escapeHtml(a.label || a.position || '') + '</div>' +
+        '<div class="cj-psi-print-card__stage">' + img +
+        '<div class="cj-psi-print-zone" style="' + zoneStyle + '">' + uploadSvg + '</div>' +
+        '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function sanitizePsiHtml(html) {
+    if (!html) return '<p class="cj-psi-empty">' + escapeHtml(psiT('details_empty', 'No details yet.')) + '</p>';
+    var wrap = document.createElement('div');
+    wrap.innerHTML = String(html);
+    wrap.querySelectorAll('script,style,iframe,object,embed').forEach(function (n) { n.remove(); });
+    wrap.querySelectorAll('*').forEach(function (el) {
+      Array.prototype.slice.call(el.attributes || []).forEach(function (attr) {
+        if (/^on/i.test(attr.name) || String(attr.value || '').trim().toLowerCase().indexOf('javascript:') === 0) {
+          el.removeAttribute(attr.name);
+        }
+      });
+    });
+    var out = wrap.innerHTML.trim();
+    return out || '<p class="cj-psi-empty">' + escapeHtml(psiT('details_empty', 'No details yet.')) + '</p>';
+  }
+
+  function renderProductSkillDetailsTab(data) {
+    var d = data.product_details || {};
+    var sections = [
+      { key: 'product_features', label: psiT('details_features', 'Product Features'), html: d.product_features, open: true },
+      { key: 'care_instructions', label: psiT('details_care', 'Care Instructions'), html: d.care_instructions, open: false },
+      { key: 'size_table', label: psiT('details_size', 'Size Table'), html: d.size_table_html, open: false },
+      { key: 'gpsr', label: psiT('details_gpsr', 'GPSR'), html: d.gpsr_html, open: false }
+    ];
+    return '<div class="cj-psi-details-acc">' + sections.map(function (sec) {
+      return '<details' + (sec.open ? ' open' : '') + '>' +
+        '<summary>' + escapeHtml(sec.label) + '</summary>' +
+        '<div class="cj-psi-details-acc__body">' + sanitizePsiHtml(sec.html) + '</div>' +
+        '</details>';
+    }).join('') + '</div>';
+  }
+
+  function fillProductSkillPanels(data) {
+    var panels = document.getElementById('cjProductSkillPanels');
+    if (!panels) return;
+    var map = {
+      overview: renderProductSkillOverview(data),
+      skill: renderProductSkillSkillTab(data),
+      variants: renderProductSkillVariantsTab(data),
+      regions: renderProductSkillRegionsTab(data),
+      print_areas: renderProductSkillPrintAreasTab(data),
+      details: renderProductSkillDetailsTab(data)
+    };
+    Object.keys(map).forEach(function (key) {
+      var panel = panels.querySelector('[data-cj-psi-panel="' + key + '"]');
+      if (panel) panel.innerHTML = map[key];
+    });
+  }
+
+  function showSimpleSkillInfoMode() {
+    var dialog = document.getElementById('cjRoyaltyInfoDialog');
+    var simple = document.getElementById('cjRoyaltyInfoSimple');
+    var product = document.getElementById('cjProductSkillInfo');
+    if (dialog) dialog.classList.remove('is-product-skill');
+    if (simple) simple.hidden = false;
+    if (product) product.hidden = true;
+  }
+
+  function showProductSkillInfoMode() {
+    var dialog = document.getElementById('cjRoyaltyInfoDialog');
+    var simple = document.getElementById('cjRoyaltyInfoSimple');
+    var product = document.getElementById('cjProductSkillInfo');
+    if (dialog) dialog.classList.add('is-product-skill');
+    if (simple) simple.hidden = true;
+    if (product) product.hidden = false;
+  }
+
+  function localizeProductSkillTabs() {
+    var tabs = document.getElementById('cjProductSkillTabs');
+    if (!tabs) return;
+    var labels = {
+      overview: psiT('tab_overview', 'Overview'),
+      skill: psiT('tab_skill', 'Skill Info'),
+      variants: psiT('tab_variants', 'Variants'),
+      regions: psiT('tab_regions', 'Regions'),
+      print_areas: psiT('tab_print_areas', 'Print Areas'),
+      details: psiT('tab_details', 'Product Details')
+    };
+    tabs.querySelectorAll('[data-cj-psi-tab]').forEach(function (btn) {
+      var key = btn.getAttribute('data-cj-psi-tab');
+      if (key && labels[key]) btn.textContent = labels[key];
+    });
+  }
+
+  function openProductSkillInfoModal(node) {
+    ensureProductSkillInfoBindings();
+    showProductSkillInfoMode();
+    localizeProductSkillTabs();
+
+    var title = skillInfoField(node, 'title', null) || node.product_key || '';
+    var iconHtml = skillIconSvgForNode(node) || CATEGORY_ICON_SVG.product;
+    var iconEl = document.getElementById('cjProductSkillIcon');
+    var titleEl = document.getElementById('cjProductSkillTitle');
+    var metaEl = document.getElementById('cjProductSkillMeta');
+    if (iconEl) iconEl.innerHTML = iconHtml;
+    if (titleEl) titleEl.textContent = title;
+
+    var metaParts = [];
+    var minLv = Number(node.min_level) || 1;
+    metaParts.push(tpl('creator.journey.level_badge', 'Level {{ n }}', { n: String(minLv) }));
+    if (!node.unlocked && nodeEffectiveCost(node) > 0) {
+      metaParts.push(formatEazBadge(Number(node.eaz_committed) || 0, nodeEffectiveCost(node), false, false));
+    }
+    if (metaEl) {
+      metaEl.textContent = metaParts.join(' · ');
+      metaEl.hidden = !metaParts.length;
+    }
+
+    setProductSkillTab('overview');
+    var panels = document.getElementById('cjProductSkillPanels');
+    if (panels) {
+      panels.querySelectorAll('[data-cj-psi-panel]').forEach(function (panel) {
+        panel.innerHTML = '<p class="cj-psi-loading">' +
+          escapeHtml(psiT('loading', 'Loading product info…')) + '</p>';
+      });
+    }
+
+    var token = ++productSkillInfoToken;
+    var pk = String(node.product_key || '').trim();
+    apiFetch('get-journey-product-skill-info', { product_key: pk })
+      .then(function (data) {
+        if (token !== productSkillInfoToken) return;
+        if (!data || !data.ok) throw new Error((data && data.error) || 'load_failed');
+        if (titleEl && data.title) titleEl.textContent = data.title;
+        fillProductSkillPanels(data);
+        setProductSkillTab('overview');
+      })
+      .catch(function () {
+        if (token !== productSkillInfoToken) return;
+        var err = '<p class="cj-psi-error">' +
+          escapeHtml(psiT('load_error', 'Could not load product information.')) + '</p>';
+        if (panels) {
+          panels.querySelectorAll('[data-cj-psi-panel]').forEach(function (panel) {
+            panel.innerHTML = err;
+          });
+        }
+      });
+  }
+
   function openSkillInfoModal(nodeKey, opts) {
     opts = opts || {};
     var overlayEl = document.getElementById('cjRoyaltyInfoOverlay');
@@ -3841,6 +4211,18 @@
     var isEaz = opts.type === 'eaz_economy';
     var node = isEaz ? findEazEconomyNode(nodeKey) : findJourneyNode(nodeKey);
     if (!node) return;
+
+    if (!isEaz && isProductSkillNode(node)) {
+      openProductSkillInfoModal(node);
+      overlayEl.hidden = false;
+      overlayEl.classList.add('is-open');
+      overlayEl.setAttribute('aria-hidden', 'false');
+      var closeBtnProduct = document.getElementById('cjRoyaltyInfoClose');
+      if (closeBtnProduct) closeBtnProduct.focus();
+      return;
+    }
+
+    showSimpleSkillInfoMode();
 
     var modalOpts = isEaz ? { type: 'eaz_economy' } : null;
     var title = skillInfoField(node, 'title', modalOpts);
@@ -3923,6 +4305,8 @@
     overlayEl.classList.remove('is-open');
     overlayEl.setAttribute('aria-hidden', 'true');
     overlayEl.hidden = true;
+    productSkillInfoToken += 1;
+    showSimpleSkillInfoMode();
   }
 
   function confirmCommitModal() {

@@ -241,14 +241,41 @@
   </div>
 
   <div class="cj-royalty-info-overlay" id="cjRoyaltyInfoOverlay" aria-hidden="true" hidden>
-    <div class="cj-royalty-info-dialog" role="dialog" aria-modal="true" aria-labelledby="cjRoyaltyInfoTitle">
-      <div class="cj-royalty-info-dialog__icon" id="cjRoyaltyInfoIcon" aria-hidden="true"></div>
-      <h4 class="cj-royalty-info-dialog__title" id="cjRoyaltyInfoTitle"></h4>
-      <p class="cj-royalty-info-dialog__body" id="cjRoyaltyInfoBody"></p>
-      <p class="cj-royalty-info-dialog__meta" id="cjRoyaltyInfoMeta" hidden></p>
-      <p class="cj-royalty-info-dialog__note" id="cjRoyaltyInfoNote"></p>
+    <div class="cj-royalty-info-dialog" id="cjRoyaltyInfoDialog" role="dialog" aria-modal="true" aria-labelledby="cjRoyaltyInfoTitle">
+      <div class="cj-royalty-info-dialog__simple" id="cjRoyaltyInfoSimple">
+        <div class="cj-royalty-info-dialog__icon" id="cjRoyaltyInfoIcon" aria-hidden="true"></div>
+        <h4 class="cj-royalty-info-dialog__title" id="cjRoyaltyInfoTitle"></h4>
+        <p class="cj-royalty-info-dialog__body" id="cjRoyaltyInfoBody"></p>
+        <p class="cj-royalty-info-dialog__meta" id="cjRoyaltyInfoMeta" hidden></p>
+        <p class="cj-royalty-info-dialog__note" id="cjRoyaltyInfoNote"></p>
+      </div>
+      <div class="cj-product-skill-info" id="cjProductSkillInfo" hidden>
+        <div class="cj-product-skill-info__header">
+          <div class="cj-product-skill-info__icon" id="cjProductSkillIcon" aria-hidden="true"></div>
+          <div class="cj-product-skill-info__heading">
+            <h4 class="cj-product-skill-info__title" id="cjProductSkillTitle"></h4>
+            <p class="cj-product-skill-info__meta" id="cjProductSkillMeta" hidden></p>
+          </div>
+        </div>
+        <div class="cj-product-skill-info__tabs" id="cjProductSkillTabs" role="tablist" aria-label="Product skill info">
+          <button type="button" class="cj-product-skill-info__tab is-active" role="tab" aria-selected="true" data-cj-psi-tab="overview" data-t="creator.journey.product_skill.tab_overview">Overview</button>
+          <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="skill" data-t="creator.journey.product_skill.tab_skill">Skill Info</button>
+          <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="variants" data-t="creator.journey.product_skill.tab_variants">Variants</button>
+          <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="regions" data-t="creator.journey.product_skill.tab_regions">Regions</button>
+          <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="print_areas" data-t="creator.journey.product_skill.tab_print_areas">Print Areas</button>
+          <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="details" data-t="creator.journey.product_skill.tab_details">Product Details</button>
+        </div>
+        <div class="cj-product-skill-info__panels" id="cjProductSkillPanels">
+          <div class="cj-product-skill-info__panel is-active" data-cj-psi-panel="overview" role="tabpanel"></div>
+          <div class="cj-product-skill-info__panel" data-cj-psi-panel="skill" role="tabpanel" hidden></div>
+          <div class="cj-product-skill-info__panel" data-cj-psi-panel="variants" role="tabpanel" hidden></div>
+          <div class="cj-product-skill-info__panel" data-cj-psi-panel="regions" role="tabpanel" hidden></div>
+          <div class="cj-product-skill-info__panel" data-cj-psi-panel="print_areas" role="tabpanel" hidden></div>
+          <div class="cj-product-skill-info__panel" data-cj-psi-panel="details" role="tabpanel" hidden></div>
+        </div>
+      </div>
       <div class="cj-commit-dialog__actions">
-        <button type="button" class="cj-btn cj-btn--primary" id="cjRoyaltyInfoClose">Close</button>
+        <button type="button" class="cj-btn cj-btn--primary" id="cjRoyaltyInfoClose" data-t="creator.common.close">Close</button>
       </div>
     </div>
   </div>
