@@ -2077,6 +2077,23 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.22);
   padding: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #ff9d00 #111827;
+}
+
+.cj-product-skill-info__panels::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cj-product-skill-info__panels::-webkit-scrollbar-track {
+  background: #111827;
+  border-radius: 999px;
+}
+
+.cj-product-skill-info__panels::-webkit-scrollbar-thumb {
+  background: #ff9d00;
+  border-radius: 999px;
 }
 
 .cj-product-skill-info__panel[hidden] {
@@ -2125,6 +2142,21 @@
   font-size: 0.88rem;
   color: rgba(255, 255, 255, 0.92);
   line-height: 1.4;
+}
+
+.cj-psi-shipping {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cj-psi-shipping__flag {
+  width: 22px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
 }
 
 .cj-psi-chips {
@@ -2232,6 +2264,8 @@
 }
 
 .cj-psi-variant-card {
+  display: flex;
+  flex-direction: column;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
@@ -2254,19 +2288,23 @@
 }
 
 .cj-psi-variant-card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 52px;
   padding: 8px;
 }
 
 .cj-psi-variant-card__name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  flex: 1;
   font-size: 0.78rem;
   font-weight: 650;
-  margin-bottom: 4px;
+  line-height: 1.25;
 }
 
 .cj-psi-variant-card__price {
+  margin-top: auto;
+  padding-top: 4px;
   font-size: 0.75rem;
   color: #ffd28a;
   font-weight: 700;

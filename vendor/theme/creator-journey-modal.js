@@ -1131,6 +1131,19 @@
     return 2;
   }
 
+  function isJourneyStarterProductNode(node) {
+    if (!node) return false;
+    var meta = node.metadata || {};
+    if (meta.journey_starter === true) return true;
+    if (meta.journey_starter === false) return false;
+    var starterKeys = (journeyData && journeyData.starter && journeyData.starter.product_keys) || [];
+    if (starterKeys.length) {
+      var pk = String(node.product_key || '');
+      return starterKeys.some(function (k) { return String(k) === pk; });
+    }
+    return productCatalogStatus(node) === 2;
+  }
+
   function productSections() {
     var ps = journeyData && journeyData.product_sections;
     return {
@@ -1144,9 +1157,12 @@
     var preview = [];
     var offline = [];
     (nodes || []).forEach(function (n) {
+      if (isJourneyStarterProductNode(n)) {
+        starter.push(n);
+        return;
+      }
       var s = productCatalogStatus(n);
-      if (s === 2) starter.push(n);
-      else if (s === 1) preview.push(n);
+      if (s === 1) preview.push(n);
       else offline.push(n);
     });
     return { starter: starter, preview: preview, offline: offline };
@@ -3902,6 +3918,16 @@
     }).join('') + '</div>';
   }
 
+  function renderProductSkillShippingCountry(ov) {
+    var flagCode = ov.shipping_flag_code || (ov.shipping_country ? String(ov.shipping_country).toLowerCase() : '');
+    var name = ov.shipping_country_name || ov.shipping_country || '';
+    if (!name) return escapeHtml('—');
+    var flag = flagCode
+      ? '<img class="cj-psi-shipping__flag" src="' + FLAG_CDN + escapeHtml(flagCode) + '.svg" alt="" loading="lazy">'
+      : '';
+    return '<span class="cj-psi-shipping">' + flag + '<span>' + escapeHtml(name) + '</span></span>';
+  }
+
   function renderProductSkillOverview(data) {
     var ov = data.overview || {};
     var audience = Array.isArray(ov.audience) ? ov.audience : [];
@@ -3913,7 +3939,7 @@
       },
       {
         label: psiT('shipping_country', 'Shipping country'),
-        valueHtml: escapeHtml(ov.shipping_country || '—')
+        valueHtml: renderProductSkillShippingCountry(ov)
       },
       {
         label: psiT('base_product_model', 'Base product model'),
@@ -3995,9 +4021,7 @@
       return '<div class="cj-psi-variant-card">' +
         '<div class="cj-psi-variant-card__media">' + media + '</div>' +
         '<div class="cj-psi-variant-card__body">' +
-        '<div class="cj-psi-variant-card__name">' +
-        '<span class="cj-psi-dot" style="background:' + escapeHtml(v.hex || '#888') + '"></span>' +
-        '<span>' + escapeHtml(v.name || '') + '</span></div>' +
+        '<div class="cj-psi-variant-card__name">' + escapeHtml(v.name || '') + '</div>' +
         '<div class="cj-psi-variant-card__price">' + escapeHtml(priceLabel) + '</div>' +
         '</div></div>';
     }).join('') + '</div>';
@@ -4015,7 +4039,7 @@
     }
     continents.forEach(function (cont, idx) {
       var countries = Array.isArray(cont.countries) ? cont.countries : [];
-      html += '<details class="cj-psi-region"' + (idx === 0 ? ' open' : '') + '>';
+      html += '<details class="cj-psi-region">';
       html += '<summary><span>' + escapeHtml(cont.title || cont.code || '') + '</span>' +
         '<span class="cj-psi-region__count">' +
         escapeHtml(psiT('countries_count', '{{ n }} countries', { n: String(countries.length) })) +
@@ -4041,26 +4065,13 @@
     if (!areas.length) {
       return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
     }
-    var uploadSvg =
-      '<svg class="cj-psi-print-zone__icon" viewBox="0 0 24 24" aria-hidden="true">' +
-      '<path d="M12 16V6M12 6l-4 4M12 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<path d="M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
-      '</svg>';
     return '<div class="cj-psi-print-grid">' + areas.map(function (a) {
-      var frac = a.print_area_frac || { l: 0.28, t: 0.22, w: 0.44, h: 0.48 };
-      var zoneStyle =
-        'left:' + (Number(frac.l) * 100) + '%;' +
-        'top:' + (Number(frac.t) * 100) + '%;' +
-        'width:' + (Number(frac.w) * 100) + '%;' +
-        'height:' + (Number(frac.h) * 100) + '%;';
       var img = a.shop_mock_url
         ? '<img src="' + escapeHtml(a.shop_mock_url) + '" alt="" loading="lazy">'
         : '';
       return '<div class="cj-psi-print-card">' +
         '<div class="cj-psi-print-card__label">' + escapeHtml(a.label || a.position || '') + '</div>' +
-        '<div class="cj-psi-print-card__stage">' + img +
-        '<div class="cj-psi-print-zone" style="' + zoneStyle + '">' + uploadSvg + '</div>' +
-        '</div></div>';
+        '<div class="cj-psi-print-card__stage">' + img + '</div></div>';
     }).join('') + '</div>';
   }
 
