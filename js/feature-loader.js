@@ -175,6 +175,13 @@
       global.__CREATOR_LAZY_MODAL_URLS["creator-edit-studio-modal.js"] = asset("creator-edit-studio-modal.js");
       global.__CREATOR_MOCK_COMPOSITING_JS = asset("creator-mock-compositing.js");
       global.__CREATOR_PRODUCTS_MODAL_JS = asset("creator-design-products-modal.js");
+      global.__CREATOR_PRODUCT_DETAIL_MODAL_JS = asset("product-detail-modal.js");
+      global.__CREATOR_PRODUCT_MOCKUP_MODAL_JS = asset("product-mockup-modal.js");
+      global.__CREATOR_CLIENT_COLORIZE_JS = asset("client-colorize.js");
+      global.__CREATOR_PRODUCT_DETAIL_MODAL_CSS = [
+        asset("product-detail-modal.css"),
+        asset("product-mockup-modal.css"),
+      ];
 
       global.__CREATOR_LAZY_CREATIONS_BUNDLE = [
         asset("creator-perf-debug.js"),

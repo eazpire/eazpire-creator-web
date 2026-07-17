@@ -1,0 +1,1514 @@
+/* product-detail-modal.css
+ * Product Detail Modal for Creator Mockup System v2
+ * Tabs: Farbauswahl | Print Area | Gewinn
+ */
+
+/* ─── Modal Container ─────────────────────────────────────────── */
+/* Vollbild: eigener Header + Footer immer sichtbar */
+.pdm {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.pdm--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.pdm__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.92);
+}
+
+/* ─── Content Panel ───────────────────────────────────────────── */
+/* Füllt gesamten Viewport */
+.pdm__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  background: #0f172a;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+/* ─── Header ──────────────────────────────────────────────────── */
+.pdm__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.pdm__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.pdm__close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.pdm__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+/* ─── Template Selector ───────────────────────────────────────── */
+/* Layout wie Body: Preview-Bereich (1fr) | Tabs-Bereich (340px). Grid rechtsbündig nur bis Mock-Rand. */
+.pdm__template-bar {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  align-items: center;
+  gap: 0;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.pdm__template-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Dropdown: doppelt so groß (280px) */
+.pdm__template-select {
+  width: 280px;
+  max-width: 280px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #f8fafc;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.pdm__template-select:focus {
+  border-color: #F59E0B;
+}
+
+/* Grid-Toggle: rechtsbündig am Rand der Mock-Vorschau (nur im Preview-Bereich, nicht bis Farbauswahl) */
+.pdm__template-bar-preview-edge {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0;
+}
+
+/* Nur im Color selection Tab sichtbar */
+.pdm__view-toggle {
+  display: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pdm__view-toggle.is-visible {
+  display: flex;
+}
+
+.pdm__view-toggle-btn {
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.pdm__view-toggle-btn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pdm__view-toggle-btn--active {
+  color: #F59E0B;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.pdm__view-toggle-btn:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Icons: 1 grid (einzelnes Quadrat), Mehrfach grid (2x2 Quadrate) */
+.pdm__view-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.pdm__view-icon--single {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='2' width='12' height='12' rx='1' stroke='%2394a3b8' stroke-width='1.2' fill='none'/%3E%3C/svg%3E");
+}
+
+.pdm__view-toggle-btn--active .pdm__view-icon--single {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Crect x='2' y='2' width='12' height='12' rx='1' stroke='%23F59E0B' stroke-width='1.2' fill='none'/%3E%3C/svg%3E");
+}
+
+.pdm__view-icon--grid {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Crect x='1' y='1' width='6' height='6' rx='0.8' stroke='%2394a3b8' stroke-width='1' fill='none'/%3E%3Crect x='9' y='1' width='6' height='6' rx='0.8' stroke='%2394a3b8' stroke-width='1' fill='none'/%3E%3Crect x='1' y='9' width='6' height='6' rx='0.8' stroke='%2394a3b8' stroke-width='1' fill='none'/%3E%3Crect x='9' y='9' width='6' height='6' rx='0.8' stroke='%2394a3b8' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+}
+
+.pdm__view-toggle-btn--active .pdm__view-icon--grid {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Crect x='1' y='1' width='6' height='6' rx='0.8' stroke='%23F59E0B' stroke-width='1' fill='none'/%3E%3Crect x='9' y='1' width='6' height='6' rx='0.8' stroke='%23F59E0B' stroke-width='1' fill='none'/%3E%3Crect x='1' y='9' width='6' height='6' rx='0.8' stroke='%23F59E0B' stroke-width='1' fill='none'/%3E%3Crect x='9' y='9' width='6' height='6' rx='0.8' stroke='%23F59E0B' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+}
+
+.pdm__template-save-btn {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  color: #F59E0B;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.pdm__template-save-btn:hover {
+  background: rgba(245, 158, 11, 0.25);
+}
+
+/* Save button: Text bei Mobile ausblenden, nur Icon */
+.pdm__template-save-btn .pdm__template-save-text {
+  display: inline;
+}
+
+.pdm__template-save-btn .pdm__template-save-icon {
+  display: none;
+  width: 18px;
+  height: 18px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'/%3E%3Cpolyline points='17 21 17 13 7 13 7 21'/%3E%3Cpolyline points='7 3 7 8 15 8'/%3E%3C/svg%3E");
+}
+
+/* ─── Body (Preview + Tabs side by side) ──────────────────────── */
+.pdm__body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ─── Preview Panel (Left) ────────────────────────────────────── */
+.pdm__preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* 1 Grid: einzelnes Bild (default) */
+.pdm__preview--single .pdm__preview-wrap {
+  display: flex;
+}
+
+.pdm__preview--single .pdm__preview-grid {
+  display: none;
+}
+
+/* Mehrfach Grid: alle Varianten */
+.pdm__preview--grid .pdm__preview-wrap {
+  display: none;
+}
+
+.pdm__preview--grid .pdm__preview-color-label {
+  display: none;
+}
+
+/* Grid-Modus: Preview-Stretch damit Grid volle Breite nutzt */
+.pdm__preview--grid {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* Canvas-Toolbar und Crop-Bar im Grid-Modus ausblenden (keine Overlays über Scroll-Bereich) */
+.pdm__preview--grid .pdm__canvas-toolbar,
+.pdm__preview--grid .pdm__crop-bar {
+  display: none !important;
+}
+
+.pdm__preview-grid {
+  display: none;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  align-self: stretch;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+}
+
+.pdm__preview--grid .pdm__preview-grid {
+  display: grid;
+  grid-auto-flow: row;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: minmax(100px, auto);
+  align-items: stretch;
+  justify-items: stretch;
+  align-content: start;
+  background: #e8e8e8;
+}
+
+.pdm__preview-grid-item {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.pdm__preview-grid-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.pdm__preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  transition: opacity 0.2s;
+}
+
+.pdm__preview-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: #e2e8f0;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  z-index: 2;
+}
+
+.pdm__preview-nav:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.pdm__preview-nav--prev {
+  left: 10px;
+}
+
+.pdm__preview-nav--next {
+  right: 10px;
+}
+
+/* Pfeile in Mehrfach-Grid ausblenden */
+.pdm__preview--grid .pdm__preview-nav {
+  display: none;
+}
+
+.pdm__preview-color-label {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.pdm__canvas-load-error {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.5;
+  z-index: 2;
+}
+
+/* ─── Tabs Panel (Right) ──────────────────────────────────────── */
+.pdm__tabs-panel {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.pdm__tab-bar {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.pdm__tab-btn {
+  flex: 1;
+  padding: 10px 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  text-align: center;
+}
+
+.pdm__tab-btn:hover {
+  color: #94a3b8;
+}
+
+.pdm__tab-btn--active {
+  color: #F59E0B;
+  border-bottom-color: #F59E0B;
+}
+
+.pdm__tab-content {
+  flex: 1;
+  min-height: 0; /* Flexbox: erlaubt Scroll bei overflow */
+  overflow-y: auto;
+  padding: 16px;
+  -webkit-overflow-scrolling: touch;
+  /* pan-y: Vertikales Scrollen immer erlaubt, auch über interaktiven Elementen */
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
+.pdm__tab-pane {
+  display: none;
+}
+
+.pdm__tab-pane--active {
+  display: block;
+}
+
+/* ─── Color Tab ───────────────────────────────────────────────── */
+.pdm__colors-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pdm__color-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  position: relative;
+  touch-action: pan-y;
+}
+
+.pdm__color-dot:hover {
+  transform: scale(1.1);
+}
+
+.pdm__color-dot--active {
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
+.pdm__color-dot--active::after {
+  display: none; /* Badge zeigt Größenanzahl stattdessen */
+}
+
+.pdm__color-dot--disabled {
+  opacity: 0.5;
+}
+
+.pdm__color-dot-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Größen-Modal */
+.pdm__size-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.pdm__size-modal--open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.pdm__size-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.pdm__size-modal-content {
+  position: relative;
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 280px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.pdm__size-modal-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #f8fafc;
+}
+
+.pdm__size-modal-hint {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.pdm__size-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pdm__size-modal-limit-msg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 12px 20px;
+  background: rgba(245, 158, 11, 0.95);
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  pointer-events: none;
+  z-index: 2;
+}
+.pdm__size-modal-limit-msg--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.pdm__size-modal-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.pdm__size-modal-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #F59E0B;
+}
+
+.pdm__size-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.pdm__size-modal-count {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.pdm__size-modal-close {
+  padding: 8px 16px;
+  background: #F59E0B;
+  color: #0f172a;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pdm__template-name-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #f8fafc;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.pdm__template-name-input:focus {
+  border-color: rgba(245, 158, 11, 0.85);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.pdm__template-name-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.pdm__template-name-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pdm__template-name-btn--cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.pdm__template-name-btn--save {
+  background: #F59E0B;
+  color: #0f172a;
+}
+
+.pdm__colors-count {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ─── Print Area Tab ──────────────────────────────────────────── */
+.pdm__area-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #f8fafc;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  touch-action: pan-y;
+}
+
+.pdm__area-select option {
+  color: #000;
+  background: #fff;
+}
+
+.pdm__designs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pdm__design-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  touch-action: pan-y;
+}
+
+.pdm__design-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pdm__design-label {
+  flex: 1;
+  font-size: 12px;
+  color: #cbd5e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdm__design-remove {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.15);
+  border: none;
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 14px;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.pdm__design-remove:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.pdm__add-design-btn {
+  width: 100%;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  margin-bottom: 16px;
+  touch-action: pan-y;
+}
+
+.pdm__add-design-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #e2e8f0;
+}
+
+.pdm__slider-group {
+  margin-bottom: 12px;
+  touch-action: pan-y;
+}
+
+.pdm__slider-group input[type="range"] {
+  /* pan-x pan-y: Browser erkennt Richtung – vertikal = Scroll, horizontal = Slider */
+  touch-action: pan-x pan-y;
+}
+
+.pdm__slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.pdm__slider-value {
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdm__slider-num-input {
+  width: 64px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #f8fafc;
+  text-align: right;
+  -moz-appearance: textfield;
+  touch-action: pan-y;
+}
+
+.pdm__slider-num-input::-webkit-outer-spin-button,
+.pdm__slider-num-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pdm__slider-num-input:focus {
+  outline: none;
+  border-color: #F59E0B;
+}
+
+.pdm__slider-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pdm__slider-suffix {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.pdm__slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  /* pan-x pan-y: Richtungserkennung – vertikal = Scroll, horizontal = Slider */
+  touch-action: pan-x pan-y;
+}
+
+.pdm__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #F59E0B;
+  cursor: pointer;
+  border: 2px solid #0f172a;
+}
+
+.pdm__slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #F59E0B;
+  cursor: pointer;
+  border: 2px solid #0f172a;
+}
+
+/* ─── Profit Tab ──────────────────────────────────────────────── */
+.pdm__profit-hint {
+  font-size: 12px;
+  color: var(--pdm-muted, #9ca3af);
+}
+
+.pdm__profit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.pdm__profit-label {
+  color: #94a3b8;
+}
+
+.pdm__profit-value {
+  color: #f8fafc;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdm__profit-value--highlight {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.pdm__profit-value--muted {
+  color: #64748b;
+}
+
+.pdm__profit-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin: 8px 0;
+}
+
+.pdm__profit-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.pdm__profit-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #22c55e;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 12px;
+  text-align: right;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  touch-action: pan-y;
+}
+
+.pdm__profit-input:focus {
+  border-color: #22c55e;
+}
+
+.pdm__profit-currency {
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 30px;
+}
+
+.pdm__profit-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* ─── Footer ──────────────────────────────────────────────────── */
+.pdm__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.pdm__autosave-status {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.pdm__footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.pdm__footer-reset-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.pdm__footer-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #e2e8f0;
+}
+
+.pdm__footer-sell-price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pdm__footer-sell-price-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.pdm__footer-sell-price-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #22c55e;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdm__autosave-status--saved {
+  color: #22c55e;
+}
+
+/* ─── Add-Source-Dialog (Hinzufügen) ───────────────────────────── */
+.pdm__add-source {
+  position: fixed;
+  inset: 0;
+  z-index: 100001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.pdm__add-source--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.pdm__add-source-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.85);
+}
+
+.pdm__add-source-content {
+  position: relative;
+  z-index: 1;
+  width: 90vw;
+  max-width: 380px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.pdm__add-source-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0 0 16px 0;
+}
+
+.pdm__add-source-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdm__add-source-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  width: 100%;
+}
+
+.pdm__add-source-opt:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.pdm__add-source-opt--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pdm__add-source-opt--disabled:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.pdm__add-source-icon {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.pdm__add-source-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pdm__add-source-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.pdm__add-source-desc--muted {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .pdm__content {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .pdm__body {
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pdm__preview {
+    height: 40vh;
+    flex: none;
+    min-height: 0;
+  }
+
+  /* Mehrfach-Grid: 2 Spalten auf Mobile, gleicher Abstand */
+  .pdm__preview--grid .pdm__preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .pdm__tabs-panel {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* Tab-Content scrollbar, Rest fix → Header/Footer sichtbar */
+  .pdm__tab-content {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Template Bar Mobile: einfaches Flex-Layout (Body ist gestapelt) */
+  .pdm__template-bar {
+    grid-template-columns: 1fr;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .pdm__template-bar-left {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pdm__template-bar-preview-edge {
+    flex-shrink: 0;
+  }
+
+  /* Dropdown Mobile: kleiner, aber proportional (140px) */
+  .pdm__template-select {
+    width: 140px;
+    max-width: 140px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  /* Save Button Mobile: nur Icon */
+  .pdm__template-save-btn .pdm__template-save-text {
+    display: none;
+  }
+
+  .pdm__template-save-btn .pdm__template-save-icon {
+    display: inline-block;
+    vertical-align: middle;
+  }
+}
+
+@media (max-width: 480px) {
+  .pdm__preview {
+    height: 35vh;
+    padding: 12px;
+  }
+
+  .pdm__tab-content {
+    padding: 12px;
+  }
+
+  .pdm__header {
+    padding: 12px 16px;
+  }
+
+  .pdm__template-bar {
+    padding: 8px 16px;
+  }
+
+  .pdm__view-toggle-btn {
+    width: 32px;
+    height: 28px;
+  }
+}
+
+/* ─── Scrollbar (matching Creator Design Modal) ──────────────── */
+.pdm__tab-content {
+  scrollbar-width: thin;
+  scrollbar-color: #374151 transparent;
+}
+.pdm__tab-content::-webkit-scrollbar { width: 6px; }
+.pdm__tab-content::-webkit-scrollbar-track { background: transparent; }
+.pdm__tab-content::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+.pdm__tab-content::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* ─── Canvas Preview ─────────────────────────────────────────── */
+.pdm__preview-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdm__canvas {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  cursor: default;
+  display: none;
+}
+
+.pdm__preview--canvas-active .pdm__canvas { display: block; }
+.pdm__preview--canvas-active .pdm__preview-img { display: none; }
+.pdm__preview--canvas-active.pdm__preview--area-fallback .pdm__canvas { display: none; }
+.pdm__preview--canvas-active.pdm__preview--area-fallback .pdm__preview-img { display: block; }
+
+/* ─── Accordion ──────────────────────────────────────────────── */
+.pdm__accordion {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.pdm__accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+  touch-action: pan-y;
+}
+
+.pdm__accordion-header:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.pdm__accordion-chevron {
+  font-size: 10px;
+  color: #64748b;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.pdm__accordion--open > .pdm__accordion-header .pdm__accordion-chevron {
+  transform: rotate(90deg);
+}
+
+.pdm__accordion-title {
+  flex: 1;
+  font-size: 12px;
+  color: #cbd5e1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdm__accordion-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pdm__accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+
+.pdm__accordion--open > .pdm__accordion-body {
+  max-height: 1200px;
+}
+
+.pdm__accordion-body-inner {
+  padding: 12px;
+  touch-action: pan-y;
+}
+
+/* ─── Area Tab Header (always visible) ───────────────────────── */
+.pdm__area-header {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pdm__area-header .pdm__area-select {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.pdm__area-header .pdm__add-design-btn {
+  flex-shrink: 0;
+  width: auto;
+  padding: 8px 12px;
+  margin-bottom: 0;
+  font-size: 12px;
+}
+
+/* ─── Pattern Toggle ─────────────────────────────────────────── */
+.pdm__pattern-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.pdm__pattern-toggle-label {
+  font-size: 12px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.pdm__toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  padding: 0;
+  touch-action: pan-y;
+}
+
+.pdm__toggle--active {
+  background: #F59E0B;
+}
+
+.pdm__toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.pdm__toggle--active::after {
+  transform: translateX(16px);
+}
+
+/* ─── Pattern Mode Buttons ───────────────────────────────────── */
+.pdm__pattern-modes {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.pdm__pattern-mode-btn {
+  flex: 1;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  touch-action: pan-y;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.pdm__pattern-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pdm__pattern-mode-btn--active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #F59E0B;
+}
+
+/* ─── Selection Handles on Canvas ────────────────────────────── */
+.pdm__canvas-toolbar {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px 8px;
+  z-index: 10;
+}
+
+.pdm__preview--canvas-active .pdm__canvas-toolbar {
+  display: none;
+}
+
+.pdm__canvas-tool-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pdm__canvas-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.pdm__canvas-tool-btn--active {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #F59E0B;
+}
+
+/* ─── Crop Confirm/Cancel bar ────────────────────────────────── */
+.pdm__crop-bar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 8px;
+  z-index: 11;
+}
+
+.pdm__crop-bar--visible { display: flex; }
+
+.pdm__crop-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.pdm__crop-btn:hover { transform: scale(1.1); }
+
+.pdm__crop-confirm {
+  background: #22c55e;
+  color: #fff;
+}
+
+.pdm__crop-cancel {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* ─── Design position hint ───────────────────────────────────── */
+.pdm__hint {
+  font-size: 11px;
+  color: #475569;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ─── Per-Variant Toggle Button ──────────────────────────────── */
+.pdm__variant-toggle {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  touch-action: pan-y;
+}
+
+.pdm__variant-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+
+.pdm__variant-toggle--active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #F59E0B;
+}

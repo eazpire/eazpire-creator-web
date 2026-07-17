@@ -2430,23 +2430,54 @@
    * script is normally attached to the Design Modal snippet, so it may not be
    * present when a product card is clicked.
    */
+  function resolveProductDetailModalAssetUrl(explicitUrl, fileName) {
+    if (explicitUrl) return explicitUrl;
+    try {
+      if (
+        window.__CREATOR_PORTAL_HOST__ ||
+        (window.location &&
+          window.location.hostname &&
+          (window.location.hostname === 'creator.eazpire.com' ||
+            window.location.hostname.indexOf('creator.') === 0))
+      ) {
+        return '/vendor/theme/' + fileName;
+      }
+    } catch (_e) {}
+    return '';
+  }
+
   function ensureProductDetailModal() {
     if (window.ProductDetailModal && typeof window.ProductDetailModal.open === 'function') {
       return Promise.resolve();
     }
     if (productDetailModalLoadPromise) return productDetailModalLoadPromise;
 
-    ensureProductDetailModalCss();
-
     var lazy = window.__CreatorLazyModals;
-    var mockupUrl = window.__CREATOR_PRODUCT_MOCKUP_MODAL_JS || '';
-    var detailUrl = window.__CREATOR_PRODUCT_DETAIL_MODAL_JS || '';
+    var colorizeUrl = resolveProductDetailModalAssetUrl(
+      window.__CREATOR_CLIENT_COLORIZE_JS || '',
+      'client-colorize.js'
+    );
+    var mockupUrl = resolveProductDetailModalAssetUrl(
+      window.__CREATOR_PRODUCT_MOCKUP_MODAL_JS || '',
+      'product-mockup-modal.js'
+    );
+    var detailUrl = resolveProductDetailModalAssetUrl(
+      window.__CREATOR_PRODUCT_DETAIL_MODAL_JS || '',
+      'product-detail-modal.js'
+    );
+    if (!window.__CREATOR_PRODUCT_DETAIL_MODAL_CSS || !window.__CREATOR_PRODUCT_DETAIL_MODAL_CSS.length) {
+      window.__CREATOR_PRODUCT_DETAIL_MODAL_CSS = [
+        resolveProductDetailModalAssetUrl('', 'product-detail-modal.css'),
+        resolveProductDetailModalAssetUrl('', 'product-mockup-modal.css'),
+      ].filter(Boolean);
+    }
+    ensureProductDetailModalCss();
     if (!lazy || typeof lazy.loadScriptsSequential !== 'function' || !detailUrl) {
       return Promise.reject(new Error('Product detail modal loader unavailable'));
     }
 
     productDetailModalLoadPromise = lazy
-      .loadScriptsSequential([mockupUrl, detailUrl])
+      .loadScriptsSequential([colorizeUrl, mockupUrl, detailUrl])
       .catch(function (err) {
         productDetailModalLoadPromise = null;
         throw err;
@@ -2513,8 +2544,21 @@
     }
     appendReviewStatusBadge(card, prod);
     card.appendChild(media);
-    card.addEventListener('click', function () {
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.addEventListener('click', function (e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       openPublishedProductPreview(prod);
+    });
+    card.addEventListener('keydown', function (e) {
+      if (!e) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openPublishedProductPreview(prod);
+      }
     });
     return card;
   }
@@ -2983,8 +3027,21 @@
           bottom.appendChild(leftBadges);
           body.appendChild(bottom);
           item.appendChild(body);
-          item.addEventListener('click', function () {
+          item.setAttribute('role', 'button');
+          item.setAttribute('tabindex', '0');
+          item.addEventListener('click', function (e) {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
             openPublishedProductPreview(prod);
+          });
+          item.addEventListener('keydown', function (e) {
+            if (!e) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openPublishedProductPreview(prod);
+            }
           });
           listEl.appendChild(item);
         });
