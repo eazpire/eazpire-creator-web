@@ -26,7 +26,7 @@
     var link = document.createElement("link");
     link.rel = "stylesheet";
     // Bump when portal CSS changes — /vendor is cached 7d; stale ?v= kept old QI UI + Public Designs bugs.
-    link.href = href + "?v=paste-20260716a";
+    link.href = href + "?v=qi-upload-20260717a";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -39,7 +39,7 @@
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
       // Bump when portal JS changes — /vendor is cached 7d.
-      s.src = src + "?v=paste-20260716a";
+      s.src = src + "?v=qi-upload-20260717a";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {

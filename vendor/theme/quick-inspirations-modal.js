@@ -918,6 +918,36 @@
     el.textContent = msg || '';
   }
 
+  /**
+   * Idle Upload label without t() DOM fallback.
+   * The submit button uses data-t=upload_submit; while busy its text is "Uploading…",
+   * so t('…upload_submit') would read that back and leave the button stuck.
+   */
+  function uploadSubmitIdleLabel() {
+    try {
+      var i18n = window.CreatorI18n || {};
+      if (typeof i18n['creator.quick_inspirations.upload_submit'] === 'string') {
+        return i18n['creator.quick_inspirations.upload_submit'];
+      }
+      var nested = i18n.quick_inspirations && i18n.quick_inspirations.upload_submit;
+      if (typeof nested === 'string') return nested;
+    } catch (_e) {}
+    return 'Upload';
+  }
+
+  function setUploadSubmitting(isBusy) {
+    uploading = !!isBusy;
+    var submit = document.getElementById('qi-upload-submit');
+    if (!submit) return;
+    if (isBusy) {
+      submit.disabled = true;
+      submit.textContent = t('creator.quick_inspirations.uploading', 'Uploading…');
+      return;
+    }
+    submit.textContent = uploadSubmitIdleLabel();
+    submit.disabled = pendingFiles.length === 0;
+  }
+
   function renderPendingPreviews() {
     var wrap = document.getElementById('qi-upload-preview');
     var submit = document.getElementById('qi-upload-submit');
@@ -929,7 +959,10 @@
       img.src = URL.createObjectURL(file);
       wrap.appendChild(img);
     });
-    if (submit) submit.disabled = pendingFiles.length === 0 || uploading;
+    if (submit) {
+      if (!uploading) submit.textContent = uploadSubmitIdleLabel();
+      submit.disabled = pendingFiles.length === 0 || uploading;
+    }
   }
 
   async function checkBanBeforeUpload() {
@@ -1040,8 +1073,8 @@
   function closeUpload() {
     hideDialog(uploadModal || document.getElementById('qi-upload-modal'));
     pendingFiles = [];
+    setUploadSubmitting(false);
     renderPendingPreviews();
-    uploading = false;
   }
 
   async function openUploadFlow() {
@@ -1209,6 +1242,15 @@
     );
   }
 
+  function reopenUploadWithError(filesSnapshot, message) {
+    pendingFiles = (filesSnapshot || []).slice();
+    // Keep uploading=true until after dialog open so renderPendingPreviews does not
+    // briefly enable the button; setUploadSubmitting(false) clears the busy label.
+    openConfirmUpload();
+    setUploadSubmitting(false);
+    showUploadStatus(message, 'error');
+  }
+
   async function submitUpload() {
     var oid = getOwnerId();
     if (!oid) {
@@ -1216,12 +1258,7 @@
       return;
     }
     if (!pendingFiles.length || uploading) return;
-    uploading = true;
-    var submit = document.getElementById('qi-upload-submit');
-    if (submit) {
-      submit.disabled = true;
-      submit.textContent = t('creator.quick_inspirations.uploading', 'Uploading…');
-    }
+    setUploadSubmitting(true);
     showUploadStatus(t('creator.quick_inspirations.analyzing', 'Uploading and analyzing…'), 'warn');
 
     var filesSnapshot = pendingFiles.slice();
@@ -1230,9 +1267,10 @@
       form.append('images', f, f.name || 'inspiration.jpg');
     });
 
-    // Switch to Your Inspirations immediately so pending tiles can appear after R2 insert.
+    // Hide confirm UI and switch to Yours so pending tiles can appear after R2 insert.
+    // Do not use closeUpload() here — it clears pendingFiles / uploading mid-request.
     closeSourcePicker();
-    closeUpload();
+    hideDialog(uploadModal || document.getElementById('qi-upload-modal'));
     closePreview();
     setActiveTab('yours');
 
@@ -1247,54 +1285,48 @@
       });
 
       if (data.error === 'missing_owner_id') {
-        pendingFiles = filesSnapshot;
-        renderPendingPreviews();
-        openConfirmUpload();
-        showUploadStatus(t('creator.quick_inspirations.login_required', 'Please sign in to upload.'), 'error');
+        reopenUploadWithError(
+          filesSnapshot,
+          t('creator.quick_inspirations.login_required', 'Please sign in to upload.')
+        );
         return;
       }
 
       if (data.count_ok > 0) {
         // Server inserted status=processing (+ R2 URLs). Reload Yours to show pending tiles;
         // poll until analyze finishes (works across modal close + page reload).
+        pendingFiles = [];
+        setUploadSubmitting(false);
         await loadItems();
         loadFilterTags();
         scheduleProcessPoll();
       } else if (data.error === 'upload_banned' || (data.rejected && data.rejected[0] && data.rejected[0].error === 'upload_banned')) {
-        openConfirmUpload();
-        showUploadStatus(
+        reopenUploadWithError(
+          filesSnapshot,
           strikeMessage(data.strike) ||
-            t('creator.quick_inspirations.ban_temp', 'Quick Inspiration uploads are temporarily blocked.'),
-          'error'
+            t('creator.quick_inspirations.ban_temp', 'Quick Inspiration uploads are temporarily blocked.')
         );
       } else if (data.error === 'daily_upload_limit') {
-        openConfirmUpload();
-        showUploadStatus(
-          t('creator.quick_inspirations.daily_limit', 'Daily upload limit reached (10 Quick Inspirations per day).'),
-          'error'
+        reopenUploadWithError(
+          filesSnapshot,
+          t('creator.quick_inspirations.daily_limit', 'Daily upload limit reached (10 Quick Inspirations per day).')
         );
       } else {
-        pendingFiles = filesSnapshot;
-        renderPendingPreviews();
-        openConfirmUpload();
         var first = (data.rejected && data.rejected[0]) || {};
-        showUploadStatus(
+        var detail =
           strikeMessage(data.strike || first.strike) ||
-            t('creator.quick_inspirations.upload_failed', 'Upload failed.'),
-          'error'
-        );
+          (first.error && first.error !== 'upload_failed' ? String(first.error) : '') ||
+          (data.error && data.error !== 'upload_failed' ? String(data.error) : '') ||
+          t('creator.quick_inspirations.upload_failed', 'Upload failed.');
+        reopenUploadWithError(filesSnapshot, detail);
       }
     } catch (_e) {
-      pendingFiles = filesSnapshot;
-      renderPendingPreviews();
-      openConfirmUpload();
-      showUploadStatus(t('creator.quick_inspirations.upload_failed', 'Upload failed.'), 'error');
+      reopenUploadWithError(
+        filesSnapshot,
+        t('creator.quick_inspirations.upload_failed', 'Upload failed.')
+      );
     } finally {
-      uploading = false;
-      if (submit) {
-        submit.textContent = t('creator.quick_inspirations.upload_submit', 'Upload');
-        submit.disabled = pendingFiles.length === 0;
-      }
+      if (uploading) setUploadSubmitting(false);
     }
   }
 
