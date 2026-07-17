@@ -1133,6 +1133,7 @@
 
   function isJourneyStarterProductNode(node) {
     if (!node) return false;
+    if (String(node.product_key || '') === SOFTSTYLE_PRODUCT_KEY) return true;
     var meta = node.metadata || {};
     if (meta.journey_starter === true) return true;
     if (meta.journey_starter === false) return false;
@@ -1142,6 +1143,15 @@
       return starterKeys.some(function (k) { return String(k) === pk; });
     }
     return productCatalogStatus(node) === 2;
+  }
+
+  /** True once the owner used their free starter pick — either a saved selection or any unlocked starter product. */
+  function ownerHasStarterPick(nodes) {
+    var sel = journeyData && journeyData.starter && journeyData.starter.selection;
+    if (sel && sel.product_key) return true;
+    return (nodes || []).some(function (n) {
+      return isJourneyStarterProductNode(n) && n.unlocked;
+    });
   }
 
   function productSections() {
@@ -1681,6 +1691,17 @@
     var unlocked = (nodes || []).filter(function (n) { return n.unlocked; });
     var lockedStarter = split.starter.filter(function (n) { return !n.unlocked; });
     var lockedNonStarter = split.preview.concat(split.offline).filter(function (n) { return !n.unlocked; });
+
+    // Once the free starter pick is used, remaining locked starters move into the
+    // Level 3 row instead of staying in the always-free "Starter Products" carousel.
+    // Softstyle stays in Starter Products regardless (color → size drill-down stays up front).
+    if (lockedStarter.length && ownerHasStarterPick(nodes)) {
+      var demoted = lockedStarter.filter(function (n) { return n.product_key !== SOFTSTYLE_PRODUCT_KEY; });
+      lockedStarter = lockedStarter.filter(function (n) { return n.product_key === SOFTSTYLE_PRODUCT_KEY; });
+      lockedNonStarter = lockedNonStarter.concat(demoted.map(function (n) {
+        return Object.assign({}, n, { min_level: 3 });
+      }));
+    }
 
     var html = '<div class="cj-product-sections">';
     if (unlocked.length) {
