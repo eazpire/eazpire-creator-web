@@ -144,11 +144,25 @@
     return !!modal;
   }
 
+  function portalToBody(el) {
+    if (!el || !document.body) return;
+    if (el.parentElement !== document.body) {
+      try {
+        document.body.appendChild(el);
+      } catch (_e) {}
+    }
+  }
+
   function showDialog(dlg) {
     if (!dlg) return;
+    // Nested pickers must also enter the top layer above Design Studio.
+    portalToBody(dlg);
     try {
-      if (typeof dlg.showModal === 'function') dlg.showModal();
-      else dlg.setAttribute('open', '');
+      if (typeof dlg.showModal === 'function') {
+        if (!dlg.open) dlg.showModal();
+      } else {
+        dlg.setAttribute('open', '');
+      }
     } catch (_e) {
       dlg.setAttribute('open', '');
     }
@@ -700,7 +714,11 @@
   function hostDialogs(host) {
     if (!host) return;
     [sourceModal, uploadModal, deleteConfirmModal].forEach(function (dlg) {
-      if (dlg && dlg.parentElement !== host) host.appendChild(dlg);
+      if (dlg && dlg.parentElement !== host) {
+        try {
+          host.appendChild(dlg);
+        } catch (_e) {}
+      }
     });
   }
 
@@ -716,22 +734,29 @@
     setDesktopSidebarCollapsed(false);
     setEazyTipOpen(false);
 
-    var host = null;
-    if (typeof window.eazCreatorAutomationLayerHost === 'function') {
-      host = window.eazCreatorAutomationLayerHost();
-    }
-    if (!host && typeof window.eazShopStudioModalRoot === 'function') {
-      host = window.eazShopStudioModalRoot();
-    }
-    if (!host) host = document.body;
-    if (modal.parentElement !== host) host.appendChild(modal);
-    hostDialogs(host);
+    /*
+     * Always portal to document.body + showModal().
+     * Printify Design Studio is a native <dialog showModal()> (browser top layer).
+     * A plain div with any z-index (even 2147483000) paints UNDER that top layer.
+     * Nesting inside eazShopStudioModalRoot also cannot escape another top-layer dialog.
+     */
+    portalToBody(modal);
+    hostDialogs(document.body);
 
     lockScroll();
     modal.classList.add('creator-modal--open');
     modal.setAttribute('aria-hidden', 'false');
     modal.style.cssText =
-      'opacity:1; pointer-events:auto; display:flex; position:fixed; inset:0; z-index:2147483647; align-items:center; justify-content:center; background:rgba(2,6,23,0.92);';
+      'opacity:1; pointer-events:auto; display:flex; position:fixed; inset:0; margin:0; padding:0; border:none; max-width:none; max-height:none; width:100%; height:100%; box-sizing:border-box; align-items:center; justify-content:center; background:rgba(2,6,23,0.92);';
+    try {
+      if (typeof modal.showModal === 'function') {
+        if (!modal.open) modal.showModal();
+      } else {
+        modal.setAttribute('open', '');
+      }
+    } catch (_e) {
+      modal.setAttribute('open', '');
+    }
     setActiveTab('public');
     loadFilterTags();
     loadItems();
@@ -756,6 +781,7 @@
     modal.classList.remove('creator-modal--open');
     modal.setAttribute('aria-hidden', 'true');
     modal.style.cssText = '';
+    hideDialog(modal);
     unlockScroll();
     sectionId = null;
     var cancelCb = pendingOnCancel;
@@ -1172,6 +1198,14 @@
         close();
       });
     }
+    modal.addEventListener('cancel', function (e) {
+      e.preventDefault();
+      if (modal.classList.contains('is-preview')) {
+        closePreview();
+        return;
+      }
+      close();
+    });
     modal.addEventListener('click', function (e) {
       if (e.target === modal) close();
     });
@@ -1217,7 +1251,7 @@
         closeDeleteConfirm(false);
         return;
       }
-      if (!modal || !modal.classList.contains('creator-modal--open')) return;
+      if (!modal || !(modal.open || modal.classList.contains('creator-modal--open'))) return;
       if (document.getElementById('qi-eazy-tip') && document.getElementById('qi-eazy-tip').classList.contains('is-visible')) {
         e.preventDefault();
         setEazyTipOpen(false);

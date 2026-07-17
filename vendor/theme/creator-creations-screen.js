@@ -2404,9 +2404,59 @@
     }
   }
 
+  var productDetailModalLoadPromise = null;
+
+  /** Inject the Product Detail Modal CSS once (lazy). */
+  function ensureProductDetailModalCss() {
+    var cssUrls = window.__CREATOR_PRODUCT_DETAIL_MODAL_CSS || [];
+    cssUrls.forEach(function (href) {
+      if (!href) return;
+      var base = String(href).split('?')[0];
+      var already = Array.prototype.some.call(
+        document.querySelectorAll('link[rel="stylesheet"]'),
+        function (l) { return (l.getAttribute('href') || '').split('?')[0] === base; }
+      );
+      if (already) return;
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
+    });
+  }
+
+  /**
+   * Ensure ProductDetailModal (+ mockup fallback) is available, loading its
+   * assets on demand. The Products tab script is lazy-loaded and the modal
+   * script is normally attached to the Design Modal snippet, so it may not be
+   * present when a product card is clicked.
+   */
+  function ensureProductDetailModal() {
+    if (window.ProductDetailModal && typeof window.ProductDetailModal.open === 'function') {
+      return Promise.resolve();
+    }
+    if (productDetailModalLoadPromise) return productDetailModalLoadPromise;
+
+    ensureProductDetailModalCss();
+
+    var lazy = window.__CreatorLazyModals;
+    var mockupUrl = window.__CREATOR_PRODUCT_MOCKUP_MODAL_JS || '';
+    var detailUrl = window.__CREATOR_PRODUCT_DETAIL_MODAL_JS || '';
+    if (!lazy || typeof lazy.loadScriptsSequential !== 'function' || !detailUrl) {
+      return Promise.reject(new Error('Product detail modal loader unavailable'));
+    }
+
+    productDetailModalLoadPromise = lazy
+      .loadScriptsSequential([mockupUrl, detailUrl])
+      .catch(function (err) {
+        productDetailModalLoadPromise = null;
+        throw err;
+      });
+    return productDetailModalLoadPromise;
+  }
+
   /**
    * Open ProductDetailModal for a published Products-tab card (preview / look & feel).
-   * Falls back to storefront URL only if the modal API is unavailable.
+   * Lazy-loads the modal assets if they are not present. Never redirects to the shop.
    */
   function openPublishedProductPreview(prod) {
     if (!prod) return;
@@ -2430,23 +2480,22 @@
       availableColors: [],
     };
 
-    var win = window;
-    if (win.ProductDetailModal && typeof win.ProductDetailModal.open === 'function') {
-      win.ProductDetailModal.open(opts);
-      return;
-    }
-    if (win.ProductMockupModal && typeof win.ProductMockupModal.open === 'function') {
-      win.ProductMockupModal.open({
-        productKey: productKey,
-        renderedDesignSrc: imageUrl,
+    ensureProductDetailModal()
+      .then(function () {
+        var win = window;
+        if (win.ProductDetailModal && typeof win.ProductDetailModal.open === 'function') {
+          win.ProductDetailModal.open(opts);
+          return;
+        }
+        if (win.ProductMockupModal && typeof win.ProductMockupModal.open === 'function') {
+          win.ProductMockupModal.open({ productKey: productKey, renderedDesignSrc: imageUrl });
+          return;
+        }
+        console.warn('[CreationsScreen] Product preview modal unavailable for', productKey);
+      })
+      .catch(function (err) {
+        console.error('[CreationsScreen] Failed to load product preview modal:', err);
       });
-      return;
-    }
-    if (prod.url) {
-      window.location.href = prod.url;
-    } else {
-      console.warn('[CreationsScreen] Product preview modal unavailable for', productKey);
-    }
   }
 
   function createProductCard(prod, index) {

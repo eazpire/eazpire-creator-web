@@ -1,9 +1,32 @@
 /* Quick Inspirations — fullscreen gallery with filter sidebar (dark Creator aesthetic) */
 
+/*
+ * Native <dialog showModal()> puts QI in the browser top layer (above Printify Design Studio).
+ * z-index alone cannot beat another showModal() dialog — keep z-index only as non-modal fallback.
+ */
 #quick-inspirations-modal.creator-modal {
   padding: 0;
-  /* Above Shop Design Studio shell (~999999), Eazy (~1000003), and studio dialogs */
+  margin: 0;
+  border: none;
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   z-index: 2147483000;
+}
+
+#quick-inspirations-modal.creator-modal[open],
+#quick-inspirations-modal.creator-modal.creator-modal--open {
+  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#quick-inspirations-modal.creator-modal::backdrop {
+  background: rgba(2, 6, 23, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 #quick-inspirations-modal .qi-modal__dialog {
