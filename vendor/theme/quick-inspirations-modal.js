@@ -21,10 +21,19 @@
   var previewItem = null;
   var items = [];
   var searchQuery = '';
+  var activeProduct = '';
+  var activeContentType = '';
+  var activeLanguage = '';
   var activeTag = '';
   var activeStyle = '';
   var activeMood = '';
   var searchTimer = null;
+
+  var CONTENT_TYPE_LABELS = {
+    design_text: 'Design + Text',
+    design_only: 'Design Only',
+    text_only: 'Text Only',
+  };
   var pendingFiles = [];
   var isLoading = false;
   var bound = false;
@@ -318,16 +327,69 @@
     return t('creator.quick_inspirations.empty', 'No quick inspirations yet. Be the first to upload!');
   }
 
-  function renderFilterChips(containerId, list, activeValue, onPick) {
+  function titleCaseLabel(value) {
+    var s = String(value || '').toLowerCase().trim();
+    if (!s) return '';
+    if (s === 't-shirt' || s === 'tshirt' || s === 'tee') return 'T-Shirt';
+    return s.replace(/\b([a-z])/g, function (m, c) {
+      return c.toUpperCase();
+    });
+  }
+
+  function contentTypeLabel(key) {
+    var k = String(key || '').toLowerCase();
+    if (k === 'design_text') {
+      return t('creator.quick_inspirations.content_type_design_text', CONTENT_TYPE_LABELS.design_text);
+    }
+    if (k === 'design_only') {
+      return t('creator.quick_inspirations.content_type_design_only', CONTENT_TYPE_LABELS.design_only);
+    }
+    if (k === 'text_only') {
+      return t('creator.quick_inspirations.content_type_text_only', CONTENT_TYPE_LABELS.text_only);
+    }
+    return rowLabelFallback(key);
+  }
+
+  function languageLabel(key) {
+    var k = String(key || '').toLowerCase();
+    if (k === 'none') return t('creator.quick_inspirations.language_none', 'None');
+    if (k === 'multilingual') {
+      return t('creator.quick_inspirations.language_multilingual', 'Multilingual');
+    }
+    return titleCaseLabel(k);
+  }
+
+  function rowLabelFallback(value) {
+    return String(value || '');
+  }
+
+  function productLabel(key) {
+    var k = String(key || '').toLowerCase();
+    if (k === 't-shirt' || k === 'tshirt' || k === 'tee') return 'T-Shirt';
+    return titleCaseLabel(k);
+  }
+
+  /**
+   * @param {string} containerId
+   * @param {Array} list
+   * @param {string} activeValue
+   * @param {function(string)} onPick
+   * @param {function(string, object): string} [labelFn]
+   */
+  function renderFilterChips(containerId, list, activeValue, onPick, labelFn) {
     var el = document.getElementById(containerId);
     if (!el) return;
     el.innerHTML = '';
     (list || []).forEach(function (row) {
       var name = row.name || row;
+      var label =
+        typeof labelFn === 'function'
+          ? labelFn(name, row)
+          : row.label || name;
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'qi-filter-chip' + (activeValue === name ? ' is-active' : '');
-      btn.textContent = name + (row.count ? ' (' + row.count + ')' : '');
+      btn.textContent = label + (row.count ? ' (' + row.count + ')' : '');
       btn.addEventListener('click', function () {
         onPick(activeValue === name ? '' : name);
       });
@@ -342,6 +404,45 @@
         return {};
       });
       if (!data || !data.ok) return;
+      renderFilterChips(
+        'qi-filter-products',
+        data.products || [],
+        activeProduct,
+        function (v) {
+          activeProduct = v;
+          loadItems();
+          loadFilterTags();
+        },
+        function (name) {
+          return productLabel(name);
+        }
+      );
+      renderFilterChips(
+        'qi-filter-content-types',
+        data.content_types || [],
+        activeContentType,
+        function (v) {
+          activeContentType = v;
+          loadItems();
+          loadFilterTags();
+        },
+        function (name, row) {
+          return row.label || contentTypeLabel(name);
+        }
+      );
+      renderFilterChips(
+        'qi-filter-languages',
+        data.languages || [],
+        activeLanguage,
+        function (v) {
+          activeLanguage = v;
+          loadItems();
+          loadFilterTags();
+        },
+        function (name) {
+          return languageLabel(name);
+        }
+      );
       renderFilterChips('qi-filter-tags', data.tags || [], activeTag, function (v) {
         activeTag = v;
         loadItems();
@@ -628,6 +729,9 @@
         u.searchParams.set('exclude_mine', '1');
       }
       if (searchQuery) u.searchParams.set('search', searchQuery);
+      if (activeProduct) u.searchParams.set('product', activeProduct);
+      if (activeContentType) u.searchParams.set('content_type', activeContentType);
+      if (activeLanguage) u.searchParams.set('language', activeLanguage);
       if (activeTag) u.searchParams.set('tag', activeTag);
       if (activeStyle) u.searchParams.set('style', activeStyle);
       if (activeMood) u.searchParams.set('mood', activeMood);
@@ -1493,6 +1597,9 @@
     var reset = document.getElementById('qi-filter-reset');
     if (reset) {
       reset.addEventListener('click', function () {
+        activeProduct = '';
+        activeContentType = '';
+        activeLanguage = '';
         activeTag = '';
         activeStyle = '';
         activeMood = '';
