@@ -1654,13 +1654,15 @@
         img.onload = function () {
           try {
             if (!canvas || !ctx) return reject(new Error('no canvas'));
-            if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
-              // Keep canvas size; draw cover-contain into existing bounds
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            } else {
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Server composites onto original size; keep canvas dims and avoid
+            // upscaling a smaller model frame over the whole design.
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (canvas.width === img.naturalWidth && canvas.height === img.naturalHeight) {
               ctx.drawImage(img, 0, 0);
+            } else {
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             }
             resolve();
           } catch (err) {
