@@ -192,6 +192,17 @@
       </div>
     </aside>
 
+    <div class="ces-tool-flyout" id="ces-tool-options-overlay" role="dialog" aria-labelledby="ces-tool-options-title" hidden>
+      <div class="ces-tool-flyout__header">
+        <h3 id="ces-tool-options-title" data-t="creator.edit_studio.tool_options_title">Tool options</h3>
+        <button type="button" class="ces-card__close" id="ces-tool-options-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="ces-tool-flyout__body" id="ces-tool-options-host"></div>
+      <div class="ces-tool-flyout__footer">
+        <button type="button" class="ces-btn ces-btn--primary" id="ces-tool-options-done" data-t="creator.edit_studio.tool_options_done">Done</button>
+      </div>
+    </div>
+
     <div class="ces-main">
     <div class="ces-workspace">
       <div class="ces-viewer" id="ces-viewer">
@@ -357,18 +368,6 @@
         </div>
       </div>
 
-      <div class="ces-overlay" id="ces-tool-options-overlay" hidden>
-        <div class="ces-card ces-card--tool-options" role="dialog" aria-labelledby="ces-tool-options-title">
-          <div class="ces-card__header">
-            <h3 id="ces-tool-options-title" data-t="creator.edit_studio.tool_options_title">Tool options</h3>
-            <button type="button" class="ces-card__close" id="ces-tool-options-close" aria-label="Close">&times;</button>
-          </div>
-          <div class="ces-card__body" id="ces-tool-options-host"></div>
-          <div class="ces-card__footer">
-            <button type="button" class="ces-btn ces-btn--primary" id="ces-tool-options-done" data-t="creator.edit_studio.tool_options_done">Done</button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="ces-genfill-bar" id="ces-genfill-bar" hidden>

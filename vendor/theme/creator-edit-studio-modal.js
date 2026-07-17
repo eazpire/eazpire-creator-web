@@ -40,6 +40,10 @@
   var SIDEBAR_RAIL_KEY = 'eaz_ces_sidebar_rail';
   var optionsModalTool = null; // tool whose options are mounted in overlay
   var TOOL_OPTION_KEYS = { pipette: 1, eraser: 1, brush: 1, genfill: 1 };
+  var toolFlyoutCloseTimer = null;
+  var toolFlyoutOutsideHandler = null;
+  var toolFlyoutRepositionHandler = null;
+  var TOOL_FLYOUT_CLOSE_MS = 240;
 
   var history = []; // [{ blobUrl, label }]
   var historyIndex = -1;
@@ -547,26 +551,122 @@
     optionsModalTool = null;
   }
 
+  function setToolFlyoutAriaExpanded(tool) {
+    if (!root) return;
+    root.querySelectorAll('[data-ces-tool]').forEach(function (btn) {
+      if (tool && btn.getAttribute('data-ces-tool') === tool) {
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        btn.removeAttribute('aria-expanded');
+      }
+    });
+  }
+
+  function detachToolFlyoutListeners() {
+    if (toolFlyoutOutsideHandler) {
+      document.removeEventListener('pointerdown', toolFlyoutOutsideHandler, true);
+      toolFlyoutOutsideHandler = null;
+    }
+    if (toolFlyoutRepositionHandler) {
+      window.removeEventListener('resize', toolFlyoutRepositionHandler);
+      toolFlyoutRepositionHandler = null;
+    }
+  }
+
+  function positionToolFlyout(tool) {
+    var overlay = $('ces-tool-options-overlay');
+    var shell = root && root.querySelector('.ces-modal__shell');
+    var sidebar = $('ces-sidebar');
+    var btn = root && root.querySelector('[data-ces-tool="' + tool + '"]');
+    if (!overlay || !shell || !sidebar || !btn) return;
+    var shellRect = shell.getBoundingClientRect();
+    var sidebarRect = sidebar.getBoundingClientRect();
+    var btnRect = btn.getBoundingClientRect();
+    var left = Math.round(sidebarRect.right - shellRect.left + 10);
+    var top = Math.round(btnRect.top - shellRect.top);
+    overlay.style.left = left + 'px';
+    overlay.style.top = top + 'px';
+    var flyoutRect = overlay.getBoundingClientRect();
+    var maxTop = Math.max(12, shellRect.height - flyoutRect.height - 12);
+    var clampedTop = Math.max(12, Math.min(top, maxTop));
+    if (clampedTop !== top) overlay.style.top = clampedTop + 'px';
+  }
+
   function closeToolOptionsModal() {
     var overlay = $('ces-tool-options-overlay');
-    restoreOptionsHome();
-    if (overlay) overlay.setAttribute('hidden', '');
+    if (toolFlyoutCloseTimer) {
+      clearTimeout(toolFlyoutCloseTimer);
+      toolFlyoutCloseTimer = null;
+    }
+    detachToolFlyoutListeners();
+    setToolFlyoutAriaExpanded(null);
+    if (!overlay || overlay.hasAttribute('hidden')) {
+      restoreOptionsHome();
+      return;
+    }
+    overlay.classList.remove('is-open');
+    var closingTool = optionsModalTool;
+    toolFlyoutCloseTimer = setTimeout(function () {
+      toolFlyoutCloseTimer = null;
+      if (optionsModalTool !== closingTool) return;
+      overlay.setAttribute('hidden', '');
+      restoreOptionsHome();
+    }, TOOL_FLYOUT_CLOSE_MS);
   }
 
   function openToolOptionsModal(tool) {
     if (!TOOL_OPTION_KEYS[tool]) return;
-    var opts = document.querySelector('[data-ces-options-home="' + tool + '"]');
-    var host = $('ces-tool-options-host');
     var overlay = $('ces-tool-options-overlay');
+    var host = $('ces-tool-options-host');
+    if (!overlay || !host) return;
+
+    if (toolFlyoutCloseTimer) {
+      clearTimeout(toolFlyoutCloseTimer);
+      toolFlyoutCloseTimer = null;
+    }
+
+    // Already open for this tool: just keep it anchored, no re-animation.
+    if (optionsModalTool === tool && !overlay.hasAttribute('hidden') && overlay.classList.contains('is-open')) {
+      positionToolFlyout(tool);
+      return;
+    }
+
+    var opts = document.querySelector('[data-ces-options-home="' + tool + '"]');
     var title = $('ces-tool-options-title');
-    if (!opts || !host || !overlay) return;
+    if (!opts) return;
+
     restoreOptionsHome();
     optionsModalTool = tool;
     opts.hidden = false;
     host.appendChild(opts);
     if (title) title.textContent = toolLabel(tool);
-    overlay.removeAttribute('hidden');
     if (tool === 'brush') renderBrushPalette();
+
+    overlay.classList.remove('is-open');
+    overlay.removeAttribute('hidden');
+    positionToolFlyout(tool);
+    setToolFlyoutAriaExpanded(tool);
+
+    requestAnimationFrame(function () {
+      positionToolFlyout(tool);
+      requestAnimationFrame(function () {
+        if (optionsModalTool === tool) overlay.classList.add('is-open');
+      });
+    });
+
+    detachToolFlyoutListeners();
+    toolFlyoutRepositionHandler = function () {
+      positionToolFlyout(tool);
+    };
+    window.addEventListener('resize', toolFlyoutRepositionHandler);
+    toolFlyoutOutsideHandler = function (e) {
+      if (overlay.hasAttribute('hidden')) return;
+      if (overlay.contains(e.target)) return;
+      var activeBtn = root && root.querySelector('[data-ces-tool="' + tool + '"]');
+      if (activeBtn && activeBtn.contains(e.target)) return;
+      closeToolOptionsModal();
+    };
+    document.addEventListener('pointerdown', toolFlyoutOutsideHandler, true);
   }
 
   function setActiveTool(tool) {
@@ -2380,9 +2480,14 @@
     if (railBtn) {
       railBtn.addEventListener('click', function () {
         if (isMobileSidebar()) return;
-        setSidebarRail(!sidebarRail);
-        if (sidebarRail && TOOL_OPTION_KEYS[activeTool]) {
-          openToolOptionsModal(activeTool);
+        var nextRail = !sidebarRail;
+        setSidebarRail(nextRail);
+        if (nextRail && TOOL_OPTION_KEYS[activeTool]) {
+          // Wait out the sidebar width transition so the flyout anchors
+          // to the settled rail position instead of the mid-collapse width.
+          setTimeout(function () {
+            if (sidebarRail && !isMobileSidebar()) openToolOptionsModal(activeTool);
+          }, 190);
         }
       });
     }
@@ -2395,13 +2500,6 @@
     if (toolOptsDone) {
       toolOptsDone.addEventListener('click', function () { closeToolOptionsModal(); });
     }
-    var toolOptsOverlay = $('ces-tool-options-overlay');
-    if (toolOptsOverlay) {
-      toolOptsOverlay.addEventListener('click', function (e) {
-        if (e.target === toolOptsOverlay) closeToolOptionsModal();
-      });
-    }
-
     if (typeof window.matchMedia === 'function') {
       var mq = window.matchMedia('(max-width: 720px)');
       var onMq = function () { applySidebarUi(); };
@@ -2604,10 +2702,16 @@
           // Confirm overlay owns Escape (capture handler); do not discard studio.
           return;
         }
+        var toolFlyout = $('ces-tool-options-overlay');
         var chronik = $('ces-chronik-overlay');
         var bg = $('ces-bg-overlay');
         var recolor = $('ces-recolor-overlay');
         var ignore = $('ces-ignore-overlay');
+        if (toolFlyout && !toolFlyout.hasAttribute('hidden')) {
+          closeToolOptionsModal();
+          e.preventDefault();
+          return;
+        }
         if (chronik && !chronik.hasAttribute('hidden')) {
           closeChronik();
           e.preventDefault();
