@@ -308,7 +308,27 @@
     obs.observe(mediaEl);
   }
 
+  function isUsableMockUrl(u) {
+    var s = String(u || '').trim();
+    if (!s) return false;
+    if (!/\/(?:design-studio-)?mockup-r2(?:\?|$)/i.test(s)) return true;
+    try {
+      var url = new URL(s, window.location.origin);
+      return !!(url.searchParams.get('k') || '').trim();
+    } catch (_) {
+      var m = /[?&]k=([^&]*)/.exec(s);
+      if (!m) return false;
+      try {
+        return !!decodeURIComponent(m[1] || '').trim();
+      } catch (_e) {
+        return false;
+      }
+    }
+  }
+
   function buildCardPreviewStack(slide, designUrl) {
+    var mockUrl = String((slide && slide.mock_url) || '').trim();
+    if (!isUsableMockUrl(mockUrl)) return null;
     var z = parseZoneFrac(slide && slide.print_area_frac);
     var zoneStyle =
       'left:' +
@@ -337,7 +357,8 @@
     mock.alt = '';
     mock.decoding = 'async';
     mock.draggable = false;
-    mock.src = slide.mock_url;
+    mock.loading = 'lazy';
+    mock.src = mockUrl;
 
     var zone = document.createElement('span');
     zone.className = 'creator-design-products-modal__card-zone';
@@ -379,7 +400,7 @@
     if (!mediaEl) return;
     mediaEl.innerHTML = '';
     var slides = ((previewConfig && previewConfig.slides) || []).filter(function (s) {
-      return s && String(s.mock_url || '').trim();
+      return s && isUsableMockUrl(s.mock_url);
     });
     if (!slides.length || !designUrl) {
       mountCardMediaCarouselPlain(mediaEl, productKey, normalizeMockUrls({ mock_urls: [] }));
@@ -397,10 +418,14 @@
       stageWrap.setAttribute('data-product-key', productKey);
 
       var stackA = buildCardPreviewStack(slides[0], designUrl);
+      if (!stackA) {
+        mountCardMediaCarouselPlain(mediaEl, productKey, normalizeMockUrls({ mock_urls: [] }));
+        return;
+      }
       stackA.classList.add('is-active');
       var stackB = buildCardPreviewStack(slides[1] || slides[0], designUrl);
       stageWrap.appendChild(stackA);
-      stageWrap.appendChild(stackB);
+      if (stackB) stageWrap.appendChild(stackB);
       stageWrap.dataset.slideIndex = '0';
       mediaEl.appendChild(stageWrap);
 
@@ -415,7 +440,10 @@
       navNext.setAttribute('aria-label', Mi().designProductsNextMock || 'Next mock');
       navNext.innerHTML = '&#8250;';
 
+      var advancing = false;
       function advanceComposedSlide(delta) {
+        if (advancing) return;
+        advancing = true;
         var idx = parseInt(stageWrap.dataset.slideIndex || '0', 10);
         var nextIdx = (idx + delta + slides.length * 100) % slides.length;
         stageWrap.dataset.slideIndex = String(nextIdx);
@@ -423,16 +451,23 @@
         var inactive = stageWrap.querySelector('.creator-design-products-modal__card-slide:not(.is-active)');
         if (!inactive) {
           inactive = buildCardPreviewStack(slides[nextIdx], designUrl);
-          stageWrap.appendChild(inactive);
+          if (inactive) stageWrap.appendChild(inactive);
         } else {
           var existing = inactive.querySelector('.creator-design-products-modal__card-mock');
-          var targetUrl = slides[nextIdx].mock_url;
+          var targetUrl = String(slides[nextIdx].mock_url || '').trim();
+          if (!isUsableMockUrl(targetUrl)) {
+            advancing = false;
+            return;
+          }
           if (existing && existing.src !== targetUrl) {
             inactive.parentNode.removeChild(inactive);
             inactive = buildCardPreviewStack(slides[nextIdx], designUrl);
-            stageWrap.appendChild(inactive);
+            if (inactive) stageWrap.appendChild(inactive);
           } else {
-            inactive.setAttribute('data-card-placement', JSON.stringify(normalizeCardPlacement(slides[nextIdx].placement)));
+            inactive.setAttribute(
+              'data-card-placement',
+              JSON.stringify(normalizeCardPlacement(slides[nextIdx].placement))
+            );
             layoutCardPreviewStack(inactive);
           }
         }
@@ -443,6 +478,7 @@
         }
         requestAnimationFrame(function () {
           if (inactive) layoutCardPreviewStack(inactive);
+          advancing = false;
         });
       }
 
@@ -464,6 +500,10 @@
 
     mediaEl.classList.remove('creator-design-products-modal__card-media--carousel');
     var singleStack = buildCardPreviewStack(slides[0], designUrl);
+    if (!singleStack) {
+      mountCardMediaCarouselPlain(mediaEl, productKey, normalizeMockUrls({ mock_urls: [] }));
+      return;
+    }
     singleStack.classList.add('is-active');
     singleStack.setAttribute('data-product-key', productKey);
     mediaEl.appendChild(singleStack);
@@ -486,6 +526,7 @@
     }
     var prev = product && product.preview_image_url ? String(product.preview_image_url).trim() : '';
     if (!urls.length && prev) urls = [prev];
+    urls = urls.filter(isUsableMockUrl);
     var creator = urls.filter(function (u) {
       return /\/mockup\//i.test(u);
     });
@@ -500,7 +541,7 @@
   }
 
   function preloadUrl(u, done) {
-    if (!u) {
+    if (!u || !isUsableMockUrl(u)) {
       done();
       return;
     }
