@@ -4091,6 +4091,85 @@
     return out || '<p class="cj-psi-empty">' + escapeHtml(psiT('details_empty', 'No details yet.')) + '</p>';
   }
 
+  function normalizePsiSectionTitle(s) {
+    return String(s == null ? '' : s)
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/[:：]\s*$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  /**
+   * Accordion summary already shows the section label — remove a matching leading
+   * title block from catalog HTML (e.g. <p><strong>Product Features:</strong></p>).
+   */
+  function stripLeadingPsiSectionTitle(html, labels) {
+    var raw = html != null ? String(html).trim() : '';
+    if (!raw) return '';
+    var aliases = (Array.isArray(labels) ? labels : [labels])
+      .map(normalizePsiSectionTitle)
+      .filter(Boolean);
+    if (!aliases.length) return raw;
+
+    function isAlias(text) {
+      return aliases.indexOf(normalizePsiSectionTitle(text)) !== -1;
+    }
+
+    var wrap = document.createElement('div');
+    wrap.innerHTML = raw;
+
+    function firstMeaningfulNode(root) {
+      for (var i = 0; i < root.childNodes.length; i++) {
+        var n = root.childNodes[i];
+        if (n.nodeType === 8) continue;
+        if (n.nodeType === 3 && !String(n.textContent || '').trim()) continue;
+        return n;
+      }
+      return null;
+    }
+
+    var first = firstMeaningfulNode(wrap);
+    if (!first) return raw;
+
+    if (first.nodeType === 3) {
+      var plain = String(first.textContent || '');
+      var m = plain.match(/^([^\n:：]+)[:：]?\s*/);
+      if (m && isAlias(m[1])) {
+        first.textContent = plain.slice(m[0].length);
+        if (!String(first.textContent || '').trim()) first.remove();
+      }
+      return wrap.innerHTML.trim();
+    }
+
+    if (first.nodeType !== 1) return raw;
+
+    if (isAlias(first.textContent)) {
+      first.remove();
+      return wrap.innerHTML.trim();
+    }
+
+    var lead = firstMeaningfulNode(first);
+    if (
+      lead &&
+      lead.nodeType === 1 &&
+      /^(STRONG|B|H1|H2|H3|H4)$/i.test(lead.tagName) &&
+      isAlias(lead.textContent)
+    ) {
+      lead.remove();
+      if (!normalizePsiSectionTitle(first.textContent)) first.remove();
+    }
+
+    return wrap.innerHTML.trim();
+  }
+
+  var PSI_SECTION_TITLE_ALIASES = {
+    product_features: ['Product Features', 'Produkteigenschaften', 'Features'],
+    care_instructions: ['Care Instructions', 'Pflegehinweise', 'Pflege'],
+    size_table: ['Size Table', 'Größentabelle', 'Size Guide'],
+    gpsr: ['GPSR'],
+  };
+
   function renderProductSkillDetailsTab(data) {
     var d = data.product_details || {};
     var sections = [
@@ -4100,9 +4179,12 @@
       { key: 'gpsr', label: psiT('details_gpsr', 'GPSR'), html: d.gpsr_html, open: false }
     ];
     return '<div class="cj-psi-details-acc">' + sections.map(function (sec) {
+      var aliases = (PSI_SECTION_TITLE_ALIASES[sec.key] || []).slice();
+      if (sec.label) aliases.unshift(sec.label);
+      var bodyHtml = stripLeadingPsiSectionTitle(sec.html, aliases);
       return '<details' + (sec.open ? ' open' : '') + '>' +
         '<summary>' + escapeHtml(sec.label) + '</summary>' +
-        '<div class="cj-psi-details-acc__body">' + sanitizePsiHtml(sec.html) + '</div>' +
+        '<div class="cj-psi-details-acc__body">' + sanitizePsiHtml(bodyHtml) + '</div>' +
         '</details>';
     }).join('') + '</div>';
   }
