@@ -1,4 +1,4 @@
-<div id="creator-chat-root" class="creator-chat" aria-label="Eazy Chat">
+<div id="creator-chat-root" class="creator-chat" aria-label="">
   <button
     type="button"
     id="creator-chat-toggle"
@@ -116,7 +116,7 @@
             <button type="button" id="creator-chat-back-to-eazy" class="creator-chat__back-btn" aria-label="Back to Eazy" style="display:none;">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L4 8l6 6"/></svg>
             </button>
-            <h3 class="creator-chat__title">Eazy Chat</h3>
+            <h3 class="creator-chat__title"></h3>
           </div>
           <button type="button" id="creator-chat-close" class="creator-chat__close creator-chat__panel-close" aria-label="Close chat">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 5l10 10M15 5L5 15"/></svg>
@@ -188,12 +188,6 @@
           </div>
         </div>
 
-        <div class="creator-chat__support-float" id="creator-chat-support-float" hidden>
-          <span class="creator-chat__support-float-dot" aria-hidden="true"></span>
-          <span class="creator-chat__support-float-status" data-t="eazy_chat.support_agent_online">Online</span>
-          <span class="creator-chat__support-float-name" id="creator-chat-support-agent-name">Tobias</span>
-        </div>
-
         <div class="creator-chat__messages" id="creator-chat-messages"></div>
         </div>
 
@@ -221,9 +215,9 @@
               class="creator-chat__input"
               data-eazy-guide="chat-input"
               rows="2"
-              placeholder="Your message..."
+              placeholder=""
               maxlength="500"
-              aria-label="Enter message"
+              aria-label=""
               
             ></textarea>
             <button type="button" id="creator-chat-upload-btn" class="creator-chat__upload-btn" aria-label="Upload image" >

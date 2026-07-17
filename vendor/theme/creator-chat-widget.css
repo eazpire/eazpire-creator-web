@@ -1176,46 +1176,6 @@
   color: #fff !important;
 }
 
-.creator-chat__support-float {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 12px 8px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.92);
-  border: 1px solid rgba(34, 197, 94, 0.45);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  width: fit-content;
-  max-width: calc(100% - 24px);
-}
-
-.creator-chat__support-float-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
-  flex-shrink: 0;
-}
-
-.creator-chat__support-float-status {
-  font-size: 12px;
-  font-weight: 700;
-  color: #86efac;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.creator-chat__support-float-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-}
-
 .creator-chat__support-stars {
   display: flex;
   gap: 6px;

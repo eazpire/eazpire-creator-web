@@ -989,7 +989,6 @@
   var supportPollTimer = null;
   var lastSupportMsgId = 0;
   var _convSupportMeta = { mode: "ai", support_status: null, support_first_reply_at: null };
-  var SUPPORT_AGENT_NAME = i18n("support_agent_name", "Tobias");
 
   function isLiveSupportActive() {
     return supportMode && _convSupportMeta.support_status !== "resolved" && _convSupportMeta.support_status !== "closed";
@@ -1015,19 +1014,15 @@
   function applySupportChrome() {
     var titleEl = document.querySelector(".creator-chat__title");
     var backBtn = document.getElementById("creator-chat-back-to-eazy");
-    var floatEl = document.getElementById("creator-chat-support-float");
-    var agentNameEl = document.getElementById("creator-chat-support-agent-name");
 
     if (titleEl) {
       titleEl.textContent = isLiveSupportActive()
         ? i18n("chatSupportTitle", "Live Support")
-        : i18n("chatAssistantTitle", "Eazpire Assistant");
+        : i18n("ui_chat_title", "Eazy Chat");
     }
     if (backBtn) {
       backBtn.style.display = (supportMode && !supportSurveyActive) ? "none" : (supportMode ? "" : "none");
     }
-    if (agentNameEl) agentNameEl.textContent = SUPPORT_AGENT_NAME;
-    if (floatEl) floatEl.hidden = !(supportAgentOnline && isLiveSupportActive());
     renderTabs();
   }
 
