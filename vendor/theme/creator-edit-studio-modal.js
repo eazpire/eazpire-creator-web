@@ -35,7 +35,11 @@
   var brushColor = { r: 0, g: 0, b: 0 };
   var recolorTarget = null; // { r, g, b }
   var ignoredColors = []; // [{ id, r, g, b, intensity }]
-  var subheaderCollapsed = false;
+  var sidebarRail = false; // desktop: icon-only rail
+  var drawerCollapsed = false; // mobile: header drawer closed
+  var SIDEBAR_RAIL_KEY = 'eaz_ces_sidebar_rail';
+  var optionsModalTool = null; // tool whose options are mounted in overlay
+  var TOOL_OPTION_KEYS = { pipette: 1, eraser: 1, brush: 1, genfill: 1 };
 
   var history = []; // [{ blobUrl, label }]
   var historyIndex = -1;
@@ -511,13 +515,69 @@
     }
   }
 
+  function isMobileSidebar() {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 720px)').matches;
+  }
+
+  function toolLabel(tool) {
+    if (tool === 'eraser') return t('eraser', 'Eraser');
+    if (tool === 'brush') return t('brush', 'Brush');
+    if (tool === 'genfill') return t('generative_fill', 'Generative Fill');
+    if (tool === 'recolor') return t('change_color', 'Change Color');
+    if (tool === 'ignore') return t('color_ignore', 'Color Ignore');
+    return t('pipette', 'Pipette');
+  }
+
+  function syncToolAccordion() {
+    if (!root) return;
+    root.querySelectorAll('[data-ces-tool-item]').forEach(function (item) {
+      var key = item.getAttribute('data-ces-tool-item');
+      var on = key === activeTool;
+      item.classList.toggle('is-active', on);
+    });
+  }
+
+  function restoreOptionsHome() {
+    if (!optionsModalTool) return;
+    var opts = document.querySelector('[data-ces-options-home="' + optionsModalTool + '"]');
+    var panel = root && root.querySelector('[data-ces-tool-panel="' + optionsModalTool + '"]');
+    if (opts && panel && opts.parentElement !== panel) {
+      panel.appendChild(opts);
+    }
+    optionsModalTool = null;
+  }
+
+  function closeToolOptionsModal() {
+    var overlay = $('ces-tool-options-overlay');
+    restoreOptionsHome();
+    if (overlay) overlay.setAttribute('hidden', '');
+  }
+
+  function openToolOptionsModal(tool) {
+    if (!TOOL_OPTION_KEYS[tool]) return;
+    var opts = document.querySelector('[data-ces-options-home="' + tool + '"]');
+    var host = $('ces-tool-options-host');
+    var overlay = $('ces-tool-options-overlay');
+    var title = $('ces-tool-options-title');
+    if (!opts || !host || !overlay) return;
+    restoreOptionsHome();
+    optionsModalTool = tool;
+    opts.hidden = false;
+    host.appendChild(opts);
+    if (title) title.textContent = toolLabel(tool);
+    overlay.removeAttribute('hidden');
+    if (tool === 'brush') renderBrushPalette();
+  }
+
   function setActiveTool(tool) {
     if (settingsLocked) return;
     if (tool === 'recolor') {
+      closeToolOptionsModal();
       openRecolorModal();
       return;
     }
     if (tool === 'ignore') {
+      closeToolOptionsModal();
       openIgnoreModal();
       return;
     }
@@ -540,6 +600,7 @@
     var pipetteOpts = $('ces-pipette-options');
     var eraserOpts = $('ces-eraser-options');
     var brushOpts = $('ces-brush-options');
+    var genfillOpts = $('ces-genfill-options');
     var genfillBar = $('ces-genfill-bar');
 
     if (pipetteBtn) {
@@ -566,12 +627,18 @@
       ignoreBtn.classList.remove('is-active');
       ignoreBtn.setAttribute('aria-selected', 'false');
     }
-    if (eraserOpts) eraserOpts.hidden = activeTool !== 'eraser';
+
+    // Keep option nodes visible for accordion / modal mounting
+    if (pipetteOpts) pipetteOpts.hidden = false;
+    if (eraserOpts) eraserOpts.hidden = false;
     if (brushOpts) {
-      brushOpts.hidden = activeTool !== 'brush';
+      brushOpts.hidden = false;
       if (activeTool === 'brush') renderBrushPalette();
     }
-    if (pipetteOpts) pipetteOpts.hidden = activeTool === 'genfill';
+    if (genfillOpts) genfillOpts.hidden = false;
+
+    syncToolAccordion();
+
     if (genfillBar) {
       if (activeTool === 'genfill') {
         genfillBar.removeAttribute('hidden');
@@ -583,6 +650,13 @@
         showMaskOverlay(false);
       }
     }
+
+    if (!isMobileSidebar() && sidebarRail && TOOL_OPTION_KEYS[activeTool]) {
+      openToolOptionsModal(activeTool);
+    } else {
+      closeToolOptionsModal();
+    }
+
     updateViewerCursor();
     updateIgnoreSummaryUi();
   }
@@ -1322,12 +1396,41 @@
     if (overlay) overlay.setAttribute('hidden', '');
   }
 
-  function setSubheaderCollapsed(collapsed) {
-    subheaderCollapsed = !!collapsed;
-    var sub = $('ces-subheader');
-    var toggle = $('ces-subheader-toggle');
-    if (sub) sub.classList.toggle('is-collapsed', subheaderCollapsed);
-    if (toggle) toggle.setAttribute('aria-expanded', subheaderCollapsed ? 'false' : 'true');
+  function applySidebarUi() {
+    var sidebar = $('ces-sidebar');
+    var toggle = $('ces-sidebar-toggle');
+    var railBtn = $('ces-sidebar-rail-btn');
+    if (!sidebar) return;
+    var mobile = isMobileSidebar();
+    sidebar.classList.toggle('is-rail', !mobile && sidebarRail);
+    sidebar.classList.toggle('is-drawer-collapsed', mobile && drawerCollapsed);
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', mobile ? (drawerCollapsed ? 'false' : 'true') : 'true');
+    }
+    if (railBtn) {
+      railBtn.setAttribute('aria-pressed', sidebarRail ? 'true' : 'false');
+      railBtn.setAttribute(
+        'aria-label',
+        sidebarRail ? t('expand_sidebar', 'Expand sidebar') : t('collapse_sidebar', 'Collapse sidebar')
+      );
+      railBtn.title = sidebarRail ? t('expand_sidebar', 'Expand sidebar') : t('collapse_sidebar', 'Collapse sidebar');
+    }
+    if (mobile || !sidebarRail) {
+      closeToolOptionsModal();
+    }
+  }
+
+  function setSidebarRail(collapsed) {
+    sidebarRail = !!collapsed;
+    try {
+      sessionStorage.setItem(SIDEBAR_RAIL_KEY, sidebarRail ? '1' : '0');
+    } catch (_) {}
+    applySidebarUi();
+  }
+
+  function setDrawerCollapsed(collapsed) {
+    drawerCollapsed = !!collapsed;
+    applySidebarUi();
   }
 
   function syncMaskCanvasSize() {
@@ -1861,6 +1964,7 @@
     closeBgModal();
     closeRecolorModal({ keepTool: true });
     closeIgnoreModal({ keepTool: true });
+    closeToolOptionsModal();
     var genfillBar = $('ces-genfill-bar');
     if (genfillBar) genfillBar.setAttribute('hidden', '');
     showMaskOverlay(false);
@@ -1898,8 +2002,14 @@
     setSettingsLocked(false);
     updateIgnoreSummaryUi();
     updatePipetteFilterUi();
+    try {
+      sidebarRail = sessionStorage.getItem(SIDEBAR_RAIL_KEY) === '1';
+    } catch (_) {
+      sidebarRail = false;
+    }
+    drawerCollapsed = false;
+    applySidebarUi();
     setActiveTool('pipette');
-    setSubheaderCollapsed(false);
     resetZoom();
     loadViewerBg();
     setBusy(true);
@@ -2255,11 +2365,46 @@
     if (!root || root.__cesBound) return;
     root.__cesBound = true;
 
-    var toggle = $('ces-subheader-toggle');
+    var toggle = $('ces-sidebar-toggle');
     if (toggle) {
       toggle.addEventListener('click', function () {
-        setSubheaderCollapsed(!subheaderCollapsed);
+        if (isMobileSidebar()) {
+          setDrawerCollapsed(!drawerCollapsed);
+        }
       });
+    }
+
+    var railBtn = $('ces-sidebar-rail-btn');
+    if (railBtn) {
+      railBtn.addEventListener('click', function () {
+        if (isMobileSidebar()) return;
+        setSidebarRail(!sidebarRail);
+        if (sidebarRail && TOOL_OPTION_KEYS[activeTool]) {
+          openToolOptionsModal(activeTool);
+        }
+      });
+    }
+
+    var toolOptsClose = $('ces-tool-options-close');
+    if (toolOptsClose) {
+      toolOptsClose.addEventListener('click', function () { closeToolOptionsModal(); });
+    }
+    var toolOptsDone = $('ces-tool-options-done');
+    if (toolOptsDone) {
+      toolOptsDone.addEventListener('click', function () { closeToolOptionsModal(); });
+    }
+    var toolOptsOverlay = $('ces-tool-options-overlay');
+    if (toolOptsOverlay) {
+      toolOptsOverlay.addEventListener('click', function (e) {
+        if (e.target === toolOptsOverlay) closeToolOptionsModal();
+      });
+    }
+
+    if (typeof window.matchMedia === 'function') {
+      var mq = window.matchMedia('(max-width: 720px)');
+      var onMq = function () { applySidebarUi(); };
+      if (mq.addEventListener) mq.addEventListener('change', onMq);
+      else if (mq.addListener) mq.addListener(onMq);
     }
 
     root.querySelectorAll('[data-ces-tool]').forEach(function (btn) {
