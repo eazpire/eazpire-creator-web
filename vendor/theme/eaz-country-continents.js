@@ -22,13 +22,40 @@
     return MAP[c] || 'OTHER';
   }
 
+  function eazAllCountryCodes() {
+    return Object.keys(MAP).sort();
+  }
+
   function eazContinentLabels() {
     return Object.assign({}, DEF, global.__EAZ_CONTINENT_LABELS || {});
   }
 
-  function eazGroupCountryRowsByContinent(rows, selectedCode, labelMap) {
+  /**
+   * @param {Array<{code:string,label?:string}>} rows
+   * @param {string} [selectedCode] — pin this ISO to top within its continent
+   * @param {Record<string,string>} [labelMap]
+   * @param {Record<string,boolean>|Set<string>|string[]} [priorityCodes] — included / priority ISOs at top
+   */
+  function eazGroupCountryRowsByContinent(rows, selectedCode, labelMap, priorityCodes) {
     var sel = String(selectedCode || '').toUpperCase();
     var lm = labelMap || eazContinentLabels();
+    var priority = Object.create(null);
+    if (priorityCodes) {
+      if (typeof priorityCodes.has === 'function') {
+        priorityCodes.forEach(function (c) {
+          priority[String(c || '').toUpperCase()] = true;
+        });
+      } else if (Array.isArray(priorityCodes)) {
+        priorityCodes.forEach(function (c) {
+          priority[String(c || '').toUpperCase()] = true;
+        });
+      } else {
+        Object.keys(priorityCodes).forEach(function (c) {
+          if (priorityCodes[c]) priority[String(c || '').toUpperCase()] = true;
+        });
+      }
+    }
+    if (sel) priority[sel] = true;
     var byCont = {};
     rows.forEach(function (row) {
       var cc = String(row.code || '').toUpperCase();
@@ -38,8 +65,13 @@
     });
     Object.keys(byCont).forEach(function (cont) {
       byCont[cont].sort(function (a, b) {
-        var aSel = String(a.code || '').toUpperCase() === sel;
-        var bSel = String(b.code || '').toUpperCase() === sel;
+        var aCode = String(a.code || '').toUpperCase();
+        var bCode = String(b.code || '').toUpperCase();
+        var aPri = !!priority[aCode];
+        var bPri = !!priority[bCode];
+        if (aPri !== bPri) return aPri ? -1 : 1;
+        var aSel = aCode === sel;
+        var bSel = bCode === sel;
         if (aSel !== bSel) return aSel ? -1 : 1;
         return String(a.label || '').localeCompare(String(b.label || ''), undefined, { sensitivity: 'base' });
       });
@@ -52,6 +84,7 @@
   }
 
   global.eazGetCountryContinent = eazGetCountryContinent;
+  global.eazAllCountryCodes = eazAllCountryCodes;
   global.eazContinentLabels = eazContinentLabels;
   global.eazGroupCountryRowsByContinent = eazGroupCountryRowsByContinent;
 })(typeof window !== 'undefined' ? window : this);

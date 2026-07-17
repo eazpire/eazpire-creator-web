@@ -40,6 +40,8 @@
   /** @type {null|function()} */
   var pendingOnCancel = null;
   var selectionInProgress = false;
+  var processPollTimer = null;
+  var PROCESS_POLL_MS = 2500;
 
   function t(key, fallback) {
     try {
@@ -252,6 +254,60 @@
     });
   }
 
+  /** Fix Markets “Translation missing: en.creator.common.*” if Liquid | t leaked through. */
+  function hardenCommonLabels() {
+    var pairs = [
+      ['qi-filter-reset', 'creator.common.reset', 'Reset'],
+      ['qi-preview-cancel', 'creator.common.cancel', 'Cancel'],
+      ['qi-preview-apply', 'creator.common.apply', 'Apply'],
+      ['qi-delete-confirm-cancel', 'creator.common.cancel', 'Cancel'],
+      ['qi-upload-cancel', 'creator.common.cancel', 'Cancel'],
+    ];
+    pairs.forEach(function (row) {
+      var el = document.getElementById(row[0]);
+      if (!el) return;
+      var cur = (el.textContent || '').trim();
+      if (!cur || /translation missing/i.test(cur) || /übersetzung fehlt/i.test(cur)) {
+        el.textContent = t(row[1], row[2]);
+      }
+    });
+  }
+
+  function stopProcessPoll() {
+    if (processPollTimer) {
+      clearTimeout(processPollTimer);
+      processPollTimer = null;
+    }
+  }
+
+  function hasProcessingItems(list) {
+    return (list || items || []).some(function (it) {
+      return it && (it.status === 'processing' || it.pending === true);
+    });
+  }
+
+  function scheduleProcessPoll() {
+    stopProcessPoll();
+    if (!hasProcessingItems()) return;
+    processPollTimer = setTimeout(async function () {
+      processPollTimer = null;
+      if (!modal || !(modal.open || modal.classList.contains('creator-modal--open'))) {
+        // Keep polling lightly even when closed so reopen is fresh — only if Yours tab context.
+        if (activeTab === 'yours') {
+          await loadItems({ silent: true });
+        }
+        if (hasProcessingItems()) scheduleProcessPoll();
+        return;
+      }
+      if (activeTab !== 'yours') {
+        if (hasProcessingItems()) scheduleProcessPoll();
+        return;
+      }
+      await loadItems({ silent: true });
+      if (hasProcessingItems()) scheduleProcessPoll();
+    }, PROCESS_POLL_MS);
+  }
+
   function emptyMessageForTab() {
     if (activeTab === 'yours') {
       if (!getOwnerId()) {
@@ -357,11 +413,17 @@
 
   function openPreview(item) {
     if (!ensureEls() || !item) return;
+    if (item.status === 'processing' || item.pending === true) return;
     previewItem = item;
     var browse = document.getElementById('qi-browse-view');
     var preview = document.getElementById('qi-preview-view');
     var img = document.getElementById('qi-preview-image');
     var removeBtn = document.getElementById('qi-preview-remove');
+    hardenCommonLabels();
+    var cancelBtn = document.getElementById('qi-preview-cancel');
+    var applyBtn = document.getElementById('qi-preview-apply');
+    if (cancelBtn) cancelBtn.textContent = t('creator.common.cancel', 'Cancel');
+    if (applyBtn) applyBtn.textContent = t('creator.common.apply', 'Apply');
     if (img) {
       img.src = item.image_url || item.thumb_url || '';
       img.alt = item.summary || t('creator.quick_inspirations.preview_aria', 'Preview inspiration');
@@ -370,6 +432,9 @@
       var owned = isOwnedItem(item);
       removeBtn.hidden = !owned;
       removeBtn.style.display = owned ? '' : 'none';
+      if (owned) {
+        removeBtn.textContent = t('creator.quick_inspirations.remove', 'Remove');
+      }
     }
     if (browse) browse.style.display = 'none';
     if (preview) {
@@ -454,12 +519,24 @@
     var previewAria = t('creator.quick_inspirations.preview_aria', 'Preview inspiration');
 
     items.forEach(function (item, index) {
+      var isProcessing = item.status === 'processing' || item.pending === true;
       var card = document.createElement('div');
-      card.className = 'qi-card' + (selectedId === item.id ? ' is-selected' : '');
+      card.className =
+        'qi-card' +
+        (selectedId === item.id ? ' is-selected' : '') +
+        (isProcessing ? ' is-processing' : '');
       card.setAttribute('data-id', item.id);
-      card.setAttribute('role', 'button');
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('aria-label', previewAria);
+      if (isProcessing) {
+        card.setAttribute('aria-busy', 'true');
+        card.setAttribute(
+          'aria-label',
+          t('creator.quick_inspirations.analyzing', 'Uploading and analyzing…')
+        );
+      } else {
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', previewAria);
+      }
 
       var placeholder = document.createElement('div');
       placeholder.className = 'qi-card__img-placeholder';
@@ -475,7 +552,18 @@
       card.appendChild(img);
       enqueueGridImage(img, gridThumbSrc(item), card);
 
-      if (isOwnedItem(item)) {
+      if (isProcessing) {
+        var overlay = document.createElement('div');
+        overlay.className = 'qi-card__processing';
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.innerHTML =
+          '<span class="qi-card__processing-spinner"></span><span class="qi-card__processing-label"></span>';
+        var lab = overlay.querySelector('.qi-card__processing-label');
+        if (lab) {
+          lab.textContent = t('creator.quick_inspirations.analyzing', 'Uploading and analyzing…');
+        }
+        card.appendChild(overlay);
+      } else if (isOwnedItem(item)) {
         var deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.className = 'qi-card__delete';
@@ -490,35 +578,38 @@
         card.appendChild(deleteBtn);
       }
 
-      var openItemPreview = function () {
-        selectedId = item.id;
-        var cards = grid.querySelectorAll('.qi-card');
-        for (var i = 0; i < cards.length; i++) {
-          cards[i].classList.toggle(
-            'is-selected',
-            String(cards[i].getAttribute('data-id')) === String(item.id)
-          );
-        }
-        openPreview(item);
-      };
-      card.addEventListener('click', openItemPreview);
-      card.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openItemPreview();
-        }
-      });
+      if (!isProcessing) {
+        var openItemPreview = function () {
+          selectedId = item.id;
+          var cards = grid.querySelectorAll('.qi-card');
+          for (var i = 0; i < cards.length; i++) {
+            cards[i].classList.toggle(
+              'is-selected',
+              String(cards[i].getAttribute('data-id')) === String(item.id)
+            );
+          }
+          openPreview(item);
+        };
+        card.addEventListener('click', openItemPreview);
+        card.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openItemPreview();
+          }
+        });
+      }
 
       grid.appendChild(card);
     });
   }
 
-  async function loadItems() {
+  async function loadItems(opts) {
+    opts = opts || {};
     if (!ensureEls() || isLoading) return;
     isLoading = true;
     var loading = document.getElementById('qi-loading');
     var empty = document.getElementById('qi-empty');
-    if (loading) loading.style.display = 'block';
+    if (!opts.silent && loading) loading.style.display = 'block';
     if (empty) empty.style.display = 'none';
 
     if (activeTab === 'yours' && !getOwnerId()) {
@@ -547,6 +638,8 @@
       });
       items = (data && (data.items || data.designs)) || [];
       renderGrid();
+      if (activeTab === 'yours' && hasProcessingItems(items)) scheduleProcessPoll();
+      else if (!hasProcessingItems(items)) stopProcessPoll();
     } catch (_e) {
       items = [];
       renderGrid();
@@ -757,9 +850,30 @@
     } catch (_e) {
       modal.setAttribute('open', '');
     }
-    setActiveTab('public');
+    hardenCommonLabels();
+    setActiveTab(opts.tab === 'yours' || opts.focusYours ? 'yours' : 'public');
     loadFilterTags();
-    loadItems();
+    loadItems().then(function () {
+      if (activeTab !== 'yours' && getOwnerId()) {
+        // Silent check: if user has processing uploads, jump to Yours so pending tiles show.
+        var u = apiUrl('list-quick-inspirations');
+        u.searchParams.set('mine', '1');
+        u.searchParams.set('limit', '12');
+        return fetch(u.toString(), { credentials: 'omit' })
+          .then(function (r) {
+            return r.json().catch(function () {
+              return {};
+            });
+          })
+          .then(function (data) {
+            var mine = (data && (data.items || data.designs)) || [];
+            if (hasProcessingItems(mine)) {
+              setActiveTab('yours');
+              return loadItems({ silent: true });
+            }
+          });
+      }
+    });
   }
 
   function clearPhoneHook() {
@@ -1110,11 +1224,19 @@
     }
     showUploadStatus(t('creator.quick_inspirations.analyzing', 'Uploading and analyzing…'), 'warn');
 
+    var filesSnapshot = pendingFiles.slice();
+    var form = new FormData();
+    filesSnapshot.forEach(function (f) {
+      form.append('images', f, f.name || 'inspiration.jpg');
+    });
+
+    // Switch to Your Inspirations immediately so pending tiles can appear after R2 insert.
+    closeSourcePicker();
+    closeUpload();
+    closePreview();
+    setActiveTab('yours');
+
     try {
-      var form = new FormData();
-      pendingFiles.forEach(function (f) {
-        form.append('images', f, f.name || 'inspiration.jpg');
-      });
       var res = await fetch(apiUrl('upload-quick-inspiration').toString(), {
         method: 'POST',
         body: form,
@@ -1125,46 +1247,36 @@
       });
 
       if (data.error === 'missing_owner_id') {
+        pendingFiles = filesSnapshot;
+        renderPendingPreviews();
+        openConfirmUpload();
         showUploadStatus(t('creator.quick_inspirations.login_required', 'Please sign in to upload.'), 'error');
         return;
       }
 
-      if (data.strike) {
-        showUploadStatus(strikeMessage(data.strike), data.strike.status === 'clear' ? 'error' : 'warn');
-      }
-
       if (data.count_ok > 0) {
-        var okMsg =
-          t('creator.quick_inspirations.upload_success', 'Uploaded successfully.') +
-          ' (' +
-          data.count_ok +
-          ')';
-        if (data.count_rejected > 0) {
-          okMsg +=
-            ' ' +
-            t('creator.quick_inspirations.some_rejected', 'Some images were rejected.') +
-            (data.strike ? ' ' + strikeMessage(data.strike) : '');
-          showUploadStatus(okMsg, 'warn');
-        } else {
-          showUploadStatus(okMsg, 'ok');
-        }
-        pendingFiles = [];
-        renderPendingPreviews();
-        loadItems();
+        // Server inserted status=processing (+ R2 URLs). Reload Yours to show pending tiles;
+        // poll until analyze finishes (works across modal close + page reload).
+        await loadItems();
         loadFilterTags();
-        setTimeout(closeUpload, 900);
+        scheduleProcessPoll();
       } else if (data.error === 'upload_banned' || (data.rejected && data.rejected[0] && data.rejected[0].error === 'upload_banned')) {
+        openConfirmUpload();
         showUploadStatus(
           strikeMessage(data.strike) ||
             t('creator.quick_inspirations.ban_temp', 'Quick Inspiration uploads are temporarily blocked.'),
           'error'
         );
       } else if (data.error === 'daily_upload_limit') {
+        openConfirmUpload();
         showUploadStatus(
           t('creator.quick_inspirations.daily_limit', 'Daily upload limit reached (10 Quick Inspirations per day).'),
           'error'
         );
       } else {
+        pendingFiles = filesSnapshot;
+        renderPendingPreviews();
+        openConfirmUpload();
         var first = (data.rejected && data.rejected[0]) || {};
         showUploadStatus(
           strikeMessage(data.strike || first.strike) ||
@@ -1173,6 +1285,9 @@
         );
       }
     } catch (_e) {
+      pendingFiles = filesSnapshot;
+      renderPendingPreviews();
+      openConfirmUpload();
       showUploadStatus(t('creator.quick_inspirations.upload_failed', 'Upload failed.'), 'error');
     } finally {
       uploading = false;
@@ -1187,6 +1302,7 @@
     if (bound) return;
     if (!ensureEls()) return;
     bound = true;
+    hardenCommonLabels();
 
     var closeBtn = document.getElementById('quick-inspirations-modal-close');
     if (closeBtn) {
