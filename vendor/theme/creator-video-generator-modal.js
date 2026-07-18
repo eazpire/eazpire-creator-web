@@ -10,6 +10,7 @@
 
   var MOTION_VIDEO_MAX_BYTES = 100 * 1024 * 1024;
   var root = null;
+  var addTarget = null; // 'motion' | 'character'
   var state = {
     motionUrl: null,
     characterUrl: null,
@@ -31,6 +32,8 @@
       if (vg && vg[key] != null && !isBadTranslationString(String(vg[key]))) return String(vg[key]);
       var cv = window.CreatorI18n && window.CreatorI18n.content_creation_videos;
       if (cv && cv[key] != null && !isBadTranslationString(String(cv[key]))) return String(cv[key]);
+      var vs = window.CreatorI18n && window.CreatorI18n.video_studio;
+      if (vs && vs[key] != null && !isBadTranslationString(String(vs[key]))) return String(vs[key]);
     } catch (e) {}
     return fallback;
   }
@@ -45,6 +48,10 @@
 
   function $(sel, el) {
     return (el || root).querySelector(sel);
+  }
+
+  function isDesktopViewport() {
+    return window.matchMedia && window.matchMedia('(min-width: 900px)').matches;
   }
 
   function isReady() {
@@ -80,6 +87,40 @@
     toggle.setAttribute('aria-expanded', 'true');
   }
 
+  function applyMotionUrl(url) {
+    state.motionUrl = url || null;
+    var preview = $('[data-cvg-motion-preview]');
+    var placeholder = $('[data-cvg-motion-placeholder]');
+    var videoEl = $('[data-cvg-motion-preview-video]');
+    if (url && videoEl) {
+      videoEl.src = url;
+      if (preview) preview.hidden = false;
+      if (placeholder) placeholder.hidden = true;
+    } else {
+      if (videoEl) videoEl.removeAttribute('src');
+      if (preview) preview.hidden = true;
+      if (placeholder) placeholder.hidden = false;
+    }
+    updateFab();
+  }
+
+  function applyCharacterUrl(url) {
+    state.characterUrl = url || null;
+    var preview = $('[data-cvg-character-preview]');
+    var placeholder = $('[data-cvg-character-placeholder]');
+    var img = $('[data-cvg-character-preview-img]');
+    if (url && img) {
+      img.src = url;
+      if (preview) preview.hidden = false;
+      if (placeholder) placeholder.hidden = true;
+    } else {
+      if (img) img.removeAttribute('src');
+      if (preview) preview.hidden = true;
+      if (placeholder) placeholder.hidden = false;
+    }
+    updateFab();
+  }
+
   function renderCarousel() {
     var carousel = $('#cvg-carousel');
     var countEl = $('#cvg-subheader-count');
@@ -105,6 +146,26 @@
         video.playsInline = true;
         video.preload = 'metadata';
         card.appendChild(video);
+
+        var actions = document.createElement('div');
+        actions.className = 'cvg-carousel__actions';
+        var saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'cvg-carousel__save';
+        if (item.saved) {
+          saveBtn.textContent = i18n('saved_to_library', 'Saved');
+          saveBtn.disabled = true;
+          saveBtn.classList.add('is-saved');
+        } else {
+          saveBtn.textContent = i18n('save_to_library', 'Save');
+          saveBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            saveResultToLibrary(item, saveBtn);
+          });
+        }
+        actions.appendChild(saveBtn);
+        card.appendChild(actions);
       }
       carousel.appendChild(card);
     });
@@ -112,6 +173,44 @@
       var n = items.filter(function (x) { return x.status === 'done'; }).length;
       countEl.textContent = String(n);
       countEl.hidden = n < 1;
+    }
+  }
+
+  async function saveResultToLibrary(item, btn) {
+    if (!item || !item.video_id || item.saved) return;
+    var owner = getOwnerId();
+    if (!owner) return;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = i18n('saving', 'Saving…');
+    }
+    try {
+      var res = await fetch(API_BASE + '?op=video-save-to-library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ video_id: item.video_id, owner_id: owner }),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (data.ok) {
+        item.saved = true;
+        if (btn) {
+          btn.textContent = i18n('saved_to_library', 'Saved');
+          btn.classList.add('is-saved');
+        }
+      } else {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = i18n('save_to_library', 'Save');
+        }
+        setStatus('character', data.error || i18n('save_failed', 'Could not save to library.'));
+      }
+    } catch (e) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = i18n('save_to_library', 'Save');
+      }
+      setStatus('character', i18n('network_error', 'Network error'));
     }
   }
 
@@ -169,6 +268,165 @@
     }
   }
 
+  function openAddSourceModal(target) {
+    addTarget = target === 'character' ? 'character' : 'motion';
+    var overlay = document.getElementById('cvgAddSourceModal');
+    if (!overlay) return;
+    var phoneBtn = document.getElementById('cvg-addsrc-phone');
+    if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
+    var pasteBtn = document.getElementById('cvg-addsrc-paste');
+    if (pasteBtn) pasteBtn.hidden = addTarget !== 'character';
+    var grid = document.getElementById('cvg-addsrc-grid');
+    if (grid) grid.classList.toggle('cvg-addsrc-grid--with-paste', addTarget === 'character');
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeAddSourceModal() {
+    var overlay = document.getElementById('cvgAddSourceModal');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function openLinkModal() {
+    var overlay = document.getElementById('cvgLinkModal');
+    var input = document.getElementById('cvg-link-url');
+    var status = document.getElementById('cvg-link-status');
+    if (!overlay) return;
+    if (input) input.value = '';
+    if (status) {
+      status.textContent = '';
+      status.className = 'cvs-link-status';
+    }
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    if (input) setTimeout(function () { input.focus(); }, 0);
+  }
+
+  function closeLinkModal() {
+    var overlay = document.getElementById('cvgLinkModal');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  async function applyPickedAsset(asset) {
+    if (!asset || !asset.url) return;
+    if (addTarget === 'character') {
+      if (asset.kind && asset.kind !== 'image') {
+        setStatus('character', i18n('need_image', 'Please choose an image.'));
+        return;
+      }
+      setStatus('character', '');
+      applyCharacterUrl(String(asset.url));
+      return;
+    }
+    if (asset.kind && asset.kind !== 'video') {
+      setStatus('motion', i18n('need_video', 'Please choose a video.'));
+      return;
+    }
+    setStatus('motion', '');
+    applyMotionUrl(String(asset.url));
+  }
+
+  function openAssetsPicker() {
+    var kind = addTarget === 'character' ? 'image' : 'video';
+    if (
+      window.CreatorVideoStudioModal &&
+      typeof window.CreatorVideoStudioModal.openLibraryPicker === 'function'
+    ) {
+      window.CreatorVideoStudioModal.openLibraryPicker({
+        kind: kind,
+        onPick: function (asset) {
+          applyPickedAsset(asset);
+        },
+      });
+      return;
+    }
+    setStatus(addTarget === 'character' ? 'character' : 'motion', i18n('library_unavailable', 'Assets library is not available right now.'));
+  }
+
+  function triggerDevicePicker() {
+    var input =
+      addTarget === 'character'
+        ? $('[data-cvg-input="character"]')
+        : $('[data-cvg-input="motion-video"]');
+    if (input) input.click();
+  }
+
+  async function pasteFromClipboard() {
+    var api = window.EazClipboardImage;
+    if (!api || typeof api.start !== 'function') {
+      setStatus('character', i18n('paste_unsupported', 'Paste from clipboard is not available in this browser.'));
+      closeAddSourceModal();
+      return;
+    }
+    var pasteBtn = document.getElementById('cvg-addsrc-paste');
+    var file = await api.start({ pasteBtn: pasteBtn, toast: false });
+    if (!file) return;
+    closeAddSourceModal();
+    var url = await uploadCharacter(file);
+    if (url) applyCharacterUrl(url);
+  }
+
+  async function ingestLinkUrl() {
+    var input = document.getElementById('cvg-link-url');
+    var status = document.getElementById('cvg-link-status');
+    var raw = input ? String(input.value || '').trim() : '';
+    if (!raw) {
+      if (status) {
+        status.textContent = i18n('link_error_invalid_url', 'Please enter a valid URL.');
+        status.className = 'cvs-link-status';
+      }
+      return;
+    }
+    if (status) {
+      status.textContent = i18n('link_downloading', 'Downloading…');
+      status.className = 'cvs-link-status is-info';
+    }
+    var owner = getOwnerId();
+    if (!owner) {
+      if (status) status.textContent = i18n('network_error', 'Network error');
+      return;
+    }
+    try {
+      var res = await fetch(API_BASE + '?op=video-studio-link-ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          owner_id: owner,
+          url: raw,
+          format: addTarget === 'character' ? 'mp4' : 'mp4',
+        }),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (data.ok && data.asset && data.asset.url) {
+        closeLinkModal();
+        await applyPickedAsset(data.asset);
+        return;
+      }
+      // Fallback: use the URL directly for character images / direct media
+      if (addTarget === 'character' && /^https?:\/\//i.test(raw)) {
+        closeLinkModal();
+        setStatus('character', '');
+        applyCharacterUrl(raw);
+        return;
+      }
+      if (status) {
+        status.textContent =
+          data.message || data.error || i18n('link_error_generic', 'Could not add media from that link.');
+        status.className = 'cvs-link-status';
+      }
+    } catch (e) {
+      if (status) {
+        status.textContent = i18n('network_error', 'Network error');
+        status.className = 'cvs-link-status';
+      }
+    }
+  }
+
   function pollJob(jobId, placeholderId) {
     var maxPolls = 240;
     var pollCount = 0;
@@ -191,6 +449,7 @@
             status: 'done',
             video_url: result.video_url,
             video_id: result.video_id || null,
+            saved: false,
           };
         } else {
           state.results.splice(idx, 1);
@@ -336,13 +595,65 @@
     root.hidden = true;
     root.setAttribute('aria-hidden', 'true');
     closeDrawer();
+    closeAddSourceModal();
+    closeLinkModal();
     try { document.body.classList.remove('cvg-modal-open'); } catch (e) {}
+  }
+
+  function bindAddSourceUi() {
+    function on(id, evt, fn) {
+      var el = document.getElementById(id);
+      if (el && !el._cvgBound) {
+        el._cvgBound = true;
+        el.addEventListener(evt, fn);
+      }
+    }
+    on('cvg-addsrc-cancel', 'click', closeAddSourceModal);
+    on('cvgAddSourceModal', 'mousedown', function (e) {
+      if (e.target && e.target.id === 'cvgAddSourceModal') closeAddSourceModal();
+    });
+    on('cvg-addsrc-assets', 'click', function () {
+      closeAddSourceModal();
+      openAssetsPicker();
+    });
+    on('cvg-addsrc-device', 'click', function () {
+      closeAddSourceModal();
+      triggerDevicePicker();
+    });
+    on('cvg-addsrc-phone', 'click', function () {
+      closeAddSourceModal();
+      if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
+        window.CreatorPhoneUploadModal.open({ purpose: 'video-generator' });
+      }
+    });
+    on('cvg-addsrc-link', 'click', function () {
+      closeAddSourceModal();
+      openLinkModal();
+    });
+    on('cvg-addsrc-paste', 'click', function () {
+      pasteFromClipboard();
+    });
+    on('cvg-link-cancel', 'click', closeLinkModal);
+    on('cvgLinkModal', 'mousedown', function (e) {
+      if (e.target && e.target.id === 'cvgLinkModal') closeLinkModal();
+    });
+    on('cvg-link-submit', 'click', function () {
+      ingestLinkUrl();
+    });
+    on('cvg-link-url', 'keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        ingestLinkUrl();
+      }
+    });
   }
 
   function bindUi() {
     root = document.getElementById('creatorVideoGeneratorModal');
     if (!root || root._cvgBound) return;
     root._cvgBound = true;
+
+    bindAddSourceUi();
 
     var closeBtn = $('#cvg-btn-close');
     if (closeBtn) closeBtn.addEventListener('click', close);
@@ -391,37 +702,22 @@
     if (motionArea && motionInput) {
       motionArea.addEventListener('click', function (e) {
         if (e.target.closest('[data-cvg-motion-remove]')) return;
-        motionInput.click();
+        openAddSourceModal('motion');
       });
       motionInput.addEventListener('change', function () {
         var file = motionInput.files && motionInput.files[0];
+        motionInput.value = '';
         if (!file) return;
         uploadMotion(file).then(function (url) {
-          state.motionUrl = url;
-          var preview = $('[data-cvg-motion-preview]');
-          var placeholder = $('[data-cvg-motion-placeholder]');
-          var videoEl = $('[data-cvg-motion-preview-video]');
-          if (url && videoEl) {
-            videoEl.src = url;
-            if (preview) preview.hidden = false;
-            if (placeholder) placeholder.hidden = true;
-          }
-          updateFab();
+          if (url) applyMotionUrl(url);
         });
       });
       var motionRemove = $('[data-cvg-motion-remove]');
       if (motionRemove) {
         motionRemove.addEventListener('click', function (e) {
           e.stopPropagation();
-          state.motionUrl = null;
           motionInput.value = '';
-          var preview = $('[data-cvg-motion-preview]');
-          var placeholder = $('[data-cvg-motion-placeholder]');
-          var videoEl = $('[data-cvg-motion-preview-video]');
-          if (videoEl) videoEl.removeAttribute('src');
-          if (preview) preview.hidden = true;
-          if (placeholder) placeholder.hidden = false;
-          updateFab();
+          applyMotionUrl(null);
         });
       }
     }
@@ -431,37 +727,22 @@
     if (charArea && charInput) {
       charArea.addEventListener('click', function (e) {
         if (e.target.closest('[data-cvg-character-remove]')) return;
-        charInput.click();
+        openAddSourceModal('character');
       });
       charInput.addEventListener('change', function () {
         var file = charInput.files && charInput.files[0];
+        charInput.value = '';
         if (!file) return;
         uploadCharacter(file).then(function (url) {
-          state.characterUrl = url;
-          var preview = $('[data-cvg-character-preview]');
-          var placeholder = $('[data-cvg-character-placeholder]');
-          var img = $('[data-cvg-character-preview-img]');
-          if (url && img) {
-            img.src = url;
-            if (preview) preview.hidden = false;
-            if (placeholder) placeholder.hidden = true;
-          }
-          updateFab();
+          if (url) applyCharacterUrl(url);
         });
       });
       var charRemove = $('[data-cvg-character-remove]');
       if (charRemove) {
         charRemove.addEventListener('click', function (e) {
           e.stopPropagation();
-          state.characterUrl = null;
           charInput.value = '';
-          var preview = $('[data-cvg-character-preview]');
-          var placeholder = $('[data-cvg-character-placeholder]');
-          var img = $('[data-cvg-character-preview-img]');
-          if (img) img.removeAttribute('src');
-          if (preview) preview.hidden = true;
-          if (placeholder) placeholder.hidden = false;
-          updateFab();
+          applyCharacterUrl(null);
         });
       }
     }
@@ -471,6 +752,16 @@
 
     document.addEventListener('keydown', function (ev) {
       if (ev.key !== 'Escape') return;
+      var addOverlay = document.getElementById('cvgAddSourceModal');
+      if (addOverlay && !addOverlay.hidden) {
+        closeAddSourceModal();
+        return;
+      }
+      var linkOverlay = document.getElementById('cvgLinkModal');
+      if (linkOverlay && !linkOverlay.hidden) {
+        closeLinkModal();
+        return;
+      }
       if (!root || root.hidden) return;
       var sidebar = $('#cvg-sidebar');
       if (sidebar && sidebar.classList.contains('is-drawer-open')) {
@@ -480,6 +771,34 @@
       close();
     });
   }
+
+  /** Phone QR upload → apply to the last open addTarget (or character if image). */
+  window.__eazVideoGeneratorPhoneApply = function (imageUrl) {
+    var vgRoot = document.getElementById('creatorVideoGeneratorModal');
+    if (!vgRoot || vgRoot.hidden || !imageUrl) return false;
+    var target = addTarget || 'character';
+    if (target === 'motion') {
+      setStatus('motion', i18n('phone_needs_video', 'Phone upload currently supports images. Use Device or Link for motion video.'));
+      return true;
+    }
+    fetch(imageUrl, { mode: 'cors', credentials: 'omit' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('fetch_failed');
+        return r.blob();
+      })
+      .then(function (blob) {
+        var ft = blob.type && blob.type.indexOf('image/') === 0 ? blob.type : 'image/jpeg';
+        var file = new File([blob], 'phone-upload.jpg', { type: ft });
+        return uploadCharacter(file);
+      })
+      .then(function (url) {
+        if (url) applyCharacterUrl(url);
+      })
+      .catch(function () {
+        setStatus('character', i18n('upload_failed', 'Upload failed'));
+      });
+    return true;
+  };
 
   function ensureOpenTriggers() {
     document.querySelectorAll('[data-creator-video-generator-open]').forEach(function (btn) {

@@ -169,3 +169,60 @@
     >Generate</button>
   </div>
 </div>
+
+
+<div id="cvgAddSourceModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div
+    class="cvs-confirm-box cvs-addsrc-box"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cvg-addsrc-title"
+  >
+    <h3 class="cvs-confirm-title" id="cvg-addsrc-title">Add media</h3>
+    <div class="cvs-addsrc-grid" id="cvg-addsrc-grid">
+      <button type="button" class="cvs-addsrc-option" id="cvg-addsrc-assets">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128193;</span>
+        <span class="cvs-addsrc-option__label">Assets</span>
+        <span class="cvs-addsrc-option__hint">Your uploaded library</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cvg-addsrc-device">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128187;</span>
+        <span class="cvs-addsrc-option__label">Device</span>
+        <span class="cvs-addsrc-option__hint">Upload from this device</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cvg-addsrc-phone" data-desktop-only="1">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128241;</span>
+        <span class="cvs-addsrc-option__label">Phone</span>
+        <span class="cvs-addsrc-option__hint">Scan a QR code to upload</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cvg-addsrc-link">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128279;</span>
+        <span class="cvs-addsrc-option__label">Link</span>
+        <span class="cvs-addsrc-option__hint">Paste a media URL</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cvg-addsrc-paste" hidden>
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128203;</span>
+        <span class="cvs-addsrc-option__label">Paste from Clipboard</span>
+        <span class="cvs-addsrc-option__hint">Use an image already copied</span>
+      </button>
+    </div>
+    <div class="cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cvg-addsrc-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="cvgLinkModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div class="cvs-confirm-box cvs-meta-box" role="dialog" aria-modal="true" aria-labelledby="cvg-link-title">
+    <h3 class="cvs-confirm-title" id="cvg-link-title">Add from link</h3>
+    <label class="cvs-meta-field">
+      <span>Media URL</span>
+      <input type="url" id="cvg-link-url" placeholder="https://…">
+    </label>
+    <p class="cvs-link-status" id="cvg-link-status" role="status"></p>
+    <div class="cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cvg-link-cancel">Cancel</button>
+      <button type="button" class="cvs-btn cvs-btn--primary" id="cvg-link-submit">Download</button>
+    </div>
+  </div>
+</div>

@@ -126,6 +126,7 @@
   display: none;
 }
 .cvg-carousel__item {
+  position: relative;
   flex: 0 0 140px;
   width: 140px;
   aspect-ratio: 9 / 16;
@@ -150,6 +151,40 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(99, 102, 241, 0.1));
+}
+.cvg-carousel__actions {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  justify-content: center;
+  z-index: 2;
+}
+.cvg-carousel__save {
+  appearance: none;
+  border: 1px solid rgba(249, 115, 22, 0.85);
+  background: rgba(249, 115, 22, 0.92);
+  color: #fff;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.cvg-carousel__save:disabled,
+.cvg-carousel__save.is-saved {
+  opacity: 0.85;
+  cursor: default;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.55);
+}
+.cvg-addsrc-grid--with-paste {
+  grid-template-columns: repeat(2, 1fr);
+}
+#cvg-addsrc-paste:not([hidden]) {
+  grid-column: 1 / -1;
 }
 .cvg-carousel__spinner {
   width: 28px;

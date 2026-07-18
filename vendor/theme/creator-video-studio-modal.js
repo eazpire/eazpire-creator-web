@@ -791,6 +791,10 @@
   // ── Assets library modal (global, all uploaded assets for this owner) ──
   var libraryAssets = [];
   var librarySelected = Object.create(null);
+  var libraryOriginFilter = 'upload'; // 'upload' | 'generate'
+  var libraryKindFilter = 'all'; // 'all' | 'video' | 'image' | 'audio'
+  /** Optional pick mode for Video Generator / external callers: { kind?, origin?, onPick(asset) } */
+  var libraryPickMode = null;
 
   function librarySelectedCount() {
     return Object.keys(librarySelected).length;
@@ -800,11 +804,33 @@
     var bar = document.getElementById('cvs-library-selectbar');
     var countEl = document.getElementById('cvs-library-selectbar-count');
     var count = librarySelectedCount();
-    if (bar) bar.hidden = count === 0;
+    var pickMode = !!libraryPickMode;
+    if (bar) bar.hidden = pickMode || count === 0;
     if (countEl) {
       countEl.textContent =
         count + ' ' + (count === 1 ? i18n('library_selected_one', 'selected') : i18n('library_selected_many', 'selected'));
     }
+  }
+
+  function syncLibraryToolbarUi() {
+    document.querySelectorAll('[data-cvs-library-origin]').forEach(function (btn) {
+      var active = btn.getAttribute('data-cvs-library-origin') === libraryOriginFilter;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-cvs-library-kind]').forEach(function (btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-cvs-library-kind') === libraryKindFilter);
+    });
+  }
+
+  function filteredLibraryAssets() {
+    return libraryAssets.filter(function (asset) {
+      var origin = asset.origin === 'generate' ? 'generate' : 'upload';
+      if (origin !== libraryOriginFilter) return false;
+      if (libraryKindFilter !== 'all' && asset.kind !== libraryKindFilter) return false;
+      if (libraryPickMode && libraryPickMode.kind && asset.kind !== libraryPickMode.kind) return false;
+      return true;
+    });
   }
 
   function renderLibraryGrid() {
@@ -812,13 +838,21 @@
     var empty = document.getElementById('cvs-library-empty');
     if (!grid) return;
     grid.innerHTML = '';
-    if (!libraryAssets.length) {
-      if (empty) empty.hidden = false;
+    syncLibraryToolbarUi();
+    var visible = filteredLibraryAssets();
+    if (!visible.length) {
+      if (empty) {
+        empty.hidden = false;
+        empty.textContent =
+          libraryOriginFilter === 'generate'
+            ? i18n('library_empty_generate', 'No saved generated videos yet.')
+            : i18n('library_empty', 'No assets uploaded yet.');
+      }
       updateLibrarySelectBar();
       return;
     }
     if (empty) empty.hidden = true;
-    libraryAssets.forEach(function (asset) {
+    visible.forEach(function (asset) {
       var card = document.createElement('div');
       card.className = 'cvs-library-card';
       card.dataset.assetId = asset.id;
@@ -849,58 +883,70 @@
       badge.textContent = asset.kind || '';
       card.appendChild(badge);
 
-      var checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'cvs-library-card__checkbox';
-      checkbox.checked = !!librarySelected[asset.id];
-      checkbox.setAttribute('aria-label', i18n('library_select_asset', 'Select asset'));
-      checkbox.addEventListener('click', function (e) {
-        e.stopPropagation();
-      });
-      checkbox.addEventListener('change', function () {
-        if (checkbox.checked) {
-          librarySelected[asset.id] = true;
-          card.classList.add('is-selected');
-        } else {
-          delete librarySelected[asset.id];
-          card.classList.remove('is-selected');
-        }
-        updateLibrarySelectBar();
-      });
-      card.appendChild(checkbox);
-
-      var delBtn = document.createElement('button');
-      delBtn.type = 'button';
-      delBtn.className = 'cvs-library-card__delete';
-      var delLabel = i18n('library_delete_asset', 'Delete from library');
-      delBtn.setAttribute('aria-label', delLabel);
-      delBtn.title = delLabel;
-      delBtn.innerHTML = '&times;';
-      delBtn.addEventListener('click', async function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var confirmed = await cvsConfirm({
-          title: i18n('library_delete_title', 'Delete from library?'),
-          message: i18n(
-            'library_delete_message',
-            'This permanently deletes the asset for all projects. This cannot be undone.'
-          ),
-          confirmLabel: i18n('confirm_delete_action', 'Delete'),
-          danger: true,
+      if (!libraryPickMode) {
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'cvs-library-card__checkbox';
+        checkbox.checked = !!librarySelected[asset.id];
+        checkbox.setAttribute('aria-label', i18n('library_select_asset', 'Select asset'));
+        checkbox.addEventListener('click', function (e) {
+          e.stopPropagation();
         });
-        if (!confirmed) return;
-        var ok = await hardDeleteLibraryAsset(asset.id);
-        if (ok) {
-          libraryAssets = libraryAssets.filter(function (a) {
-            return a.id !== asset.id;
+        checkbox.addEventListener('change', function () {
+          if (checkbox.checked) {
+            librarySelected[asset.id] = true;
+            card.classList.add('is-selected');
+          } else {
+            delete librarySelected[asset.id];
+            card.classList.remove('is-selected');
+          }
+          updateLibrarySelectBar();
+        });
+        card.appendChild(checkbox);
+
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'cvs-library-card__delete';
+        var delLabel = i18n('library_delete_asset', 'Delete from library');
+        delBtn.setAttribute('aria-label', delLabel);
+        delBtn.title = delLabel;
+        delBtn.innerHTML = '&times;';
+        delBtn.addEventListener('click', async function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var confirmed = await cvsConfirm({
+            title: i18n('library_delete_title', 'Delete from library?'),
+            message: i18n(
+              'library_delete_message',
+              'This permanently deletes the asset for all projects. This cannot be undone.'
+            ),
+            confirmLabel: i18n('confirm_delete_action', 'Delete'),
+            danger: true,
           });
-          delete librarySelected[asset.id];
-          renderLibraryGrid();
-        }
-      });
-      card.appendChild(delBtn);
+          if (!confirmed) return;
+          var ok = await hardDeleteLibraryAsset(asset.id);
+          if (ok) {
+            libraryAssets = libraryAssets.filter(function (a) {
+              return a.id !== asset.id;
+            });
+            delete librarySelected[asset.id];
+            renderLibraryGrid();
+          }
+        });
+        card.appendChild(delBtn);
+      }
 
       card.addEventListener('click', async function () {
+        if (libraryPickMode && typeof libraryPickMode.onPick === 'function') {
+          var pickCb = libraryPickMode.onPick;
+          closeAssetsLibraryModal();
+          try {
+            pickCb(asset);
+          } catch (ePick) {
+            console.warn('[VideoStudio] library pick callback failed', ePick);
+          }
+          return;
+        }
         var statusEl = document.getElementById('cvs-library-status');
         var ok = await attachAssetToProject(asset.id);
         if (statusEl) {
@@ -932,14 +978,32 @@
     }
   }
 
-  function openAssetsLibraryModal() {
+  function openAssetsLibraryModal(opts) {
     var overlay = document.getElementById('cvsAssetsLibraryModal');
     if (!overlay) return;
+    libraryPickMode = opts && typeof opts === 'object' ? opts : null;
     librarySelected = Object.create(null);
+    if (libraryPickMode && libraryPickMode.origin === 'generate') {
+      libraryOriginFilter = 'generate';
+    } else if (libraryPickMode && libraryPickMode.origin === 'upload') {
+      libraryOriginFilter = 'upload';
+    } else if (!libraryPickMode) {
+      libraryOriginFilter = 'upload';
+    }
+    if (libraryPickMode && libraryPickMode.kind) {
+      libraryKindFilter = libraryPickMode.kind;
+    } else if (!libraryPickMode) {
+      libraryKindFilter = 'all';
+    }
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
     var statusEl = document.getElementById('cvs-library-status');
-    if (statusEl) statusEl.textContent = i18n('library_hint', 'Click an asset to add it to this project.');
+    if (statusEl) {
+      statusEl.textContent = libraryPickMode
+        ? i18n('library_pick_hint', 'Click an asset to use it.')
+        : i18n('library_hint', 'Click an asset to add it to this project.');
+    }
+    syncLibraryToolbarUi();
     loadLibraryAssets();
   }
 
@@ -949,6 +1013,7 @@
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
     librarySelected = Object.create(null);
+    libraryPickMode = null;
   }
 
   async function addSelectedLibraryAssetsToProject() {
@@ -2409,6 +2474,21 @@
     });
     on('cvs-library-btn-remove-selected', 'click', removeSelectedLibraryAssets);
     on('cvs-library-btn-add-selected', 'click', addSelectedLibraryAssetsToProject);
+    document.querySelectorAll('[data-cvs-library-origin]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        libraryOriginFilter = btn.getAttribute('data-cvs-library-origin') === 'generate' ? 'generate' : 'upload';
+        librarySelected = Object.create(null);
+        renderLibraryGrid();
+      });
+    });
+    document.querySelectorAll('[data-cvs-library-kind]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var k = btn.getAttribute('data-cvs-library-kind') || 'all';
+        libraryKindFilter = k === 'video' || k === 'image' || k === 'audio' ? k : 'all';
+        librarySelected = Object.create(null);
+        renderLibraryGrid();
+      });
+    });
     on('cvs-sidebar-toggle', 'click', function () {
       var wrap = document.getElementById('cvs-sidebar-wrap');
       if (!wrap) return;
@@ -2679,6 +2759,7 @@
   window.CreatorVideoStudioModal = {
     open: open,
     close: close,
+    openLibraryPicker: openAssetsLibraryModal,
     refreshAssets: loadAssets,
     getAssets: function () {
       return assets;

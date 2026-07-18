@@ -523,6 +523,22 @@
         </button>
       </div>
     </header>
+    <div class="cvs-library-toolbar">
+      <div class="cvs-library-origin" role="tablist" aria-label="Asset source">
+        <button type="button" class="cvs-library-origin__btn is-active" role="tab" aria-selected="true" data-cvs-library-origin="upload" id="cvs-library-origin-upload">
+          Upload
+        </button>
+        <button type="button" class="cvs-library-origin__btn" role="tab" aria-selected="false" data-cvs-library-origin="generate" id="cvs-library-origin-generate">
+          Generate
+        </button>
+      </div>
+      <div class="cvs-library-kind" role="group" aria-label="Asset type">
+        <button type="button" class="cvs-library-kind__btn is-active" data-cvs-library-kind="all">All</button>
+        <button type="button" class="cvs-library-kind__btn" data-cvs-library-kind="video">Videos</button>
+        <button type="button" class="cvs-library-kind__btn" data-cvs-library-kind="image">Images</button>
+        <button type="button" class="cvs-library-kind__btn" data-cvs-library-kind="audio">Audio</button>
+      </div>
+    </div>
     <div class="cvs-projects-body">
       <div class="cvs-library-grid" id="cvs-library-grid" role="list"></div>
       <p class="cvs-projects-empty" id="cvs-library-empty" hidden>

@@ -151,6 +151,13 @@
     }
 
     if (
+      typeof window.__eazVideoGeneratorPhoneApply === 'function' &&
+      window.__eazVideoGeneratorPhoneApply(imageUrl)
+    ) {
+      return;
+    }
+
+    if (
       typeof window.__eazVideoStudioPhoneApply === 'function' &&
       window.__eazVideoStudioPhoneApply(imageUrl)
     ) {

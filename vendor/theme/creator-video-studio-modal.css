@@ -1001,6 +1001,65 @@
 /* ── Projects modal (grid of saved projects) ── */
 .cvs-projects-modal { z-index: 10065; }
 .cvs-projects-shell { max-width: 960px; max-height: 720px; margin: auto; border-radius: 16px; overflow: hidden; }
+.cvs-library-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 18px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+.cvs-library-origin {
+  display: flex;
+  gap: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  width: fit-content;
+  max-width: 100%;
+}
+.cvs-library-origin__btn {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 8px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.cvs-library-origin__btn + .cvs-library-origin__btn {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+.cvs-library-origin__btn.is-active {
+  background: rgba(249, 115, 22, 0.22);
+  color: #fff;
+}
+.cvs-library-kind {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cvs-library-kind__btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.cvs-library-kind__btn.is-active {
+  border-color: rgba(249, 115, 22, 0.65);
+  background: rgba(249, 115, 22, 0.18);
+  color: #fff;
+}
 .cvs-projects-body {
   flex: 1;
   min-height: 0;
