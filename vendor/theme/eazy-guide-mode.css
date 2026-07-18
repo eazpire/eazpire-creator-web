@@ -37,11 +37,137 @@ html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eazy-thought-tail {
   border-bottom: 8px solid #fff;
 }
 
-.eaz-guide-toolbar {
+/* Subtle highlight for all interactive targets while Guide Mode is on */
+html.eaz-guide-active button:not(.eaz-guide-toolbar__chip):not(.eaz-guide-toolbar__explain):not(.eaz-guide-prompt__btn):not(.eaz-guide-selection__clear),
+html.eaz-guide-active a,
+html.eaz-guide-active [role="button"],
+html.eaz-guide-active [data-desktop-switch],
+html.eaz-guide-active [data-goto],
+html.eaz-guide-active [data-nav],
+html.eaz-guide-active [data-mkt-parent],
+html.eaz-guide-active [data-mkt-child],
+html.eaz-guide-active [data-eazy-guide],
+html.eaz-guide-active [data-tab],
+html.eaz-guide-active [data-maintab],
+html.eaz-guide-active [data-statusfilter],
+html.eaz-guide-active [data-promo-tab],
+html.eaz-guide-active [data-automations-add],
+html.eaz-guide-active [data-limit],
+html.eaz-guide-active [data-open-settings],
+html.eaz-guide-active [data-open-sales-modal],
+html.eaz-guide-active [data-creator-terms-trigger],
+html.eaz-guide-active input,
+html.eaz-guide-active textarea,
+html.eaz-guide-active select,
+html.eaz-guide-active .creator-creations-card,
+html.eaz-guide-active .eaz-creator-promotions-card,
+html.eaz-guide-active .creator-todo-item,
+html.eaz-guide-active .cmkt-card,
+html.eaz-guide-active canvas[role="button"] {
+  outline: 1px solid rgba(255, 200, 120, 0.32) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.12) !important;
+}
+
+.eaz-guide-dock {
   position: fixed;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: min(440px, calc(100vw - 24px));
+  z-index: 2147483001;
+  pointer-events: none;
+}
+
+.eaz-guide-dock > * {
+  pointer-events: auto;
+}
+
+.eaz-guide-selection {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(15, 10, 30, 0.94);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+  min-height: 48px;
+}
+
+.eaz-guide-selection.is-visible,
+html.eaz-guide-has-selection .eaz-guide-selection {
+  display: flex;
+}
+
+.eaz-guide-selection__media {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eaz-guide-selection__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.eaz-guide-selection__icon {
+  color: rgba(255, 200, 120, 0.9);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.eaz-guide-selection__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eaz-guide-selection__title {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eaz-guide-selection__meta {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.eaz-guide-selection__clear {
+  appearance: none;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.eaz-guide-toolbar {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -51,9 +177,7 @@ html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eazy-thought-tail {
   background: rgba(15, 10, 30, 0.92);
   border: 1px solid rgba(249, 115, 22, 0.45);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  z-index: 2147483001;
-  pointer-events: auto;
-  max-width: calc(100vw - 24px);
+  max-width: 100%;
 }
 
 .eaz-guide-toolbar__row {
@@ -131,27 +255,52 @@ html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eazy-thought-tail {
 }
 
 .eaz-guide-prompt {
-  position: fixed;
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
   display: none;
   align-items: center;
   gap: 8px;
-  width: min(420px, calc(100vw - 24px));
+  width: 100%;
   padding: 8px 10px;
   border-radius: 14px;
   background: rgba(15, 10, 30, 0.95);
   border: 1px solid rgba(249, 115, 22, 0.35);
-  z-index: 2147483001;
 }
 
-html.eaz-guide-has-explain .eaz-guide-prompt.is-visible {
-  bottom: calc(124px + env(safe-area-inset-bottom, 0px));
-}
-
-html.eaz-guide-active .eaz-guide-prompt.is-visible {
+.eaz-guide-prompt.is-visible {
   display: flex;
+}
+
+.eaz-guide-prompt__context {
+  flex-shrink: 0;
+  max-width: 42%;
+  display: none;
+  align-items: center;
+}
+
+.eaz-guide-prompt__context.is-visible {
+  display: flex;
+}
+
+.eaz-guide-prompt__context-thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(249, 115, 22, 0.45);
+}
+
+.eaz-guide-prompt__context-chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.18);
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .eaz-guide-prompt__input {
@@ -253,15 +402,14 @@ html.eaz-guide-screenshot-active .eaz-guide-screenshot-overlay {
 html:not(.eaz-guide-active) .eaz-guide-screenshot-overlay,
 html:not(.eaz-guide-active) .eaz-guide-screenshot-overlay__rect,
 html:not(.eaz-guide-active) .eaz-guide-screenshot-persist,
-html:not(.eaz-guide-active) .eaz-guide-prompt,
-html:not(.eaz-guide-active) .eaz-guide-toolbar,
+html:not(.eaz-guide-active) .eaz-guide-dock,
 html:not(.eaz-guide-active) .eaz-guide-exit-hint {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
-.eaz-guide-highlight {
+.eazy-guide-highlight {
   outline: 2px solid #f97316 !important;
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.25) !important;

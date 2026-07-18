@@ -37,6 +37,127 @@
     return document.getElementById('creatorMarketing');
   }
 
+  var CMKT_STROKE = 3;
+  var CMKT_STROKE_HALF = CMKT_STROKE / 2;
+
+  function ensureCmktConnector(branch) {
+    if (!branch) return null;
+    var el = branch.querySelector(':scope > .cmkt-connector');
+    if (el) return el;
+    el = document.createElement('div');
+    el.className = 'cmkt-connector';
+    el.setAttribute('aria-hidden', 'true');
+    el.hidden = true;
+    var trunk = branch.querySelector(':scope > .cmkt-trunk');
+    if (trunk && trunk.parentNode === branch) {
+      branch.insertBefore(el, trunk);
+    } else {
+      branch.insertBefore(el, branch.firstChild);
+    }
+    return el;
+  }
+
+  function clearCmktConnector(branch) {
+    if (!branch) return;
+    branch.classList.remove('has-cmkt-connector');
+    branch.style.removeProperty('--cmkt-connector-x');
+    var connector = branch.querySelector(':scope > .cmkt-connector');
+    if (connector) {
+      connector.hidden = true;
+      var svg = connector.querySelector('svg');
+      if (svg) svg.remove();
+    }
+  }
+
+  /**
+   * Journey-style gold stem: anchor under active parent; orthogonal SVG when off-center.
+   */
+  function positionCmktConnectors() {
+    var tree = document.getElementById('creatorMarketingTree') || document.querySelector('#creatorMarketing .cmkt-tree');
+    if (!tree) return;
+
+    document.querySelectorAll('[data-mkt-branch]').forEach(function (branch) {
+      clearCmktConnector(branch);
+    });
+    document.querySelectorAll('#creatorMarketing .creator-marketing-panel .cmkt-trunk').forEach(function (trunk) {
+      trunk.style.removeProperty('left');
+      var panel = trunk.closest('.creator-marketing-panel');
+      if (panel) panel.style.removeProperty('--cmkt-connector-x');
+    });
+
+    if (!currentParent) return;
+
+    var parentCard = document.querySelector('.cmkt-card--parent.is-active[data-mkt-parent="' + currentParent + '"]');
+    if (!parentCard) return;
+
+    var branch = document.querySelector('[data-mkt-branch="' + currentParent + '"]:not([hidden])');
+    var panel =
+      currentParent === 'promotions'
+        ? document.getElementById('creatorMarketingPanelPromotions')
+        : null;
+    var target = branch || (panel && !panel.classList.contains('creator-marketing-panel--hidden') ? panel : null);
+    if (!target) return;
+
+    var treeRect = tree.getBoundingClientRect();
+    var parentRect = parentCard.getBoundingClientRect();
+    var parentX = Math.round(parentRect.left + parentRect.width / 2 - treeRect.left);
+    var pct = treeRect.width > 0 ? ((parentX / treeRect.width) * 100).toFixed(2) + '%' : '50%';
+
+    if (branch) {
+      branch.style.setProperty('--cmkt-connector-x', pct);
+      var childrenGrid = branch.querySelector('.cmkt-children-grid');
+      if (!childrenGrid) return;
+      var branchRect = branch.getBoundingClientRect();
+      var gridRect = childrenGrid.getBoundingClientRect();
+      var localParentX = Math.round(parentRect.left + parentRect.width / 2 - branchRect.left);
+      var gridCenterX = Math.round(gridRect.left + gridRect.width / 2 - branchRect.left);
+      var top = Math.round(0);
+      var trunk = branch.querySelector(':scope > .cmkt-trunk');
+      var trunkH = trunk ? Math.max(CMKT_STROKE, Math.round(trunk.getBoundingClientRect().height)) : 28;
+      var bottom = trunkH;
+      var h = Math.max(CMKT_STROKE, bottom - top);
+
+      if (Math.abs(localParentX - gridCenterX) > 6) {
+        var connector = ensureCmktConnector(branch);
+        branch.classList.add('has-cmkt-connector');
+        connector.hidden = false;
+        connector.style.top = '0px';
+        connector.style.height = h + 'px';
+        var pathStartY = CMKT_STROKE_HALF;
+        var pathEndY = h - CMKT_STROKE_HALF;
+        var elbowY = Math.round(pathStartY + (pathEndY - pathStartY) * 0.55);
+        var pathD =
+          'M' + localParentX + ',' + pathStartY +
+          ' L' + localParentX + ',' + elbowY +
+          ' L' + gridCenterX + ',' + elbowY +
+          ' L' + gridCenterX + ',' + pathEndY;
+        var svg = connector.querySelector('svg');
+        if (!svg) {
+          svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('aria-hidden', 'true');
+          var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('class', 'cmkt-connector__path');
+          svg.appendChild(path);
+          connector.appendChild(svg);
+        }
+        svg.setAttribute('viewBox', '0 0 ' + Math.round(branchRect.width) + ' ' + h);
+        svg.querySelector('.cmkt-connector__path').setAttribute('d', pathD);
+      }
+    } else if (panel) {
+      panel.style.setProperty('--cmkt-connector-x', pct);
+      var leafTrunk = panel.querySelector(':scope > .cmkt-trunk');
+      if (leafTrunk) {
+        leafTrunk.style.left = 'calc(' + pct + ' - 50%)';
+      }
+    }
+  }
+
+  function scheduleCmktConnectors() {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(positionCmktConnectors);
+    });
+  }
+
   function setParentExpanded(parent, expanded) {
     document.querySelectorAll('.cmkt-card--parent').forEach(function (btn) {
       var isThis = btn.dataset.mktParent === parent;
@@ -48,6 +169,7 @@
       if (show) branch.removeAttribute('hidden');
       else branch.setAttribute('hidden', '');
     });
+    scheduleCmktConnectors();
   }
 
   function clearChildActive() {
@@ -202,6 +324,7 @@
     syncRootAttrs();
     updateHeaderTitle();
     bumpEazyHeaderUi();
+    scheduleCmktConnectors();
   }
 
   /**
@@ -238,6 +361,7 @@
 
     updateHeaderTitle();
     bumpEazyHeaderUi();
+    scheduleCmktConnectors();
   }
 
   /** Legacy API used by desktop dashboard deep-links */
@@ -323,6 +447,9 @@
         else expandParent(sub, { force: true, collapseIfSame: false });
       }
     } catch (e) {}
+
+    window.addEventListener('resize', scheduleCmktConnectors);
+    scheduleCmktConnectors();
   }
 
   if (document.readyState === 'loading') {

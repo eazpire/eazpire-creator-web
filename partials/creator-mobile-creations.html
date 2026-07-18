@@ -1,10 +1,10 @@
 <div class="creator-creations" id="creatorCreations">
   <div class="creator-creations-tabs">
     <div class="creator-creations-tabs-nav">
-      <button type="button" class="creator-creations-tab is-active" data-tab="designs">Designs</button>
-      <button type="button" class="creator-creations-tab" data-tab="products">Products</button>
+      <button type="button" class="creator-creations-tab is-active" data-tab="designs" data-eazy-guide="creations.tab-designs">Designs</button>
+      <button type="button" class="creator-creations-tab" data-tab="products" data-eazy-guide="creations.tab-products">Products</button>
     </div>
-    <button type="button" class="creator-creations-view-btn" id="creatorCreationsViewBtn" aria-label="View mode" aria-haspopup="dialog">
+    <button type="button" class="creator-creations-view-btn" id="creatorCreationsViewBtn" aria-label="View mode" aria-haspopup="dialog" data-eazy-guide="creations.view-mode">
       <span class="creator-creations-view-icon" id="creatorCreationsViewIcon">
         <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16.5" y="9.5" width="5" height="5" rx="1"/></svg>
       </span>
@@ -13,20 +13,20 @@
 
   <div class="creator-creations-panel" id="creatorCreationsPanelDesigns" data-tab="designs">
     <div class="creator-creations-toolbar" id="creatorDesignsToolbar">
-      <input type="search" id="creatorDesignsSearch" class="creator-creations-search" placeholder="Search" aria-label="Search">
-      <button type="button" class="creator-creations-filter-btn creator-creations-filter-btn--has-badge" id="creatorDesignsFilter" aria-label="Filter">
+      <input type="search" id="creatorDesignsSearch" class="creator-creations-search" placeholder="Search" aria-label="Search" data-eazy-guide="creations.search">
+      <button type="button" class="creator-creations-filter-btn creator-creations-filter-btn--has-badge" id="creatorDesignsFilter" aria-label="Filter" data-eazy-guide="creations.filter">
         <span class="creator-creations-filter-btn__rail" aria-hidden="true"></span>
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         <span class="creator-creations-filter-btn__label">Filter</span>
         <span class="creator-creations-filter-badge" id="creatorDesignsFilterBadge" aria-hidden="true"></span>
       </button>
-      <button type="button" class="creator-creations-upload-btn" id="creatorDesignsUpload" aria-label="Upload">
+      <button type="button" class="creator-creations-upload-btn" id="creatorDesignsUpload" aria-label="Upload" data-eazy-guide="creations.upload">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </button>
       <div class="creator-creations-toolbar__meta">
         <div class="creator-creations-activity-switch" id="creatorDesignsActivitySwitch" role="group" aria-label="Active: saved designs in your library. Inactive: generated designs not saved yet.">
-          <button type="button" class="creator-creations-activity-btn is-active" data-designs-activity="active" aria-pressed="true" data-t="creator.creations.designs_tab_active">Active</button>
-          <button type="button" class="creator-creations-activity-btn" data-designs-activity="inactive" aria-pressed="false" data-t="creator.creations.designs_tab_inactive">Inactive</button>
+          <button type="button" class="creator-creations-activity-btn is-active" data-designs-activity="active" aria-pressed="true" data-eazy-guide="creations.activity-active" data-t="creator.creations.designs_tab_active">Active</button>
+          <button type="button" class="creator-creations-activity-btn" data-designs-activity="inactive" aria-pressed="false" data-eazy-guide="creations.activity-inactive" data-t="creator.creations.designs_tab_inactive">Inactive</button>
         </div>
         <span class="creator-creations-count" id="creatorDesignsCount">0 Designs</span>
       </div>

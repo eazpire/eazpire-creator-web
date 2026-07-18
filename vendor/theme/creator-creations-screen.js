@@ -2136,6 +2136,7 @@
   function createDesignCard(design, useParticleAnimation, index) {
     var card = document.createElement('div');
     card.className = 'creator-creations-card';
+    card.setAttribute('data-eazy-guide', 'creations.design-card');
     card.dataset.designId = design.id || '';
     card.dataset.jobId = design.job_id || '';
     card.dataset.designIndex = String(index);
@@ -2532,6 +2533,7 @@
   function createProductCard(prod, index) {
     var card = document.createElement('div');
     card.className = 'creator-creations-card';
+    card.setAttribute('data-eazy-guide', 'creations.product-card');
     var media = document.createElement('div');
     media.className = 'creator-creations-card-media';
     appendProductImageCarousel(media, prod, index);

@@ -9,7 +9,7 @@
   data-i18n-countdown-aria="Time until daily limits reset"
 >
   <div class="creator-daily-limits__row">
-    <div class="creator-daily-limits__item" data-limit="upload">
+    <div class="creator-daily-limits__item" data-limit="upload" data-eazy-guide="chrome.limit-uploads">
       <span class="creator-daily-limits__label">
         <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.uploads">Uploads</span>
       </span>
@@ -19,7 +19,7 @@
       </span>
     </div>
     <span class="creator-daily-limits__divider" aria-hidden="true">│</span>
-    <div class="creator-daily-limits__item" data-limit="design">
+    <div class="creator-daily-limits__item" data-limit="design" data-eazy-guide="chrome.limit-generations">
       <span class="creator-daily-limits__label">
         <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.designs">Generations</span>
       </span>
@@ -29,7 +29,7 @@
       </span>
     </div>
     <span class="creator-daily-limits__divider" aria-hidden="true">│</span>
-    <div class="creator-daily-limits__item" data-limit="publish">
+    <div class="creator-daily-limits__item" data-limit="publish" data-eazy-guide="chrome.limit-publishes">
       <span class="creator-daily-limits__label">
         <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.publishes">Publishes</span>
       </span>
@@ -42,6 +42,7 @@
       <div
         class="creator-daily-limits__countdown"
         data-limit-countdown
+        data-eazy-guide="chrome.limit-countdown"
         hidden
         aria-hidden="true"
       >

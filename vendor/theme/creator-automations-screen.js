@@ -307,7 +307,7 @@
     var parts = [];
 
     parts.push(
-      '<article class="creator-automations-card creator-automations-card--add" type="button" data-automations-add>' +
+      '<article class="creator-automations-card creator-automations-card--add" type="button" data-automations-add data-eazy-guide="automations.add">' +
         '<span class="creator-automations-card-add-icon" aria-hidden="true">+</span>' +
         '<span class="creator-automations-card-add-label">' +
         esc(loc.add_tile || 'Add') +
@@ -355,7 +355,7 @@
           '<label class="creator-automations-switch">' +
           '<input type="checkbox" class="creator-automations-switch-input" data-automation-paused-toggle="' +
           aidStr +
-          '"' +
+          '" data-eazy-guide="automations.active-toggle"' +
           (paused ? '' : ' checked') +
           ' aria-label="' +
           esc(loc.active_switch_label || 'Active') +
@@ -390,7 +390,7 @@
       parts.push(
         '<article class="creator-automations-card" data-automation-id="' +
           esc(String(a.id)) +
-          '">' +
+          '" data-eazy-guide="automations.card">' +
           '<div class="creator-automations-card-meta">' +
           '<h3 class="creator-automations-card-title">' +
           titleHtml +

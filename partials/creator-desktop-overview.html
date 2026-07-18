@@ -5,7 +5,7 @@
 <header class="creator-desktop-header creator-header">
   <div class="creator-header__top">
     <div class="creator-desktop-header__left">
-      <a class="creator-desktop-header__brand" href="https://creator.eazpire.com" aria-label="eazpire creator">
+      <a class="creator-desktop-header__brand" href="https://creator.eazpire.com" aria-label="eazpire creator" data-eazy-guide="chrome.brand">
         <img
           class="creator-desktop-header__brand-logo"
           src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950"
@@ -15,8 +15,8 @@
           loading="lazy"
         >
       </a>
-      <div class="creator-desktop-hero__level-badge creator-desktop-header__level-badge" id="creatorDesktopHeroLevelBadge">
-        <button type="button" class="creator-desktop-hero__level-icon creator-desktop-header__level-journey creator-journey-trigger" aria-label="Open Creator Journey">
+      <div class="creator-desktop-hero__level-badge creator-desktop-header__level-badge" id="creatorDesktopHeroLevelBadge" data-eazy-guide="level">
+        <button type="button" class="creator-desktop-hero__level-icon creator-desktop-header__level-journey creator-journey-trigger" aria-label="Open Creator Journey" data-eazy-guide="chrome.journey-star">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
           </svg>
@@ -41,6 +41,7 @@
               hidden
               aria-expanded="false"
               aria-label="More about XP and your level"
+              data-eazy-guide="chrome.xp-info"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <circle cx="12" cy="12" r="10"></circle>
@@ -51,13 +52,13 @@
         </div>
       </div>
       <div class="creator-desktop-header__share-row" aria-label="Share">
-        <button type="button" class="creator-desktop-header__share-btn creator-desktop-header__share-btn--icon" id="creatorDesktopCopyLinkBtn" aria-label="Copy link">
+        <button type="button" class="creator-desktop-header__share-btn creator-desktop-header__share-btn--icon" id="creatorDesktopCopyLinkBtn" aria-label="Copy link" data-eazy-guide="chrome.copy-link">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
         </button>
-        <button type="button" class="creator-desktop-header__share-btn creator-desktop-header__share-btn--icon" id="creatorDesktopShareBtn" aria-label="Share">
+        <button type="button" class="creator-desktop-header__share-btn creator-desktop-header__share-btn--icon" id="creatorDesktopShareBtn" aria-label="Share" data-eazy-guide="chrome.share">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="18" cy="5" r="3"></circle>
             <circle cx="6" cy="12" r="3"></circle>
@@ -70,7 +71,7 @@
     </div>
 
     <div class="creator-desktop-header__center">
-      <p class="creator-desktop-header__screen-title" id="creatorDesktopScreenTitle">Dashboard</p>
+      <p class="creator-desktop-header__screen-title" id="creatorDesktopScreenTitle" data-eazy-guide="chrome.screen-title">Dashboard</p>
     </div>
 
     <div class="creator-desktop-header__right">
@@ -113,29 +114,29 @@
 
       </div>
       <div class="creator-desktop-header__audio-widget" id="creatorDesktopAudioArea">
-        <canvas class="creator-desktop-header__audio-visualizer" id="creatorDesktopAudioVisualizer" width="112" height="28" aria-label="Open audio library" role="button" tabindex="0"></canvas>
+        <canvas class="creator-desktop-header__audio-visualizer" id="creatorDesktopAudioVisualizer" width="112" height="28" aria-label="Open audio library" role="button" tabindex="0" data-eazy-guide="chrome.audio-visualizer"></canvas>
         <div class="creator-desktop-header__audio-controls" id="creatorDesktopAudioControls">
-          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__back" id="creatorAudioCtrlBack" aria-label="Back 10s">
+          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__back" id="creatorAudioCtrlBack" aria-label="Back 10s" data-eazy-guide="chrome.audio-back">
             <svg viewBox="0 0 24 24" width="14" height="14"><path d="M11 18V6l-8 6 8 6zm8-6l-8 6V6l8 6z" fill="currentColor"/></svg>
           </button>
-          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__play" id="creatorAudioCtrlPlay" aria-label="Play">
+          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__play" id="creatorAudioCtrlPlay" aria-label="Play" data-eazy-guide="chrome.audio-play">
             <svg class="creator-audio-ctrl__play-icon" viewBox="0 0 24 24" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
             <svg class="creator-audio-ctrl__pause-icon" viewBox="0 0 24 24" width="16" height="16"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>
           </button>
-          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__fwd" id="creatorAudioCtrlFwd" aria-label="Next (random)">
+          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__fwd" id="creatorAudioCtrlFwd" aria-label="Next (random)" data-eazy-guide="chrome.audio-fwd">
             <svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 18l8-6-8-6v12zm9-12v12l8-6-8-6z" fill="currentColor"/></svg>
           </button>
         </div>
       </div>
 
       
-      <button type="button" class="creator-desktop-header__balance" id="creatorDesktopBalanceBtn" aria-label="Available and pending EAZC">
+      <button type="button" class="creator-desktop-header__balance" id="creatorDesktopBalanceBtn" aria-label="Available and pending EAZC" data-eazy-guide="chrome.eazc">
         <img class="creator-desktop-header__balance-coin" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo" alt="" width="18" height="18" loading="lazy" data-eaz-coin="eazc">
         <span class="creator-desktop-header__balance-value" id="creator-desktop-sales-balance-value" data-sales-balance-value>Loading...</span>
         <span class="creator-desktop-header__balance-unit" data-sales-balance-unit>EAZC</span>
       </button>
 
-      <button type="button" class="creator-desktop-header__account creator-settings-trigger" id="creatorDesktopAccountBtn" data-open-settings aria-label="Creator Settings">
+      <button type="button" class="creator-desktop-header__account creator-settings-trigger" id="creatorDesktopAccountBtn" data-open-settings aria-label="Creator Settings" data-eazy-guide="chrome.settings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4 20c0-3.3 2.7-6 6-6h4c3.3 0 6 2.7 6 6"/></svg>
       </button>
 
@@ -186,7 +187,7 @@
   data-i18n-countdown-aria="Time until daily limits reset"
 >
   <div class="creator-daily-limits__row">
-    <div class="creator-daily-limits__item" data-limit="upload">
+    <div class="creator-daily-limits__item" data-limit="upload" data-eazy-guide="chrome.limit-uploads">
       <span class="creator-daily-limits__label">
         <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.uploads">Uploads</span>
       </span>
@@ -196,7 +197,7 @@
       </span>
     </div>
     <span class="creator-daily-limits__divider" aria-hidden="true">│</span>
-    <div class="creator-daily-limits__item" data-limit="design">
+    <div class="creator-daily-limits__item" data-limit="design" data-eazy-guide="chrome.limit-generations">
       <span class="creator-daily-limits__label">
         <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.designs">Generations</span>
       </span>
@@ -206,7 +207,7 @@
       </span>
     </div>
     <span class="creator-daily-limits__divider" aria-hidden="true">│</span>
-    <div class="creator-daily-limits__item" data-limit="publish">
+    <div class="creator-daily-limits__item" data-limit="publish" data-eazy-guide="chrome.limit-publishes">
       <span class="creator-daily-limits__label">
         <span class="creator-daily-limits__name" data-t="creator.daily_limits_subheader.publishes">Publishes</span>
       </span>
@@ -219,6 +220,7 @@
       <div
         class="creator-daily-limits__countdown"
         data-limit-countdown
+        data-eazy-guide="chrome.limit-countdown"
         hidden
         aria-hidden="true"
       >
@@ -253,6 +255,7 @@
           id="creatorDesktopNavDashboard"
           data-desktop-switch="dashboard"
           data-screen-title="Dashboard"
+          data-eazy-guide="chrome.nav-dashboard"
         >
           <span class="creator-nav-menu-icon-wrap">
 <svg class="creator-nav-menu-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
@@ -270,6 +273,7 @@
           id="creatorDesktopNavGenerator"
           data-desktop-switch="generator"
           data-screen-title="Generator"
+          data-eazy-guide="chrome.nav-generator"
         >
           <span class="creator-nav-menu-icon-wrap">
 <svg class="creator-nav-menu-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
@@ -288,6 +292,7 @@
           id="creatorDesktopNavCreations"
           data-desktop-switch="creations"
           data-screen-title="Creations"
+          data-eazy-guide="chrome.nav-creations"
         >
           <span class="creator-nav-menu-icon-wrap">
 <svg class="creator-nav-menu-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
@@ -307,6 +312,7 @@
           id="creatorDesktopNavMarketing"
           data-desktop-switch="marketing"
           data-screen-title="Marketing"
+          data-eazy-guide="chrome.nav-marketing"
         >
           <span class="creator-nav-menu-icon-wrap">
 <svg class="creator-nav-menu-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
@@ -325,6 +331,7 @@
           id="creatorDesktopNavAutomations"
           data-desktop-switch="automations"
           data-screen-title="Automations"
+          data-eazy-guide="chrome.nav-automations"
         >
           <span class="creator-nav-menu-icon-wrap">
 <svg class="creator-nav-menu-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
@@ -478,9 +485,9 @@
 
 <footer class="creator-desktop-footer">
   <div class="creator-desktop-footer__left">
-    <span class="creator-desktop-footer__copyright">© 2026 <span class="creator-desktop-footer__brand" translate="no" data-no-translate="1">eazpire</span></span>
+    <span class="creator-desktop-footer__copyright" data-eazy-guide="chrome.copyright">© 2026 <span class="creator-desktop-footer__brand" translate="no" data-no-translate="1">eazpire</span></span>
     <span class="creator-desktop-footer__sep">*</span>
-    <button type="button" class="creator-desktop-footer__link creator-desktop-footer__link--btn" data-creator-terms-trigger>Terms & Policies</button>
+    <button type="button" class="creator-desktop-footer__link creator-desktop-footer__link--btn" data-creator-terms-trigger data-eazy-guide="chrome.terms">Terms & Policies</button>
   </div>
   <div class="creator-desktop-footer__right">
     <button
@@ -488,6 +495,7 @@
       class="creator-desktop-footer__language-btn"
       id="creatorDesktopLangBtn"
       aria-label="Language"
+      data-eazy-guide="chrome.language"
     >
       <span class="creator-desktop-footer__language-flag creator-desktop-lang-modal__item-flag" id="creatorDesktopLangFlag" data-lang-flag aria-hidden="true">🌐</span>
     </button>
@@ -500,6 +508,7 @@
       data-footer-aria-balance="EAZV balance"
       data-footer-aria-starter="Starter Pack: generations and uploads used"
       data-footer-eaz-mode="balance"
+      data-eazy-guide="chrome.eazv"
     >
       <span class="creator-desktop-footer__eaz-normal" data-footer-eaz-normal>
         <img class="creator-desktop-footer__balance-coin" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazv_coin_logo" alt="" width="20" height="20" loading="lazy" data-eaz-coin="eazv">

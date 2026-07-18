@@ -1,25 +1,61 @@
-/* Hero Images fullscreen modal (IDEA-039) */
+/* Hero Images fullscreen modal (IDEA-039) — glass nebula shell */
+
+html.chim-modal-open,
+html.chim-modal-open body {
+  overflow: hidden !important;
+}
+
 .chim-modal-root {
   position: fixed;
   inset: 0;
   z-index: 10050;
   display: flex;
-  background: rgba(4, 2, 12, 0.92);
-  backdrop-filter: blur(8px);
+  /* Slightly transparent so Creator page shows through */
+  background: rgba(4, 2, 12, 0.55);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
 }
 .chim-modal-root[hidden] {
   display: none !important;
 }
 
 .chim-modal__shell {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
   min-height: 0;
   color: #f5f5f7;
-  background: linear-gradient(180deg, #0d1118 0%, #080c12 100%);
   font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  /* Transparent shell — nebula glows only, page still readable behind */
+  background:
+    radial-gradient(1100px 520px at 18% -8%, rgba(255, 120, 45, 0.22), transparent 55%),
+    radial-gradient(900px 560px at 88% 8%, rgba(80, 60, 160, 0.18), transparent 52%),
+    radial-gradient(1200px 700px at 50% 100%, rgba(249, 115, 22, 0.08), transparent 55%),
+    linear-gradient(165deg, rgba(10, 8, 22, 0.62) 0%, rgba(6, 8, 18, 0.48) 55%, rgba(4, 6, 14, 0.55) 100%);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.chim-modal__shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image:
+    radial-gradient(circle at 12% 22%, rgba(255, 255, 255, 0.14) 0.6px, transparent 1.4px),
+    radial-gradient(circle at 78% 18%, rgba(255, 255, 255, 0.1) 0.6px, transparent 1.4px),
+    radial-gradient(circle at 48% 72%, rgba(255, 255, 255, 0.08) 0.7px, transparent 1.6px);
+  background-size: 260px 260px, 320px 320px, 420px 420px;
+}
+
+.chim-modal__header,
+.chim-modal__body {
+  position: relative;
+  z-index: 1;
 }
 
 .chim-modal__header {
@@ -27,22 +63,31 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(12, 8, 24, 0.95);
+  background: rgba(8, 6, 18, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   flex-shrink: 0;
 }
+
 .chim-modal__title {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
+  letter-spacing: 0.01em;
+  background: linear-gradient(90deg, #fff 0%, rgba(255, 210, 170, 0.95) 55%, #f97316 140%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
+
 .chim-modal__close {
   appearance: none;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
   cursor: pointer;
@@ -50,9 +95,12 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .chim-modal__close:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(249, 115, 22, 0.18);
+  border-color: rgba(249, 115, 22, 0.55);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
 }
 .chim-modal__close svg {
   width: 18px;
@@ -70,30 +118,275 @@
   flex-direction: column;
   overflow: hidden;
 }
+
 .chim-modal__body .creator-hero-create-context {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  width: 100%;
 }
+
 .chim-modal__body .creator-hero-create-scroll {
   flex: 1;
   min-height: 0;
+  width: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding: 16px 18px 24px;
+  padding: 14px 16px 20px;
+  box-sizing: border-box;
+  /* Hide scrollbar visually — scroll still works (wheel/touch) */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.chim-modal__body .creator-hero-create-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-/* Desktop marketing host: slightly wider comfortable form */
-@media (min-width: 992px) {
-  .chim-modal__body .creator-hero-create-scroll {
-    padding: 24px 32px 32px;
-    max-width: 920px;
-    margin: 0 auto;
-    width: 100%;
+/* Fill modal — no cramped centered card */
+.chim-modal__body .creator-content-creation-hero {
+  padding: 0;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.chim-modal__body .creator-hero-upload-container {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Soft glass panels instead of heavy boxed cards */
+.chim-modal__body .creator-hero-product-selector {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 14px 14px 16px;
+  background: rgba(12, 14, 28, 0.42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  margin-bottom: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.chim-modal__body .creator-hero-product-selector-title {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 12px;
+}
+
+.chim-modal__body .creator-hero-product-category {
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background-color: rgba(8, 10, 22, 0.75);
+  background-size: cover;
+  background-position: center;
+  min-height: 104px;
+  padding: 16px 12px;
+  isolation: isolate;
+}
+.chim-modal__body .creator-hero-product-category[data-category="top"] {
+  background-image: url('chim-bg-top.jpg');
+}
+.chim-modal__body .creator-hero-product-category[data-category="bottom"] {
+  background-image: url('chim-bg-bottom.jpg');
+}
+.chim-modal__body .creator-hero-product-category[data-category="feet"] {
+  background-image: url('chim-bg-feet.jpg');
+}
+.chim-modal__body .creator-hero-product-category[data-category="addition"] {
+  background-image: url('chim-bg-addition.jpg');
+}
+/* Dim scrim — inactive darker; selected clearer; icon/label stay on top */
+.chim-modal__body .creator-hero-product-category::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(165deg, rgba(6, 8, 16, 0.72) 0%, rgba(4, 6, 14, 0.84) 100%);
+  transition: background 0.18s ease;
+}
+.chim-modal__body .creator-hero-product-category > * {
+  position: relative;
+  z-index: 1;
+}
+.chim-modal__body .creator-hero-product-preview,
+.chim-modal__body .creator-hero-product-category-soon {
+  z-index: 5;
+}
+.chim-modal__body .creator-hero-product-icon,
+.chim-modal__body .creator-hero-product-label {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.chim-modal__body .creator-hero-product-category:hover:not(.creator-hero-product-category--disabled) {
+  border-color: rgba(249, 115, 22, 0.65);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.12);
+}
+.chim-modal__body .creator-hero-product-category:hover:not(.creator-hero-product-category--disabled)::after {
+  background: linear-gradient(165deg, rgba(6, 8, 16, 0.55) 0%, rgba(4, 6, 14, 0.68) 100%);
+}
+
+.chim-modal__body .creator-hero-product-category--selected {
+  border-color: rgba(249, 115, 22, 0.85);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.25), 0 10px 28px rgba(249, 115, 22, 0.16);
+}
+.chim-modal__body .creator-hero-product-category--selected::after {
+  background: linear-gradient(165deg, rgba(20, 12, 4, 0.35) 0%, rgba(8, 8, 16, 0.48) 100%);
+}
+.chim-modal__body .creator-hero-product-category--disabled::after {
+  background: linear-gradient(165deg, rgba(4, 6, 12, 0.82) 0%, rgba(2, 4, 10, 0.9) 100%);
+}
+.chim-modal__body .creator-hero-product-grid:has(.creator-hero-product-category--selected)
+  .creator-hero-product-category:not(.creator-hero-product-category--selected):not(.creator-hero-product-category--disabled) {
+  filter: brightness(0.75) saturate(0.85);
+}
+
+.chim-modal__body .creator-hero-upload-area {
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(8, 10, 22, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.chim-modal__body .creator-hero-upload-area:hover {
+  border-color: rgba(249, 115, 22, 0.55);
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.chim-modal__body .creator-hero-prompt-section {
+  margin-bottom: 0;
+}
+
+.chim-modal__body .creator-hero-prompt-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.chim-modal__body .creator-hero-prompt-input {
+  border-radius: 14px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(8, 10, 22, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  min-height: 96px;
+}
+
+.chim-modal__body .creator-hero-eazy-footer--status-only {
+  padding: 8px 16px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(6, 6, 16, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.chim-modal__body .creator-hero-create-status {
+  text-align: left;
+  padding: 0 2px;
+}
+
+/* Desktop / tablet: use full modal width, denser creative layout */
+@media (min-width: 840px) {
+  .chim-modal__header {
+    padding: 12px 22px;
   }
-  .chim-modal__body .creator-content-creation-hero .creator-hero-upload-container {
-    max-width: 100%;
+
+  .chim-modal__body .creator-hero-create-scroll {
+    padding: 18px 22px 22px;
+  }
+
+  .chim-modal__body .creator-hero-product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .chim-modal__body .creator-hero-product-category {
+    min-height: 118px;
+  }
+
+  /* Product selector full width; uploads + prompt share one row */
+  .chim-modal__body .creator-hero-upload-container {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    grid-template-areas:
+      "selector selector"
+      "uploads prompt";
+    column-gap: 16px;
+    row-gap: 16px;
+    align-items: stretch;
+  }
+
+  .chim-modal__body .creator-hero-product-selector {
+    grid-area: selector;
+    margin-bottom: 0;
+  }
+
+  .chim-modal__body .creator-hero-upload-grid {
+    grid-area: uploads;
+    width: auto;
+    margin: 0;
+    gap: 14px;
+    height: 100%;
+  }
+
+  .chim-modal__body .creator-hero-upload-area {
+    aspect-ratio: 1.25;
+    padding: 12px;
+  }
+
+  .chim-modal__body .creator-hero-prompt-section {
+    grid-area: prompt;
+    width: auto;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .chim-modal__body .creator-hero-prompt-input {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    resize: none;
+  }
+
+  .chim-modal__body .creator-hero-eazy-footer--status-only {
+    padding: 10px 22px 16px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .chim-modal__body .creator-hero-create-scroll {
+    padding: 20px 28px 24px;
+  }
+
+  .chim-modal__body .creator-hero-upload-container {
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+    column-gap: 20px;
+    row-gap: 18px;
+  }
+
+  .chim-modal__body .creator-hero-product-category {
+    min-height: 128px;
+  }
+
+  .chim-modal__body .creator-hero-eazy-footer--status-only {
+    padding: 10px 28px 18px;
   }
 }

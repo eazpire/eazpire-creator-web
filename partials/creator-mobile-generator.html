@@ -1,12 +1,12 @@
 <div class="creator-generator" id="creatorGenerator">
   <div class="creator-generator__scroll">
     <div class="creator-generator__pills">
-      <button type="button" class="creator-pill" id="genTargetProduct" aria-haspopup="dialog">
+      <button type="button" class="creator-pill" id="genTargetProduct" aria-haspopup="dialog" data-eazy-guide="generator.target-product">
         <span class="creator-pill__label">Target Product</span>
         <span class="creator-pill__value" id="genTargetProductVal" data-value="all">Anything</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
       </button>
-      <button type="button" class="creator-pill" id="genDesignType" aria-haspopup="dialog">
+      <button type="button" class="creator-pill" id="genDesignType" aria-haspopup="dialog" data-eazy-guide="generator.design-type">
         <span class="creator-pill__label">Design Type</span>
         <span class="creator-pill__value" id="genDesignTypeVal" data-value="classic">Classic</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5z"/></svg>
@@ -15,7 +15,7 @@
 
     <article class="creator-gen-card creator-gen-card--upload">
       <span class="creator-gen-upload-optional">Optional</span>
-      <div class="creator-gen-upload-zone" id="genUploadZone" role="button" tabindex="0">
+      <div class="creator-gen-upload-zone" id="genUploadZone" role="button" tabindex="0" data-eazy-guide="generator.upload">
         <svg class="creator-gen-upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="17 8 12 3 7 8"/>
@@ -43,26 +43,26 @@
       <div class="creator-gen-card__bar">
         <h3 class="creator-gen-card__title">Prompt</h3>
         <div class="creator-gen-card__actions">
-          <button type="button" class="creator-gen-btn creator-gen-btn--suggest" id="genSuggest" aria-label="Suggest">
+          <button type="button" class="creator-gen-btn creator-gen-btn--suggest" id="genSuggest" aria-label="Suggest" data-eazy-guide="generator.suggest">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
             Suggest
           </button>
-          <button type="button" class="creator-gen-btn creator-gen-btn--clear" id="genClear" aria-label="Clear">
+          <button type="button" class="creator-gen-btn creator-gen-btn--clear" id="genClear" aria-label="Clear" data-eazy-guide="generator.clear">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
             Clear
           </button>
         </div>
       </div>
-      <textarea id="genPrompt" class="creator-gen-textarea" rows="4" placeholder="Describe your design or upload an image – both optional"></textarea>
+      <textarea id="genPrompt" class="creator-gen-textarea" rows="4" placeholder="Describe your design or upload an image – both optional" data-eazy-guide="generator.prompt"></textarea>
       <div class="creator-gen-prompt-footer">
-        <button type="button" class="creator-gen-link" id="genMoreOptions">More options</button>
+        <button type="button" class="creator-gen-link" id="genMoreOptions" data-eazy-guide="generator.more-options">More options</button>
         <div class="creator-eazy-speech-anchor" id="creatorEazySpeechAnchorGen" aria-hidden="true"></div>
       </div>
     </article>
   </div>
   
     <footer class="creator-gen-footer creator-gen-footer--fixed">
-      <button type="button" class="creator-gen-submit" id="genGenerate" data-eaz-price="10">
+      <button type="button" class="creator-gen-submit" id="genGenerate" data-eaz-price="10" data-eazy-guide="generator.generate">
         <span>Generate</span>
         <span class="creator-gen-submit__badge">10 EAZ</span>
       </button>

@@ -141,9 +141,9 @@
   },
   "hero-images": {
     "title": "Hero Images",
-    "summary": "Create rotating hero banners for your shop storefront (costs EAZ).",
+    "summary": "Create rotating hero banners for your shop storefront (costs EAZV).",
     "tips": [
-      "Hero Images cost 0.5 EAZ and appear as shop title images.",
+      "Hero Images cost EAZV and appear as shop title images.",
       "Choose up to 5 products for one hero image.",
       "Published hero images rotate randomly on your shop page."
     ]
@@ -159,7 +159,7 @@
   },
   "creator-settings": {
     "title": "Creator Settings",
-    "summary": "Manage creator names, filters, and publishing defaults.",
+    "summary": "Manage creator names, filters, EAZ, and publishing defaults.",
     "tips": [
       "You can create up to 5 creator names.",
       "The active creator defines the name you publish under.",
@@ -167,21 +167,21 @@
     ]
   },
   "balance": {
-    "title": "EAZ Balance",
-    "summary": "EAZ is your in-app currency for premium features like hero images.",
+    "title": "EAZV Balance",
+    "summary": "EAZV is your spendable in-app currency for premium Creator features.",
     "tips": [
-      "EAZ is your currency for premium features like hero images.",
-      "You earn EAZ by creating designs, sales, and daily login.",
+      "Spend EAZV on generations, hero images, and skill unlocks.",
+      "Earn EAZV via activity, daily refill, packs, or converting EAZC.",
       "Your max balance increases with your level."
     ]
   },
   "level": {
     "title": "Creator Level",
-    "summary": "Your level unlocks benefits and raises your maximum EAZ balance.",
+    "summary": "Your level unlocks benefits and raises your maximum EAZV balance.",
     "tips": [
-      "Your level determines your maximum EAZ balance.",
+      "Your level determines your maximum EAZV balance.",
       "You gain XP through activities like creating designs and publishing products.",
-      "There are 10 levels and each unlocks new benefits."
+      "There are multiple levels and each unlocks new benefits."
     ]
   },
   "mentor-support": {
@@ -208,5 +208,548 @@
       "Tap a function icon to start a guided flow.",
       "Customize visible functions in the Eazy tab with the eye icon."
     ]
+  },
+  "chrome.brand": {
+    "title": "Eazpire Creator",
+    "summary": "Brand mark for your Creator workspace. Outside Guide Mode it opens the Creator portal home.",
+    "tips": [
+      "You are in the Creator area for designs, marketing, and automations.",
+      "Use Shop mode when you want to browse the storefront instead."
+    ]
+  },
+  "chrome.journey-star": {
+    "title": "Creator Journey",
+    "summary": "Opens your Creator Journey — guided tasks that teach the tools and reward XP.",
+    "tips": [
+      "Complete open tasks to progress.",
+      "Claim XP when a task is finished.",
+      "Journey unlocks help you grow step by step."
+    ]
+  },
+  "chrome.xp-info": {
+    "title": "XP Info",
+    "summary": "Opens a short explanation of XP and how leveling works.",
+    "tips": [
+      "XP comes from creator activity such as designs and publishes.",
+      "Your progress bar shows how far you are to the next level."
+    ]
+  },
+  "chrome.copy-link": {
+    "title": "Copy Link",
+    "summary": "Copies your creator share link to the clipboard.",
+    "tips": [
+      "Share the link so others can find your storefront.",
+      "Pairs well with the Share button next to it."
+    ]
+  },
+  "chrome.share": {
+    "title": "Share",
+    "summary": "Shares your creator link via the device share sheet or a fallback.",
+    "tips": [
+      "Great for inviting fans and partners.",
+      "Works best when you are logged in."
+    ]
+  },
+  "chrome.screen-title": {
+    "title": "Page Title",
+    "summary": "Shows which Creator screen you are on (Dashboard, Generator, Creations, Marketing, or Automations).",
+    "tips": [
+      "The title updates when you switch screens.",
+      "Use the sidebar (desktop) or swipe / menu (mobile) to change screens."
+    ]
+  },
+  "chrome.eazy": {
+    "title": "Eazy",
+    "summary": "Your assistant. Double-click while snapped to enter Guide Mode; single-click to exit Guide Mode.",
+    "tips": [
+      "In Guide Mode, tap any highlighted control to learn what it does.",
+      "Use Prompt to ask deeper questions about your selection."
+    ]
+  },
+  "chrome.audio-visualizer": {
+    "title": "Audio Library",
+    "summary": "Opens the creator audio library for background music during your session.",
+    "tips": [
+      "Pick tracks that fit your creative mood.",
+      "Use the playback controls beside the visualizer."
+    ]
+  },
+  "chrome.audio-back": {
+    "title": "Rewind",
+    "summary": "Jumps the current track back about 10 seconds.",
+    "tips": ["Use with Play/Pause and Next for quick control."]
+  },
+  "chrome.audio-play": {
+    "title": "Play / Pause",
+    "summary": "Starts or pauses the current audio track.",
+    "tips": ["Open the visualizer to browse the full audio library."]
+  },
+  "chrome.audio-fwd": {
+    "title": "Next Track",
+    "summary": "Skips to another track (random next).",
+    "tips": ["Useful while you keep working in Creator."]
+  },
+  "chrome.eazc": {
+    "title": "EAZC Balance",
+    "summary": "Your earnings balance (EAZC) from sales and community. Opens Balance & Payouts.",
+    "tips": [
+      "Available and pending EAZC are shown here.",
+      "Convert EAZC to EAZV in Settings → EAZ if you want to spend inside Creator.",
+      "Cash out via Balance & Payouts."
+    ]
+  },
+  "chrome.settings": {
+    "title": "Creator Settings",
+    "summary": "Opens Creator Settings for profile, EAZ, filters, and publishing defaults.",
+    "tips": [
+      "Manage creator names and preferences here.",
+      "EAZV details and conversion live in the EAZ tab."
+    ]
+  },
+  "chrome.mode-shop": {
+    "title": "Shop Mode",
+    "summary": "Switches from Creator tools to the shop experience.",
+    "tips": [
+      "Use Shop to browse and buy.",
+      "Creator is for designing, publishing, and marketing."
+    ]
+  },
+  "chrome.mode-creator": {
+    "title": "Creator Mode",
+    "summary": "You are in the Creator workspace for designs, marketing, and automations.",
+    "tips": ["Stay here to create and manage your catalog."]
+  },
+  "chrome.limit-uploads": {
+    "title": "Daily Uploads",
+    "summary": "How many image uploads you have left today.",
+    "tips": [
+      "Limits reset on the countdown timer.",
+      "Higher levels or EAZV skills can raise allowances."
+    ]
+  },
+  "chrome.limit-generations": {
+    "title": "Daily Generations",
+    "summary": "How many AI design generations you have left today.",
+    "tips": [
+      "Each generate counts toward this limit.",
+      "Watch the reset timer on the right."
+    ]
+  },
+  "chrome.limit-publishes": {
+    "title": "Daily Publishes",
+    "summary": "How many product publishes you have left today.",
+    "tips": ["Publishing a design to a product uses this quota."]
+  },
+  "chrome.limit-countdown": {
+    "title": "Limit Reset Timer",
+    "summary": "Time remaining until daily upload, generation, and publish limits reset.",
+    "tips": ["Plan heavy create or publish sessions before reset if you are near the cap."]
+  },
+  "chrome.nav-dashboard": {
+    "title": "Dashboard",
+    "summary": "Home overview: level, journey, stats, and quick actions.",
+    "tips": ["Start here for progress and shortcuts."]
+  },
+  "chrome.nav-generator": {
+    "title": "Generator",
+    "summary": "Create new AI designs from a prompt and optional reference images.",
+    "tips": ["Best place to start a new design."]
+  },
+  "chrome.nav-creations": {
+    "title": "Creations",
+    "summary": "Your design library and published products.",
+    "tips": ["Switch between Designs and Products tabs."]
+  },
+  "chrome.nav-marketing": {
+    "title": "Marketing",
+    "summary": "Content creation, publishing, and promotions for your shop.",
+    "tips": ["Skill-tree layout: create → publish → promote."]
+  },
+  "chrome.nav-automations": {
+    "title": "Automations",
+    "summary": "Schedule recurring design generation and later publish or marketing jobs.",
+    "tips": ["Design Generator automations are available first."]
+  },
+  "chrome.mobile-menu": {
+    "title": "Menu",
+    "summary": "Opens the mobile navigation drawer.",
+    "tips": ["Switch screens or Shop/Creator mode from here."]
+  },
+  "chrome.mobile-dots": {
+    "title": "Screen Indicators",
+    "summary": "Shows which mobile screen you are on. Swipe left or right to change screens.",
+    "tips": ["Five dots = five Creator screens."]
+  },
+  "chrome.copyright": {
+    "title": "Copyright",
+    "summary": "eazpire brand and year notice.",
+    "tips": ["Informational only."]
+  },
+  "chrome.terms": {
+    "title": "Terms & Policies",
+    "summary": "Opens legal terms and policies for the Creator platform.",
+    "tips": ["Read these before publishing commercially."]
+  },
+  "chrome.language": {
+    "title": "Language",
+    "summary": "Changes the UI language for Creator.",
+    "tips": ["Your choice is remembered for later visits."]
+  },
+  "chrome.eazv": {
+    "title": "EAZV Balance",
+    "summary": "Spendable in-app currency for features such as generate, hero images, and unlocks.",
+    "tips": [
+      "Different from EAZC (earnings).",
+      "Earn via activity, convert from EAZC, or buy packs.",
+      "Opens EAZ settings."
+    ]
+  },
+  "dashboard.journey-section": {
+    "title": "Your Creator Journey",
+    "summary": "Guided onboarding tasks that teach Creator tools and reward XP.",
+    "tips": [
+      "Finish open tasks, then claim XP.",
+      "The progress bar shows overall completion."
+    ]
+  },
+  "dashboard.journey-tab-open": {
+    "title": "Open Tasks",
+    "summary": "Journey tasks you still need to complete.",
+    "tips": ["Outside Guide Mode, tap a task to jump to the right screen."]
+  },
+  "dashboard.journey-tab-completed": {
+    "title": "Completed Tasks",
+    "summary": "Journey tasks you already finished.",
+    "tips": ["Review what you have unlocked."]
+  },
+  "dashboard.journey-item": {
+    "title": "Journey Task",
+    "summary": "A single journey step. Completing it earns XP.",
+    "tips": [
+      "Some tasks open settings or other screens.",
+      "Look for claim XP when a task is ready."
+    ]
+  },
+  "dashboard.overview": {
+    "title": "Overview",
+    "summary": "Snapshot of your creator activity: designs, products, heroes, and sales on mobile.",
+    "tips": ["Cards jump to the matching screen outside Guide Mode."]
+  },
+  "dashboard.stat-sales": {
+    "title": "Sales",
+    "summary": "Opens your sales and earnings overview.",
+    "tips": ["Shown in the mobile overview row.", "Tracks eazpire and Amazon sales context."]
+  },
+  "dashboard.stat-designs": {
+    "title": "Designs",
+    "summary": "Count of generated and uploaded designs. Opens Creations → Designs.",
+    "tips": ["Generated vs uploaded are shown separately."]
+  },
+  "dashboard.stat-products": {
+    "title": "Products",
+    "summary": "Count of online and offline products. Opens Creations → Products.",
+    "tips": ["Online means visible in the shop."]
+  },
+  "dashboard.stat-heroes": {
+    "title": "Hero Images",
+    "summary": "Count of generated and online hero banners. Opens Marketing.",
+    "tips": ["Heroes rotate on your shop storefront."]
+  },
+  "dashboard.quick-actions": {
+    "title": "Quick Actions",
+    "summary": "Shortcuts to the most used Creator flows.",
+    "tips": ["Same destinations as the sidebar, with short descriptions."]
+  },
+  "dashboard.qa-generator": {
+    "title": "Design Generator",
+    "summary": "Jump to the Generator to create a new design.",
+    "tips": ["Fastest path to a new artwork."]
+  },
+  "dashboard.qa-designs": {
+    "title": "My Designs",
+    "summary": "Jump to Creations → Designs to manage artwork.",
+    "tips": ["Activate, filter, or open a design from there."]
+  },
+  "dashboard.qa-content": {
+    "title": "Content Creation",
+    "summary": "Jump to Marketing to create hero images and other content.",
+    "tips": ["Part of the marketing skill tree."]
+  },
+  "dashboard.qa-products": {
+    "title": "My Products",
+    "summary": "Jump to Creations → Products.",
+    "tips": ["Manage published listings."]
+  },
+  "dashboard.qa-automations": {
+    "title": "Automations",
+    "summary": "Jump to Automations to schedule design generation.",
+    "tips": ["Useful once you have a repeatable prompt style."]
+  },
+  "dashboard.section-reorder": {
+    "title": "Reorder Sections",
+    "summary": "Drag handle to change the order of dashboard sections on mobile.",
+    "tips": ["Personalize what appears first."]
+  },
+  "generator.target-product": {
+    "title": "Target Product",
+    "summary": "Choose which product type the design should fit, or Anything for flexibility.",
+    "tips": ["Anything keeps the design usable across more products."]
+  },
+  "generator.design-type": {
+    "title": "Design Type",
+    "summary": "Style family for generation (for example Classic).",
+    "tips": ["Different types change look and composition."]
+  },
+  "generator.upload": {
+    "title": "Upload Reference",
+    "summary": "Optional reference image to guide the AI.",
+    "tips": [
+      "Clear photos and simple subjects work best.",
+      "Counts toward daily uploads."
+    ]
+  },
+  "generator.reference-images": {
+    "title": "Reference Images",
+    "summary": "Selected references and how strongly they influence the result.",
+    "tips": ["Remove or adjust influence before generating."]
+  },
+  "generator.suggest": {
+    "title": "Suggest",
+    "summary": "Fills or improves the prompt with AI suggestions.",
+    "tips": ["Good when you need a starting idea."]
+  },
+  "generator.clear": {
+    "title": "Clear",
+    "summary": "Clears the prompt and related draft fields.",
+    "tips": ["Use before starting a completely new idea."]
+  },
+  "generator.prompt": {
+    "title": "Design Prompt",
+    "summary": "Describe the design you want. More detail usually means better results.",
+    "tips": [
+      "Mention subject, style, colors, and mood.",
+      "Pair with a reference image if needed."
+    ]
+  },
+  "generator.more-options": {
+    "title": "More Options",
+    "summary": "Extra generation settings and advanced controls.",
+    "tips": ["Open when you need finer control than the main form."]
+  },
+  "generator.generate": {
+    "title": "Start Generation",
+    "summary": "Starts an AI design job. Costs EAZV and uses a daily generation slot.",
+    "tips": [
+      "Confirm cost before running.",
+      "Results appear in Creations and notifications."
+    ]
+  },
+  "creations.tab-designs": {
+    "title": "Designs Tab",
+    "summary": "All designs you generated or uploaded.",
+    "tips": ["Open a card for preview and actions."]
+  },
+  "creations.tab-products": {
+    "title": "Products Tab",
+    "summary": "Products published from your designs.",
+    "tips": ["Online and offline status is managed here."]
+  },
+  "creations.view-mode": {
+    "title": "View Mode",
+    "summary": "Switch between 2-column, 3-column, or list layout.",
+    "tips": ["Pick denser grids when browsing many items."]
+  },
+  "creations.search": {
+    "title": "Search",
+    "summary": "Filter the current list by text.",
+    "tips": ["Works on Designs and Products."]
+  },
+  "creations.filter": {
+    "title": "Filter",
+    "summary": "Narrow by status, type, or other criteria.",
+    "tips": ["Combine with search for faster finding."]
+  },
+  "creations.upload": {
+    "title": "Upload Design",
+    "summary": "Upload your own artwork into the library.",
+    "tips": ["Uses a daily upload slot."]
+  },
+  "creations.activity-active": {
+    "title": "Active Designs",
+    "summary": "Designs currently active in your library.",
+    "tips": ["Active designs can be used for products."]
+  },
+  "creations.activity-inactive": {
+    "title": "Inactive Designs",
+    "summary": "Designs you deactivated or locked.",
+    "tips": ["Reactivate or unlock when needed."]
+  },
+  "creations.count": {
+    "title": "Item Count",
+    "summary": "How many designs or products match the current filters.",
+    "tips": ["Updates as you search or filter."]
+  },
+  "creations.design-card": {
+    "title": "Design Card",
+    "summary": "One design. Opens preview or Design Studio outside Guide Mode.",
+    "tips": [
+      "Product badge shows linked products.",
+      "Activate or deactivate controls library state."
+    ]
+  },
+  "creations.products-badge": {
+    "title": "Linked Products",
+    "summary": "Number of products created from this design.",
+    "tips": ["Opens product context from the design."]
+  },
+  "creations.library-btn": {
+    "title": "Activate / Deactivate / Unlock",
+    "summary": "Changes whether the design is available in your library.",
+    "tips": ["Unlock may cost EAZV depending on your rules."]
+  },
+  "creations.product-card": {
+    "title": "Product Card",
+    "summary": "One published product. Opens product preview or editor outside Guide Mode.",
+    "tips": ["Check online vs offline status in Overview."]
+  },
+  "marketing.content-creation": {
+    "title": "Content Creation",
+    "summary": "Create marketing assets: hero images, video, and later images.",
+    "tips": [
+      "Expand to see creation tools.",
+      "Hero Images open a dedicated create flow."
+    ]
+  },
+  "marketing.content-publish": {
+    "title": "Content Publish",
+    "summary": "Manage assets you already created — libraries and publish status.",
+    "tips": ["Separate from creation: here you review what you have."]
+  },
+  "marketing.promotion": {
+    "title": "Promotion",
+    "summary": "Shop promotions and discounts for your storefront.",
+    "tips": ["Create active or upcoming offers from here."]
+  },
+  "marketing.hero-images-create": {
+    "title": "Hero Images (Create)",
+    "summary": "Create rotating shop title or hero banners. Costs EAZV.",
+    "tips": [
+      "Up to 5 products per hero.",
+      "Published heroes rotate on your shop."
+    ]
+  },
+  "marketing.video-create": {
+    "title": "Video",
+    "summary": "Create marketing video content.",
+    "tips": ["Opens Video Studio and Video Generator tools."]
+  },
+  "marketing.images-create": {
+    "title": "Images",
+    "summary": "Extra image creation tools — coming soon.",
+    "tips": ["Placeholder until the feature ships."]
+  },
+  "marketing.video-studio": {
+    "title": "Video Studio",
+    "summary": "Edit and assemble marketing videos from tracks and saved projects.",
+    "tips": ["Use for longer edited clips."]
+  },
+  "marketing.video-generator": {
+    "title": "Video Generator",
+    "summary": "Generate motion or video clips for marketing.",
+    "tips": ["Faster path when you want AI-assisted motion."]
+  },
+  "marketing.publish-heroes": {
+    "title": "Published Hero Images",
+    "summary": "Grid of hero images ready or already online.",
+    "tips": ["Empty state appears when you have none yet."]
+  },
+  "marketing.publish-videos": {
+    "title": "Published Videos",
+    "summary": "Grid of saved marketing videos.",
+    "tips": ["Open a card for preview outside Guide Mode."]
+  },
+  "marketing.publish-images": {
+    "title": "Published Images",
+    "summary": "Grid of saved marketing images.",
+    "tips": ["Coming soon until image publish is enabled."]
+  },
+  "marketing.promo-tab-active": {
+    "title": "Active Promotions",
+    "summary": "Promotions currently live in your shop.",
+    "tips": ["Edit a card to change discount or dates."]
+  },
+  "marketing.promo-tab-upcoming": {
+    "title": "Upcoming Promotions",
+    "summary": "Scheduled promotions that have not started yet.",
+    "tips": ["Prepare campaigns before go-live."]
+  },
+  "marketing.promo-tab-ended": {
+    "title": "Ended Promotions",
+    "summary": "Past promotions for history.",
+    "tips": ["Useful for repeating successful offers."]
+  },
+  "marketing.promo-tab-all": {
+    "title": "All Promotions",
+    "summary": "Full list regardless of status.",
+    "tips": ["Fast overview across campaigns."]
+  },
+  "marketing.promo-new": {
+    "title": "New Promotion",
+    "summary": "Start a new shop promotion.",
+    "tips": ["Set discount, dates, and targeting in the editor."]
+  },
+  "marketing.promo-card": {
+    "title": "Promotion Card",
+    "summary": "One promotion with status and discount summary.",
+    "tips": ["Opens the editor for that promotion outside Guide Mode."]
+  },
+  "automations.tab-design": {
+    "title": "Design Generator Automations",
+    "summary": "Schedule recurring design generation jobs.",
+    "tips": ["Main automation area available today."]
+  },
+  "automations.tab-publish": {
+    "title": "Publish Automations",
+    "summary": "Automate publishing flows — coming soon.",
+    "tips": ["Placeholder until enabled."]
+  },
+  "automations.tab-marketing": {
+    "title": "Marketing Automations",
+    "summary": "Automate marketing posts or content — coming soon.",
+    "tips": ["Placeholder until enabled."]
+  },
+  "automations.status-active": {
+    "title": "Active",
+    "summary": "Automations currently running.",
+    "tips": ["Toggle Active on a card to pause or resume."]
+  },
+  "automations.status-scheduled": {
+    "title": "Scheduled",
+    "summary": "Automations waiting for their next run.",
+    "tips": ["Check last run and generation counts on cards."]
+  },
+  "automations.status-expired": {
+    "title": "Expired",
+    "summary": "Automations that finished or expired.",
+    "tips": ["Recreate or edit if you need them again."]
+  },
+  "automations.add": {
+    "title": "Add Automation",
+    "summary": "Create a new automation rule.",
+    "tips": ["Define schedule, prompt style, and limits in the create flow."]
+  },
+  "automations.card": {
+    "title": "Automation Card",
+    "summary": "One automation: title, created date, last run, and generations.",
+    "tips": [
+      "Title opens edit outside Guide Mode.",
+      "Preview opens overview.",
+      "Active switch pauses new runs."
+    ]
+  },
+  "automations.active-toggle": {
+    "title": "Active Switch",
+    "summary": "Pause or resume this automation without deleting it.",
+    "tips": ["Paused jobs stop new runs."]
   }
 }

@@ -24,12 +24,12 @@
     </svg>
   </div>
   <div class="creator-header__top">
-    <button type="button" class="creator-header__drawer-btn" id="creatorMobileDrawerBtn" aria-label="Open menu">
+    <button type="button" class="creator-header__drawer-btn" id="creatorMobileDrawerBtn" aria-label="Open menu" data-eazy-guide="chrome.mobile-menu">
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
         <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill="currentColor"/>
       </svg>
     </button>
-    <div class="creator-header__brand" aria-label="eazpire creator">
+    <div class="creator-header__brand" aria-label="eazpire creator" data-eazy-guide="chrome.brand">
       <img
         class="creator-header__brand-logo"
         src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950"
@@ -41,18 +41,18 @@
     </div>
     <div class="creator-header__actions">
       
-      <button type="button" class="creator-header__balance-btn" id="creatorHeaderBalanceBtn" role="button" tabindex="0" aria-label="Available and pending EAZC">
+      <button type="button" class="creator-header__balance-btn" id="creatorHeaderBalanceBtn" role="button" tabindex="0" aria-label="Available and pending EAZC" data-eazy-guide="chrome.eazc">
         <img class="creator-header__balance-coin" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo" alt="" width="18" height="18" loading="lazy" data-eaz-coin="eazc">
         <span class="creator-header__balance-value" id="global-sales-balance-value" data-sales-balance-value data-debug-owner="">Loading...</span>
         <span class="creator-header__balance-unit" data-sales-balance-unit>EAZC</span>
       </button>
-      <button type="button" class="creator-header__account-btn creator-settings-trigger" id="creatorHeaderAccountBtn" data-open-settings aria-label="Creator Settings">
+      <button type="button" class="creator-header__account-btn creator-settings-trigger" id="creatorHeaderAccountBtn" data-open-settings aria-label="Creator Settings" data-eazy-guide="chrome.settings">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4 20c0-3.3 2.7-6 6-6h4c3.3 0 6 2.7 6 6"/></svg>
       </button>
     </div>
   </div>
   <div class="creator-header__content">
-    <div class="creator-header__dots" aria-hidden="true">
+    <div class="creator-header__dots" aria-hidden="true" data-eazy-guide="chrome.mobile-dots">
       
     </div>
     <div class="creator-header__title-row">
@@ -95,21 +95,21 @@
 
       </div>
       <div class="creator-header__audio-widget creator-header__audio-widget--mobile" id="creatorMobileAudioArea">
-        <canvas class="creator-header__audio-visualizer creator-header__audio-visualizer--mobile" id="creatorMobileAudioVisualizer" width="72" height="22" aria-label="Open audio library" role="button" tabindex="0"></canvas>
+        <canvas class="creator-header__audio-visualizer creator-header__audio-visualizer--mobile" id="creatorMobileAudioVisualizer" width="72" height="22" aria-label="Open audio library" role="button" tabindex="0" data-eazy-guide="chrome.audio-visualizer"></canvas>
         <div class="creator-header__audio-controls creator-header__audio-controls--mobile" id="creatorMobileAudioControls">
-          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__back" id="creatorMobileAudioCtrlBack" aria-label="Back 10s">
+          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__back" id="creatorMobileAudioCtrlBack" aria-label="Back 10s" data-eazy-guide="chrome.audio-back">
             <svg viewBox="0 0 24 24" width="14" height="14"><path d="M11 18V6l-8 6 8 6zm8-6l-8 6V6l8 6z" fill="currentColor"/></svg>
           </button>
-          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__play" id="creatorMobileAudioCtrlPlay" aria-label="Play">
+          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__play" id="creatorMobileAudioCtrlPlay" aria-label="Play" data-eazy-guide="chrome.audio-play">
             <svg class="creator-audio-ctrl__play-icon" viewBox="0 0 24 24" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
             <svg class="creator-audio-ctrl__pause-icon" viewBox="0 0 24 24" width="14" height="14"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>
           </button>
-          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__fwd" id="creatorMobileAudioCtrlFwd" aria-label="Next (random)">
+          <button type="button" class="creator-audio-ctrl__btn creator-audio-ctrl__btn--mobile creator-audio-ctrl__fwd" id="creatorMobileAudioCtrlFwd" aria-label="Next (random)" data-eazy-guide="chrome.audio-fwd">
             <svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 18l8-6-8-6v12zm9-12v12l8-6-8-6z" fill="currentColor"/></svg>
           </button>
         </div>
       </div>
-      <h1 class="creator-header__title">Dashboard</h1>
+      <h1 class="creator-header__title" data-eazy-guide="chrome.screen-title">Dashboard</h1>
     </div>
     <p class="creator-header__swipe-hint">Swipe left / right</p>
   </div>

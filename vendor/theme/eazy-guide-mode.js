@@ -9,7 +9,6 @@
     (window.CreatorChatActions && window.CreatorChatActions.API_BASE) ||
     "https://creator-engine.eazpire.workers.dev/apps/creator-dispatch";
 
-  var LONG_PRESS_MS = 520;
   var REGISTRY_URL = null;
   var registryCache = null;
   var active = false;
@@ -18,10 +17,17 @@
   var screenshotDragActive = false;
   var tools = { click: true, screenshot: false, prompt: false };
   var session = { element: null, screenshot: null, prompt: "", voice_transcript: "" };
+  var selectedHighlightEl = null;
 
   var ui = {
+    dock: null,
+    selectionBar: null,
+    selectionMedia: null,
+    selectionTitle: null,
+    selectionMeta: null,
     toolbar: null,
     promptBar: null,
+    promptContext: null,
     promptInput: null,
     screenshotOverlay: null,
     screenshotRect: null,
@@ -100,13 +106,126 @@
   function isInsideGuideUi(node) {
     if (!node || !node.closest) return false;
     return !!(
+      node.closest(".eaz-guide-dock") ||
       node.closest(".eaz-guide-toolbar") ||
       node.closest(".eaz-guide-prompt") ||
+      node.closest(".eaz-guide-selection") ||
       node.closest(".eaz-guide-screenshot-overlay") ||
       node.closest(".eaz-guide-exit-hint") ||
       node.closest("#eazy-mascot") ||
       node.closest("#creator-chat-toggle")
     );
+  }
+
+  function getCreatorScreen() {
+    var desk = document.querySelector(".creator-desktop-stage__panel.is-active[data-desktop-screen]");
+    if (desk) return String(desk.getAttribute("data-desktop-screen") || "").toLowerCase() || null;
+    var mobile = document.querySelector("#creatorMobileApp .creator-screen.is-active[data-screen]");
+    if (mobile) {
+      var idx = String(mobile.getAttribute("data-screen") || "");
+      var map = { "0": "dashboard", "1": "generator", "2": "creations", "3": "marketing", "4": "automations" };
+      return map[idx] || null;
+    }
+    return null;
+  }
+
+  function selectionTitleFromSession() {
+    if (session.screenshot && session.screenshot.base64) {
+      return i18n("creator.guide.selection_screenshot", "Screenshot");
+    }
+    if (session.element && session.element.guide_key && registryCache && registryCache[session.element.guide_key]) {
+      return registryCache[session.element.guide_key].title || session.element.guide_key;
+    }
+    if (session.element && session.element.label) return String(session.element.label).slice(0, 80);
+    return "";
+  }
+
+  function hasSelection() {
+    return !!(session.element || (session.screenshot && session.screenshot.base64));
+  }
+
+  function syncSelectionUi() {
+    if (!ui.selectionBar || !ui.promptContext) return;
+    var title = selectionTitleFromSession();
+    var meta = getCreatorScreen() || "";
+    var show = hasSelection();
+
+    ui.selectionBar.hidden = !show;
+    ui.selectionBar.classList.toggle("is-visible", show);
+    ui.selectionTitle.textContent = title || i18n("creator.guide.selection_empty", "Selection");
+    ui.selectionMeta.textContent = meta ? meta.charAt(0).toUpperCase() + meta.slice(1) : "";
+    ui.selectionMeta.hidden = !meta;
+
+    var mediaHtml = "";
+    if (session.screenshot && session.screenshot.base64) {
+      var mime = session.screenshot.mime || "image/jpeg";
+      mediaHtml =
+        '<img class="eaz-guide-selection__thumb" alt="" src="data:' +
+        mime +
+        ";base64," +
+        session.screenshot.base64 +
+        '" />';
+    } else if (show) {
+      mediaHtml = '<span class="eaz-guide-selection__icon" aria-hidden="true">◎</span>';
+    }
+    ui.selectionMedia.innerHTML = mediaHtml;
+
+    // Prompt context chip (left of input) — same selection, compact
+    if (session.screenshot && session.screenshot.base64) {
+      var mime2 = session.screenshot.mime || "image/jpeg";
+      ui.promptContext.innerHTML =
+        '<img class="eaz-guide-prompt__context-thumb" alt="" src="data:' +
+        mime2 +
+        ";base64," +
+        session.screenshot.base64 +
+        '" />';
+      ui.promptContext.hidden = false;
+      ui.promptContext.classList.add("is-visible");
+    } else if (session.element && title) {
+      ui.promptContext.innerHTML =
+        '<span class="eaz-guide-prompt__context-chip">' + escapeHtml(title) + "</span>";
+      ui.promptContext.hidden = false;
+      ui.promptContext.classList.add("is-visible");
+    } else {
+      ui.promptContext.innerHTML = "";
+      ui.promptContext.hidden = true;
+      ui.promptContext.classList.remove("is-visible");
+    }
+
+    document.documentElement.classList.toggle("eaz-guide-has-selection", show);
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function clearSelection() {
+    session.element = null;
+    session.screenshot = null;
+    clearGuideHighlights();
+    clearPersistRect();
+    syncSelectionUi();
+    syncExplainUi();
+  }
+
+  function setSelectedHighlight(el) {
+    clearGuideHighlights();
+    selectedHighlightEl = el || null;
+    if (selectedHighlightEl && selectedHighlightEl.classList) {
+      selectedHighlightEl.classList.add("eazy-guide-highlight");
+    }
+  }
+
+  function findInteractiveTarget(node) {
+    if (!node || !node.closest) return node;
+    var hit = node.closest(
+      "button, a, [role='button'], [data-eazy-guide], [data-desktop-switch], [data-goto], [data-nav], [data-mkt-parent], [data-mkt-child], [data-open-settings], [data-open-sales-modal], [data-creator-terms-trigger], [data-demo-switch], [data-tab], [data-maintab], [data-statusfilter], [data-promo-tab], [data-automations-add], [data-limit], input, textarea, select, canvas[role='button'], .creator-creations-card, .eaz-creator-promotions-card, .creator-journey-trigger, .creator-todo-item, .creator-desktop-header__balance, .creator-header__balance"
+    );
+    return hit || node;
   }
 
   function setGuideFlag(on) {
@@ -226,11 +345,16 @@
     if (!el || !el.closest) return null;
     var node = el;
     var depth = 0;
-    while (node && depth < 6) {
+    while (node && depth < 10) {
       if (node.getAttribute && node.getAttribute("data-eazy-guide")) {
+        var rawLabel = (node.getAttribute("aria-label") || "").trim();
+        if (!rawLabel) {
+          var titleNode = node.querySelector && node.querySelector(".cmkt-card__title, .creator-container__title, [data-t]");
+          rawLabel = ((titleNode && titleNode.textContent) || node.textContent || "").trim().slice(0, 120);
+        }
         return {
           guide_key: node.getAttribute("data-eazy-guide"),
-          label: (node.getAttribute("aria-label") || node.textContent || "").trim().slice(0, 120),
+          label: rawLabel.slice(0, 120),
           selector: node.id ? "#" + node.id : null,
         };
       }
@@ -435,6 +559,7 @@
       page: getPagePath(),
       locale: getLocale(),
       active_function: getActiveFunction(),
+      creator_screen: getCreatorScreen(),
       element: session.element,
       screenshot: session.screenshot,
       prompt: session.prompt || session.voice_transcript || "",
@@ -453,7 +578,7 @@
     if (pendingRequest) return;
     var payload = buildPayload();
     if (!payload.element && !payload.screenshot && !payload.prompt) {
-      showBubble(i18n("creator.guide.empty_session", "Long-press an element, capture a screenshot, or type a question."), false);
+      showBubble(i18n("creator.guide.empty_session", "Tap an element, capture a screenshot, or type a question."), false);
       return;
     }
 
@@ -503,28 +628,43 @@
   }
 
   function ensureUi() {
-    if (ui.toolbar) return;
+    if (ui.dock) return;
 
-    ui.toolbar = document.createElement("div");
-    ui.toolbar.className = "eaz-guide-toolbar";
-    ui.toolbar.setAttribute("role", "toolbar");
-    ui.toolbar.innerHTML =
+    ui.dock = document.createElement("div");
+    ui.dock.className = "eaz-guide-dock";
+    ui.dock.innerHTML =
+      '<div class="eaz-guide-selection" hidden>' +
+      '<div class="eaz-guide-selection__media"></div>' +
+      '<div class="eaz-guide-selection__text">' +
+      '<span class="eaz-guide-selection__title"></span>' +
+      '<span class="eaz-guide-selection__meta" hidden></span>' +
+      "</div>" +
+      '<button type="button" class="eaz-guide-selection__clear" data-action="clear-selection" aria-label="Clear">×</button>' +
+      "</div>" +
+      '<div class="eaz-guide-prompt">' +
+      '<div class="eaz-guide-prompt__context" hidden></div>' +
+      '<input type="text" class="eaz-guide-prompt__input" autocomplete="off" />' +
+      '<button type="button" class="eaz-guide-prompt__btn" data-action="voice" title="Voice">🎤</button>' +
+      '<button type="button" class="eaz-guide-prompt__btn eaz-guide-prompt__btn--send" data-action="send"></button>' +
+      "</div>" +
+      '<div class="eaz-guide-toolbar" role="toolbar">' +
       '<div class="eaz-guide-toolbar__row">' +
       '<button type="button" class="eaz-guide-toolbar__chip is-active" data-tool="click"></button>' +
       '<button type="button" class="eaz-guide-toolbar__chip" data-tool="screenshot"></button>' +
       '<button type="button" class="eaz-guide-toolbar__chip" data-tool="prompt"></button>' +
       "</div>" +
-      '<button type="button" class="eaz-guide-toolbar__explain" data-tool="ask" hidden></button>';
-    document.body.appendChild(ui.toolbar);
+      '<button type="button" class="eaz-guide-toolbar__explain" data-tool="ask" hidden></button>' +
+      "</div>";
+    document.body.appendChild(ui.dock);
 
-    ui.promptBar = document.createElement("div");
-    ui.promptBar.className = "eaz-guide-prompt";
-    ui.promptBar.innerHTML =
-      '<input type="text" class="eaz-guide-prompt__input" autocomplete="off" />' +
-      '<button type="button" class="eaz-guide-prompt__btn" data-action="voice" title="Voice">🎤</button>' +
-      '<button type="button" class="eaz-guide-prompt__btn eaz-guide-prompt__btn--send" data-action="send"></button>';
-    document.body.appendChild(ui.promptBar);
-    ui.promptInput = ui.promptBar.querySelector(".eaz-guide-prompt__input");
+    ui.selectionBar = ui.dock.querySelector(".eaz-guide-selection");
+    ui.selectionMedia = ui.dock.querySelector(".eaz-guide-selection__media");
+    ui.selectionTitle = ui.dock.querySelector(".eaz-guide-selection__title");
+    ui.selectionMeta = ui.dock.querySelector(".eaz-guide-selection__meta");
+    ui.promptBar = ui.dock.querySelector(".eaz-guide-prompt");
+    ui.promptContext = ui.dock.querySelector(".eaz-guide-prompt__context");
+    ui.promptInput = ui.dock.querySelector(".eaz-guide-prompt__input");
+    ui.toolbar = ui.dock.querySelector(".eaz-guide-toolbar");
 
     ui.screenshotOverlay = document.createElement("div");
     ui.screenshotOverlay.className = "eaz-guide-screenshot-overlay";
@@ -561,6 +701,12 @@
       syncToolUi();
     });
 
+    ui.selectionBar.querySelector('[data-action="clear-selection"]').addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      clearSelection();
+    });
+
     ui.promptBar.querySelector('[data-action="send"]').addEventListener("click", function () {
       if (promptLocked) {
         clearPrompt();
@@ -579,7 +725,7 @@
     ui.promptBar.querySelector('[data-action="voice"]').addEventListener("click", toggleVoiceInput);
 
     bindScreenshotOverlay();
-    bindLongPressInspect();
+    bindGuideInteractionFreeze();
   }
 
   function syncToolUi() {
@@ -591,86 +737,86 @@
     });
     ui.promptBar.classList.toggle("is-visible", !!tools.prompt);
     document.documentElement.classList.toggle("eaz-guide-screenshot-active", !!tools.screenshot);
+    syncSelectionUi();
     syncExplainUi();
   }
 
-  function bindLongPressInspect() {
-    var highlightEl = null;
-    var pressTimer = null;
-    var startX = 0;
-    var startY = 0;
-    var targetEl = null;
+  function inspectTarget(rawTarget) {
+    if (!active || !tools.click || tools.screenshot) return;
+    var target = findInteractiveTarget(rawTarget);
+    if (!target || isInsideGuideUi(target)) return;
+    var root = getScopeRoot();
+    if (root !== document.body && !root.contains(target)) return;
 
-    function clearHighlight() {
-      if (highlightEl) {
-        highlightEl.classList.remove("eazy-guide-highlight");
-        highlightEl = null;
-      }
+    var resolved = resolveGuideKey(target);
+    session.element = resolved;
+    // Keep screenshot only if user explicitly captured; click replaces element focus
+    setSelectedHighlight(target);
+    try {
+      navigator.vibrate(15);
+    } catch (v) {}
+    syncSelectionUi();
+    loadRegistry().then(function () {
+      syncSelectionUi();
+      requestExplain(false);
+    });
+  }
+
+  function bindGuideInteractionFreeze() {
+    function isInteractiveHit(node) {
+      return !!findInteractiveTarget(node);
     }
 
-    function onPointerDown(e) {
-      if (!active || !tools.click) return;
-      if (e.button != null && e.button !== 0) return;
+    function blockAndInspect(e) {
+      if (!active) return;
+      if (tools.screenshot) return;
       var t = e.target;
       if (isInsideGuideUi(t)) return;
-      var root = getScopeRoot();
-      if (root !== document.body && !root.contains(t)) return;
+      if (getSnapTarget(t)) return;
 
-      startX = e.clientX;
-      startY = e.clientY;
-      targetEl = t;
-      clearHighlight();
-      if (pressTimer) clearTimeout(pressTimer);
-      pressTimer = setTimeout(function () {
-        pressTimer = null;
-        if (!active || !tools.click || !targetEl) return;
-        var resolved = resolveGuideKey(targetEl);
-        session.element = resolved;
-        highlightEl = targetEl;
-        highlightEl.classList.add("eazy-guide-highlight");
-        try {
-          navigator.vibrate(20);
-        } catch (v) {}
-        loadRegistry().then(function () {
-          requestExplain(false);
-        });
-      }, LONG_PRESS_MS);
-    }
+      // Freeze interactive targets only (keep page scroll working)
+      if (!isInteractiveHit(t) && e.type === "click") {
+        // Still allow inspecting labeled text nodes via closest walk
+        inspectTarget(t);
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+        return;
+      }
 
-    function onPointerMove(e) {
-      if (!pressTimer) return;
-      var dx = e.clientX - startX;
-      var dy = e.clientY - startY;
-      if (dx * dx + dy * dy > 100) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+
+      if (tools.click && e.type === "click") {
+        inspectTarget(t);
       }
     }
 
-    function onPointerUp() {
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
-    }
-
-    document.addEventListener("mousedown", onPointerDown, true);
-    document.addEventListener("mousemove", onPointerMove, true);
-    document.addEventListener("mouseup", onPointerUp, true);
-    document.addEventListener("touchstart", function (e) {
-      if (!e.touches || !e.touches[0]) return;
-      onPointerDown({
-        clientX: e.touches[0].clientX,
-        clientY: e.touches[0].clientY,
-        target: e.target,
-        button: 0,
-      });
-    }, { capture: true, passive: true });
-    document.addEventListener("touchmove", function (e) {
-      if (!e.touches || !e.touches[0]) return;
-      onPointerMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
-    }, { capture: true, passive: true });
-    document.addEventListener("touchend", onPointerUp, true);
+    document.addEventListener("click", blockAndInspect, true);
+    document.addEventListener(
+      "pointerdown",
+      function (e) {
+        if (!active || tools.screenshot) return;
+        if (isInsideGuideUi(e.target) || getSnapTarget(e.target)) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        // Only block activation on interactive controls (not touch scroll)
+        if (!isInteractiveHit(e.target)) return;
+        e.preventDefault();
+        e.stopPropagation();
+      },
+      true
+    );
+    document.addEventListener(
+      "submit",
+      function (e) {
+        if (!active) return;
+        if (isInsideGuideUi(e.target)) return;
+        e.preventDefault();
+        e.stopPropagation();
+      },
+      true
+    );
   }
 
   function bindScreenshotOverlay() {
@@ -807,12 +953,20 @@
             crop_rect: { left: left, top: top, width: w, height: h },
           };
           hideBubble();
+          syncSelectionUi();
           syncExplainUi();
+          if (tools.prompt) {
+            // Keep selection visible; user can ask about the crop
+            showBubble(i18n("creator.guide.screenshot_ready", "Screenshot selected — ask me about it."), false);
+          } else {
+            requestExplain(false);
+          }
         });
       })
       .catch(function () {
         clearPersistRect();
         session.screenshot = null;
+        syncSelectionUi();
         syncExplainUi();
         showBubble(i18n("creator.guide.screenshot_failed", "Could not capture screenshot."), false);
       });
@@ -875,10 +1029,16 @@
     }
     if (ui.promptBar) ui.promptBar.classList.remove("is-locked");
     setPromptSendMode("send");
+    syncSelectionUi();
     syncExplainUi();
     ui.exitHint.textContent = i18n("creator.guide.exit_hint", "Guide Mode — click Eazy to exit");
-    showBubble(i18n("creator.guide.entered", "Guide Mode on! Long-press any element, drag a screenshot, or ask me."), false);
-    loadRegistry();
+    showBubble(
+      i18n("creator.guide.entered", "Guide Mode on! Tap any control to learn, drag a screenshot, or ask me."),
+      false
+    );
+    loadRegistry().then(function () {
+      syncSelectionUi();
+    });
     try {
       localStorage.setItem("eazy_guide_discovered", "1");
     } catch (e) {}
@@ -889,6 +1049,7 @@
     active = false;
     setGuideFlag(false);
     document.documentElement.classList.remove("eaz-guide-has-explain");
+    document.documentElement.classList.remove("eaz-guide-has-selection");
     cleanupScreenshotUi();
     clearGuideHighlights();
     resetSession();
@@ -897,18 +1058,20 @@
       ui.promptInput.value = "";
       ui.promptInput.readOnly = false;
     }
-    if (ui.toolbar) ui.toolbar.style.display = "none";
+    if (ui.dock) ui.dock.style.display = "none";
     if (ui.promptBar) {
       ui.promptBar.classList.remove("is-visible", "is-locked");
-      ui.promptBar.style.display = "none";
+    }
+    if (ui.selectionBar) {
+      ui.selectionBar.hidden = true;
+      ui.selectionBar.classList.remove("is-visible");
     }
     if (ui.exitHint) ui.exitHint.textContent = "";
     return true;
   }
 
   function showGuideUi() {
-    if (ui.toolbar) ui.toolbar.style.display = "";
-    if (ui.promptBar) ui.promptBar.style.display = "";
+    if (ui.dock) ui.dock.style.display = "";
   }
 
   function onEazyDoubleClick(e) {

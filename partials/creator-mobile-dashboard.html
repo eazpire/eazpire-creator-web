@@ -2,8 +2,8 @@
   
   
   <div class="creator-level-row">
-    <div class="creator-level-badge" id="creator-mobile-level-root">
-      <button type="button" class="creator-level-badge__icon creator-journey-trigger" aria-label="Open Creator Journey">
+    <div class="creator-level-badge" id="creator-mobile-level-root" data-eazy-guide="level">
+      <button type="button" class="creator-level-badge__icon creator-journey-trigger" aria-label="Open Creator Journey" data-eazy-guide="chrome.journey-star">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
         </svg>
@@ -27,12 +27,12 @@
       </div>
     </div>
     <div class="creator-level-share-row">
-      <button type="button" class="creator-share-btn creator-share-btn--icon" id="creator-copy-link-btn" aria-label="Copy link">
+      <button type="button" class="creator-share-btn creator-share-btn--icon" id="creator-copy-link-btn" aria-label="Copy link" data-eazy-guide="chrome.copy-link">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
         </svg>
       </button>
-      <button type="button" class="creator-share-btn creator-share-btn--icon" id="creator-share-btn" aria-label="Share">
+      <button type="button" class="creator-share-btn creator-share-btn--icon" id="creator-share-btn" aria-label="Share" data-eazy-guide="chrome.share">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -46,9 +46,9 @@
   <div class="creator-dashboard-sections" id="creatorDashboardSections">
   
   
-  <article class="creator-container" data-collapsible data-section-id="journey">
+  <article class="creator-container" data-collapsible data-section-id="journey" data-eazy-guide="dashboard.journey-section">
     <button type="button" class="creator-container__header" aria-expanded="true" aria-controls="creator-mobile-journey-body" id="creator-mobile-journey-toggle">
-      <span class="creator-container__drag" aria-label="Change order">⋮⋮</span>
+      <span class="creator-container__drag" aria-label="Change order" data-eazy-guide="dashboard.section-reorder">⋮⋮</span>
       <span class="creator-container__title" data-t="creator.overview.onboarding_title">Your Creator Journey</span>
       <span class="creator-container__count" id="creator-mobile-journey-progress">0/10</span>
       <svg class="creator-container__chevron" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -60,8 +60,8 @@
         <div class="creator-journey-bar__fill" id="creator-mobile-journey-bar-fill" style="width: 0%"></div>
       </div>
       <div class="creator-journey-tabs">
-        <button type="button" class="creator-journey-tab creator-journey-tab--active" data-tab="open"><span data-t="creator.overview.tab_open">Open</span> <span id="creator-mobile-journey-open-count">0</span></button>
-        <button type="button" class="creator-journey-tab" data-tab="completed"><span data-t="creator.overview.tab_completed">Completed</span> <span id="creator-mobile-journey-completed-count">0</span></button>
+        <button type="button" class="creator-journey-tab creator-journey-tab--active" data-tab="open" data-eazy-guide="dashboard.journey-tab-open"><span data-t="creator.overview.tab_open">Open</span> <span id="creator-mobile-journey-open-count">0</span></button>
+        <button type="button" class="creator-journey-tab" data-tab="completed" data-eazy-guide="dashboard.journey-tab-completed"><span data-t="creator.overview.tab_completed">Completed</span> <span id="creator-mobile-journey-completed-count">0</span></button>
       </div>
       <div class="creator-journey-list creator-journey-list--open" id="creator-mobile-journey-open">
         <p class="creator-journey-loading" data-t="creator.overview.loading_todos">Loading your journey...</p>
@@ -86,7 +86,7 @@
     <div class="creator-container__body" id="creator-mobile-stats-body">
       <div class="creator-stats-grid">
         
-        <article class="creator-stat-card creator-stat-card--sales creator-stat-card--clickable" data-open-sales-modal role="button" tabindex="0">
+        <article class="creator-stat-card creator-stat-card--sales creator-stat-card--clickable" data-open-sales-modal role="button" tabindex="0" data-eazy-guide="dashboard.stat-sales">
           <div class="creator-stat-card__icon creator-stat-card__icon--sales">💰</div>
           <span class="creator-stat-card__label" data-t="creator.overview.sales_label">Sales</span>
           <div class="creator-stat-card__dual">
@@ -96,7 +96,7 @@
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-sales-amazon">–</span>
           </div>
         </article>
-        <article class="creator-stat-card creator-stat-card--designs creator-stat-card--clickable" role="button" tabindex="0" data-goto="2" data-creations-tab="designs">
+        <article class="creator-stat-card creator-stat-card--designs creator-stat-card--clickable" role="button" tabindex="0" data-goto="2" data-creations-tab="designs" data-eazy-guide="dashboard.stat-designs">
           <div class="creator-stat-card__icon creator-stat-card__icon--designs">🎨</div>
           <span class="creator-stat-card__label" data-t="creator.overview.designs_label">Designs</span>
           <div class="creator-stat-card__dual">
@@ -106,7 +106,7 @@
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-designs-uploaded">–</span>
           </div>
         </article>
-        <article class="creator-stat-card creator-stat-card--products creator-stat-card--clickable" role="button" tabindex="0" data-goto="2" data-creations-tab="products">
+        <article class="creator-stat-card creator-stat-card--products creator-stat-card--clickable" role="button" tabindex="0" data-goto="2" data-creations-tab="products" data-eazy-guide="dashboard.stat-products">
           <div class="creator-stat-card__icon creator-stat-card__icon--products">📦</div>
           <span class="creator-stat-card__label" data-t="creator.overview.products_label">Products</span>
           <div class="creator-stat-card__dual">
@@ -116,7 +116,7 @@
             <span class="creator-stat-card__dual-value" id="creator-mobile-stat-products-offline">–</span>
           </div>
         </article>
-        <article class="creator-stat-card creator-stat-card--heroes creator-stat-card--clickable" role="button" tabindex="0" data-goto="3" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
+        <article class="creator-stat-card creator-stat-card--heroes creator-stat-card--clickable" role="button" tabindex="0" data-goto="3" data-marketing-subtab="content-creation" data-marketing-content="hero-images" data-eazy-guide="dashboard.stat-heroes">
           <div class="creator-stat-card__icon creator-stat-card__icon--heroes">🖼️</div>
           <span class="creator-stat-card__label" data-t="creator.overview.hero_images_label">Hero Images</span>
           <div class="creator-stat-card__dual">
@@ -142,7 +142,7 @@
     </button>
     <div class="creator-container__body" id="creator-mobile-actions-body">
       <div class="creator-quick-actions">
-        <a href="/?eaz_open_shop_create=1" class="creator-quick-action" data-goto="1">
+        <a href="/?eaz_open_shop_create=1" class="creator-quick-action" data-goto="1" data-eazy-guide="dashboard.qa-generator">
           <div class="creator-quick-action__icon">🎨</div>
           <div class="creator-quick-action__text">
             <p class="creator-quick-action__title" data-t="creator.overview.action_generator_title">Design Generator</p>
@@ -150,7 +150,7 @@
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
-        <a href="/pages/creator-dashboard#creations" class="creator-quick-action" data-goto="2" data-creations-tab="designs">
+        <a href="/pages/creator-dashboard#creations" class="creator-quick-action" data-goto="2" data-creations-tab="designs" data-eazy-guide="dashboard.qa-designs">
           <div class="creator-quick-action__icon">📤</div>
           <div class="creator-quick-action__text">
             <p class="creator-quick-action__title" data-t="creator.overview.action_designs_title">My Designs</p>
@@ -158,7 +158,7 @@
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
-        <a href="/pages/creator-dashboard?eaz_marketing_subtab=content-creation&amp;eaz_marketing_content=hero-images#marketing" class="creator-quick-action" data-goto="3" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
+        <a href="/pages/creator-dashboard?eaz_marketing_subtab=content-creation&amp;eaz_marketing_content=hero-images#marketing" class="creator-quick-action" data-goto="3" data-marketing-subtab="content-creation" data-marketing-content="hero-images" data-eazy-guide="dashboard.qa-content">
           <div class="creator-quick-action__icon">🖼️</div>
           <div class="creator-quick-action__text">
             <p class="creator-quick-action__title" data-t="creator.overview.action_content_title">Content Creation</p>
@@ -166,7 +166,7 @@
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
-        <a href="/pages/creator-dashboard?eaz_creations_tab=products#creations" class="creator-quick-action" data-goto="2" data-creations-tab="products">
+        <a href="/pages/creator-dashboard?eaz_creations_tab=products#creations" class="creator-quick-action" data-goto="2" data-creations-tab="products" data-eazy-guide="dashboard.qa-products">
           <div class="creator-quick-action__icon">📊</div>
           <div class="creator-quick-action__text">
             <p class="creator-quick-action__title" data-t="creator.overview.action_products_title">My Products</p>
@@ -174,7 +174,7 @@
           </div>
           <span class="creator-quick-action__arrow">→</span>
         </a>
-        <a href="/pages/creator-dashboard#automations" class="creator-quick-action" data-goto="4" data-automations-maintab="design-generator">
+        <a href="/pages/creator-dashboard#automations" class="creator-quick-action" data-goto="4" data-automations-maintab="design-generator" data-eazy-guide="dashboard.qa-automations">
           <div class="creator-quick-action__icon">⚙️</div>
           <div class="creator-quick-action__text">
             <p class="creator-quick-action__title" data-t="creator.overview.action_automations_title">Automations</p>
