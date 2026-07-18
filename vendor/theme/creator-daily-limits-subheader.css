@@ -1,4 +1,4 @@
-/* Creator daily limits subheader — Layout 3 (cosmic inline), fixed strip below header */
+/* Creator daily limits subheader — single-line strip: stats + countdown */
 
 .creator-daily-limits {
   position: fixed;
@@ -27,9 +27,9 @@
 
 .creator-daily-limits__row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: clamp(6px, 1.6vw, 12px);
   min-height: 22px;
   overflow-x: auto;
@@ -136,42 +136,22 @@
   background: linear-gradient(90deg, #c026d3 0%, #f97316 45%, #fde68a 100%);
 }
 
-.creator-daily-limits__foot {
-  flex: 1 1 100%;
-  order: 10;
-  margin: 5px 0 0;
-  padding-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  text-align: center;
-  font-size: 10px;
-  line-height: 1.3;
-  color: rgba(154, 168, 199, 0.72);
-  letter-spacing: 0.03em;
-}
-
-.creator-daily-limits__foot-wrap {
-  flex: 1 1 100%;
-  order: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-}
-
-.creator-daily-limits__foot-wrap .creator-daily-limits__foot {
+.creator-daily-limits__timer-wrap {
   flex: 0 0 auto;
-  order: 0;
-  width: 100%;
-  margin: 5px 0 0;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 0 2px;
+  padding: 0 0 0 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  min-width: 0;
 }
 
 .creator-daily-limits__countdown {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin: 0 0 1px;
-  padding: 0 2px;
+  margin: 0;
+  padding: 0;
 }
 
 .creator-daily-limits__countdown[hidden] {
@@ -218,16 +198,6 @@
   white-space: nowrap;
 }
 
-.creator-daily-limits.has-countdown .creator-daily-limits__foot-wrap .creator-daily-limits__foot {
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.creator-daily-limits__foot-star {
-  margin-right: 4px;
-  color: rgba(192, 38, 211, 0.75);
-}
-
 .creator-daily-limits.is-loading .creator-daily-limits__bar-text {
   opacity: 0.45;
 }
@@ -239,8 +209,6 @@
   }
 
   .creator-daily-limits__row {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
     gap: 14px;
     max-width: min(1360px, 100%);
     margin: 0 auto;
@@ -261,31 +229,9 @@
     font-size: 10px;
   }
 
-  .creator-daily-limits__foot-wrap {
-    flex: 0 0 auto;
-    order: 0;
-    align-items: flex-start;
-    gap: 4px;
+  .creator-daily-limits__timer-wrap {
     margin: 0 0 0 2px;
     padding: 0 0 0 14px;
-    border-left: 1px solid rgba(255, 255, 255, 0.12);
-  }
-
-  .creator-daily-limits__foot-wrap .creator-daily-limits__foot {
-    flex: 0 0 auto;
-    width: auto;
-    margin: 0;
-    padding: 0;
-    border-top: none;
-    text-align: left;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .creator-daily-limits__countdown {
-    margin: 0 0 0 1px;
-    padding: 0;
   }
 
   .creator-daily-limits__countdown-bar {
@@ -295,10 +241,6 @@
 
   .creator-daily-limits__countdown-text {
     font-size: 10px;
-  }
-
-  .creator-daily-limits__foot-star {
-    margin-right: 5px;
   }
 }
 
@@ -328,5 +270,9 @@
 
   .creator-daily-limits__item[data-limit="publish"] .creator-daily-limits__bar-text::before {
     content: "↗ ";
+  }
+
+  .creator-daily-limits__timer-wrap {
+    padding-left: 8px;
   }
 }

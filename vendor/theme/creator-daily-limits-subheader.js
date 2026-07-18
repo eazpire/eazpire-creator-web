@@ -290,12 +290,6 @@
         loadingState
       );
 
-      var foot = rootEl.querySelector('[data-limit-footnote]');
-      if (foot && !loadingState) {
-        var nextFoot = mode === 'lifetime' ? i18n('lifetime', rootEl) : i18n('reset', rootEl);
-        if (foot.textContent !== nextFoot) foot.textContent = nextFoot;
-      }
-
       rootEl.classList.toggle('is-loading', !!loadingState);
       rootEl.classList.remove('is-guest');
     });
