@@ -99,6 +99,10 @@
       if (codeHint) codeHint.hidden = true;
       var overviewShell = document.getElementById('cjOverviewShell');
       if (overviewShell) overviewShell.hidden = true;
+      var overviewHiddenBar = document.getElementById('cjOverviewHiddenBar');
+      var overviewHiddenActions = document.getElementById('cjOverviewHiddenActions');
+      if (overviewHiddenBar) overviewHiddenBar.hidden = true;
+      if (overviewHiddenActions) overviewHiddenActions.innerHTML = '';
       if (balanceWrap) {
         balanceWrap.hidden = false;
         var cachedBal = readCachedBalanceEaz();

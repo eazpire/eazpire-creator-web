@@ -3673,6 +3673,10 @@
   border: 1px dashed rgba(255, 255, 255, 0.12);
 }
 
+.cj-overview-hidden-bar[hidden] {
+  display: none !important;
+}
+
 .cj-overview-hidden-bar__label {
   font-size: 0.75rem;
   color: var(--cj-muted);
