@@ -2156,6 +2156,12 @@
   gap: 8px;
 }
 
+.cj-psi-ships-from {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
 .cj-psi-shipping__flag {
   width: 22px;
   height: 16px;

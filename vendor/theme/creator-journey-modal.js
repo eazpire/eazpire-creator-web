@@ -3948,6 +3948,19 @@
   }
 
   function renderProductSkillShippingCountry(ov) {
+    var shipsFrom = Array.isArray(ov.ships_from) ? ov.ships_from : [];
+    if (shipsFrom.length) {
+      return '<div class="cj-psi-ships-from">' + shipsFrom.map(function (s) {
+        var flagCode = s.flag_code || (s.code ? String(s.code).toLowerCase() : '');
+        var name = s.name || s.label || s.code || '';
+        var flag = flagCode
+          ? '<img class="cj-psi-shipping__flag" src="' + FLAG_CDN + escapeHtml(flagCode) + '.svg" alt="" loading="lazy">'
+          : '';
+        return '<span class="cj-psi-shipping">' + flag +
+          '<span>' + escapeHtml(psiT('ships_from_label', 'Ships from {{ country }}', { country: name })) +
+          '</span></span>';
+      }).join('') + '</div>';
+    }
     var flagCode = ov.shipping_flag_code || (ov.shipping_country ? String(ov.shipping_country).toLowerCase() : '');
     var name = ov.shipping_country_name || ov.shipping_country || '';
     if (!name) return escapeHtml('—');
@@ -3957,17 +3970,30 @@
     return '<span class="cj-psi-shipping">' + flag + '<span>' + escapeHtml(name) + '</span></span>';
   }
 
+  function formatUsdCents(cents) {
+    if (cents == null || !Number.isFinite(Number(cents))) return null;
+    var n = Number(cents) / 100;
+    try {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+    } catch (e) {
+      return '$' + n.toFixed(2);
+    }
+  }
+
   function renderProductSkillOverview(data) {
     var ov = data.overview || {};
     var audience = Array.isArray(ov.audience) ? ov.audience : [];
     var printAreas = Array.isArray(ov.print_areas) ? ov.print_areas : [];
+    var shipsFrom = Array.isArray(ov.ships_from) ? ov.ships_from : [];
     return renderPsiKvRows([
       {
         label: psiT('audience', 'Audience'),
         valueHtml: renderPsiChips(audience.length ? audience : ['—'])
       },
       {
-        label: psiT('shipping_country', 'Shipping country'),
+        label: shipsFrom.length > 1
+          ? psiT('ships_from', 'Ships from')
+          : psiT('shipping_country', 'Shipping country'),
         valueHtml: renderProductSkillShippingCountry(ov)
       },
       {
@@ -4080,14 +4106,18 @@
   function renderProductSkillRegionsTab(data) {
     var regions = data.regions || {};
     var continents = Array.isArray(regions.continents) ? regions.continents : [];
-    var html = '<p class="cj-psi-hint">' +
-      escapeHtml(psiT('shipping_placeholder', 'Shipping costs will be configured in Admin.')) +
-      '</p>';
+    var placeholder = regions.shipping_costs_placeholder !== false;
+    var html = '';
+    if (placeholder) {
+      html += '<p class="cj-psi-hint">' +
+        escapeHtml(psiT('shipping_placeholder', 'Shipping costs will be configured in Admin → Shipping.')) +
+        '</p>';
+    }
     if (!continents.length) {
       html += '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
       return html;
     }
-    continents.forEach(function (cont, idx) {
+    continents.forEach(function (cont) {
       var countries = Array.isArray(cont.countries) ? cont.countries : [];
       html += '<details class="cj-psi-region">';
       html += '<summary><span>' + escapeHtml(cont.title || cont.code || '') + '</span>' +
@@ -4098,11 +4128,14 @@
         var flag = c.flag_code
           ? '<img class="cj-psi-country__flag" src="' + FLAG_CDN + escapeHtml(c.flag_code) + '.svg" alt="" loading="lazy">'
           : '<span class="cj-psi-country__flag" aria-hidden="true"></span>';
-        var ship = psiT('shipping_tba', 'TBA');
+        var first = formatUsdCents(c.shipping_first_cents);
+        var add = formatUsdCents(c.shipping_additional_cents);
+        var shipFirst = first || psiT('shipping_tba', 'TBA');
+        var shipAdd = add || psiT('shipping_tba', 'TBA');
         html += '<div class="cj-psi-country">' + flag +
           '<span class="cj-psi-country__name">' + escapeHtml(c.name || c.code || '') + '</span>' +
           '<span class="cj-psi-country__ship">' +
-          escapeHtml(psiT('shipping_first', '1st') + ': ' + ship + ' · ' + psiT('shipping_additional', 'Add.') + ': ' + ship) +
+          escapeHtml(psiT('shipping_first', '1st') + ': ' + shipFirst + ' · ' + psiT('shipping_additional', 'Add.') + ': ' + shipAdd) +
           '</span></div>';
       });
       html += '</details>';
