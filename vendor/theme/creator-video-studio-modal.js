@@ -943,6 +943,18 @@
         'link_error_facebook_failed',
         'Could not find a public video on that Facebook link. Only public videos/reels work — save the file and use Device instead.'
       ),
+      tiktok_failed: i18n(
+        'link_error_tiktok_failed',
+        'Could not extract media from that TikTok link. The post may be private or region-locked — save the file and use Device instead.'
+      ),
+      instagram_failed: i18n(
+        'link_error_instagram_failed',
+        'Could not extract public media from that Instagram link. Private or login-only posts are not supported — save the file and use Device instead.'
+      ),
+      youtube_failed: i18n(
+        'link_error_youtube_failed',
+        'Could not extract media from that YouTube link (experimental). Try again later, or save the file and use Device instead.'
+      ),
       unsupported_content_type: i18n(
         'link_error_content_type',
         "That link doesn't point directly to a video, audio, or image file."

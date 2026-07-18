@@ -26,7 +26,7 @@
     var link = document.createElement("link");
     link.rel = "stylesheet";
     // Bump when portal CSS changes — /vendor is cached 7d; stale ?v= kept old QI UI + Public Designs bugs.
-    link.href = href + "?v=qi20-20260717";
+    link.href = href + "?v=skill-modal-20260718b";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -39,7 +39,7 @@
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
       // Bump when portal JS changes — /vendor is cached 7d.
-      s.src = src + "?v=qi20-20260717";
+      s.src = src + "?v=skill-modal-20260718b";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -83,7 +83,7 @@
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
     // Portal serves /partials with max-age=7d — bump when modal markup/CSS in partials changes.
-    var url = "/partials/" + name + "?v=paste-20260716a";
+    var url = "/partials/" + name + "?v=skill-modal-20260718b";
     if (host.querySelector('[data-partial="' + name + '"]')) return;
     var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;

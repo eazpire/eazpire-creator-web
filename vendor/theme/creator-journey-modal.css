@@ -1993,7 +1993,13 @@
   gap: 12px;
 }
 
-/* Author `display:flex` would otherwise override the [hidden] attribute (theme-wide pattern). */
+/*
+ * Mode class on the dialog is the source of truth (not only [hidden]).
+ * Author `display:flex` on .cj-product-skill-info would otherwise keep the
+ * product shell visible for every skill after Softstyle was opened once.
+ */
+.cj-royalty-info-dialog:not(.is-product-skill) .cj-product-skill-info,
+.cj-royalty-info-dialog.is-product-skill .cj-royalty-info-dialog__simple,
 .cj-product-skill-info[hidden],
 .cj-royalty-info-dialog__simple[hidden] {
   display: none !important;
@@ -2327,41 +2333,37 @@
   line-height: 1.25;
 }
 
-.cj-psi-variant-card__price {
-  font-size: 0.75rem;
-  color: #ffd28a;
-  font-weight: 700;
-}
-
 .cj-psi-variant-card__details {
   padding: 0 10px 12px;
 }
 
-.cj-psi-variant-views {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 8px;
-  margin-top: 10px;
+.cj-psi-size-prices {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.cj-psi-variant-view__label {
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.65);
-  margin-bottom: 4px;
-}
-
-.cj-psi-variant-view__media {
-  aspect-ratio: 1;
+.cj-psi-size-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 8px;
   border-radius: 8px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.cj-psi-variant-view__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
+.cj-psi-size-price__name {
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.cj-psi-size-price__cost {
+  font-size: 0.75rem;
+  color: #ffd28a;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .cj-psi-region > summary {
@@ -2415,45 +2417,54 @@
   white-space: nowrap;
 }
 
-.cj-psi-print-acc {
-  display: flex;
-  flex-direction: column;
+.cj-psi-print-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.cj-psi-print-card {
-  border-radius: 12px;
+@media (min-width: 768px) {
+  .cj-psi-print-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.cj-psi-print-tile {
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
-  overflow: hidden;
+  padding: 8px;
+  min-width: 0;
 }
 
-.cj-psi-print-card > summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 10px 12px;
-  font-size: 0.85rem;
+.cj-psi-print-tile__label {
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: capitalize;
+  margin-bottom: 6px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.cj-psi-print-card > summary::-webkit-details-marker {
-  display: none;
-}
-
-.cj-psi-print-card__stage {
-  position: relative;
-  margin: 0 10px 10px;
+.cj-psi-print-tile__media {
   aspect-ratio: 1;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.25);
 }
 
-.cj-psi-print-card__stage img {
+.cj-psi-print-tile__media img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  display: block;
+}
+
+.cj-psi-print-tile__media .cj-psi-empty {
+  margin: 0;
+  padding: 8px;
+  font-size: 0.68rem;
+  text-align: center;
 }
 
 .cj-psi-print-zone {

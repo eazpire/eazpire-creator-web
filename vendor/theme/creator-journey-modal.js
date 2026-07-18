@@ -3875,9 +3875,44 @@
   function isProductSkillNode(node) {
     // Only catalog product unlocks use the tabbed product-skill shell.
     // Design types, royalties, markets, EAZV economy, etc. stay on the simple info modal.
-    if (!node || node.category !== 'product') return false;
+    if (!node) return false;
+    var cat = node.category != null ? String(node.category).trim() : '';
+    if (cat !== 'product') return false;
+    // Guard against mis-tagged nodes that carry a design_type / non-product key.
+    if (node.design_type) return false;
+    var key = node.node_key != null ? String(node.node_key) : '';
+    if (key.indexOf('design_type:') === 0) return false;
     var pk = node.product_key != null ? String(node.product_key).trim() : '';
     return !!pk;
+  }
+
+  /** Wipe stale Softstyle/product HTML so it cannot leak into simple skill modals. */
+  function clearProductSkillShell() {
+    var iconEl = document.getElementById('cjProductSkillIcon');
+    var titleEl = document.getElementById('cjProductSkillTitle');
+    var metaEl = document.getElementById('cjProductSkillMeta');
+    var panels = document.getElementById('cjProductSkillPanels');
+    if (iconEl) iconEl.innerHTML = '';
+    if (titleEl) titleEl.textContent = '';
+    if (metaEl) {
+      metaEl.textContent = '';
+      metaEl.hidden = true;
+    }
+    if (panels) {
+      panels.querySelectorAll('[data-cj-psi-panel]').forEach(function (panel) {
+        panel.innerHTML = '';
+        panel.classList.remove('is-active');
+        panel.hidden = true;
+      });
+    }
+    var tabs = document.getElementById('cjProductSkillTabs');
+    if (tabs) {
+      tabs.querySelectorAll('[data-cj-psi-tab]').forEach(function (btn) {
+        var isOverview = btn.getAttribute('data-cj-psi-tab') === 'overview';
+        btn.classList.toggle('is-active', isOverview);
+        btn.setAttribute('aria-selected', isOverview ? 'true' : 'false');
+      });
+    }
   }
 
   function formatCentsPrice(cents) {
@@ -4054,46 +4089,46 @@
     return html;
   }
 
+  function normalizePsiSizeEntry(sz) {
+    if (sz && typeof sz === 'object') {
+      return {
+        name: String(sz.name || sz.size || '').trim(),
+        cost_cents: sz.cost_cents != null ? Number(sz.cost_cents) : null
+      };
+    }
+    return { name: String(sz || '').trim(), cost_cents: null };
+  }
+
   function renderProductSkillVariantsTab(data) {
     var variants = Array.isArray(data.variants) ? data.variants : [];
     if (!variants.length) {
       return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
     }
     return '<div class="cj-psi-variant-list">' + variants.map(function (v) {
-      var price = formatCentsPrice(v.cost_cents);
-      var priceLabel = price
-        ? psiT('purchase_price', 'From {{ price }}', { price: price })
-        : psiT('price_na', 'Price n/a');
       var media = v.image_url
         ? '<img src="' + escapeHtml(v.image_url) + '" alt="" loading="lazy">'
         : '<span class="cj-psi-dot" style="width:28px;height:28px;background:' +
           escapeHtml(v.hex || '#888') + '"></span>';
-      var sizes = Array.isArray(v.sizes) ? v.sizes : [];
-      var views = Array.isArray(v.views) ? v.views : [];
+      var sizes = (Array.isArray(v.sizes) ? v.sizes : []).map(normalizePsiSizeEntry)
+        .filter(function (sz) { return !!sz.name; });
       var sizesHtml = sizes.length
-        ? '<div class="cj-psi-sizes" aria-label="' + escapeHtml(psiT('sizes', 'Sizes')) + '">' +
+        ? '<div class="cj-psi-size-prices" aria-label="' + escapeHtml(psiT('sizes', 'Sizes')) + '">' +
           sizes.map(function (sz) {
-            return '<span class="cj-psi-size">' + escapeHtml(sz) + '</span>';
+            var price = formatCentsPrice(sz.cost_cents);
+            var priceLabel = price || psiT('price_na', 'Price n/a');
+            return '<div class="cj-psi-size-price">' +
+              '<span class="cj-psi-size-price__name">' + escapeHtml(sz.name) + '</span>' +
+              '<span class="cj-psi-size-price__cost">' + escapeHtml(priceLabel) + '</span>' +
+              '</div>';
           }).join('') + '</div>'
-        : '';
-      var viewsHtml = views.length
-        ? '<div class="cj-psi-variant-views">' + views.map(function (vw) {
-            var img = vw.image_url
-              ? '<img src="' + escapeHtml(vw.image_url) + '" alt="" loading="lazy">'
-              : '';
-            return '<div class="cj-psi-variant-view">' +
-              '<div class="cj-psi-variant-view__label">' + escapeHtml(vw.label || vw.position || '') + '</div>' +
-              '<div class="cj-psi-variant-view__media">' + img + '</div></div>';
-          }).join('') + '</div>'
-        : '';
-      return '<details class="cj-psi-variant-card" open>' +
+        : '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
+      return '<details class="cj-psi-variant-card">' +
         '<summary class="cj-psi-variant-card__summary">' +
         '<span class="cj-psi-variant-card__media">' + media + '</span>' +
         '<span class="cj-psi-variant-card__body">' +
         '<span class="cj-psi-variant-card__name">' + escapeHtml(v.name || '') + '</span>' +
-        '<span class="cj-psi-variant-card__price">' + escapeHtml(priceLabel) + '</span>' +
         '</span></summary>' +
-        '<div class="cj-psi-variant-card__details">' + sizesHtml + viewsHtml + '</div>' +
+        '<div class="cj-psi-variant-card__details">' + sizesHtml + '</div>' +
         '</details>';
     }).join('') + '</div>';
   }
@@ -4143,13 +4178,15 @@
     if (!areas.length) {
       return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
     }
-    return '<div class="cj-psi-print-acc">' + areas.map(function (a, idx) {
+    return '<div class="cj-psi-print-grid">' + areas.map(function (a) {
+      var label = a.label || a.position || '';
       var img = a.shop_mock_url
         ? '<img src="' + escapeHtml(a.shop_mock_url) + '" alt="" loading="lazy">'
         : '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
-      return '<details class="cj-psi-print-card"' + (idx === 0 ? ' open' : '') + '>' +
-        '<summary>' + escapeHtml(a.label || a.position || '') + '</summary>' +
-        '<div class="cj-psi-print-card__stage">' + img + '</div></details>';
+      return '<div class="cj-psi-print-tile">' +
+        '<div class="cj-psi-print-tile__label">' + escapeHtml(label) + '</div>' +
+        '<div class="cj-psi-print-tile__media">' + img + '</div>' +
+        '</div>';
     }).join('') + '</div>';
   }
 
@@ -4297,6 +4334,7 @@
       product.hidden = true;
       product.setAttribute('hidden', '');
     }
+    clearProductSkillShell();
   }
 
   function showProductSkillInfoMode() {
@@ -4405,7 +4443,7 @@
       return;
     }
 
-    // Cancel any in-flight product-skill fetch so it cannot refill the hidden shell.
+    // Non-product path: cancel product fetch, force simple shell, clear stale product DOM.
     productSkillInfoToken += 1;
     showSimpleSkillInfoMode();
 
