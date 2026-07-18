@@ -6,6 +6,7 @@
 
   var LABEL_W = 104;
   var MAX_TIMELINE_MS = 3 * 60 * 1000;
+  var MAX_TRACKS = 12;
   var SEEK_THRESHOLD_PLAYING = 0.35;
   var SEEK_THRESHOLD_PAUSED = 0.03;
   var SEEK_THRESHOLD_START = 0.15;
@@ -18,18 +19,38 @@
     return Math.max(a, Math.min(b, n));
   }
 
+  /** Universal tracks accept video, image, and audio on any lane. */
+  function makeTrack(index, opts) {
+    opts = opts || {};
+    return {
+      id: opts.id || uid('t'),
+      type: 'any',
+      name: opts.name || 'T' + (index + 1),
+      clips: Array.isArray(opts.clips) ? opts.clips : [],
+      volume: opts.volume != null ? opts.volume : 1,
+      muted: !!opts.muted,
+    };
+  }
+
   function defaultTracks() {
-    return [
-      { id: 'v1', type: 'video', name: 'V1', clips: [], volume: 1, muted: false },
-      { id: 'v2', type: 'video', name: 'V2', clips: [], volume: 1, muted: false },
-      { id: 'a1', type: 'audio', name: 'A1', clips: [], volume: 1, muted: false },
-    ];
+    return [makeTrack(0, { id: 't1' }), makeTrack(1, { id: 't2' }), makeTrack(2, { id: 't3' })];
   }
 
   function ensureTrackAudioDefaults(tracks) {
-    (tracks || []).forEach(function (t) {
+    (tracks || []).forEach(function (t, i) {
+      t.type = 'any';
+      if (!t.id) t.id = uid('t');
+      if (!t.name) t.name = 'T' + (i + 1);
       if (t.volume == null) t.volume = 1;
       if (t.muted == null) t.muted = false;
+      if (!Array.isArray(t.clips)) t.clips = [];
+    });
+    return tracks;
+  }
+
+  function renumberTrackNames(tracks) {
+    (tracks || []).forEach(function (t, i) {
+      t.name = 'T' + (i + 1);
     });
     return tracks;
   }
@@ -182,7 +203,8 @@
           var el = document.createElement('div');
           el.className =
             'cvs-clip' +
-            (track.type === 'audio' ? ' is-audio' : '') +
+            (asset.kind === 'audio' ? ' is-audio' : '') +
+            (asset.kind === 'image' ? ' is-image' : '') +
             (clip.id === api.selectedClipId ? ' is-selected' : '');
           el.dataset.clipId = clip.id;
           el.style.left = left + 'px';
@@ -271,15 +293,44 @@
       }
     }
 
+    function trackIndexAtClientY(clientY) {
+      if (!tracksEl) return -1;
+      var rows = tracksEl.querySelectorAll('.cvs-track');
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i].getBoundingClientRect();
+        if (clientY >= r.top && clientY <= r.bottom) return i;
+      }
+      if (!rows.length) return -1;
+      // Above first / below last → clamp to nearest track
+      var first = rows[0].getBoundingClientRect();
+      if (clientY < first.top) return 0;
+      return rows.length - 1;
+    }
+
+    function moveClipToTrack(clip, targetTrack) {
+      if (!clip || !targetTrack) return false;
+      var found = getClip(clip.id);
+      if (!found || found.track.id === targetTrack.id) return false;
+      found.track.clips.splice(found.clipIndex, 1);
+      targetTrack.clips.push(clip);
+      return true;
+    }
+
     function startMove(e, clip, onDone) {
       e.preventDefault();
       var startX = e.clientX;
+      var startY = e.clientY;
       var orig = clip.timelineStart || 0;
       var moved = false;
       function onMove(ev) {
         var dx = ev.clientX - startX;
-        if (Math.abs(dx) > 3) moved = true;
+        var dy = ev.clientY - startY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
         clip.timelineStart = clamp(orig + (dx / api.pxPerSec) * 1000, 0, MAX_TIMELINE_MS);
+        var ti = trackIndexAtClientY(ev.clientY);
+        if (ti >= 0 && ti < api.tracks.length) {
+          moveClipToTrack(clip, api.tracks[ti]);
+        }
         recomputeDuration();
         renderTracks();
         drawFrame(api.playheadMs);
@@ -447,7 +498,8 @@
           syncMediaPlayback(media, item.localMs, api.playing);
         }
 
-        if (item.track.type === 'audio') return;
+        // Audio-only assets never paint on the canvas (any track).
+        if (asset.kind === 'audio') return;
         if (asset.kind === 'video' && media.readyState < 2) return;
 
         var crop = item.clip.crop || { x: 0, y: 0, w: 1, h: 1 };
@@ -525,8 +577,10 @@
       api.width = project.width || api.width;
       api.height = project.height || api.height;
       var draft = project.draft || {};
-      api.tracks = ensureTrackAudioDefaults(
-        Array.isArray(draft.tracks) && draft.tracks.length ? draft.tracks : defaultTracks()
+      api.tracks = renumberTrackNames(
+        ensureTrackAudioDefaults(
+          Array.isArray(draft.tracks) && draft.tracks.length ? draft.tracks : defaultTracks()
+        )
       );
       api.playheadMs = Number(draft.playhead_ms) || 0;
       renderAll();
@@ -579,16 +633,10 @@
       var track = api.tracks.find(function (t) {
         return t.id === trackId;
       });
-      if (!track) return null;
-      if (asset.kind === 'audio' && track.type !== 'audio') {
-        track = api.tracks.find(function (t) {
-          return t.type === 'audio';
-        });
-      }
-      if (asset.kind !== 'audio' && track.type === 'audio') {
-        track = api.tracks.find(function (t) {
-          return t.type === 'video';
-        });
+      // Universal tracks: keep the drop target. Fall back to first track only
+      // when the id is missing (e.g. double-click add without a lane).
+      if (!track) {
+        track = api.tracks[0] || null;
       }
       if (!track) return null;
 
@@ -733,32 +781,18 @@
       return selectedClip();
     };
 
-    // ── Transport: restart / jump to previous|next audio clip ────────────
-    // Primary source: clips on audio-type tracks, ordered by timelineStart.
-    // Fallback (no audio tracks/clips): any clip whose asset has audio
-    // (kind 'audio' or 'video'), so Forward/Backward still do something
-    // useful on video-only projects that carry their own sound.
+    // ── Transport: restart / jump to previous|next clip with audio ───────
+    // Any track can hold audio/video; jump targets are based on asset kind.
     function audioClipStartTimes() {
-      var audioTracks = api.tracks.filter(function (t) {
-        return t.type === 'audio' && (t.clips || []).length;
-      });
       var starts = [];
-      if (audioTracks.length) {
-        audioTracks.forEach(function (t) {
-          (t.clips || []).forEach(function (c) {
+      api.tracks.forEach(function (t) {
+        (t.clips || []).forEach(function (c) {
+          var asset = api.assetsById[c.assetId];
+          if (asset && (asset.kind === 'audio' || asset.kind === 'video')) {
             starts.push(c.timelineStart || 0);
-          });
+          }
         });
-      } else {
-        api.tracks.forEach(function (t) {
-          (t.clips || []).forEach(function (c) {
-            var asset = api.assetsById[c.assetId];
-            if (asset && (asset.kind === 'audio' || asset.kind === 'video')) {
-              starts.push(c.timelineStart || 0);
-            }
-          });
-        });
-      }
+      });
       starts.sort(function (a, b) {
         return a - b;
       });
@@ -766,6 +800,20 @@
         return i === 0 || v !== starts[i - 1];
       });
     }
+
+    api.addTrack = function () {
+      if (api.tracks.length >= MAX_TRACKS) return null;
+      var track = makeTrack(api.tracks.length);
+      api.tracks.push(track);
+      renumberTrackNames(api.tracks);
+      renderAll();
+      api.onChange();
+      return track;
+    };
+
+    api.canAddTrack = function () {
+      return api.tracks.length < MAX_TRACKS;
+    };
 
     api.restartToStart = function () {
       if (api.playing) api.togglePlay();
@@ -878,5 +926,9 @@
     return api;
   }
 
-  global.CreatorVideoStudioTimeline = { create: createEngine, MAX_TIMELINE_MS: MAX_TIMELINE_MS };
+  global.CreatorVideoStudioTimeline = {
+    create: createEngine,
+    MAX_TIMELINE_MS: MAX_TIMELINE_MS,
+    MAX_TRACKS: MAX_TRACKS,
+  };
 })(window);

@@ -557,6 +557,9 @@
 .cvs-clip.is-audio {
   background: linear-gradient(135deg, rgba(56, 189, 248, 0.85), rgba(14, 165, 233, 0.7));
 }
+.cvs-clip.is-image {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.85), rgba(124, 58, 237, 0.7));
+}
 .cvs-clip__edge {
   position: absolute;
   top: 0;

@@ -251,7 +251,100 @@
     suppressHistory = false;
   }
 
+  function projectIsSaved() {
+    return !!(project && project.id && Number(project.is_saved) === 1);
+  }
+
+  function blankLocalProject() {
+    return {
+      id: null,
+      title: i18n('untitled', 'Untitled'),
+      description: '',
+      aspect_preset: 'youtube_16_9',
+      width: 1920,
+      height: 1080,
+      duration_ms: 0,
+      is_saved: 0,
+      draft: {
+        tracks: [
+          { id: 't1', type: 'any', name: 'T1', clips: [], volume: 1, muted: false },
+          { id: 't2', type: 'any', name: 'T2', clips: [], volume: 1, muted: false },
+          { id: 't3', type: 'any', name: 'T3', clips: [], volume: 1, muted: false },
+        ],
+        playhead_ms: 0,
+      },
+    };
+  }
+
+  function applyBlankProject() {
+    project = blankLocalProject();
+    assets = assets.filter(function (a) {
+      return a._uploading;
+    });
+    var presetEl = document.getElementById('cvs-aspect-preset');
+    if (presetEl) presetEl.value = project.aspect_preset;
+    var wEl = document.getElementById('cvs-aspect-w');
+    var hEl = document.getElementById('cvs-aspect-h');
+    if (wEl) wEl.value = String(project.width);
+    if (hEl) hEl.value = String(project.height);
+    var custom = document.getElementById('cvs-aspect-custom');
+    if (custom) custom.hidden = true;
+    if (engine) {
+      engine.setAssets(assets, localUrls);
+      engine.setProject(project);
+      history = [JSON.stringify(engine.getDraft())];
+      historyIndex = 0;
+    }
+    updateTimeUi();
+    updateProjectPickerLabel();
+    isDirty = false;
+    renderAssetGrid();
+  }
+
+  /**
+   * Creates a hidden draft row (is_saved=0) when the sidebar needs a
+   * project_id for asset attach — never shown in the Projects list until
+   * the user explicitly Saves.
+   */
+  async function ensureDraftProject() {
+    if (project && project.id) return project.id;
+    try {
+      var a = currentAspect();
+      var res = await fetch(apiUrl('video-studio-project-create'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: (project && project.title) || i18n('untitled', 'Untitled'),
+          description: (project && project.description) || '',
+          aspect_preset: a.preset,
+          width: a.width,
+          height: a.height,
+          is_saved: 0,
+        }),
+      });
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (!data.ok || !data.project) return null;
+      var draft = engine ? engine.getDraft() : (project && project.draft) || blankLocalProject().draft;
+      project = Object.assign({}, data.project, {
+        is_saved: 0,
+        draft: draft,
+        title: (project && project.title) || data.project.title,
+        description: (project && project.description) || data.project.description || '',
+      });
+      updateProjectPickerLabel();
+      return project.id;
+    } catch (e) {
+      console.warn('[VideoStudio] ensure draft project failed', e);
+      return null;
+    }
+  }
+
   function scheduleSave() {
+    // Only autosave projects the user has explicitly saved once.
+    if (!projectIsSaved()) return;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
       saveProject(true);
@@ -491,7 +584,10 @@
       });
       card.addEventListener('dblclick', function () {
         if (!engine || asset._uploading) return;
-        engine.addClipFromAsset(asset.id, asset.kind === 'audio' ? 'a1' : 'v1', engine.playheadMs);
+        // Universal tracks: drop on the first lane (user can drag to any track).
+        var targetTrackId =
+          (engine.tracks && engine.tracks[0] && engine.tracks[0].id) || 't1';
+        engine.addClipFromAsset(asset.id, targetTrackId, engine.playheadMs);
       });
       card.addEventListener('click', function () {
         if (asset._uploading) return;
@@ -612,8 +708,9 @@
    */
   async function attachAssetToProject(assetId, opts) {
     opts = opts || {};
-    var projectId = project && project.id;
-    if (!projectId || !assetId) return false;
+    if (!assetId) return false;
+    var projectId = (project && project.id) || (await ensureDraftProject());
+    if (!projectId) return false;
     try {
       var res = await fetch(apiUrl('video-studio-project-asset-attach'), {
         method: 'POST',
@@ -1336,8 +1433,14 @@
       var data = await res.json().catch(function () {
         return { ok: false };
       });
-      if (!data.ok || !data.project) return;
+      if (!data.ok) return;
+      // No saved project yet → start a local blank (no DB row).
+      if (!data.project) {
+        applyBlankProject();
+        return;
+      }
       project = data.project;
+      if (project.is_saved == null) project.is_saved = 1;
       var presetEl = document.getElementById('cvs-aspect-preset');
       if (presetEl) presetEl.value = project.aspect_preset || 'youtube_16_9';
       var wEl = document.getElementById('cvs-aspect-w');
@@ -1358,12 +1461,18 @@
       isDirty = false;
     } catch (e) {
       console.warn('[VideoStudio] project load failed', e);
+      applyBlankProject();
     }
   }
 
   async function saveProject(silent, overrides) {
     if (!engine) return;
+    var forceMarkSaved = !!(overrides && overrides.mark_saved);
+    // Silent autosave only for projects already in the saved list
+    // (unless caller explicitly promotes with mark_saved, e.g. export).
+    if (silent && !projectIsSaved() && !forceMarkSaved) return;
     var a = currentAspect();
+    var markSaved = !silent || forceMarkSaved;
     var body = {
       project_id: project && project.id,
       title: (overrides && overrides.title) || (project && project.title) || 'Untitled',
@@ -1374,6 +1483,8 @@
       height: a.height,
       duration_ms: engine.durationMs,
       draft: engine.getDraft(),
+      silent: !!silent,
+      mark_saved: markSaved,
     };
     try {
       var res = await fetch(apiUrl('video-studio-project-save'), {
@@ -1405,7 +1516,7 @@
       description: (project && project.description) || '',
     });
     if (!result) return;
-    await saveProject(false, { title: result.name, description: result.description });
+    await saveProject(false, { title: result.name, description: result.description, mark_saved: true });
   }
 
   async function createNewProject() {
@@ -1421,34 +1532,9 @@
       });
       if (!ok) return;
     }
-    setStatus(i18n('loading', 'Loading…'));
-    try {
-      var res = await fetch(apiUrl('video-studio-project-create'), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: i18n('untitled', 'Untitled') }),
-      });
-      var data = await res.json().catch(function () {
-        return { ok: false };
-      });
-      if (!data.ok || !data.project) throw new Error(data.error || 'create_failed');
-      project = data.project;
-      await loadAssets();
-      if (engine) {
-        engine.setAssets(assets, localUrls);
-        engine.setProject(project);
-        history = [JSON.stringify(engine.getDraft())];
-        historyIndex = 0;
-      }
-      updateProjectPickerLabel();
-      updateTimeUi();
-      isDirty = false;
-      setStatus(i18n('project_created', 'New project created'));
-    } catch (e) {
-      console.warn('[VideoStudio] create project failed', e);
-      setStatus(i18n('save_failed', 'Save failed'));
-    }
+    // Local blank only — do not create a DB Untitled row until Save / first asset attach.
+    applyBlankProject();
+    setStatus(i18n('project_created', 'New project created'));
   }
 
   // ── Projects modal (grid browser) ─────────────────────────────────────
@@ -1503,7 +1589,10 @@
         return { ok: false };
       });
       if (data.ok && Array.isArray(data.items)) {
-        projectsCache = data.items;
+        // Defense in depth: never show drafts / unsaved Untitled rows.
+        projectsCache = data.items.filter(function (p) {
+          return p && (Number(p.is_saved) === 1 || p.is_saved === true);
+        });
         renderProjectsGrid();
       }
     } catch (e) {
@@ -1972,7 +2061,9 @@
     if (btn) btn.disabled = true;
     setStatus(i18n('exporting', 'Exporting…'));
     try {
-      await saveProject(true);
+      // Persist timeline before export; promote unsaved drafts so the export
+      // has a project_id without requiring a separate Save click.
+      await saveProject(true, { mark_saved: true });
       var a = currentAspect();
       var blob = await renderExportBlob(a.width, a.height);
       if (!blob) throw new Error('encode_failed');
@@ -2347,6 +2438,14 @@
     });
     on('cvs-btn-forward', 'click', function () {
       if (engine) engine.seekToNextAudioClip();
+    });
+    on('cvs-btn-add-track', 'click', function () {
+      if (!engine) return;
+      if (typeof engine.canAddTrack === 'function' && !engine.canAddTrack()) {
+        setStatus(i18n('add_track_max', 'Maximum number of tracks reached'));
+        return;
+      }
+      if (typeof engine.addTrack === 'function') engine.addTrack();
     });
     on('cvs-btn-split', 'click', function () {
       if (engine) engine.splitSelected();
