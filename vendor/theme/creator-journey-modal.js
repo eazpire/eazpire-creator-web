@@ -4099,18 +4099,47 @@
     return { name: String(sz || '').trim(), cost_cents: null };
   }
 
+  function psiVariantViewUrl(views, position, fallbackUrl) {
+    var list = Array.isArray(views) ? views : [];
+    var pos = String(position || '').toLowerCase();
+    for (var i = 0; i < list.length; i++) {
+      var p = String(list[i] && list[i].position || '').toLowerCase();
+      if (p === pos && list[i].image_url) return String(list[i].image_url);
+    }
+    return fallbackUrl || '';
+  }
+
   function renderProductSkillVariantsTab(data) {
     var variants = Array.isArray(data.variants) ? data.variants : [];
     if (!variants.length) {
       return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
     }
+    var enabledAreas = Array.isArray(data.overview && data.overview.print_areas)
+      ? data.overview.print_areas.map(function (p) { return String(p || '').toLowerCase(); })
+      : [];
+    var backEnabled = !enabledAreas.length || enabledAreas.indexOf('back') !== -1;
+
     return '<div class="cj-psi-variant-list">' + variants.map(function (v) {
-      var media = v.image_url
-        ? '<img src="' + escapeHtml(v.image_url) + '" alt="" loading="lazy">'
+      var frontUrl = psiVariantViewUrl(v.views, 'front', v.image_url || '');
+      var backUrl = backEnabled ? psiVariantViewUrl(v.views, 'back', '') : '';
+      var thumbs = [];
+      if (frontUrl) thumbs.push(frontUrl);
+      if (backUrl && backUrl !== frontUrl) thumbs.push(backUrl);
+      var media = thumbs.length
+        ? '<span class="cj-psi-variant-card__thumbs' + (thumbs.length > 1 ? ' cj-psi-variant-card__thumbs--dual' : '') + '">' +
+          thumbs.map(function (url) {
+            return '<img src="' + escapeHtml(url) + '" alt="" loading="lazy">';
+          }).join('') + '</span>'
         : '<span class="cj-psi-dot" style="width:28px;height:28px;background:' +
           escapeHtml(v.hex || '#888') + '"></span>';
       var sizes = (Array.isArray(v.sizes) ? v.sizes : []).map(normalizePsiSizeEntry)
         .filter(function (sz) { return !!sz.name; });
+      var sizeLabels = sizes.length
+        ? '<span class="cj-psi-variant-card__size-labels" aria-label="' + escapeHtml(psiT('sizes', 'Sizes')) + '">' +
+          sizes.map(function (sz) {
+            return '<span class="cj-psi-size">' + escapeHtml(sz.name) + '</span>';
+          }).join('') + '</span>'
+        : '';
       var sizesHtml = sizes.length
         ? '<div class="cj-psi-size-prices" aria-label="' + escapeHtml(psiT('sizes', 'Sizes')) + '">' +
           sizes.map(function (sz) {
@@ -4127,6 +4156,7 @@
         '<span class="cj-psi-variant-card__media">' + media + '</span>' +
         '<span class="cj-psi-variant-card__body">' +
         '<span class="cj-psi-variant-card__name">' + escapeHtml(v.name || '') + '</span>' +
+        sizeLabels +
         '</span></summary>' +
         '<div class="cj-psi-variant-card__details">' + sizesHtml + '</div>' +
         '</details>';
