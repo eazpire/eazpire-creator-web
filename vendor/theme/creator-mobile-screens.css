@@ -2875,9 +2875,12 @@ html.creator-creations-bulk-overlay-open {
 .creator-marketing-panel--hidden { display: none !important; }
 /* Other marketing tabs: hide Content Creation Eazy strips (sticky/footer overlap) */
 #creatorMarketing[data-marketing-subtab="content-publish"] #creatorMarketingPanelCreation .creator-hero-eazy-footer,
-#creatorMarketing[data-marketing-subtab="content-publish"] #creatorMarketingPanelCreation .creator-video-eazy-footer,
-#creatorMarketing[data-marketing-subtab="promotions"] #creatorMarketingPanelCreation .creator-hero-eazy-footer,
-#creatorMarketing[data-marketing-subtab="promotions"] #creatorMarketingPanelCreation .creator-video-eazy-footer {
+#creatorMarketing[data-marketing-subtab="promotions"] #creatorMarketingPanelCreation .creator-hero-eazy-footer {
+  display: none !important;
+}
+/* Video Studio footer bar removed — never show on videos workspace */
+#creatorMarketing .creator-video-eazy-footer,
+.creator-video-create-context .creator-video-eazy-footer {
   display: none !important;
 }
 .creator-marketing-under-tabs {

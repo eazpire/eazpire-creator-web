@@ -3745,13 +3745,12 @@ body.creator-video-motion-info-modal-open {
   display: block !important;
   padding: 12px 20px 18px;
 }
-.creator-desktop-content-creation .creator-video-eazy-footer.creator-hero-eazy-footer--status-only,
-.creator-desktop-marketing-host .creator-video-eazy-footer.creator-hero-eazy-footer--status-only,
-#creatorMarketing .creator-video-eazy-footer.creator-hero-eazy-footer--status-only {
-  display: block !important;
-  padding: 0 !important;
-  background: rgba(6, 4, 14, 0.95) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+/* Legacy Video Studio footer bar removed (tools grid replaces it) */
+.creator-desktop-content-creation .creator-video-eazy-footer,
+.creator-desktop-marketing-host .creator-video-eazy-footer,
+#creatorMarketing .creator-video-eazy-footer,
+.creator-video-create-context .creator-video-eazy-footer {
+  display: none !important;
 }
 .creator-desktop-content-creation .creator-hero-eazy-footer__inner,
 .creator-desktop-marketing-host .creator-hero-eazy-footer__inner {
