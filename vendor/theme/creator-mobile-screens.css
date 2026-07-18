@@ -2843,13 +2843,9 @@ html.creator-creations-bulk-overlay-open {
   -webkit-overflow-scrolling: touch;
   padding: 16px 14px 28px;
   position: relative;
-  /* Existing creator galaxy asset + dark overlay so skill-tree cards stay readable */
-  background:
-    linear-gradient(165deg, rgba(6, 8, 18, 0.78) 0%, rgba(10, 12, 28, 0.72) 45%, rgba(8, 10, 22, 0.82) 100%),
-    radial-gradient(120% 80% at 50% 0%, rgba(255, 120, 40, 0.14), transparent 55%),
-    url('galaxy-nebula-bg.png') center center / cover no-repeat;
-  background-attachment: local;
-  border-radius: 16px;
+  /* No nested panel — nebula comes from .creator-mobile-app / desktop stage */
+  background: transparent;
+  border-radius: 0;
 }
 .cmkt-tree {
   display: flex;

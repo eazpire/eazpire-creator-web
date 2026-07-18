@@ -26,7 +26,7 @@
     var link = document.createElement("link");
     link.rel = "stylesheet";
     // Bump when portal CSS changes — /vendor is cached 7d; stale ?v= kept old QI UI + Public Designs bugs.
-    link.href = href + "?v=skill-modal-20260718b";
+    link.href = href + "?v=mkt-expand-20260718";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -39,7 +39,7 @@
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
       // Bump when portal JS changes — /vendor is cached 7d.
-      s.src = src + "?v=skill-modal-20260718b";
+      s.src = src + "?v=mkt-expand-20260718";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -50,6 +50,21 @@
       };
       document.head.appendChild(s);
     });
+  }
+
+  /** Load script but do not fail the whole feature chain (optional leaf UIs). */
+  function loadScriptOptional(src) {
+    return loadScript(src).catch(function (err) {
+      console.warn("[CreatorPortalFeatures] optional script skipped", src, err);
+    });
+  }
+
+  function loadScriptsSequentialOptional(urls) {
+    return urls.reduce(function (chain, url) {
+      return chain.then(function () {
+        return loadScriptOptional(url);
+      });
+    }, Promise.resolve());
   }
 
   function loadScriptsParallel(urls) {
@@ -324,6 +339,7 @@
       await injectPartial("creator-hero-images-modal.html");
       loadCss(asset("creator-hero-images-modal.css"));
 
+      // Core skill-tree nav first — expand must bind even if leaf modals 404.
       await loadScriptsSequential([
         asset("creator-phone-upload-modal.js"),
         asset("creator-footer-eaz-ui.js"),
@@ -336,12 +352,7 @@
         asset("creator-videos-screen.js"),
         asset("creator-content-publish-images-screen.js"),
         asset("eaz-creator-promotions.js"),
-        asset("creator-hero-images-modal.js"),
         asset("creator-marketing-screen.js"),
-        asset("creator-video-studio-timeline.js"),
-        asset("creator-video-studio-modal.js"),
-        asset("creator-video-studio-asset-tools.js"),
-        asset("creator-video-generator-modal.js"),
       ]);
 
       try {
@@ -349,6 +360,15 @@
       } catch (e) {}
 
       applyMarketingDeepLink();
+
+      // Leaf UIs (hero modal / video studio) — optional so missing vendor files do not block expand.
+      await loadScriptsSequentialOptional([
+        asset("creator-hero-images-modal.js"),
+        asset("creator-video-studio-timeline.js"),
+        asset("creator-video-studio-modal.js"),
+        asset("creator-video-studio-asset-tools.js"),
+        asset("creator-video-generator-modal.js"),
+      ]);
     })();
 
     try {

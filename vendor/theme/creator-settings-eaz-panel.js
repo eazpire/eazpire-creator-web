@@ -700,7 +700,6 @@
       if (eLocked) eLocked.textContent = fmtEaz(eazcLocked);
 
       var convertToEazgBlock = document.getElementById('creatorEazcToEazgConvert');
-      var convertBlock = document.getElementById('creatorEazEarnedConvert');
       var availEarned = Number(eazcAvail || 0);
       earnedAvailableEaz = availEarned;
       if (convertToEazgBlock) {
@@ -709,15 +708,7 @@
         if (eazcAmountInput) eazcAmountInput.max = String(availEarned);
         updateEazcToEazgPreview();
       }
-      if (convertBlock) {
-        convertBlock.hidden = !(availEarned > 0);
-        earnedConvertCfg.eaz_cents_per_eaz = Number(data.eaz_cents_per_eaz || 10);
-        earnedConvertCfg.fiat_currency = data.fiat_currency || 'USD';
-        earnedConvertCfg.min_convert_eaz = Number(data.min_convert_eaz || 100);
-        var amountInput = document.getElementById('creatorEazConvertAmount');
-        if (amountInput) amountInput.min = String(earnedConvertCfg.min_convert_eaz);
-        updateCreatorConvertPreview();
-      }
+      // Cash out lives in Balance & Payouts (sales modal), not Settings → EAZ.
 
       document.querySelectorAll('.creator-eaz-free-cap').forEach(function (x) {
         x.textContent = String(cap);

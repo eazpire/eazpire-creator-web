@@ -933,31 +933,163 @@
     if (networkDateTo) networkDateTo.value = toYMD(now);
   }
 
+  var cashoutCfg = {
+    eaz_cents_per_eaz: 10,
+    fiat_currency: 'USD',
+    min_convert_eaz: 100,
+    available_eaz: 0
+  };
+
+  function fmtEazAmount(n) {
+    var v = Number(n || 0);
+    return v % 1 === 0 ? String(v) : v.toFixed(2);
+  }
+
+  function cashoutI18n(key, fallback) {
+    var map = {
+      preview: (overlay && overlay.dataset.i18nCashoutPreview) || '≈ {{amount}} (lowest rate)',
+      min: (overlay && overlay.dataset.i18nCashoutMin) || 'Minimum {{min}} EAZC required.',
+      success: (overlay && overlay.dataset.i18nCashoutSuccess) || 'Conversion complete. Fiat is now available for payout.',
+      fail: (overlay && overlay.dataset.i18nCashoutFail) || 'Conversion failed.'
+    };
+    return map[key] || fallback || '';
+  }
+
+  function formatFiatFromUsdCents(cents) {
+    var usd = Number(cents || 0) / 100;
+    var target = normalizeCurrencyCode(
+      (typeof window !== 'undefined' && window.__EAZ_PRESENTMENT_CURRENCY) ||
+        cashoutCfg.fiat_currency ||
+        earningsDisplayCurrency ||
+        'USD',
+      'USD'
+    );
+    if (typeof window.EazShopMoney !== 'undefined' && typeof window.EazShopMoney.convertUsdToPresentment === 'function') {
+      try {
+        return window.EazShopMoney.convertUsdToPresentment(usd, target);
+      } catch (_e) { /* fall through */ }
+    }
+    return formatMoney(usd, target);
+  }
+
+  function updateCashoutPreview() {
+    var preview = document.getElementById('slmCashoutPreview');
+    var amountEl = document.getElementById('slmCashoutAmount');
+    var availEl = document.getElementById('slmCashoutAvail');
+    if (availEl) availEl.textContent = fmtEazAmount(cashoutCfg.available_eaz) + ' EAZC';
+    if (!preview) return;
+    var amount = Number(amountEl && amountEl.value);
+    var rate = cashoutCfg.eaz_cents_per_eaz || 10;
+    if (!amount || amount <= 0 || !rate) {
+      preview.textContent = '';
+      return;
+    }
+    var usdCents = Math.round(amount * rate);
+    preview.textContent = cashoutI18n('preview').replace(/\{\{amount\}\}/g, formatFiatFromUsdCents(usdCents));
+  }
+
+  function setCashoutMsg(text, kind) {
+    var el = document.getElementById('slmCashoutMsg');
+    if (!el) return;
+    el.hidden = !text;
+    el.textContent = text || '';
+    el.classList.remove('is-error', 'is-success');
+    if (kind) el.classList.add(kind === 'error' ? 'is-error' : 'is-success');
+  }
+
+  async function runCashout(op) {
+    var ownerId = getOwnerId();
+    var amountEl = document.getElementById('slmCashoutAmount');
+    var amount = Number(amountEl && amountEl.value);
+    var min = cashoutCfg.min_convert_eaz || 100;
+    if (!ownerId || !amount || amount < min) {
+      setCashoutMsg(cashoutI18n('min').replace(/\{\{min\}\}/g, String(min)), 'error');
+      return;
+    }
+    if (amount > cashoutCfg.available_eaz + 1e-9) {
+      setCashoutMsg(cashoutI18n('fail'), 'error');
+      return;
+    }
+    setCashoutMsg('', null);
+    try {
+      var url = getApiBase() + '/apps/creator-dispatch?op=' + encodeURIComponent(op);
+      var res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner_id: ownerId, amount_eaz: amount })
+      });
+      var data = await res.json();
+      if (!data || !data.ok) throw new Error((data && data.error) || 'failed');
+      if (amountEl) amountEl.value = '';
+      updateCashoutPreview();
+      setCashoutMsg(cashoutI18n('success'), 'success');
+      await loadOverviewData();
+      if (typeof window.reloadCreatorDashboardBalances === 'function') {
+        window.reloadCreatorDashboardBalances();
+      } else if (typeof window.loadCreatorSalesBalance === 'function') {
+        window.loadCreatorSalesBalance(0);
+      }
+    } catch (_e) {
+      setCashoutMsg(cashoutI18n('fail'), 'error');
+    }
+  }
+
+  function bindCashoutUi() {
+    if (!overlay || overlay.__slmCashoutBound) return;
+    overlay.__slmCashoutBound = true;
+    var amountEl = document.getElementById('slmCashoutAmount');
+    var fiatBtn = document.getElementById('slmCashoutFiatBtn');
+    var gcBtn = document.getElementById('slmCashoutGcBtn');
+    if (amountEl) {
+      amountEl.addEventListener('input', updateCashoutPreview);
+      amountEl.addEventListener('change', updateCashoutPreview);
+    }
+    if (fiatBtn) fiatBtn.addEventListener('click', function () { runCashout('convert-eaz-to-fiat'); });
+    if (gcBtn) gcBtn.addEventListener('click', function () { runCashout('convert-eaz-to-gift-card'); });
+  }
+
   async function loadOverviewData() {
     const ownerId = getOwnerId();
     if (!ownerId) return;
-    const balanceEl = document.getElementById('slmBalanceValue');
-    const availableEl = document.getElementById('slmAvailableAmount');
-    const pendingEl = document.getElementById('slmPendingAmount');
-    const reviewEl = document.getElementById('slmReviewAmount');
-    const breakdownSalesEl = document.getElementById('slmBreakdownSales');
-    const breakdownNetworkEl = document.getElementById('slmBreakdownNetwork');
+    bindCashoutUi();
+    const fiatAvailableEl = document.getElementById('slmFiatAvailable');
+    const fiatPaidOutEl = document.getElementById('slmFiatPaidOut');
+    const fiatLifetimeEl = document.getElementById('slmFiatLifetime');
+    const eazcAvailableEl = document.getElementById('slmEazcAvailable');
+    const eazcPendingEl = document.getElementById('slmEazcPending');
+    const eazcConvertedEl = document.getElementById('slmEazcConverted');
+    const eazcLifetimeEl = document.getElementById('slmEazcLifetime');
     try {
-      const url = getApiBase() + '/apps/creator-dispatch?op=get-creator-payout-overview&owner_id=' + encodeURIComponent(ownerId) + '&days=' + currentDays;
-      const res = await fetch(url);
-      const data = await res.json();
+      const overviewUrl = getApiBase() + '/apps/creator-dispatch?op=get-creator-payout-overview&owner_id=' + encodeURIComponent(ownerId) + '&days=' + currentDays;
+      const earnedUrl = getApiBase() + '/apps/creator-dispatch?op=get-earned-balance&owner_id=' + encodeURIComponent(ownerId);
+      const [overviewRes, earnedRes] = await Promise.all([fetch(overviewUrl), fetch(earnedUrl)]);
+      const data = await overviewRes.json();
+      const earned = await earnedRes.json().catch(function () { return null; });
       if (!data.ok) return;
       overviewBaseCurrency = normalizeCurrencyCode(data.baseCurrency || data.currency || 'EUR', 'EUR');
       earningsDisplayCurrency = normalizeCurrencyCode(data.earningsCurrency || 'USD', 'USD');
       const avail = typeof data.availableAmount === 'number' ? data.availableAmount : 0;
-      const salesAmt = typeof data.salesAmount === 'number' ? data.salesAmount : 0;
-      const networkAmt = typeof data.networkAmount === 'number' ? data.networkAmount : 0;
       availableAmountBase = avail;
       const availEarnings = convertAmount(avail, overviewBaseCurrency, earningsDisplayCurrency);
-      const salesEarnings = convertAmount(salesAmt, overviewBaseCurrency, earningsDisplayCurrency);
-      const networkEarnings = convertAmount(networkAmt, overviewBaseCurrency, earningsDisplayCurrency);
-      if (balanceEl) balanceEl.textContent = availEarnings.toFixed(2);
-      if (availableEl) availableEl.textContent = formatMoney(availEarnings, earningsDisplayCurrency);
+      var paidOutTotal = typeof data.payoutsTotal === 'number' ? data.payoutsTotal : 0;
+      var lifetimeTotal = typeof data.lifetimeAmount === 'number'
+        ? data.lifetimeAmount
+        : (avail + paidOutTotal);
+      if (fiatAvailableEl) fiatAvailableEl.textContent = formatMoney(availEarnings, earningsDisplayCurrency);
+      if (fiatPaidOutEl) {
+        fiatPaidOutEl.textContent = formatMoney(
+          convertAmount(paidOutTotal, overviewBaseCurrency, earningsDisplayCurrency),
+          earningsDisplayCurrency
+        );
+      }
+      if (fiatLifetimeEl) {
+        fiatLifetimeEl.textContent = formatMoney(
+          convertAmount(lifetimeTotal, overviewBaseCurrency, earningsDisplayCurrency),
+          earningsDisplayCurrency
+        );
+      }
+
       var requestAvailEl = document.getElementById('slmRequestAvailable');
       requestDisplayCurrency = getPreferredRequestCurrency();
       const availRequest = convertAmount(avail, overviewBaseCurrency, requestDisplayCurrency);
@@ -975,26 +1107,41 @@
         if (typeof renderPayoutMethods === 'function') renderPayoutMethods(avail);
       });
       if (shopFormulaEl) shopFormulaEl.textContent = formatMoney(availRequest, requestDisplayCurrency) + ' + 10% = ' + formatMoney(availRequest * 1.1, requestDisplayCurrency);
-      if (pendingEl) pendingEl.textContent = formatMoney(0, earningsDisplayCurrency);
-      if (reviewEl) reviewEl.textContent = formatMoney(0, earningsDisplayCurrency);
-      var paidOutTotal = typeof data.payoutsTotal === 'number' ? data.payoutsTotal : 0;
-      var paidOutEl = document.getElementById('slmPaidOutAmount');
-      if (paidOutEl) paidOutEl.textContent = formatMoney(convertAmount(paidOutTotal, overviewBaseCurrency, earningsDisplayCurrency), earningsDisplayCurrency);
-      if (breakdownSalesEl) breakdownSalesEl.textContent = formatMoney(salesEarnings, earningsDisplayCurrency);
-      if (breakdownNetworkEl) breakdownNetworkEl.textContent = formatMoney(networkEarnings, earningsDisplayCurrency);
-      const total = salesAmt + networkAmt || 1;
-      const salesPct = Math.round((salesAmt / total) * 100);
-      const networkPct = 100 - salesPct;
-      var salesFill = overlay?.querySelector('button[data-nav="earnings"] .slm-breakdown-item__fill');
-      var networkFill = overlay?.querySelector('button[data-nav="network"] .slm-breakdown-item__fill');
-      if (salesFill) salesFill.style.width = Math.max(salesPct, 2) + '%';
-      if (networkFill) networkFill.style.width = Math.max(networkPct, 2) + '%';
+
+      if (earned && earned.ok) {
+        var eazcAvail = Number(
+          earned.balance_eazc_available != null ? earned.balance_eazc_available : earned.balance_earned_available || 0
+        );
+        var eazcPending = Number(
+          earned.balance_eazc_locked != null ? earned.balance_eazc_locked : earned.balance_earned_locked || 0
+        );
+        var eazcConverted = Number(earned.balance_eazc_converted || 0);
+        var eazcLifetime = Number(
+          earned.balance_eazc_lifetime != null
+            ? earned.balance_eazc_lifetime
+            : eazcAvail + eazcPending + eazcConverted
+        );
+        if (eazcAvailableEl) eazcAvailableEl.textContent = fmtEazAmount(eazcAvail) + ' EAZC';
+        if (eazcPendingEl) eazcPendingEl.textContent = fmtEazAmount(eazcPending) + ' EAZC';
+        if (eazcConvertedEl) eazcConvertedEl.textContent = fmtEazAmount(eazcConverted) + ' EAZC';
+        if (eazcLifetimeEl) eazcLifetimeEl.textContent = fmtEazAmount(eazcLifetime) + ' EAZC';
+        cashoutCfg.eaz_cents_per_eaz = Number(earned.eaz_cents_per_eaz || 10);
+        cashoutCfg.fiat_currency = earned.fiat_currency || 'USD';
+        cashoutCfg.min_convert_eaz = Number(earned.min_convert_eaz || 100);
+        cashoutCfg.available_eaz = eazcAvail;
+        var amountInput = document.getElementById('slmCashoutAmount');
+        if (amountInput) {
+          amountInput.min = String(cashoutCfg.min_convert_eaz);
+          amountInput.max = String(Math.max(eazcAvail, cashoutCfg.min_convert_eaz));
+        }
+        updateCashoutPreview();
+      }
+
       var payoutsListEl = document.getElementById('slmPayoutsList');
       var payoutsEmptyEl = document.getElementById('slmPayoutsEmpty');
       if (payoutsListEl && payoutsEmptyEl) {
         var payouts = Array.isArray(data.payouts) ? data.payouts : [];
         var statusCompleted = (overlay && overlay.dataset.i18nStatusCompleted) || 'Completed';
-        var statusPaid = (overlay && overlay.dataset.i18nStatusPaid) || 'Paid';
         var payoutShopLabel = (overlay && overlay.dataset.i18nPayoutShopCredit) || 'Shop credit';
         var payoutBankLabel = (overlay && overlay.dataset.i18nPayoutBank) || 'Bank transfer';
         var payoutWiseLabel = (overlay && overlay.dataset.i18nPayoutWise) || 'Wise';
@@ -1010,6 +1157,9 @@
           payoutsListEl.innerHTML = '';
           payoutsEmptyEl.style.display = 'block';
         }
+      }
+      if (window.EazCoinBrand && typeof window.EazCoinBrand.applyCoinImages === 'function') {
+        window.EazCoinBrand.applyCoinImages(overlay);
       }
     } catch (e) {
       console.warn('[Sales Modal] Overview load failed:', e);

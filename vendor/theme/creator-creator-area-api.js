@@ -170,7 +170,15 @@
     return c + ' ';
   }
 
-  function applySalesPayoutToDom(formatted, symbol, balanceEl, desktopSalesEl, unitEls) {
+  function fmtHeaderEazc(n) {
+    var v = Number(n || 0);
+    if (!Number.isFinite(v)) v = 0;
+    return v % 1 === 0
+      ? String(v)
+      : v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  function applySalesPayoutToDom(formatted, unitLabel, balanceEl, desktopSalesEl, unitEls) {
     if (balanceEl) {
       balanceEl.textContent = formatted;
       balanceEl.style.color = '';
@@ -180,10 +188,10 @@
       desktopSalesEl.style.color = '';
     }
     unitEls.forEach(function (u) {
-      u.textContent = symbol;
+      u.textContent = unitLabel;
     });
     document.querySelectorAll('.creator-desktop-header [data-sales-balance-unit]').forEach(function (u) {
-      u.textContent = symbol;
+      u.textContent = unitLabel;
     });
   }
 
@@ -191,14 +199,14 @@
     if (balanceEl) balanceEl.textContent = '—';
     if (desktopSalesEl) desktopSalesEl.textContent = '—';
     unitEls.forEach(function (u) {
-      u.textContent = '';
+      u.textContent = 'EAZC';
     });
     document.querySelectorAll('.creator-desktop-header [data-sales-balance-unit]').forEach(function (u) {
-      u.textContent = '';
+      u.textContent = 'EAZC';
     });
   }
 
-  // Sales/payout balance (EUR etc.) — do NOT use window.loadCreatorBalance (EAZ) from creator-api-helper.liquid
+  // Header: Available + Pending EAZC (not fiat). Opens Balance & Payouts.
   window.loadCreatorSalesBalance = async function (retryCount) {
       retryCount = retryCount || 0;
       var balanceEl = document.getElementById('global-sales-balance-value');
@@ -222,31 +230,40 @@
         Date.now() - window.__salesBalanceCache.timestamp < BALANCE_CACHE_MS &&
         window.__salesBalanceCache.amount != null
       ) {
-        var cachedAmt = Number(window.__salesBalanceCache.amount);
-        var cachedCur = window.__salesBalanceCache.currency || 'EUR';
-        var cachedSym = formatCurrencySymbol(cachedCur);
-        var cachedFmt = cachedAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        applySalesPayoutToDom(cachedFmt, cachedSym, balanceEl, desktopSalesEl, unitEls);
+        applySalesPayoutToDom(
+          fmtHeaderEazc(window.__salesBalanceCache.amount),
+          'EAZC',
+          balanceEl,
+          desktopSalesEl,
+          unitEls
+        );
         return;
       }
       window.__salesBalanceCache.loading = (async function () {
         try {
           var data = await Promise.race([
-            window.creatorApiFetch('get-creator-payout-overview', { owner_id: ownerId, days: 90 }),
+            window.creatorApiFetch('get-earned-balance', { owner_id: ownerId }),
             new Promise(function (_, reject) {
               setTimeout(function () { reject(new Error('balance_timeout')); }, 12000);
             })
           ]);
           if (data && data.ok !== false) {
-            var amount = data.availableAmount != null ? Number(data.availableAmount) : 0;
-            var currency = data.currency || 'EUR';
-            var symbol = formatCurrencySymbol(currency);
-            var formatted = amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            applySalesPayoutToDom(formatted, symbol, balanceEl, desktopSalesEl, unitEls);
+            var amount =
+              data.balance_eazc_header != null
+                ? Number(data.balance_eazc_header)
+                : Number(data.balance_eazc_available || data.balance_earned_available || 0) +
+                  Number(data.balance_eazc_locked || data.balance_earned_locked || 0);
+            var formatted = fmtHeaderEazc(amount);
+            applySalesPayoutToDom(formatted, 'EAZC', balanceEl, desktopSalesEl, unitEls);
             window.__salesBalanceCache.amount = amount;
-            window.__salesBalanceCache.currency = currency;
+            window.__salesBalanceCache.currency = 'EAZC';
             window.__salesBalanceCache.timestamp = Date.now();
-            window.dispatchEvent(new CustomEvent('eazBalanceUpdated', { detail: { balance: amount, currency: currency } }));
+            window.dispatchEvent(
+              new CustomEvent('eazBalanceUpdated', { detail: { balance: amount, currency: 'EAZC', kind: 'eazc_header' } })
+            );
+            if (window.EazCoinBrand && typeof window.EazCoinBrand.applyCoinImages === 'function') {
+              window.EazCoinBrand.applyCoinImages(document);
+            }
           } else {
             clearSalesPayoutDom(balanceEl, desktopSalesEl, unitEls);
           }

@@ -2887,10 +2887,9 @@
 
   async function loadBalances() {
     if (window.__CREATOR_IS_LOGGED_IN === false && !window.__DEV_BYPASS) {
-      var zeroAmt = Number(0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      text('creator-desktop-sales-balance-value', zeroAmt);
+      text('creator-desktop-sales-balance-value', '0');
       document.querySelectorAll('.creator-desktop-header [data-sales-balance-unit]').forEach(function (el) {
-        el.textContent = '€';
+        el.textContent = 'EAZC';
       });
       text('creator-desktop-eaz-value', '—');
       if (typeof window.applyCreatorFooterStarterUi === 'function') {

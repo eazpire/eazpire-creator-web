@@ -9021,7 +9021,7 @@
       btn.addEventListener("click", function () {
         var act = btn.getAttribute("data-action");
         if (act === "earn_tips") {
-          appendMessage("assistant", "How to earn EAZC:\n\u2022 Sales on your products\n\u2022 Move to Earn with your Character\n\nConvert EAZC to EAZG in Creator Settings to use features, or cash out from the EAZ tab.");
+          appendMessage("assistant", "How to earn EAZC:\n\u2022 Sales on your products\n\u2022 Move to Earn with your Character\n\nConvert EAZC to EAZV in Creator Settings to use features, or cash out to fiat in Balance & Payouts.");
         } else if (act === "open_eaz_wallet") {
           if (window.CreatorSettingsV2Modal && typeof window.CreatorSettingsV2Modal.open === "function") {
             window.CreatorSettingsV2Modal.open({ tab: "eaz", eazSub: "balance" });

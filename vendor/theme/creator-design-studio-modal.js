@@ -3193,7 +3193,7 @@
       amount: String(calc.eazc_amount.toFixed(2)),
     }) + '</p>';
     html += '</div>';
-    html += '<p class="cds-muted">' + t('designStudioPriceEazcHint', 'You earn EAZC from sales. Convert EAZC to shop credit or cash out later in Creator Settings.') + '</p>';
+    html += '<p class="cds-muted">' + t('designStudioPriceEazcHint', 'You earn EAZC from sales. Cash out to fiat in Balance & Payouts, or convert EAZC to EAZV in Creator Settings.') + '</p>';
     html += '<p class="cds-muted">' + t('designStudioPriceEazcConvert', 'EAZC can be converted to fiat after it becomes available.') + '</p>';
     html += '</div>';
 

@@ -2334,10 +2334,12 @@ body.creator-mobile-page .creator-desktop-app {
     cursor: pointer;
   }
 
-  .creator-desktop-header__balance-icon {
+  .creator-desktop-header__balance-icon,
+  .creator-desktop-header__balance-coin {
     width: 16px;
     height: 16px;
     flex: 0 0 16px;
+    object-fit: contain;
   }
 
   .creator-desktop-footer__balance-coin {
