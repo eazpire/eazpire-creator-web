@@ -348,11 +348,32 @@
     }
   };
 
+  function interestsPanelQuery(oid) {
+    var q = '?op=get-interests-panel&owner_id=' + encodeURIComponent(oid);
+    try {
+      var lang =
+        (window.__locale && window.__locale.lang) ||
+        (document.documentElement && document.documentElement.lang) ||
+        '';
+      if (lang) q += '&shop_language=' + encodeURIComponent(String(lang).slice(0, 2));
+      var country =
+        (window.__EAZ_COUNTRY__ && String(window.__EAZ_COUNTRY__)) ||
+        (document.documentElement && document.documentElement.getAttribute('data-country')) ||
+        '';
+      if (country) q += '&country=' + encodeURIComponent(String(country).slice(0, 2));
+      var intent = new URLSearchParams(location.search).get('product_intent') || '';
+      if (!intent && /\/men\b|mens-|\/herren/i.test(location.pathname + location.search)) intent = 'men';
+      if (!intent && /\/women\b|womens-|\/damen/i.test(location.pathname + location.search)) intent = 'women';
+      if (intent) q += '&product_intent=' + encodeURIComponent(intent);
+    } catch (e) { /* ignore */ }
+    return q;
+  }
+
   HubState.prototype.refreshThemesFromServer = function () {
     var self = this;
     var oid = getOwnerId();
     if (!oid) return;
-    return fetch(API_BASE + '?op=get-interests-panel&owner_id=' + encodeURIComponent(oid))
+    return fetch(API_BASE + interestsPanelQuery(oid))
       .then(function (r) {
         return r.json();
       })
@@ -588,7 +609,7 @@
         var si = self.root.querySelector('#ehubSearchInput');
         if (si) si.value = '';
         var oid = getOwnerId();
-        fetch(API_BASE + '?op=get-interests-panel&owner_id=' + encodeURIComponent(oid))
+        fetch(API_BASE + interestsPanelQuery(oid))
           .then(function (r) {
             return r.json();
           })
