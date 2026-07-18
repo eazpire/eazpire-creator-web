@@ -83,7 +83,7 @@
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
     // Portal serves /partials with max-age=7d — bump when modal markup/CSS in partials changes.
-    var url = "/partials/" + name + "?v=skill-modal-20260718b";
+    var url = "/partials/" + name + "?v=cvg-addmedia-20260718c";
     if (host.querySelector('[data-partial="' + name + '"]')) return;
     var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;

@@ -81,13 +81,7 @@
                   <span class="cvg-motion-card__title" data-t="creator.content_creation.videos.motion_reference_upload_title">Reference motion video</span>
                 </div>
                 <div class="cvg-upload-status" data-cvg-motion-status hidden></div>
-                <div class="cvg-upload-area" data-cvg-upload="motion-video">
-                  <input
-                    type="file"
-                    accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
-                    class="cvg-upload-input"
-                    data-cvg-input="motion-video"
-                  >
+                <div class="cvg-upload-area" data-cvg-upload="motion-video" role="button" tabindex="0">
                   <div class="cvg-upload-placeholder" data-cvg-motion-placeholder>
                     <span class="cvg-upload-add" aria-hidden="true">+</span>
                   </div>
@@ -109,8 +103,7 @@
                   <span class="cvg-motion-card__title" data-t="creator.content_creation.videos.motion_character_image_title">Character image</span>
                 </div>
                 <div class="cvg-upload-status" data-cvg-character-status hidden></div>
-                <div class="cvg-upload-area" data-cvg-upload="character">
-                  <input type="file" accept="image/*" class="cvg-upload-input" data-cvg-input="character">
+                <div class="cvg-upload-area" data-cvg-upload="character" role="button" tabindex="0">
                   <div class="cvg-upload-placeholder" data-cvg-character-placeholder>
                     <span class="cvg-upload-add" aria-hidden="true">+</span>
                   </div>
@@ -159,6 +152,28 @@
         </section>
       </main>
     </div>
+
+    
+    <input
+      type="file"
+      accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+      class="cvg-upload-input"
+      data-cvg-input="motion-video"
+      id="cvg-input-motion-video"
+      hidden
+      tabindex="-1"
+      aria-hidden="true"
+    >
+    <input
+      type="file"
+      accept="image/*"
+      class="cvg-upload-input"
+      data-cvg-input="character"
+      id="cvg-input-character"
+      hidden
+      tabindex="-1"
+      aria-hidden="true"
+    >
 
     <button
       type="button"

@@ -271,7 +271,11 @@
   function openAddSourceModal(target) {
     addTarget = target === 'character' ? 'character' : 'motion';
     var overlay = document.getElementById('cvgAddSourceModal');
-    if (!overlay) return;
+    if (!overlay) {
+      console.warn('[VideoGenerator] Add media modal (#cvgAddSourceModal) missing');
+      return;
+    }
+    bindAddSourceUi();
     var phoneBtn = document.getElementById('cvg-addsrc-phone');
     if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
     var pasteBtn = document.getElementById('cvg-addsrc-paste');
@@ -347,11 +351,15 @@
     setStatus(addTarget === 'character' ? 'character' : 'motion', i18n('library_unavailable', 'Assets library is not available right now.'));
   }
 
+  function getDeviceInput(target) {
+    var id = target === 'character' ? 'cvg-input-character' : 'cvg-input-motion-video';
+    return document.getElementById(id) || (root && root.querySelector(
+      target === 'character' ? '[data-cvg-input="character"]' : '[data-cvg-input="motion-video"]'
+    ));
+  }
+
   function triggerDevicePicker() {
-    var input =
-      addTarget === 'character'
-        ? $('[data-cvg-input="character"]')
-        : $('[data-cvg-input="motion-video"]');
+    var input = getDeviceInput(addTarget === 'character' ? 'character' : 'motion');
     if (input) input.click();
   }
 
@@ -581,6 +589,7 @@
   }
 
   function open() {
+    bindUi();
     root = document.getElementById('creatorVideoGeneratorModal');
     if (!root) return;
     root.hidden = false;
@@ -697,55 +706,54 @@
       });
     });
 
-    var motionArea = $('[data-cvg-upload="motion-video"]');
-    var motionInput = $('[data-cvg-input="motion-video"]');
-    if (motionArea && motionInput) {
-      motionArea.addEventListener('click', function (e) {
-        if (e.target.closest('[data-cvg-motion-remove]')) return;
-        openAddSourceModal('motion');
-      });
-      motionInput.addEventListener('change', function () {
-        var file = motionInput.files && motionInput.files[0];
-        motionInput.value = '';
-        if (!file) return;
-        uploadMotion(file).then(function (url) {
-          if (url) applyMotionUrl(url);
-        });
-      });
-      var motionRemove = $('[data-cvg-motion-remove]');
-      if (motionRemove) {
-        motionRemove.addEventListener('click', function (e) {
+    function bindUploadArea(areaSel, removeSel, target, onFile) {
+      var area = $(areaSel);
+      var input = getDeviceInput(target);
+      if (!area || !input || area._cvgUploadBound) return;
+      area._cvgUploadBound = true;
+      function openPicker(e) {
+        if (e) {
+          e.preventDefault();
           e.stopPropagation();
-          motionInput.value = '';
-          applyMotionUrl(null);
+          if (e.target && e.target.closest && e.target.closest(removeSel)) return;
+        }
+        openAddSourceModal(target);
+      }
+      area.addEventListener('click', openPicker);
+      area.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openPicker(e);
+        }
+      });
+      input.addEventListener('change', function () {
+        var file = input.files && input.files[0];
+        input.value = '';
+        if (!file) return;
+        onFile(file);
+      });
+      var removeBtn = $(removeSel);
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          input.value = '';
+          if (target === 'character') applyCharacterUrl(null);
+          else applyMotionUrl(null);
         });
       }
     }
 
-    var charArea = $('[data-cvg-upload="character"]');
-    var charInput = $('[data-cvg-input="character"]');
-    if (charArea && charInput) {
-      charArea.addEventListener('click', function (e) {
-        if (e.target.closest('[data-cvg-character-remove]')) return;
-        openAddSourceModal('character');
+    bindUploadArea('[data-cvg-upload="motion-video"]', '[data-cvg-motion-remove]', 'motion', function (file) {
+      uploadMotion(file).then(function (url) {
+        if (url) applyMotionUrl(url);
       });
-      charInput.addEventListener('change', function () {
-        var file = charInput.files && charInput.files[0];
-        charInput.value = '';
-        if (!file) return;
-        uploadCharacter(file).then(function (url) {
-          if (url) applyCharacterUrl(url);
-        });
+    });
+    bindUploadArea('[data-cvg-upload="character"]', '[data-cvg-character-remove]', 'character', function (file) {
+      uploadCharacter(file).then(function (url) {
+        if (url) applyCharacterUrl(url);
       });
-      var charRemove = $('[data-cvg-character-remove]');
-      if (charRemove) {
-        charRemove.addEventListener('click', function (e) {
-          e.stopPropagation();
-          charInput.value = '';
-          applyCharacterUrl(null);
-        });
-      }
-    }
+    });
 
     var fab = $('#cvg-generate-fab');
     if (fab) fab.addEventListener('click', function () { generate(); });

@@ -366,12 +366,27 @@
   cursor: pointer;
   background: rgba(0, 0, 0, 0.2);
 }
-.cvg-upload-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
+.cvg-upload-input,
+#creatorVideoGeneratorModal input.cvg-upload-input[type="file"] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.cvg-upload-input[hidden] {
+  display: none !important;
+}
+/* Add-media / link overlays must sit above the fullscreen generator shell */
+#cvgAddSourceModal.cvs-confirm-overlay,
+#cvgLinkModal.cvs-confirm-overlay {
+  z-index: 10080;
 }
 .cvg-upload-placeholder {
   position: absolute;
@@ -445,9 +460,10 @@
 }
 .cvg-orient-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px 18px;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 12px;
   width: fit-content;
   max-width: 100%;
 }
