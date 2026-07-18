@@ -140,20 +140,21 @@
 
             <div class="cvg-field">
               <span class="cvg-field__label" data-t="creator.content_creation.videos.character_orientation_label">Character orientation</span>
-              <div class="cvg-orient-switch" role="group" aria-label="Character orientation">
-                <button type="button" class="cvg-orient-btn is-active" data-cvg-orient="video">
-                  Video
-                </button>
-                <button type="button" class="cvg-orient-btn" data-cvg-orient="image">
-                  Image
-                </button>
+              <div class="cvg-orient-row">
+                <div class="cvg-orient-switch" role="group" aria-label="Character orientation">
+                  <button type="button" class="cvg-orient-btn is-active" data-cvg-orient="video">
+                    Video
+                  </button>
+                  <button type="button" class="cvg-orient-btn" data-cvg-orient="image">
+                    Image
+                  </button>
+                </div>
+                <label class="cvg-checkbox">
+                  <input type="checkbox" data-cvg-keep-sound checked>
+                  <span data-t="creator.content_creation.videos.motion_keep_sound">Keep reference video audio</span>
+                </label>
               </div>
             </div>
-
-            <label class="cvg-checkbox">
-              <input type="checkbox" data-cvg-keep-sound checked>
-              <span data-t="creator.content_creation.videos.motion_keep_sound">Keep reference video audio</span>
-            </label>
           </div>
         </section>
       </main>

@@ -408,8 +408,19 @@
   resize: vertical;
   min-height: 72px;
 }
+.cvg-orient-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 18px;
+  width: fit-content;
+  max-width: 100%;
+}
 .cvg-orient-switch {
   display: inline-flex;
+  flex: 0 0 auto;
+  width: max-content;
+  align-self: flex-start;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   overflow: hidden;
@@ -420,10 +431,11 @@
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
-  padding: 8px 18px;
+  padding: 8px 14px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 .cvg-orient-btn.is-active {
   background: rgba(249, 115, 22, 0.3);
@@ -437,10 +449,13 @@
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   user-select: none;
+  flex: 0 1 auto;
+  white-space: nowrap;
 }
 .cvg-checkbox input {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
   accent-color: #f97316;
 }
 
