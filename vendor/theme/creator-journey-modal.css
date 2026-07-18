@@ -1993,6 +1993,12 @@
   gap: 12px;
 }
 
+/* Author `display:flex` would otherwise override the [hidden] attribute (theme-wide pattern). */
+.cj-product-skill-info[hidden],
+.cj-royalty-info-dialog__simple[hidden] {
+  display: none !important;
+}
+
 .cj-product-skill-info__header {
   display: flex;
   align-items: center;

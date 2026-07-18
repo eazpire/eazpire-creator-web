@@ -3874,7 +3874,11 @@
   var productSkillInfoBound = false;
 
   function isProductSkillNode(node) {
-    return !!(node && node.category === 'product' && node.product_key);
+    // Only catalog product unlocks use the tabbed product-skill shell.
+    // Design types, royalties, markets, EAZV economy, etc. stay on the simple info modal.
+    if (!node || node.category !== 'product') return false;
+    var pk = node.product_key != null ? String(node.product_key).trim() : '';
+    return !!pk;
   }
 
   function formatCentsPrice(cents) {
@@ -4253,8 +4257,14 @@
     var simple = document.getElementById('cjRoyaltyInfoSimple');
     var product = document.getElementById('cjProductSkillInfo');
     if (dialog) dialog.classList.remove('is-product-skill');
-    if (simple) simple.hidden = false;
-    if (product) product.hidden = true;
+    if (simple) {
+      simple.hidden = false;
+      simple.removeAttribute('hidden');
+    }
+    if (product) {
+      product.hidden = true;
+      product.setAttribute('hidden', '');
+    }
   }
 
   function showProductSkillInfoMode() {
@@ -4262,8 +4272,14 @@
     var simple = document.getElementById('cjRoyaltyInfoSimple');
     var product = document.getElementById('cjProductSkillInfo');
     if (dialog) dialog.classList.add('is-product-skill');
-    if (simple) simple.hidden = true;
-    if (product) product.hidden = false;
+    if (simple) {
+      simple.hidden = true;
+      simple.setAttribute('hidden', '');
+    }
+    if (product) {
+      product.hidden = false;
+      product.removeAttribute('hidden');
+    }
   }
 
   function localizeProductSkillTabs() {
@@ -4357,6 +4373,8 @@
       return;
     }
 
+    // Cancel any in-flight product-skill fetch so it cannot refill the hidden shell.
+    productSkillInfoToken += 1;
     showSimpleSkillInfoMode();
 
     var modalOpts = isEaz ? { type: 'eaz_economy' } : null;
