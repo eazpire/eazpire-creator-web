@@ -192,11 +192,14 @@
   }
 
   function getOwnerId() {
-    if (typeof window.__EAZ_OWNER_ID !== 'undefined' && window.__EAZ_OWNER_ID != null) {
-      return String(window.__EAZ_OWNER_ID);
+    if (typeof window.__EAZ_OWNER_ID !== 'undefined' && window.__EAZ_OWNER_ID != null && String(window.__EAZ_OWNER_ID) !== '') {
+      return String(window.__EAZ_OWNER_ID).trim();
     }
     var meta = document.querySelector('meta[name="creator-owner-id"]');
-    return meta ? meta.getAttribute('content') : null;
+    if (meta && meta.getAttribute('content')) return String(meta.getAttribute('content')).trim();
+    var input = document.querySelector('input[id^="ownerId-"]');
+    if (input && input.value) return String(input.value).trim();
+    return '';
   }
 
   function apiUrl(op) {
@@ -1093,22 +1096,45 @@
   }
 
   // ── Link modal phone QR bridge — paste a link on your phone, it fills the desktop input live ──
+  var PHONE_UPLOAD_WORKER_FALLBACK = 'https://creator-engine.eazpire.workers.dev';
+
   /**
-   * Always hits the creator-engine worker directly (same host that serves the QR image and
-   * scan page), never the Creator Hub's own origin. On the Shopify theme `CREATOR_API_CONFIG.BASE_URL`
-   * already points at the worker, so stripping `/apps/creator-dispatch` off `API_BASE` happens to work
-   * there — but on Creator Hub (`creator-web`) `BASE_URL` is set to `window.location.origin` (see
-   * `creator-web/js/theme-bridge.js`), which is the Hub's own domain, not the worker. That made the
-   * phone-bridge fetches 404 on Creator Hub → QR box stayed empty + "Phone scan unavailable right now".
-   * `PHONE_UPLOAD_BASE_URL` is set to the worker URL on both theme and Creator Hub, so prefer it
-   * (same pattern as `apiBase()` in `creator-phone-upload-modal.js`).
+   * Always hit the creator-engine worker (QR image + scan page), never Creator Hub origin.
+   * Same hardened resolution as `apiBase()` in creator-phone-upload-modal.js.
    */
   function phoneBridgeApiBase() {
     var cfg = window.CREATOR_API_CONFIG || {};
     if (cfg.PHONE_UPLOAD_BASE_URL) {
       return String(cfg.PHONE_UPLOAD_BASE_URL).replace(/\/+$/, '');
     }
-    return API_BASE.replace(/\/apps\/creator-dispatch$/, '');
+    if (cfg.WORKER_BASE_URL) {
+      return String(cfg.WORKER_BASE_URL).replace(/\/+$/, '');
+    }
+    var base = cfg.BASE_URL ? String(cfg.BASE_URL).replace(/\/+$/, '') : '';
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(base)) return base;
+    if (window.__CREATOR_PORTAL_HOST__) return PHONE_UPLOAD_WORKER_FALLBACK;
+    var fromApi = String(API_BASE || '').replace(/\/apps\/creator-dispatch$/i, '').replace(/\/+$/, '');
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(fromApi)) return fromApi;
+    return PHONE_UPLOAD_WORKER_FALLBACK;
+  }
+
+  function fetchPhoneBridgeJson(url, options) {
+    return fetch(url, options || { credentials: 'omit' }).then(function (r) {
+      return r.text().then(function (text) {
+        var snippet = String(text || '').trim();
+        var data = {};
+        if (snippet) {
+          try {
+            data = JSON.parse(snippet);
+          } catch (_e) {
+            var err = new Error('Phone bridge returned non-JSON (HTTP ' + r.status + ')');
+            err.httpStatus = r.status;
+            throw err;
+          }
+        }
+        return { httpOk: r.ok, status: r.status, data: data };
+      });
+    });
   }
 
   function stopLinkPhoneBridge() {
@@ -1138,13 +1164,9 @@
       encodeURIComponent(sessionId) +
       '&owner_id=' +
       encodeURIComponent(ownerId);
-    fetch(u, { credentials: 'omit' })
-      .then(function (r) {
-        return r.json().catch(function () {
-          return null;
-        });
-      })
-      .then(function (data) {
+    fetchPhoneBridgeJson(u, { credentials: 'omit' })
+      .then(function (res) {
+        var data = res.data;
         if (!data || !data.ok || linkPhoneSessionId !== sessionId) return;
         if (data.status === 'completed' && data.value) {
           stopLinkPhoneBridge();
@@ -1161,32 +1183,32 @@
     var qrImg = document.getElementById('cvs-link-qr-img');
     var phoneStatus = document.getElementById('cvs-link-phone-status');
     if (!box || !isDesktopViewport()) return;
+    stopLinkPhoneBridge();
+    if (qrImg) {
+      qrImg.removeAttribute('src');
+      qrImg.alt = '';
+    }
     var ownerId = getOwnerId();
-    if (!ownerId) return;
-    if (phoneStatus) phoneStatus.textContent = '';
+    if (!ownerId) {
+      if (phoneStatus) {
+        phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+      }
+      return;
+    }
+    if (phoneStatus) phoneStatus.textContent = i18n('link_phone_starting', 'Preparing phone scan…');
 
     var base = phoneBridgeApiBase();
-    fetch(base + '/api/creator-phone-upload/config', { credentials: 'omit' })
-      .then(function (r) {
-        return r.json().catch(function () {
-          return null;
-        });
-      })
-      .then(function (cfg) {
-        if (!cfg || !cfg.ok) return null;
-        return fetch(base + '/api/creator-phone-upload/session', {
-          method: 'POST',
-          credentials: 'omit',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ owner_id: ownerId, purpose: 'video_link' }),
-        }).then(function (r2) {
-          return r2.json().catch(function () {
-            return null;
-          });
-        });
-      })
-      .then(function (session) {
-        if (!session || !session.ok || !session.session_id) {
+    // Session create already validates phone-upload QR config — skip a separate /config hop
+    // (that hop was a common silent failure when the Hub origin was used by mistake).
+    fetchPhoneBridgeJson(base + '/api/creator-phone-upload/session', {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ owner_id: ownerId, purpose: 'video_link' }),
+    })
+      .then(function (res) {
+        var session = res.data;
+        if (!res.httpOk || !session || !session.ok || !session.session_id) {
           if (phoneStatus) {
             phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
           }
@@ -1194,11 +1216,31 @@
         }
         linkPhoneSessionId = session.session_id;
         if (qrImg) {
-          qrImg.src = base + '/api/creator-phone-upload/qr-image?session=' + encodeURIComponent(session.session_id);
+          qrImg.onload = function () {
+            if (phoneStatus && linkPhoneSessionId === session.session_id) {
+              phoneStatus.textContent = i18n('link_phone_hint', 'Paste the link on your phone — it fills in here automatically.');
+            }
+          };
+          qrImg.onerror = function () {
+            if (phoneStatus) {
+              phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+            }
+          };
+          qrImg.alt = 'Phone scan QR';
+          qrImg.src =
+            base +
+            '/api/creator-phone-upload/qr-image?session=' +
+            encodeURIComponent(session.session_id) +
+            '&t=' +
+            String(Date.now());
+        }
+        if (phoneStatus) {
+          phoneStatus.textContent = i18n('link_phone_ready', 'Scan the QR code with your phone');
         }
         linkPhonePollTimer = setInterval(function () {
           pollLinkPhoneSession(session.session_id, ownerId);
         }, 2000);
+        pollLinkPhoneSession(session.session_id, ownerId);
       })
       .catch(function () {
         if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
