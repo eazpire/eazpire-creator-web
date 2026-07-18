@@ -1115,14 +1115,6 @@
     function applyLocaleRouting(code) {
       var normalized = normalizeLocaleForMatch(code);
       if (!normalized) return;
-      try {
-        var _rm = [];
-        for (var _i = 0; _i < localStorage.length; _i++) {
-          var _k = localStorage.key(_i);
-          if (_k && _k.indexOf('eaz_lang_cache_v') === 0) _rm.push(_k);
-        }
-        for (var _j = 0; _j < _rm.length; _j++) localStorage.removeItem(_rm[_j]);
-      } catch (_e) {}
       if (typeof window.eazSetLangCookie === 'function') {
         window.eazSetLangCookie(normalized);
       } else {
@@ -1156,17 +1148,42 @@
                   : '/' + routeLocale + (basePath === '/' ? '' : basePath);
               return targetPath + (window.location.search || '') + (window.location.hash || '');
             })();
-      var targetUrl =
-        typeof window.eazBuildNavigationUrlForLang === 'function'
-          ? window.eazBuildNavigationUrlForLang(normalized, { bust: true })
-          : returnTo;
-      var sync =
-        typeof window.eazSubmitShopifyLocaleChange === 'function'
-          ? window.eazSubmitShopifyLocaleChange(normalized, returnTo)
-          : Promise.resolve();
-      sync.finally(function () {
-        window.location.replace(targetUrl);
-      });
+      function hardNavigate() {
+        if (typeof window.eazHardNavigateForLanguage === 'function') {
+          window.eazHardNavigateForLanguage(normalized);
+          return;
+        }
+        var targetUrl =
+          typeof window.eazBuildNavigationUrlForLang === 'function'
+            ? window.eazBuildNavigationUrlForLang(normalized, { bust: true })
+            : returnTo;
+        var sync =
+          typeof window.eazSubmitShopifyLocaleChange === 'function'
+            ? window.eazSubmitShopifyLocaleChange(normalized, returnTo)
+            : Promise.resolve();
+        sync.finally(function () {
+          window.location.replace(targetUrl);
+        });
+      }
+
+      if (typeof window.eazSubmitShopifyLocaleChange === 'function') {
+        window.eazSubmitShopifyLocaleChange(normalized, returnTo);
+      }
+
+      if (typeof window.eazSoftSwitchLanguage === 'function') {
+        window
+          .eazSoftSwitchLanguage(normalized)
+          .then(function (result) {
+            if (result && result.ok) return;
+            hardNavigate();
+          })
+          .catch(function () {
+            hardNavigate();
+          });
+        return;
+      }
+
+      hardNavigate();
     }
 
     var LANG_TO_COUNTRY = {
