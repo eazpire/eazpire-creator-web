@@ -116,6 +116,24 @@
 
   function render(container) {
     if (!container) return;
+    container.innerHTML =
+      '<div class="creator-video-tools-grid" data-creator-video-tools-grid>' +
+      '<button type="button" class="creator-video-tool-card" data-creator-video-studio-open>' +
+      '<span class="creator-video-tool-card__icon" aria-hidden="true">🎞️</span>' +
+      '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_studio', 'Video Studio')) + '</span>' +
+      '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_studio_desc', 'Edit clips on a timeline, crop, mix audio, and export.')) + '</span>' +
+      '</button>' +
+      '<button type="button" class="creator-video-tool-card" data-creator-video-generator-open>' +
+      '<span class="creator-video-tool-card__icon" aria-hidden="true">✨</span>' +
+      '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_generator', 'Video Generator')) + '</span>' +
+      '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_generator_desc', 'Generate videos with Motion Control and more AI tools.')) + '</span>' +
+      '</button>' +
+      '</div>';
+  }
+
+  /** @deprecated Legacy form markup kept for reference / future re-enable of inline settings. */
+  function renderLegacyVideoForm(container) {
+    if (!container) return;
     var motionInfoBodyId = 'creator-motion-info-' + String(container.id || ('x' + Math.random().toString(36).slice(2, 11))).replace(/[^a-zA-Z0-9_-]/g, '-');
     var charDlg = 'cvc-char-' + String(container.id || ('x' + Math.random().toString(36).slice(2, 11))).replace(/[^a-zA-Z0-9_-]/g, '-');
     container.innerHTML =
@@ -1615,81 +1633,18 @@
 
   function bind(ctx) {
     if (!ctx || !ctx.container) return;
+    if (ctx.container.getAttribute('data-creator-video-bound') === '1') return;
+    ctx.container.setAttribute('data-creator-video-bound', '1');
     render(ctx.container);
 
-    var typeEl = ctx.container.querySelector('[data-creator-video-content-type]');
-    if (typeEl) {
-      typeEl.addEventListener('change', function () { syncContentTypeUi(ctx.container, ctx); });
-      syncContentTypeUi(ctx.container, ctx);
-    }
-
-    var orientName = 'cv-orient-' + String(ctx.container.id || 'video-host').replace(/[^a-zA-Z0-9_-]/g, '');
-    ctx.container.querySelectorAll('[data-creator-video-orient-radio]').forEach(function (r) {
-      r.setAttribute('name', orientName);
-    });
-
-    if (eazIsVideoCreationWorkspaceActive()) {
-      loadHeroThumbnailsForVideo(ctx.container, ctx);
-    }
-
-    var topCard = ctx.container.querySelector('[data-creator-video-category="top"]');
-    var additionCard = ctx.container.querySelector('[data-creator-video-category="addition"]');
-    var topRemove = ctx.container.querySelector('[data-creator-video-remove="top"]');
-    var additionRemove = ctx.container.querySelector('[data-creator-video-remove="addition"]');
-    var promptEl = ctx.container.querySelector('[data-creator-video-prompt]');
-
-    if (topCard) {
-      topCard.addEventListener('click', function (e) {
-        if (e.target.closest('.creator-hero-product-preview-remove')) return;
-        if (e.target.closest('.creator-product-image-carousel__btn')) return;
-        if (typeof window.openHeroProductSelectionModalSimple === 'function') {
-          var creatorName = window.CreatorSettings && window.CreatorSettings.creatorName ? window.CreatorSettings.creatorName : null;
-          try { window.__heroModalUsedProductsContext = 'video'; } catch (err) {}
-          window.openHeroProductSelectionModalSimple('top', function (product) {
-            try { window.__heroModalUsedProductsContext = 'hero'; } catch (err2) {}
-            setVideoProductPreview(ctx, 'top', adaptModalProductToVideo(product));
-          }, creatorName, { lockedRegion: getLockedRegionFromVideoSelection() });
+    ctx.container.querySelectorAll('[data-creator-video-generator-open]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (window.CreatorVideoGeneratorModal && typeof window.CreatorVideoGeneratorModal.open === 'function') {
+          window.CreatorVideoGeneratorModal.open();
         }
       });
-    }
-    if (additionCard) {
-      additionCard.addEventListener('click', function (e) {
-        if (e.target.closest('.creator-hero-product-preview-remove')) return;
-        if (e.target.closest('.creator-product-image-carousel__btn')) return;
-        if (typeof window.openHeroProductSelectionModalSimple === 'function') {
-          var creatorName = window.CreatorSettings && window.CreatorSettings.creatorName ? window.CreatorSettings.creatorName : null;
-          try { window.__heroModalUsedProductsContext = 'video'; } catch (err) {}
-          window.openHeroProductSelectionModalSimple('additional', function (product) {
-            try { window.__heroModalUsedProductsContext = 'hero'; } catch (err2) {}
-            setVideoProductPreview(ctx, 'addition', adaptModalProductToVideo(product));
-          }, creatorName, { lockedRegion: getLockedRegionFromVideoSelection() });
-        }
-      });
-    }
-    if (topRemove) topRemove.addEventListener('click', function (e) { e.stopPropagation(); removeVideoProduct(ctx, 'top'); });
-    if (additionRemove) additionRemove.addEventListener('click', function (e) { e.stopPropagation(); removeVideoProduct(ctx, 'addition'); });
-
-    if (promptEl) {
-      promptEl.addEventListener('input', function () { updateEazyVideoUi(ctx); });
-    }
-    if (ctx.eazyStartBtn) ctx.eazyStartBtn.addEventListener('click', function () { if (!ctx.eazyStartBtn.disabled) generateVideo(ctx); });
-
-    setupMotionReferenceUpload(ctx);
-    setupMotionInfoModal(ctx);
-    setupMotionCharacterUi(ctx);
-
-    var motionDesc = ctx.container.querySelector('[data-creator-video-motion-description]');
-    if (motionDesc) motionDesc.addEventListener('input', function () { updateEazyVideoUi(ctx); });
-    var keepSound = ctx.container.querySelector('[data-creator-video-keep-sound]');
-    if (keepSound) keepSound.addEventListener('change', function () { updateEazyVideoUi(ctx); });
-    ctx.container.querySelectorAll('[data-creator-video-orient-radio]').forEach(function (r) {
-      r.addEventListener('change', function () { updateEazyVideoUi(ctx); });
     });
-
-    var already = videoEazyContexts.some(function (c) { return c.container === ctx.container; });
-    if (!already) videoEazyContexts.push(ctx);
-
-    updateEazyVideoUi(ctx);
   }
 
   function eazIsVideoCreationWorkspaceActive() {

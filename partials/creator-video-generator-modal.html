@@ -1,0 +1,170 @@
+<div
+  id="creatorVideoGeneratorModal"
+  class="cvg-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cvg-modal-title"
+>
+  <div class="cvg-modal__shell">
+    <header class="cvg-modal__header">
+      <div class="cvg-modal__header-left">
+        <button
+          type="button"
+          class="cvg-btn cvg-btn--icon cvg-btn--menu"
+          id="cvg-btn-menu"
+          aria-label="Open menu"
+          title="Open menu"
+        >
+          <span aria-hidden="true">☰</span>
+        </button>
+        <h2 id="cvg-modal-title" class="cvg-modal__title" data-t="creator.video_generator.title">Video Generator</h2>
+      </div>
+      <button
+        type="button"
+        class="cvg-btn cvg-btn--icon"
+        id="cvg-btn-close"
+        aria-label="Close"
+      >
+        ×
+      </button>
+    </header>
+
+    <div class="cvg-subheader" id="cvg-subheader" data-cvg-subheader>
+      <button
+        type="button"
+        class="cvg-subheader__toggle"
+        id="cvg-subheader-toggle"
+        aria-expanded="false"
+        aria-controls="cvg-subheader-panel"
+      >
+        <span class="cvg-subheader__label" data-t="creator.video_generator.results">Results</span>
+        <span class="cvg-subheader__count" id="cvg-subheader-count" hidden>0</span>
+        <span class="cvg-subheader__chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="cvg-subheader__panel" id="cvg-subheader-panel" hidden>
+        <div class="cvg-carousel" id="cvg-carousel" role="list"></div>
+      </div>
+    </div>
+
+    <div class="cvg-body">
+      <aside class="cvg-sidebar" id="cvg-sidebar" aria-label="Menu">
+        <nav class="cvg-sidebar__nav">
+          <button
+            type="button"
+            class="cvg-sidebar__item is-active"
+            data-cvg-tool="motion_control"
+            data-t="creator.video_generator.motion_control"
+          >Motion Control</button>
+        </nav>
+        <button
+          type="button"
+          class="cvg-rail"
+          id="cvg-sidebar-toggle"
+          aria-label="Toggle sidebar"
+          aria-expanded="true"
+        >
+          ‹
+        </button>
+      </aside>
+
+      <div class="cvg-drawer-scrim" id="cvg-drawer-scrim" hidden></div>
+
+      <main class="cvg-main" id="cvg-main">
+        <section class="cvg-panel" data-cvg-panel="motion_control">
+          <div class="cvg-motion-layout">
+            <div class="cvg-motion-row">
+              <div class="cvg-motion-card">
+                <div class="cvg-motion-card__head">
+                  <span class="cvg-motion-card__icon" aria-hidden="true">🎬</span>
+                  <span class="cvg-motion-card__title" data-t="creator.content_creation.videos.motion_reference_upload_title">Reference motion video</span>
+                </div>
+                <div class="cvg-upload-status" data-cvg-motion-status hidden></div>
+                <div class="cvg-upload-area" data-cvg-upload="motion-video">
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                    class="cvg-upload-input"
+                    data-cvg-input="motion-video"
+                  >
+                  <div class="cvg-upload-placeholder" data-cvg-motion-placeholder>
+                    <span class="cvg-upload-add" aria-hidden="true">+</span>
+                  </div>
+                  <div class="cvg-upload-preview" data-cvg-motion-preview hidden>
+                    <video playsinline controls class="cvg-preview-video" data-cvg-motion-preview-video></video>
+                    <button
+                      type="button"
+                      class="cvg-preview-remove"
+                      data-cvg-motion-remove
+                      aria-label="Remove video"
+                    >×</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cvg-motion-card">
+                <div class="cvg-motion-card__head">
+                  <span class="cvg-motion-card__icon" aria-hidden="true">🖼️</span>
+                  <span class="cvg-motion-card__title" data-t="creator.content_creation.videos.motion_character_image_title">Character image</span>
+                </div>
+                <div class="cvg-upload-status" data-cvg-character-status hidden></div>
+                <div class="cvg-upload-area" data-cvg-upload="character">
+                  <input type="file" accept="image/*" class="cvg-upload-input" data-cvg-input="character">
+                  <div class="cvg-upload-placeholder" data-cvg-character-placeholder>
+                    <span class="cvg-upload-add" aria-hidden="true">+</span>
+                  </div>
+                  <div class="cvg-upload-preview" data-cvg-character-preview hidden>
+                    <img class="cvg-preview-img" data-cvg-character-preview-img alt="">
+                    <button
+                      type="button"
+                      class="cvg-preview-remove"
+                      data-cvg-character-remove
+                      aria-label="Remove character image"
+                    >×</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="cvg-field">
+              <label class="cvg-field__label" for="cvg-prompt" data-t="creator.video_generator.prompt_label">Prompt (optional)</label>
+              <textarea
+                id="cvg-prompt"
+                class="cvg-field__textarea"
+                rows="3"
+                data-cvg-prompt
+                placeholder="Optional guidance for scene, lighting, or motion."
+              ></textarea>
+            </div>
+
+            <div class="cvg-field">
+              <span class="cvg-field__label" data-t="creator.content_creation.videos.character_orientation_label">Character orientation</span>
+              <div class="cvg-orient-switch" role="group" aria-label="Character orientation">
+                <button type="button" class="cvg-orient-btn is-active" data-cvg-orient="video">
+                  Video
+                </button>
+                <button type="button" class="cvg-orient-btn" data-cvg-orient="image">
+                  Image
+                </button>
+              </div>
+            </div>
+
+            <label class="cvg-checkbox">
+              <input type="checkbox" data-cvg-keep-sound checked>
+              <span data-t="creator.content_creation.videos.motion_keep_sound">Keep reference video audio</span>
+            </label>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <button
+      type="button"
+      class="cvg-generate-fab"
+      id="cvg-generate-fab"
+      hidden
+      data-t="creator.video_generator.generate"
+    >Generate</button>
+  </div>
+</div>

@@ -2842,6 +2842,18 @@ html.creator-creations-bulk-overlay-open {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(28, 36, 52, 0.75);
   flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.creator-marketing-tabs::-webkit-scrollbar {
+  display: none;
+}
+.creator-marketing-tabs-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: 100%;
+  min-width: max-content;
 }
 .creator-marketing-tab {
   padding: 12px 20px;
@@ -2852,6 +2864,8 @@ html.creator-creations-bulk-overlay-open {
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 .creator-marketing-tab.is-active {
   color: var(--slm-accent, #f97316);

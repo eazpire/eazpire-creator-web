@@ -319,6 +319,8 @@
       await injectPartial("creator-phone-upload-modal.html");
       await injectPartial("creator-video-studio-modal.html");
       loadCss(asset("creator-video-studio-modal.css"));
+      await injectPartial("creator-video-generator-modal.html");
+      loadCss(asset("creator-video-generator-modal.css"));
 
       await loadScriptsSequential([
         asset("creator-phone-upload-modal.js"),
@@ -336,6 +338,7 @@
         asset("creator-video-studio-timeline.js"),
         asset("creator-video-studio-modal.js"),
         asset("creator-video-studio-asset-tools.js"),
+        asset("creator-video-generator-modal.js"),
       ]);
 
       try {
