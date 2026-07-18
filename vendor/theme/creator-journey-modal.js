@@ -42,6 +42,7 @@
   var overviewStatsData = null;
   var overviewPrefs = null;
   var overviewLoadPromise = null;
+  var overviewDetailPromise = null;
   var OVERVIEW_CUSTOMER_SETTING_KEY = 'journey.overview_prefs';
   var OVERVIEW_LOCAL_STORAGE_KEY = 'cj_overview_prefs';
 
@@ -4756,7 +4757,7 @@
       html += renderOverviewStatCard(
         'unlock',
         catLabels[cat] || cat,
-        c.unlocked + '/' + c.total,
+        fmtOverviewNum(c.unlocked) + '/' + fmtOverviewNum(c.total),
         t('creator.journey.overview_unlocked_of', 'Unlocked')
       );
     });
@@ -4788,8 +4789,8 @@
         renderOverviewStatCard('conversion', t('creator.journey.overview_stat_conversion', 'Conversion'), (perf.conversion_rate || 0) + '%', t('creator.journey.overview_conversion_hint', 'Orders ÷ hero clicks'))
       ].join(''),
       quests: [
-        renderOverviewStatCard('quest_main', t('creator.journey.quests_main', 'Main Quests'), q.main_completed + '/' + q.main_total, t('creator.journey.overview_completed', 'Completed')),
-        renderOverviewStatCard('quest_daily', t('creator.journey.quests_daily', 'Daily Quests'), q.side_completed + '/' + q.side_total, t('creator.journey.overview_completed', 'Completed'))
+        renderOverviewStatCard('quest_main', t('creator.journey.quests_main', 'Main Quests'), fmtOverviewNum(q.main_completed) + '/' + fmtOverviewNum(q.main_total), t('creator.journey.overview_completed', 'Completed')),
+        renderOverviewStatCard('quest_daily', t('creator.journey.quests_daily', 'Daily Quests'), fmtOverviewNum(q.side_completed) + '/' + fmtOverviewNum(q.side_total), t('creator.journey.overview_completed', 'Completed'))
       ].join(''),
       eaz: [
         renderOverviewStatCard('eaz_free', t('creator.journey.overview_eaz_free', 'Free'), fmtEazOverview(eaz.balance_free) + ' EAZV', t('creator.journey.overview_balance_now', 'Current balance')),
@@ -4906,6 +4907,7 @@
     overviewFetchedAt = 0;
     journeyLoadPromise = null;
     overviewLoadPromise = null;
+    overviewDetailPromise = null;
     eazEconomyData = null;
     eazEconomyLoadPromise = null;
     levelData = null;
@@ -4921,6 +4923,11 @@
     var oid = ownerId();
     if (!oid) return null;
     if (!opts.force && !opts.revalidate && overviewCacheFresh()) return overviewStatsData;
+    // A first-paint payload is already visible while its detailed enrichment runs.
+    // Do not start another request merely because a user reselects Overview.
+    if (overviewStatsData && overviewStatsData.partial && overviewDetailPromise) {
+      return overviewStatsData;
+    }
     if (overviewLoadPromise) return overviewLoadPromise;
     var overviewLoad = document.getElementById('cjOverviewLoading');
     var overviewShell = document.getElementById('cjOverviewShell');
@@ -4935,9 +4942,34 @@
         // Local preferences are available synchronously. Account settings may arrive
         // later and re-render the already-visible overview without delaying it.
         loadOverviewPrefs().then(function () { renderOverview(); }).catch(function () {});
-        var nextStats = await apiFetch('get-journey-overview-stats', { owner_id: oid, days: '90' });
+        // The initial response deliberately excludes history scans. Paint it immediately;
+        // expensive analytics, quests and ledger totals are filled in afterward.
+        var nextStats = await apiFetch('get-journey-overview-stats', {
+          owner_id: oid,
+          days: '90'
+        });
         overviewStatsData = nextStats;
         overviewFetchedAt = Date.now();
+        if (nextStats && nextStats.ok && nextStats.partial) {
+          overviewDetailPromise = apiFetch('get-journey-overview-stats', {
+            owner_id: oid,
+            days: '90',
+            detail: 'full'
+          }).then(function (detailedStats) {
+            if (detailedStats && detailedStats.ok) {
+              overviewStatsData = detailedStats;
+              overviewFetchedAt = Date.now();
+              renderOverview();
+            }
+            return detailedStats;
+          }).catch(function (e) {
+            // Initial cards stay useful even if optional historical enrichment is slow.
+            console.warn('[CreatorJourney] overview detail', e);
+            return null;
+          }).finally(function () {
+            overviewDetailPromise = null;
+          });
+        }
         return overviewStatsData;
       } catch (e) {
         // Preserve a visible stale dashboard if the background revalidation fails.
