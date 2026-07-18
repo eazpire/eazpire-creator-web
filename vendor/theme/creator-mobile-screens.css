@@ -2842,6 +2842,14 @@ html.creator-creations-bulk-overlay-open {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 16px 14px 28px;
+  position: relative;
+  /* Existing creator galaxy asset + dark overlay so skill-tree cards stay readable */
+  background:
+    linear-gradient(165deg, rgba(6, 8, 18, 0.78) 0%, rgba(10, 12, 28, 0.72) 45%, rgba(8, 10, 22, 0.82) 100%),
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 120, 40, 0.14), transparent 55%),
+    url('galaxy-nebula-bg.png') center center / cover no-repeat;
+  background-attachment: local;
+  border-radius: 16px;
 }
 .cmkt-tree {
   display: flex;
@@ -2851,16 +2859,8 @@ html.creator-creations-bulk-overlay-open {
   max-width: 720px;
   margin: 0 auto;
   width: 100%;
-}
-.cmkt-hint {
-  margin: 0 0 14px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(255, 157, 0, 0.85);
-  text-shadow: 0 0 10px rgba(255, 157, 0, 0.25);
+  position: relative;
+  z-index: 1;
 }
 .cmkt-level {
   position: relative;
@@ -2920,8 +2920,11 @@ html.creator-creations-bulk-overlay-open {
   min-height: 96px;
   padding: 14px 8px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(160deg, rgba(30, 35, 48, 0.95), rgba(12, 16, 24, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(160deg, rgba(30, 35, 48, 0.96), rgba(12, 16, 24, 0.98));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   color: #f5f5f7;
   cursor: pointer;
   text-align: center;
