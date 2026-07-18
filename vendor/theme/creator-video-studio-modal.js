@@ -939,6 +939,10 @@
         (data && data.platform ? data.platform + ': ' : '') +
         i18n('link_error_not_configured', 'Link download service not configured. Please contact support.'),
       cobalt_failed: i18n('link_error_cobalt_failed', 'Could not extract media from that link.'),
+      facebook_failed: i18n(
+        'link_error_facebook_failed',
+        'Could not find a public video on that Facebook link. Only public videos/reels work — save the file and use Device instead.'
+      ),
       unsupported_content_type: i18n(
         'link_error_content_type',
         "That link doesn't point directly to a video, audio, or image file."
