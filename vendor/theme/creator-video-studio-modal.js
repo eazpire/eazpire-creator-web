@@ -2669,13 +2669,15 @@
       return true;
     }
 
-    // Portal marketing host: under-tab button active
+    // Portal / skill-tree: Videos child card active under Content Creation
     var underTab = document.querySelector(
-      '.creator-marketing-under-tab.is-active[data-content="videos"], [data-creator-under-tab="videos"].is-active'
+      '.creator-marketing-under-tab.is-active[data-content="videos"], [data-creator-under-tab="videos"].is-active, ' +
+      '.cmkt-card--child.is-active[data-mkt-for="content-creation"][data-mkt-child="videos"]'
     );
     if (underTab) {
       var subtab = document.querySelector(
-        '.creator-marketing-tab.is-active[data-subtab="content-creation"], [data-subtab="content-creation"].is-active'
+        '.creator-marketing-tab.is-active[data-subtab="content-creation"], [data-subtab="content-creation"].is-active, ' +
+        '.cmkt-card--parent.is-active[data-mkt-parent="content-creation"]'
       );
       if (subtab) return true;
       var wrap = document.getElementById('creatorDesktopContentCreation') || document.getElementById('creatorMarketing');

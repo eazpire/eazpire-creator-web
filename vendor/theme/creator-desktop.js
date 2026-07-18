@@ -893,7 +893,8 @@
       'genColorOverlay',
       'genDialectOverlay',
       'reference-influence-modal',
-      'creator-inspiration-modal'
+      'creator-inspiration-modal',
+      'creatorHeroImagesModal'
     ];
 
     modalRootIds.forEach(function (id) {
@@ -3375,8 +3376,8 @@
   function initDesktopContentCreationMarketing() {
     var wrap = document.getElementById('creatorDesktopContentCreation');
     if (!wrap) return;
-    var currentSubTab = 'content-creation';
-    var currentContentTab = 'hero-images';
+    var currentSubTab = '';
+    var currentContentTab = '';
     var panelCreation = document.getElementById('creatorDesktopMarketingPanelCreation');
     var panelPublish = document.getElementById('creatorDesktopMarketingPanelPublish');
 
@@ -3386,35 +3387,77 @@
       }
     }
 
-    function switchSubTab(subtab) {
-      currentSubTab = subtab;
-      wrap.querySelectorAll('.creator-desktop-marketing-tab').forEach(function (btn) {
-        btn.classList.toggle('is-active', btn.dataset.subtab === subtab);
+    function setDesktopMarketingPanelHidden(el, hidden) {
+      if (!el) return;
+      el.classList.toggle('creator-desktop-marketing-panel--hidden', hidden);
+      if (hidden) el.setAttribute('hidden', '');
+      else el.removeAttribute('hidden');
+    }
+
+    function setParentExpanded(parent, expanded) {
+      wrap.querySelectorAll('.cmkt-card--parent, .creator-desktop-marketing-tab').forEach(function (btn) {
+        var key = btn.dataset.mktParent || btn.dataset.subtab;
+        var isThis = key === parent;
+        btn.classList.toggle('is-active', !!(expanded && isThis));
+        btn.setAttribute('aria-expanded', expanded && isThis ? 'true' : 'false');
       });
-      function setDesktopMarketingPanelHidden(el, hidden) {
-        if (!el) return;
-        el.classList.toggle('creator-desktop-marketing-panel--hidden', hidden);
-        if (hidden) el.setAttribute('hidden', '');
-        else el.removeAttribute('hidden');
+      wrap.querySelectorAll('[data-mkt-branch]').forEach(function (branch) {
+        var show = expanded && branch.getAttribute('data-mkt-branch') === parent;
+        if (show) branch.removeAttribute('hidden');
+        else branch.setAttribute('hidden', '');
+      });
+    }
+
+    function switchSubTab(subtab) {
+      if (currentSubTab === subtab && !currentContentTab) {
+        currentSubTab = '';
+        currentContentTab = '';
+        setParentExpanded('', false);
+        setDesktopMarketingPanelHidden(panelCreation, true);
+        setDesktopMarketingPanelHidden(panelPublish, true);
+        wrap.setAttribute('data-marketing-subtab', '');
+        bumpEazyHeaderUi();
+        return;
       }
-      setDesktopMarketingPanelHidden(panelCreation, subtab !== 'content-creation');
-      setDesktopMarketingPanelHidden(panelPublish, subtab !== 'content-publish');
+      currentSubTab = subtab;
+      currentContentTab = '';
+      setParentExpanded(subtab, true);
+      setDesktopMarketingPanelHidden(panelCreation, true);
+      setDesktopMarketingPanelHidden(panelPublish, true);
+      wrap.querySelectorAll('.cmkt-card--child').forEach(function (btn) {
+        btn.classList.remove('is-active');
+      });
       wrap.setAttribute('data-marketing-subtab', subtab);
-      var activePanel = subtab === 'content-creation' ? panelCreation : panelPublish;
-      if (activePanel) {
-        activePanel.querySelectorAll('.creator-desktop-marketing-panel-content').forEach(function (el) {
-          el.classList.toggle('is-active', el.dataset.content === currentContentTab);
-        });
-      }
       bumpEazyHeaderUi();
     }
 
     function switchContentTab(content) {
+      if (!currentSubTab) currentSubTab = 'content-creation';
       currentContentTab = content;
-      wrap.querySelectorAll('.creator-desktop-marketing-under-tab').forEach(function (btn) {
-        btn.classList.toggle('is-active', btn.dataset.content === content);
+      setParentExpanded(currentSubTab, true);
+      wrap.querySelectorAll('.cmkt-card--child, .creator-desktop-marketing-under-tab').forEach(function (btn) {
+        var forParent = btn.dataset.mktFor || currentSubTab;
+        var child = btn.dataset.mktChild || btn.dataset.content;
+        btn.classList.toggle('is-active', forParent === currentSubTab && child === content);
       });
+
+      if (currentSubTab === 'content-creation' && content === 'hero-images') {
+        setDesktopMarketingPanelHidden(panelCreation, true);
+        setDesktopMarketingPanelHidden(panelPublish, true);
+        if (window.CreatorHeroImagesModal && typeof window.CreatorHeroImagesModal.open === 'function') {
+          window.CreatorHeroImagesModal.open();
+        }
+        bumpEazyHeaderUi();
+        return;
+      }
+
+      if (window.CreatorHeroImagesModal && typeof window.CreatorHeroImagesModal.close === 'function') {
+        window.CreatorHeroImagesModal.close();
+      }
+
       var activePanel = currentSubTab === 'content-creation' ? panelCreation : panelPublish;
+      setDesktopMarketingPanelHidden(panelCreation, currentSubTab !== 'content-creation');
+      setDesktopMarketingPanelHidden(panelPublish, currentSubTab !== 'content-publish');
       if (activePanel) {
         activePanel.querySelectorAll('.creator-desktop-marketing-panel-content').forEach(function (el) {
           el.classList.toggle('is-active', el.dataset.content === content);
@@ -3423,13 +3466,19 @@
       bumpEazyHeaderUi();
     }
 
-    wrap.querySelectorAll('.creator-desktop-marketing-tab').forEach(function (btn) {
-      var subtab = btn.dataset.subtab;
+    wrap.querySelectorAll('.cmkt-card--parent, .creator-desktop-marketing-tab').forEach(function (btn) {
+      var subtab = btn.dataset.mktParent || btn.dataset.subtab;
       if (subtab) btn.addEventListener('click', function () { switchSubTab(subtab); });
     });
-    wrap.querySelectorAll('.creator-desktop-marketing-under-tab').forEach(function (btn) {
-      var content = btn.dataset.content;
-      if (content) btn.addEventListener('click', function () { switchContentTab(content); });
+    wrap.querySelectorAll('.cmkt-card--child, .creator-desktop-marketing-under-tab').forEach(function (btn) {
+      var content = btn.dataset.mktChild || btn.dataset.content;
+      var parent = btn.dataset.mktFor;
+      if (content) {
+        btn.addEventListener('click', function () {
+          if (parent) currentSubTab = parent;
+          switchContentTab(content);
+        });
+      }
     });
 
     window.CreatorDesktopMarketing = {

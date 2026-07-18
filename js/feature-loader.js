@@ -321,6 +321,8 @@
       loadCss(asset("creator-video-studio-modal.css"));
       await injectPartial("creator-video-generator-modal.html");
       loadCss(asset("creator-video-generator-modal.css"));
+      await injectPartial("creator-hero-images-modal.html");
+      loadCss(asset("creator-hero-images-modal.css"));
 
       await loadScriptsSequential([
         asset("creator-phone-upload-modal.js"),
@@ -334,6 +336,7 @@
         asset("creator-videos-screen.js"),
         asset("creator-content-publish-images-screen.js"),
         asset("eaz-creator-promotions.js"),
+        asset("creator-hero-images-modal.js"),
         asset("creator-marketing-screen.js"),
         asset("creator-video-studio-timeline.js"),
         asset("creator-video-studio-modal.js"),

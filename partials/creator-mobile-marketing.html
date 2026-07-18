@@ -1,95 +1,121 @@
-<div class="creator-marketing" id="creatorMarketing" data-marketing-subtab="content-creation">
-  <div class="creator-marketing-tabs">
-    <div class="creator-marketing-tabs-nav">
-      <button type="button" class="creator-marketing-tab is-active" data-subtab="content-creation">Content Creation</button>
-      <button type="button" class="creator-marketing-tab" data-subtab="content-publish">Content Publish</button>
-      <button type="button" class="creator-marketing-tab" data-subtab="promotions">Promotions</button>
-    </div>
-  </div>
+<div class="creator-marketing" id="creatorMarketing" data-marketing-subtab="" data-marketing-parent="" data-marketing-content="">
+  <div class="cmkt-scroll" id="creatorMarketingScroll">
+    <div class="cmkt-tree" id="creatorMarketingTree">
+      <p class="cmkt-hint" data-t="creator.marketing.parent_hint">Choose a marketing area</p>
 
-  <div class="creator-marketing-panel" id="creatorMarketingPanelCreation" data-subtab="content-creation">
-    <div class="creator-marketing-under-tabs">
-      <button type="button" class="creator-marketing-under-tab is-active" data-content="hero-images">Hero Images</button>
-      <button type="button" class="creator-marketing-under-tab" data-content="videos">Videos</button>
-      <button type="button" class="creator-marketing-under-tab" data-content="images">Images</button>
-    </div>
-    <div class="creator-marketing-panel-content is-active" data-content="hero-images">
-      <div class="creator-hero-create-context">
-        <div class="creator-hero-create-scroll" id="creatorHeroCreateScroll">
-          <div class="creator-content-creation-hero creator-content-creation-hero--mobile" id="creatorContentCreationHero" data-creator-hero-host></div>
-          <div class="creator-eazy-speech-anchor" id="creatorEazySpeechAnchorMar" aria-hidden="true"></div>
+      <div class="cmkt-level cmkt-level--parents">
+        <div class="cmkt-parents-grid" role="group" aria-label="Content Creation">
+          <button type="button" class="cmkt-card cmkt-card--parent" data-mkt-parent="content-creation" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">✨</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.content_creation">Content Creation</span>
+          </button>
+          <button type="button" class="cmkt-card cmkt-card--parent" data-mkt-parent="content-publish" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">📤</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.content_publish">Content Publish</span>
+          </button>
+          <button type="button" class="cmkt-card cmkt-card--parent" data-mkt-parent="promotions" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">🏷️</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.promotion">Promotion</span>
+          </button>
         </div>
+      </div>
+
+      
+      <div class="cmkt-level cmkt-level--children" data-mkt-branch="content-creation" hidden>
+        <div class="cmkt-trunk" aria-hidden="true"></div>
+        <div class="cmkt-children-grid">
+          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="hero-images" data-mkt-for="content-creation" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">🖼️</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.hero_images">Hero Images</span>
+          </button>
+          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="videos" data-mkt-for="content-creation" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">🎬</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.video">Video</span>
+          </button>
+          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="images" data-mkt-for="content-creation" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">📷</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.images">Images</span>
+          </button>
+        </div>
+      </div>
+
+      
+      <div class="cmkt-level cmkt-level--children" data-mkt-branch="content-publish" hidden>
+        <div class="cmkt-trunk" aria-hidden="true"></div>
+        <div class="cmkt-children-grid">
+          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="hero-images" data-mkt-for="content-publish" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">🖼️</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.hero_images">Hero Images</span>
+          </button>
+          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="videos" data-mkt-for="content-publish" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">🎬</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.videos">Videos</span>
+          </button>
+          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="images" data-mkt-for="content-publish" aria-expanded="false">
+            <span class="cmkt-card__icon" aria-hidden="true">📷</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.images">Images</span>
+          </button>
+        </div>
+      </div>
+
+      
+      <div class="creator-marketing-panel creator-marketing-panel--hidden" id="creatorMarketingPanelCreation" data-subtab="content-creation" hidden>
+        <div class="cmkt-trunk cmkt-trunk--leaf" aria-hidden="true"></div>
+        <div class="creator-marketing-panel-content" data-content="hero-images">
+          
+        </div>
+        <div class="creator-marketing-panel-content" data-content="videos">
+          <div class="creator-video-create-context">
+            <div class="creator-hero-create-scroll" id="creatorVideoCreateScroll">
+              <div class="creator-content-creation-video creator-content-creation-hero--mobile" id="creatorContentCreationVideo" data-creator-video-host></div>
+              <div class="creator-eazy-speech-anchor" id="creatorEazySpeechAnchorVideo" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+        <div class="creator-marketing-panel-content" data-content="images">
+          <div class="creator-marketing-coming-soon-block">
+            <span class="creator-marketing-coming-soon-label">Coming soon</span>
+            <p data-t="creator.marketing.images">Images</p>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="creator-marketing-panel creator-marketing-panel--hidden" id="creatorMarketingPanelPublish" data-subtab="content-publish" hidden>
+        <div class="cmkt-trunk cmkt-trunk--leaf" aria-hidden="true"></div>
+        <div class="creator-marketing-panel-content" data-content="hero-images">
+          <div class="creator-hero-images-panel" id="creatorHeroImagesPanel">
+            <div class="creator-hero-images-grid-wrap">
+              <div id="creatorHeroImagesLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
+              <div id="creatorHeroImagesEmpty" class="creator-hero-images-empty" style="display:none">No hero images yet.</div>
+              <div id="creatorHeroImagesGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
+            </div>
+          </div>
+        </div>
+        <div class="creator-marketing-panel-content" data-content="videos">
+          <div class="creator-videos-publish-panel" id="creatorVideosPublishPanel">
+            <div class="creator-hero-images-grid-wrap">
+              <div id="creatorVideosLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
+              <div id="creatorVideosEmpty" class="creator-hero-images-empty" style="display:none">No videos yet.</div>
+              <div id="creatorVideosGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
+            </div>
+          </div>
+        </div>
+        <div class="creator-marketing-panel-content" data-content="images">
+          <div class="creator-publish-images-panel" id="creatorPublishImagesPanel">
+            <div class="creator-hero-images-grid-wrap">
+              <div id="creatorPublishImagesLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
+              <div id="creatorPublishImagesEmpty" class="creator-hero-images-empty" style="display:none">No saved images yet.</div>
+              <div id="creatorPublishImagesGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="creator-marketing-panel creator-marketing-panel--hidden" id="creatorMarketingPanelPromotions" data-subtab="promotions" hidden>
+        <div class="cmkt-trunk cmkt-trunk--leaf" aria-hidden="true"></div>
         
-<footer class="creator-hero-eazy-footer creator-hero-eazy-footer--status-only">
-  <div class="creator-hero-eazy-proxy" aria-hidden="true">
-    <span data-creator-hero-eazy-bubble-wrap></span>
-    <button
-      type="button"
-      class="creator-hero-eazy-proxy__btn"
-      data-creator-hero-eazy-start
-      disabled
-    >
-      Start generation
-    </button>
-  </div>
-  <div class="creator-hero-create-status" data-creator-hero-status></div>
-</footer>
-
-      </div>
-    </div>
-    <div class="creator-marketing-panel-content" data-content="videos">
-      <div class="creator-video-create-context">
-        <div class="creator-hero-create-scroll" id="creatorVideoCreateScroll">
-          <div class="creator-content-creation-video creator-content-creation-hero--mobile" id="creatorContentCreationVideo" data-creator-video-host></div>
-          <div class="creator-eazy-speech-anchor" id="creatorEazySpeechAnchorVideo" aria-hidden="true"></div>
-        </div>
-      </div>
-    </div>
-    <div class="creator-marketing-panel-content" data-content="images">
-      <div class="creator-marketing-coming-soon-block">
-        <span class="creator-marketing-coming-soon-label">Coming soon</span>
-        <p>Images</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="creator-marketing-panel creator-marketing-panel--hidden" id="creatorMarketingPanelPublish" data-subtab="content-publish" hidden>
-    <div class="creator-marketing-under-tabs">
-      <button type="button" class="creator-marketing-under-tab is-active" data-content="hero-images">Hero Images</button>
-      <button type="button" class="creator-marketing-under-tab" data-content="videos">Videos</button>
-      <button type="button" class="creator-marketing-under-tab" data-content="images">Images</button>
-    </div>
-    <div class="creator-marketing-panel-content is-active" data-content="hero-images">
-      <div class="creator-hero-images-panel" id="creatorHeroImagesPanel">
-        <div class="creator-hero-images-grid-wrap">
-          <div id="creatorHeroImagesLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
-          <div id="creatorHeroImagesEmpty" class="creator-hero-images-empty" style="display:none">No hero images yet.</div>
-          <div id="creatorHeroImagesGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
-        </div>
-      </div>
-    </div>
-    <div class="creator-marketing-panel-content" data-content="videos">
-      <div class="creator-videos-publish-panel" id="creatorVideosPublishPanel">
-        <div class="creator-hero-images-grid-wrap">
-          <div id="creatorVideosLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
-          <div id="creatorVideosEmpty" class="creator-hero-images-empty" style="display:none">No videos yet.</div>
-          <div id="creatorVideosGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
-        </div>
-      </div>
-    </div>
-    <div class="creator-marketing-panel-content" data-content="images">
-      <div class="creator-publish-images-panel" id="creatorPublishImagesPanel">
-        <div class="creator-hero-images-grid-wrap">
-          <div id="creatorPublishImagesLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
-          <div id="creatorPublishImagesEmpty" class="creator-hero-images-empty" style="display:none">No saved images yet.</div>
-          <div id="creatorPublishImagesGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="creator-marketing-panel creator-marketing-panel--hidden" id="creatorMarketingPanelPromotions" data-subtab="promotions" hidden>
-    
 <div class="eaz-creator-promotions" id="eazCreatorPromotionsRoot">
   <div
     class="eaz-creator-promotions__sub-tabs"
@@ -109,5 +135,7 @@
   <p class="eaz-creator-promotions__error" id="eazCreatorPromotionsError" hidden role="alert"></p>
 </div>
 
+      </div>
+    </div>
   </div>
 </div>

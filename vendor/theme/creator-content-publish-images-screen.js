@@ -117,12 +117,18 @@
       document.getElementById('creatorDesktopPublishImagesLoading')
     );
 
-    document.querySelectorAll('.creator-marketing-under-tab[data-content="images"], .creator-desktop-marketing-under-tab[data-content="images"]').forEach(function (btn) {
+    document.querySelectorAll(
+      '.creator-marketing-under-tab[data-content="images"], .creator-desktop-marketing-under-tab[data-content="images"], ' +
+      '.cmkt-card--child[data-mkt-for="content-publish"][data-mkt-child="images"]'
+    ).forEach(function (btn) {
       btn.addEventListener('click', function () {
         setTimeout(function () { load(); }, 120);
       });
     });
-    document.querySelectorAll('.creator-marketing-tab[data-subtab="content-publish"], .creator-desktop-marketing-tab[data-subtab="content-publish"]').forEach(function (btn) {
+    document.querySelectorAll(
+      '.creator-marketing-tab[data-subtab="content-publish"], .creator-desktop-marketing-tab[data-subtab="content-publish"], ' +
+      '.cmkt-card--parent[data-mkt-parent="content-publish"]'
+    ).forEach(function (btn) {
       btn.addEventListener('click', function () {
         setTimeout(function () { load(); }, 150);
       });

@@ -3572,40 +3572,24 @@ body.creator-video-motion-info-modal-open {
   box-shadow: none;
 }
 
-.creator-desktop-marketing-host .creator-marketing-tabs {
-  padding: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
+.creator-desktop-marketing-host .cmkt-scroll {
+  padding: 18px 8px 32px;
 }
 
-.creator-desktop-marketing-host .creator-marketing-tabs-nav {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 2px;
-  padding: 0 10px;
-  min-width: max-content;
+.creator-desktop-marketing-host .cmkt-tree {
+  max-width: 860px;
 }
 
-.creator-desktop-marketing-host .creator-marketing-tab {
-  padding: 11px 16px;
-  font-size: 13px;
-  border-bottom-width: 2px;
-  white-space: nowrap;
-  flex: 0 0 auto;
+.creator-desktop-marketing-host .cmkt-card {
+  min-height: 120px;
+}
+
+.creator-desktop-marketing-host .cmkt-card__title {
+  font-size: 14px;
 }
 
 .creator-desktop-marketing-host .creator-marketing-panel {
   min-height: 0;
-}
-
-.creator-desktop-marketing-host .creator-marketing-under-tabs {
-  padding: 8px 10px 0;
-}
-
-.creator-desktop-marketing-host .creator-marketing-under-tab {
-  padding: 9px 13px;
-  font-size: 12px;
 }
 
 .creator-desktop-marketing-host .creator-marketing-panel-content {

@@ -999,6 +999,13 @@
       return true;
     }
 
+    // IDEA-039: Hero create lives in fullscreen modal
+    if (window.CreatorHeroImagesModal && typeof window.CreatorHeroImagesModal.isOpen === 'function') {
+      if (window.CreatorHeroImagesModal.isOpen()) return true;
+    }
+    var heroModal = document.getElementById('creatorHeroImagesModal');
+    if (heroModal && !heroModal.hidden) return true;
+
     var viewport = document.getElementById('creatorMobileSwipeViewport');
     if (viewport) {
       if (!viewport.classList.contains('slide-3')) return false;
@@ -1014,6 +1021,9 @@
 
     var host = document.querySelector('[data-creator-hero-host]');
     if (!host) return false;
+    if (host.closest('#creatorHeroImagesModal')) {
+      return !!(heroModal && !heroModal.hidden);
+    }
     var panelContent = host.closest('.creator-marketing-panel-content');
     if (panelContent && !panelContent.classList.contains('is-active')) return false;
     var marketingPanel = host.closest('.creator-marketing-panel');

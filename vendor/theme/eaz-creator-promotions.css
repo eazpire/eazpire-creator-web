@@ -1,28 +1,4 @@
-/* Creator Marketing – Promotions tab (scoped under #creatorMarketing) */
-#creatorMarketing .creator-marketing-tabs-nav {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0;
-  width: 100%;
-}
-
-#creatorMarketing .creator-marketing-tab {
-  flex: 1 1 0;
-  min-width: 0;
-  font-size: 11px;
-  padding-left: 6px;
-  padding-right: 6px;
-  white-space: nowrap;
-}
-
-@media (min-width: 400px) {
-  #creatorMarketing .creator-marketing-tab {
-    font-size: 12px;
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-}
-
+/* Creator Marketing – Promotions panel (scoped under #creatorMarketing) */
 .eaz-creator-promotions {
   flex: 1;
   min-height: 0;

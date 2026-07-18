@@ -2828,7 +2828,7 @@ html.creator-creations-bulk-overlay-open {
   overflow: hidden;
 }
 
-/* ========== Marketing Screen ========== */
+/* ========== Marketing Screen (skill-tree, IDEA-039) ========== */
 .creator-marketing {
   display: flex;
   flex-direction: column;
@@ -2836,74 +2836,135 @@ html.creator-creations-bulk-overlay-open {
   min-height: 0;
   overflow: hidden;
 }
-.creator-marketing-tabs {
-  display: flex;
-  padding: 0 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(28, 36, 52, 0.75);
-  flex-shrink: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
+.cmkt-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 14px 28px;
 }
-.creator-marketing-tabs::-webkit-scrollbar {
-  display: none;
-}
-.creator-marketing-tabs-nav {
+.cmkt-tree {
   display: flex;
-  flex-wrap: nowrap;
+  flex-direction: column;
   align-items: stretch;
+  gap: 0;
+  max-width: 720px;
+  margin: 0 auto;
   width: 100%;
-  min-width: max-content;
 }
-.creator-marketing-tab {
-  padding: 12px 20px;
-  font-size: 14px;
+.cmkt-hint {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--slm-muted, rgba(255, 255, 255, 0.6));
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  white-space: nowrap;
-  flex: 0 0 auto;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 157, 0, 0.85);
+  text-shadow: 0 0 10px rgba(255, 157, 0, 0.25);
 }
-.creator-marketing-tab.is-active {
-  color: var(--slm-accent, #f97316);
-  border-bottom-color: var(--slm-accent, #f97316);
+.cmkt-level {
+  position: relative;
+  z-index: 1;
 }
-.creator-marketing-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-.creator-marketing-panel--hidden { display: none !important; }
-/* Other marketing tabs: hide Content Creation Eazy strips (sticky/footer overlap) */
-#creatorMarketing[data-marketing-subtab="content-publish"] #creatorMarketingPanelCreation .creator-hero-eazy-footer,
-#creatorMarketing[data-marketing-subtab="promotions"] #creatorMarketingPanelCreation .creator-hero-eazy-footer {
+.cmkt-level[hidden] {
   display: none !important;
 }
+.cmkt-parents-grid,
+.cmkt-children-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+.cmkt-trunk {
+  position: relative;
+  height: 28px;
+  margin: 0 auto;
+  width: 2px;
+}
+.cmkt-trunk::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(255, 157, 0, 0.55), rgba(255, 157, 0, 0.12));
+  pointer-events: none;
+}
+.cmkt-trunk--leaf {
+  height: 22px;
+}
+.cmkt-level--children {
+  margin-top: 0;
+}
+.cmkt-level--children .cmkt-children-grid::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 157, 0, 0.35), transparent);
+  pointer-events: none;
+}
+.cmkt-card {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 96px;
+  padding: 14px 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(160deg, rgba(30, 35, 48, 0.95), rgba(12, 16, 24, 0.98));
+  color: #f5f5f7;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cmkt-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 157, 0, 0.45);
+}
+.cmkt-card.is-active {
+  border-color: rgba(255, 157, 0, 0.9);
+  box-shadow: 0 0 0 1px rgba(255, 157, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(160deg, rgba(255, 157, 0, 0.16), rgba(12, 16, 24, 0.98));
+}
+.cmkt-card__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.cmkt-card__title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: inherit;
+}
+.cmkt-card--child {
+  min-height: 84px;
+}
+.cmkt-card--child .cmkt-card__title {
+  font-size: 11px;
+}
+
+.creator-marketing-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-top: 4px;
+}
+.creator-marketing-panel--hidden { display: none !important; }
 /* Video Studio footer bar removed — never show on videos workspace */
 #creatorMarketing .creator-video-eazy-footer,
 .creator-video-create-context .creator-video-eazy-footer {
   display: none !important;
-}
-.creator-marketing-under-tabs {
-  display: flex;
-  gap: 0;
-  padding: 8px 18px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
-}
-.creator-marketing-under-tab {
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--slm-muted, rgba(255, 255, 255, 0.6));
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  margin-bottom: -1px;
-}
-.creator-marketing-under-tab.is-active {
-  color: var(--slm-accent, #f97316);
-  border-bottom-color: var(--slm-accent, #f97316);
 }
 .creator-marketing-panel-content {
   display: none;
@@ -2937,6 +2998,23 @@ html.creator-creations-bulk-overlay-open {
   margin-bottom: 12px;
 }
 .creator-marketing-coming-soon-block p { font-size: 16px; color: var(--slm-muted, rgba(255, 255, 255, 0.6)); margin: 0; }
+
+@media (min-width: 600px) {
+  .cmkt-card {
+    min-height: 110px;
+    padding: 18px 12px;
+  }
+  .cmkt-card__title {
+    font-size: 14px;
+  }
+  .cmkt-card--child .cmkt-card__title {
+    font-size: 13px;
+  }
+  .cmkt-parents-grid,
+  .cmkt-children-grid {
+    gap: 14px;
+  }
+}
 
 /* Hero Create / Content Creation */
 .creator-hero-create-context {
