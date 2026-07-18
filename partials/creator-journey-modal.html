@@ -259,6 +259,7 @@
           <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="variants" data-t="creator.journey.product_skill.tab_variants">Variants</button>
           <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="regions" data-t="creator.journey.product_skill.tab_regions">Regions</button>
           <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="print_areas" data-t="creator.journey.product_skill.tab_print_areas">Print Areas</button>
+          <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="preview" data-t="creator.journey.product_skill.tab_preview">Preview</button>
           <button type="button" class="cj-product-skill-info__tab" role="tab" aria-selected="false" data-cj-psi-tab="details" data-t="creator.journey.product_skill.tab_details">Product Details</button>
         </div>
         <div class="cj-product-skill-info__panels" id="cjProductSkillPanels">
@@ -267,6 +268,7 @@
           <div class="cj-product-skill-info__panel" data-cj-psi-panel="variants" role="tabpanel" hidden></div>
           <div class="cj-product-skill-info__panel" data-cj-psi-panel="regions" role="tabpanel" hidden></div>
           <div class="cj-product-skill-info__panel" data-cj-psi-panel="print_areas" role="tabpanel" hidden></div>
+          <div class="cj-product-skill-info__panel" data-cj-psi-panel="preview" role="tabpanel" hidden></div>
           <div class="cj-product-skill-info__panel" data-cj-psi-panel="details" role="tabpanel" hidden></div>
         </div>
       </div>
@@ -301,7 +303,33 @@
           <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/>
         </svg>
       </button>
+      <button
+        type="button"
+        class="cj-psi-preview-overlay__nav cj-psi-preview-overlay__nav--prev"
+        id="cjPsiPreviewPrev"
+        data-cj-psi-preview-nav="-1"
+        hidden
+        aria-label="Previous mock"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="cj-psi-preview-overlay__nav cj-psi-preview-overlay__nav--next"
+        id="cjPsiPreviewNext"
+        data-cj-psi-preview-nav="1"
+        hidden
+        aria-label="Next mock"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <img class="cj-psi-preview-overlay__img" id="cjPsiPreviewImg" alt="" decoding="async">
+      <p class="cj-psi-preview-overlay__caption" id="cjPsiPreviewCaption" hidden></p>
+      <p class="cj-psi-preview-overlay__counter" id="cjPsiPreviewCounter" hidden></p>
     </div>
   </div>
 
