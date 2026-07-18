@@ -4662,7 +4662,7 @@
 
   function fmtOverviewNum(n) {
     var v = Number(n);
-    if (!Number.isFinite(v)) return '—';
+    if (!Number.isFinite(v)) return '0';
     if (v >= 1000000) return (Math.round(v / 100000) / 10) + 'M';
     if (v >= 10000) return (Math.round(v / 100) / 10) + 'k';
     return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -4670,7 +4670,7 @@
 
   function fmtEazOverview(n) {
     var v = Number(n);
-    if (!Number.isFinite(v)) return '—';
+    if (!Number.isFinite(v)) return '0';
     return (Math.round(v * 10) / 10).toLocaleString(undefined, { maximumFractionDigits: 1 });
   }
 
@@ -4684,11 +4684,12 @@
       return fmtOverviewNum(stats.portfolio.products_online) + ' · ' + fmtOverviewNum(stats.portfolio.active_designs);
     }
     if (id === 'performance') {
-      return fmtOverviewNum(stats.performance.sales_orders) + ' sales · ' + stats.performance.hero_ctr + '% CTR';
+      return fmtOverviewNum(stats.performance.sales_orders) + ' sales · ' +
+        fmtOverviewNum(stats.performance.hero_ctr) + '% CTR';
     }
     if (id === 'quests') {
-      return stats.quests.main_completed + '/' + stats.quests.main_total + ' · ' +
-        stats.quests.side_completed + '/' + stats.quests.side_total;
+      return fmtOverviewNum(stats.quests.main_completed) + '/' + fmtOverviewNum(stats.quests.main_total) + ' · ' +
+        fmtOverviewNum(stats.quests.side_completed) + '/' + fmtOverviewNum(stats.quests.side_total);
     }
     if (id === 'eaz') {
       return fmtEazOverview(stats.eaz.balance_free) + ' free';
