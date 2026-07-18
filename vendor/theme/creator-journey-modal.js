@@ -4030,7 +4030,7 @@
     if (!variants.length) {
       return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
     }
-    return '<div class="cj-psi-variant-grid">' + variants.map(function (v) {
+    return '<div class="cj-psi-variant-list">' + variants.map(function (v) {
       var price = formatCentsPrice(v.cost_cents);
       var priceLabel = price
         ? psiT('purchase_price', 'From {{ price }}', { price: price })
@@ -4039,12 +4039,33 @@
         ? '<img src="' + escapeHtml(v.image_url) + '" alt="" loading="lazy">'
         : '<span class="cj-psi-dot" style="width:28px;height:28px;background:' +
           escapeHtml(v.hex || '#888') + '"></span>';
-      return '<div class="cj-psi-variant-card">' +
-        '<div class="cj-psi-variant-card__media">' + media + '</div>' +
-        '<div class="cj-psi-variant-card__body">' +
-        '<div class="cj-psi-variant-card__name">' + escapeHtml(v.name || '') + '</div>' +
-        '<div class="cj-psi-variant-card__price">' + escapeHtml(priceLabel) + '</div>' +
-        '</div></div>';
+      var sizes = Array.isArray(v.sizes) ? v.sizes : [];
+      var views = Array.isArray(v.views) ? v.views : [];
+      var sizesHtml = sizes.length
+        ? '<div class="cj-psi-sizes" aria-label="' + escapeHtml(psiT('sizes', 'Sizes')) + '">' +
+          sizes.map(function (sz) {
+            return '<span class="cj-psi-size">' + escapeHtml(sz) + '</span>';
+          }).join('') + '</div>'
+        : '';
+      var viewsHtml = views.length
+        ? '<div class="cj-psi-variant-views">' + views.map(function (vw) {
+            var img = vw.image_url
+              ? '<img src="' + escapeHtml(vw.image_url) + '" alt="" loading="lazy">'
+              : '';
+            return '<div class="cj-psi-variant-view">' +
+              '<div class="cj-psi-variant-view__label">' + escapeHtml(vw.label || vw.position || '') + '</div>' +
+              '<div class="cj-psi-variant-view__media">' + img + '</div></div>';
+          }).join('') + '</div>'
+        : '';
+      return '<details class="cj-psi-variant-card" open>' +
+        '<summary class="cj-psi-variant-card__summary">' +
+        '<span class="cj-psi-variant-card__media">' + media + '</span>' +
+        '<span class="cj-psi-variant-card__body">' +
+        '<span class="cj-psi-variant-card__name">' + escapeHtml(v.name || '') + '</span>' +
+        '<span class="cj-psi-variant-card__price">' + escapeHtml(priceLabel) + '</span>' +
+        '</span></summary>' +
+        '<div class="cj-psi-variant-card__details">' + sizesHtml + viewsHtml + '</div>' +
+        '</details>';
     }).join('') + '</div>';
   }
 
@@ -4086,13 +4107,13 @@
     if (!areas.length) {
       return '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
     }
-    return '<div class="cj-psi-print-grid">' + areas.map(function (a) {
+    return '<div class="cj-psi-print-acc">' + areas.map(function (a, idx) {
       var img = a.shop_mock_url
         ? '<img src="' + escapeHtml(a.shop_mock_url) + '" alt="" loading="lazy">'
-        : '';
-      return '<div class="cj-psi-print-card">' +
-        '<div class="cj-psi-print-card__label">' + escapeHtml(a.label || a.position || '') + '</div>' +
-        '<div class="cj-psi-print-card__stage">' + img + '</div></div>';
+        : '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
+      return '<details class="cj-psi-print-card"' + (idx === 0 ? ' open' : '') + '>' +
+        '<summary>' + escapeHtml(a.label || a.position || '') + '</summary>' +
+        '<div class="cj-psi-print-card__stage">' + img + '</div></details>';
     }).join('') + '</div>';
   }
 
