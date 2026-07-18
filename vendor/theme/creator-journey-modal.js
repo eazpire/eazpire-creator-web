@@ -3945,17 +3945,81 @@
     });
   }
 
+  function isPsiPreviewOpen() {
+    var el = document.getElementById('cjPsiPreviewOverlay');
+    return !!(el && el.classList.contains('is-open'));
+  }
+
+  function closePsiMockPreview() {
+    var overlay = document.getElementById('cjPsiPreviewOverlay');
+    var img = document.getElementById('cjPsiPreviewImg');
+    if (!overlay) return;
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.hidden = true;
+    if (img) {
+      img.removeAttribute('src');
+      img.alt = '';
+    }
+  }
+
+  function openPsiMockPreview(url) {
+    var src = url != null ? String(url).trim() : '';
+    if (!src) return;
+    var overlay = document.getElementById('cjPsiPreviewOverlay');
+    var img = document.getElementById('cjPsiPreviewImg');
+    var closeBtn = document.getElementById('cjPsiPreviewClose');
+    if (!overlay || !img) return;
+    img.src = src;
+    img.alt = psiT('mock_preview_aria', 'Preview mock');
+    overlay.hidden = false;
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden', 'false');
+    if (closeBtn) closeBtn.focus();
+  }
+
   function ensureProductSkillInfoBindings() {
     if (productSkillInfoBound) return;
     productSkillInfoBound = true;
     var tabs = document.getElementById('cjProductSkillTabs');
-    if (!tabs) return;
-    tabs.addEventListener('click', function (e) {
-      var btn = e.target && e.target.closest ? e.target.closest('[data-cj-psi-tab]') : null;
-      if (!btn) return;
-      var key = btn.getAttribute('data-cj-psi-tab');
-      if (key) setProductSkillTab(key);
-    });
+    if (tabs) {
+      tabs.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('[data-cj-psi-tab]') : null;
+        if (!btn) return;
+        var key = btn.getAttribute('data-cj-psi-tab');
+        if (key) setProductSkillTab(key);
+      });
+    }
+    var panels = document.getElementById('cjProductSkillPanels');
+    if (panels) {
+      panels.addEventListener('click', function (e) {
+        var thumb = e.target && e.target.closest ? e.target.closest('[data-cj-psi-preview]') : null;
+        if (!thumb || !panels.contains(thumb)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openPsiMockPreview(thumb.getAttribute('data-cj-psi-preview'));
+      });
+    }
+    var previewOverlay = document.getElementById('cjPsiPreviewOverlay');
+    if (previewOverlay) {
+      previewOverlay.addEventListener('click', function (e) {
+        var closer = e.target && e.target.closest ? e.target.closest('[data-cj-psi-preview-close]') : null;
+        if (closer || e.target === previewOverlay) {
+          e.preventDefault();
+          closePsiMockPreview();
+        }
+      });
+    }
+  }
+
+  function renderPsiMockThumb(url, extraClass) {
+    var src = url != null ? String(url).trim() : '';
+    if (!src) return '';
+    var cls = 'cj-psi-mock-thumb' + (extraClass ? ' ' + extraClass : '');
+    return '<button type="button" class="' + cls + '" data-cj-psi-preview="' + escapeHtml(src) +
+      '" aria-label="' + escapeHtml(psiT('mock_preview_aria', 'Preview mock')) + '">' +
+      '<img src="' + escapeHtml(src) + '" alt="" loading="lazy">' +
+      '</button>';
   }
 
   function renderPsiKvRows(rows) {
@@ -4127,9 +4191,7 @@
       if (backUrl && backUrl !== frontUrl) thumbs.push(backUrl);
       var media = thumbs.length
         ? '<span class="cj-psi-variant-card__thumbs' + (thumbs.length > 1 ? ' cj-psi-variant-card__thumbs--dual' : '') + '">' +
-          thumbs.map(function (url) {
-            return '<img src="' + escapeHtml(url) + '" alt="" loading="lazy">';
-          }).join('') + '</span>'
+          thumbs.map(function (url) { return renderPsiMockThumb(url); }).join('') + '</span>'
         : '<span class="cj-psi-dot" style="width:28px;height:28px;background:' +
           escapeHtml(v.hex || '#888') + '"></span>';
       var sizes = (Array.isArray(v.sizes) ? v.sizes : []).map(normalizePsiSizeEntry)
@@ -4211,7 +4273,7 @@
     return '<div class="cj-psi-print-grid">' + areas.map(function (a) {
       var label = a.label || a.position || '';
       var img = a.shop_mock_url
-        ? '<img src="' + escapeHtml(a.shop_mock_url) + '" alt="" loading="lazy">'
+        ? renderPsiMockThumb(a.shop_mock_url, 'cj-psi-mock-thumb--tile')
         : '<p class="cj-psi-empty">' + escapeHtml(psiT('empty', 'No data available yet.')) + '</p>';
       return '<div class="cj-psi-print-tile">' +
         '<div class="cj-psi-print-tile__label">' + escapeHtml(label) + '</div>' +
@@ -4553,6 +4615,7 @@
   }
 
   function closeSkillInfoModal() {
+    closePsiMockPreview();
     var overlayEl = document.getElementById('cjRoyaltyInfoOverlay');
     if (!overlayEl) return;
     overlayEl.classList.remove('is-open');
@@ -5560,6 +5623,10 @@
 
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
+      if (isPsiPreviewOpen()) {
+        closePsiMockPreview();
+        return;
+      }
       var royaltyOpen = document.getElementById('cjRoyaltyInfoOverlay');
       if (royaltyOpen && royaltyOpen.classList.contains('is-open')) {
         closeSkillInfoModal();
