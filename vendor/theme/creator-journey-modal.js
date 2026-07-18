@@ -85,7 +85,6 @@
   };
 
   function setPanelLoading(loading) {
-    var overviewLoad = document.getElementById('cjOverviewLoading');
     var treeLoad = document.getElementById('cjTreeLoading');
     var codeHint = document.getElementById('cjCodeHint');
     var balanceVal = document.getElementById('cjSidebarBalanceValue');
@@ -93,16 +92,9 @@
     var xpEl = document.getElementById('cjFloatLevelXp');
     var levelWrap = document.getElementById('cjFloatLevel');
 
-    if (overviewLoad) overviewLoad.hidden = !loading;
     if (treeLoad) treeLoad.hidden = !loading;
     if (loading) {
       if (codeHint) codeHint.hidden = true;
-      var overviewShell = document.getElementById('cjOverviewShell');
-      if (overviewShell) overviewShell.hidden = true;
-      var overviewHiddenBar = document.getElementById('cjOverviewHiddenBar');
-      var overviewHiddenActions = document.getElementById('cjOverviewHiddenActions');
-      if (overviewHiddenBar) overviewHiddenBar.hidden = true;
-      if (overviewHiddenActions) overviewHiddenActions.innerHTML = '';
       if (balanceWrap) {
         balanceWrap.hidden = false;
         var cachedBal = readCachedBalanceEaz();
@@ -607,9 +599,11 @@
     if (currentTab === 'overview') {
       if (overviewCacheFresh()) {
         renderOverview();
-      } else {
-        loadOverviewStats().then(function () { renderOverview(); }).catch(console.warn);
       }
+      // Keep the cached dashboard visible while newer stats load in the background.
+      loadOverviewStats({ revalidate: overviewCacheFresh() }).then(function () {
+        renderOverview();
+      }).catch(console.warn);
     }
     document.dispatchEvent(new CustomEvent('creator-journey-tab-changed', {
       detail: { tab: currentTab }
@@ -4835,18 +4829,31 @@
   }
 
   function renderOverviewHiddenBar() {
+    var shell = document.getElementById('cjOverviewShell');
+    var sections = document.getElementById('cjOverviewSections');
     var bar = document.getElementById('cjOverviewHiddenBar');
-    var actions = document.getElementById('cjOverviewHiddenActions');
-    if (!bar || !actions || !overviewPrefs) return;
+    if (!shell || !sections || !overviewPrefs) return;
     var hidden = OVERVIEW_SECTION_DEFS.filter(function (def) {
       return !overviewSectionState(def.id).visible;
     });
     if (!hidden.length) {
-      bar.hidden = true;
-      actions.innerHTML = '';
+      // The restore controls do not exist unless there is something to restore.
+      // This prevents an empty "Hidden sections" row during the initial load too.
+      if (bar) bar.remove();
       return;
     }
-    bar.hidden = false;
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'cj-overview-hidden-bar';
+      bar.id = 'cjOverviewHiddenBar';
+      bar.innerHTML =
+        '<span class="cj-overview-hidden-bar__label" data-t="creator.journey.overview_hidden_label">' +
+        escapeHtml(t('creator.journey.overview_hidden_label', '')) +
+        '</span><div class="cj-overview-hidden-bar__actions" id="cjOverviewHiddenActions"></div>';
+      shell.insertBefore(bar, sections);
+    }
+    var actions = bar.querySelector('#cjOverviewHiddenActions');
+    if (!actions) return;
     actions.innerHTML = hidden.map(function (def) {
       return '<button type="button" class="cj-btn cj-btn--ghost cj-overview-restore-btn" data-cj-overview-show="' + def.id + '">' +
         escapeHtml(overviewSectionTitle(def.id)) + '</button>';
@@ -4913,19 +4920,30 @@
     opts = opts || {};
     var oid = ownerId();
     if (!oid) return null;
-    if (!opts.force && overviewCacheFresh()) return overviewStatsData;
+    if (!opts.force && !opts.revalidate && overviewCacheFresh()) return overviewStatsData;
     if (overviewLoadPromise) return overviewLoadPromise;
+    var overviewLoad = document.getElementById('cjOverviewLoading');
+    var overviewShell = document.getElementById('cjOverviewShell');
+    if (!overviewCacheFresh()) {
+      if (overviewLoad) overviewLoad.hidden = false;
+      if (overviewShell) overviewShell.hidden = true;
+      var hiddenBar = document.getElementById('cjOverviewHiddenBar');
+      if (hiddenBar) hiddenBar.remove();
+    }
     overviewLoadPromise = (async function () {
       try {
-        await loadOverviewPrefs();
-        overviewStatsData = await apiFetch('get-journey-overview-stats', { owner_id: oid, days: '90' });
+        // Local preferences are available synchronously. Account settings may arrive
+        // later and re-render the already-visible overview without delaying it.
+        loadOverviewPrefs().then(function () { renderOverview(); }).catch(function () {});
+        var nextStats = await apiFetch('get-journey-overview-stats', { owner_id: oid, days: '90' });
+        overviewStatsData = nextStats;
         overviewFetchedAt = Date.now();
         return overviewStatsData;
       } catch (e) {
-        overviewStatsData = null;
-        overviewFetchedAt = 0;
+        // Preserve a visible stale dashboard if the background revalidation fails.
+        if (!overviewStatsData) overviewFetchedAt = 0;
         console.warn('[CreatorJourney] overview stats', e);
-        return null;
+        return overviewStatsData;
       } finally {
         overviewLoadPromise = null;
       }
@@ -4938,11 +4956,11 @@
     var overviewLoad = document.getElementById('cjOverviewLoading');
     var overviewShell = document.getElementById('cjOverviewShell');
     var sectionsEl = document.getElementById('cjOverviewSections');
-    if (!journeyData) return;
-
-    if (overviewLoad) overviewLoad.hidden = true;
-
-    if (codeHint) codeHint.hidden = !!journeyData.is_creator;
+    var isCreator = overviewStatsData && typeof overviewStatsData.is_creator === 'boolean'
+      ? overviewStatsData.is_creator
+      : (journeyData && typeof journeyData.is_creator === 'boolean' ? journeyData.is_creator : null);
+    if (overviewLoad && overviewStatsData) overviewLoad.hidden = true;
+    if (codeHint && isCreator != null) codeHint.hidden = !!isCreator;
 
     if (overviewShell && sectionsEl) {
       if (overviewStatsData && overviewStatsData.ok) {
@@ -4952,6 +4970,7 @@
         wireOverviewSectionEvents(overviewShell);
       } else if (overviewStatsData && !overviewStatsData.ok) {
         overviewShell.hidden = false;
+        renderOverviewHiddenBar();
         sectionsEl.innerHTML = '<p class="cj-muted">' +
           escapeHtml(t('creator.journey.load_error', 'Could not load journey data. Please try again.')) + '</p>';
       }
