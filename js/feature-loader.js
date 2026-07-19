@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Lazy-load theme creator assets for portal routes.
  */
 (function (global) {
@@ -25,8 +25,8 @@
     if (!href || document.querySelector('link[data-portal-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    // Bump when portal CSS changes — /vendor is cached 7d; stale ?v= kept old QI UI + Public Designs bugs.
-    link.href = href + "?v=smm-fb-connect-20260719a";
+    // Bump when portal CSS changes â€” /vendor is cached 7d; stale ?v= kept old QI UI + Public Designs bugs.
+    link.href = href + "?v=ppm-20260719a";
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -38,8 +38,8 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      // Bump when portal JS changes — /vendor is cached 7d.
-      s.src = src + "?v=smm-fb-connect-20260719a";
+      // Bump when portal JS changes â€” /vendor is cached 7d.
+      s.src = src + "?v=ppm-20260719a";
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -97,8 +97,8 @@
   async function injectPartial(name, hostEl) {
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
-    // Portal serves /partials with max-age=7d — bump when modal markup/CSS in partials changes.
-    var url = "/partials/" + name + "?v=smm-fb-connect-20260719a";
+    // Portal serves /partials with max-age=7d â€” bump when modal markup/CSS in partials changes.
+    var url = "/partials/" + name + "?v=ppm-20260719a";
     if (host.querySelector('[data-partial="' + name + '"]')) return;
     var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;
@@ -366,7 +366,7 @@
 
       applyMarketingDeepLink();
 
-      // Leaf UIs (hero modal / video studio) — optional so missing vendor files do not block expand.
+      // Leaf UIs (hero modal / video studio) â€” optional so missing vendor files do not block expand.
       await loadScriptsSequentialOptional([
         asset("creator-hero-images-modal.js"),
         asset("creator-video-studio-timeline.js"),
@@ -401,7 +401,7 @@
         await injectPartial("creator-mobile-automations.html", host);
       }
 
-      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas / paste→influence)
+      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas / pasteâ†’influence)
       await injectPartial("reference-influence-modal.html");
       await injectPartial("creator-inspiration-modal.html");
       await injectPartial("quick-inspirations-modal.html");
@@ -461,7 +461,7 @@
         badge_ready_aria: "Level badge ready",
       };
 
-      // Settings modal is large — load on first open only (not on dashboard boot).
+      // Settings modal is large â€” load on first open only (not on dashboard boot).
     })();
 
     try {

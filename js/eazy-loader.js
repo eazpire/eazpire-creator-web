@@ -17,7 +17,7 @@
     if (!href || document.querySelector('link[data-portal-eazy-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href + "?v=7";
+    link.href = href + "?v=8";
     link.setAttribute("data-portal-eazy-css", href);
     document.head.appendChild(link);
   }
@@ -29,7 +29,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=7";
+      s.src = src + "?v=8";
       s.defer = true;
       s.setAttribute("data-portal-eazy-js", src);
       s.onload = function () {
@@ -98,7 +98,6 @@
       a("wardrobe-figure.js"),
       a("eaz-artifacts-outfit.js"),
       a("eaz-artifacts-marketplace.js"),
-      a("eazy-guide-mode.js"),
       a("creator-legacy-save.js"),
       a("creator-chat-widget.js"),
     ];
@@ -156,6 +155,7 @@
         asset("eazy-functions.js"),
         asset("eazy-mascot-tab.js"),
         asset("creator-notifications.bootstrap.js"),
+        asset("eazy-guide-mode.js"),
       ]);
       await loadScript(asset("eaz-chat-widget-loader.js"));
 

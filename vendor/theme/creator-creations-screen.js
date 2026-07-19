@@ -2456,6 +2456,13 @@
     document.head.appendChild(link);
   }
 
+  function withPortalCacheBust(url) {
+    if (!url) return url;
+    if (String(url).indexOf('?') !== -1) return url;
+    // Keep in sync with creator-web/js/feature-loader.js vendor ?v=
+    return String(url) + '?v=ppm-20260719a';
+  }
+
   /** Lazy-load Product Preview Modal (Creations → Products). */
   function ensureProductPreviewModal() {
     if (window.CreatorProductPreviewModal && typeof window.CreatorProductPreviewModal.open === 'function') {
@@ -2464,13 +2471,17 @@
     if (productPreviewModalLoadPromise) return productPreviewModalLoadPromise;
 
     var lazy = window.__CreatorLazyModals;
-    var jsUrl = resolveProductPreviewModalAssetUrl(
-      window.__CREATOR_PRODUCT_PREVIEW_MODAL_JS || '',
-      'creator-product-preview-modal.js'
+    var jsUrl = withPortalCacheBust(
+      resolveProductPreviewModalAssetUrl(
+        window.__CREATOR_PRODUCT_PREVIEW_MODAL_JS || '',
+        'creator-product-preview-modal.js'
+      )
     );
-    var cssUrl = resolveProductPreviewModalAssetUrl(
-      window.__CREATOR_PRODUCT_PREVIEW_MODAL_CSS || '',
-      'creator-product-preview-modal.css'
+    var cssUrl = withPortalCacheBust(
+      resolveProductPreviewModalAssetUrl(
+        window.__CREATOR_PRODUCT_PREVIEW_MODAL_CSS || '',
+        'creator-product-preview-modal.css'
+      )
     );
     ensureCssHref(cssUrl);
 

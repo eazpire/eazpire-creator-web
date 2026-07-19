@@ -37,6 +37,7 @@
     if (isRecentDrag) return;
     if (Date.now() < suppressClickUntil) return;
     if (window.EazyGuide && window.EazyGuide.shouldSuppressChatOpen && window.EazyGuide.shouldSuppressChatOpen()) return;
+    if (window.EazyGuide && window.EazyGuide.shouldSuppressExit && window.EazyGuide.shouldSuppressExit()) return;
     if (window.EazyGuide && window.EazyGuide.isActive && window.EazyGuide.isActive()) {
       window.EazyGuide.exit();
       return;
@@ -62,6 +63,7 @@
 
   function openCreatorChatFromMascotImmediate() {
     if (window.EazyGuide && window.EazyGuide.shouldSuppressChatOpen && window.EazyGuide.shouldSuppressChatOpen()) return;
+    if (window.EazyGuide && window.EazyGuide.shouldSuppressExit && window.EazyGuide.shouldSuppressExit()) return;
     if (window.EazyGuide && window.EazyGuide.isActive && window.EazyGuide.isActive()) {
       window.EazyGuide.exit();
       return;
