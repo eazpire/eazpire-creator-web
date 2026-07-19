@@ -1147,7 +1147,18 @@
         'link_error_not_configured',
         'Link download service not configured. Please contact support.'
       ),
+      missing_owner_id: i18n('link_error_auth', 'Please sign in to import media from links.'),
+      not_configured: i18n(
+        'link_error_not_configured',
+        'Link download service not configured. Please contact support.'
+      ),
+      asset_not_found: i18n('link_error_generic', 'Could not add media from that link.'),
+      timeout: i18n('link_error_timeout', 'Import timed out. Try again in a moment.'),
+      resolve_failed: i18n('link_error_generic', 'Could not add media from that link.'),
     };
+    if (data && data.error === 'already_in_assets') {
+      return i18n('link_already_in_assets', 'Already in your assets.');
+    }
     return (data && map[data.error]) || i18n('link_error_generic', 'Could not add media from that link.');
   }
 
@@ -1192,14 +1203,24 @@
         }
         return;
       }
-      linkExtracted = { url: url, format: format, kind: data.kind };
+      linkExtracted = { url: url, format: format, kind: data.kind, cached: !!data.cached, assetId: data.asset_id || null };
       renderLinkPreview(data.preview_url, data.kind);
       var downloadBtn = document.getElementById('cvs-link-submit');
       if (downloadBtn) downloadBtn.disabled = false;
       if (statusEl) {
-        statusEl.textContent = data.warning
-          ? i18n('link_extracted_with_warning', 'Preview ready — audio-only extraction was not available, this will save the original media.')
-          : i18n('link_extracted', 'Preview ready — click Download to save it.');
+        if (data.cached) {
+          statusEl.textContent = i18n(
+            'link_extracted_cached',
+            'Already in your assets — click Download to add it to this project.'
+          );
+        } else if (data.warning) {
+          statusEl.textContent = i18n(
+            'link_extracted_with_warning',
+            'Preview ready — audio-only extraction was not available, this will save the original media.'
+          );
+        } else {
+          statusEl.textContent = i18n('link_extracted', 'Preview ready — click Download to save it.');
+        }
         statusEl.className = 'cvs-link-status is-success';
       }
     } catch (e) {
@@ -1251,9 +1272,12 @@
         return { ok: false };
       });
       if (data.status === 'ready' && data.asset) {
-        return { ok: true, asset: data.asset, warning: data.warning || null };
+        return { ok: true, asset: data.asset, warning: data.warning || null, cached: !!data.cached };
       }
-      if (data.status === 'failed' || data.error) {
+      if (data.status === 'failed') {
+        return { ok: false, data: data };
+      }
+      if (!data.ok && data.error && data.error !== 'asset_not_found') {
         return { ok: false, data: data };
       }
       await sleep(intervalMs);
@@ -1291,9 +1315,10 @@
 
       var asset = data.asset || null;
       var warning = data.warning || null;
+      var wasCached = !!data.cached;
 
       if (data.cached && asset) {
-        /* dedupe hit — asset already in library */
+        wasCached = true;
       } else if (data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
         if (statusEl) {
           statusEl.textContent = i18n('link_queued', 'Import queued — preparing download…');
@@ -1310,8 +1335,22 @@
         }
         asset = polled.asset;
         warning = polled.warning || warning;
+        wasCached = wasCached || !!polled.cached;
       } else if (data.status === 'ready' && asset) {
-        /* synchronous cached response */
+        wasCached = wasCached || !!data.cached;
+      } else if (data.status === 'ready' && data.asset_id && !asset) {
+        var readyPoll = await pollLinkIngestStatus(data.asset_id, statusEl);
+        if (!readyPoll.ok || !readyPoll.asset) {
+          if (statusEl) {
+            statusEl.textContent = linkIngestErrorMessage(readyPoll.data || { error: 'fetch_failed' });
+            statusEl.className = 'cvs-link-status';
+          }
+          if (downloadBtn) downloadBtn.disabled = false;
+          return;
+        }
+        asset = readyPoll.asset;
+        warning = readyPoll.warning || warning;
+        wasCached = wasCached || !!readyPoll.cached;
       } else {
         if (statusEl) {
           statusEl.textContent = linkIngestErrorMessage(data);
@@ -1333,9 +1372,19 @@
       libraryAssets.unshift(asset);
       await attachAssetToProject(asset.id);
       if (statusEl) {
-        statusEl.textContent = warning
-          ? i18n('link_added_with_warning', 'Added — audio-only extraction was not available, saved the original media.')
-          : i18n('link_added', 'Added to project sidebar');
+        if (wasCached) {
+          statusEl.textContent = i18n(
+            'link_already_in_assets',
+            'Already in your assets — added to this project.'
+          );
+        } else if (warning) {
+          statusEl.textContent = i18n(
+            'link_added_with_warning',
+            'Added — audio-only extraction was not available, saved the original media.'
+          );
+        } else {
+          statusEl.textContent = i18n('link_added', 'Added to project sidebar');
+        }
         statusEl.className = 'cvs-link-status is-success';
       }
       setTimeout(closeLinkModal, 900);

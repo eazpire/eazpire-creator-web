@@ -401,7 +401,10 @@
       if (data.status === 'ready' && data.asset) {
         return { ok: true, asset: data.asset };
       }
-      if (data.status === 'failed' || data.error) {
+      if (data.status === 'failed') {
+        return { ok: false, data: data };
+      }
+      if (!data.ok && data.error) {
         return { ok: false, data: data };
       }
       await sleep(intervalMs);
@@ -444,6 +447,9 @@
       if (data.ok && data.asset && data.asset.url) {
         closeLinkModal();
         await applyPickedAsset(data.asset);
+        if (status && data.cached) {
+          status.textContent = i18n('link_already_in_assets', 'Already in your assets — added to this project.');
+        }
         return;
       }
       if (data.ok && data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
