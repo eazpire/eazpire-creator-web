@@ -89,10 +89,76 @@
         </section>
 
         <section class="smm-panel" data-smm-panel="new_post" hidden>
-          <h3 class="smm-panel__title" data-t="creator.social_media_manager.new_post_title">New Post</h3>
-          <p class="smm-panel__stub" data-t="creator.social_media_manager.new_post_stub">Compose and schedule posts after you connect at least one account.</p>
+          <div class="smm-new-post" id="smm-new-post">
+            <div class="smm-new-post__empty" id="smm-new-post-empty" hidden>
+              <h3 class="smm-panel__title" data-t="creator.social_media_manager.new_post_title">New Post</h3>
+              <p class="smm-panel__stub" data-t="creator.social_media_manager.new_post_stub">Compose and schedule posts after you connect at least one account.</p>
+            </div>
+            <div class="smm-new-post__composer" id="smm-new-post-composer" hidden>
+              <div class="smm-new-post__subheader">
+                <span class="smm-new-post__assets-label" data-t="creator.social_media_manager.assets_label">Assets</span>
+                <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-choose-asset" data-t="creator.social_media_manager.choose_asset">Choose asset</button>
+              </div>
+              <div class="smm-new-post__body">
+                <div class="smm-new-post__viewer" id="smm-new-post-viewer">
+                  <p class="smm-new-post__viewer-empty" data-t="creator.social_media_manager.viewer_empty">Pick an image or video to preview it here.</p>
+                </div>
+                <div class="smm-new-post__fields">
+                  <label class="smm-field">
+                    <span class="smm-field__label" data-t="creator.social_media_manager.caption_label">Caption</span>
+                    <textarea id="smm-caption" class="smm-field__textarea" rows="5" maxlength="2200" placeholder="Write your post caption…"></textarea>
+                  </label>
+                  <label class="smm-field">
+                    <span class="smm-field__label" data-t="creator.social_media_manager.link_label">Link URL (optional)</span>
+                    <input type="url" id="smm-link-url" class="smm-field__input" placeholder="https://…" autocomplete="off" />
+                  </label>
+                  <div class="smm-channel-settings" id="smm-channel-settings" aria-live="polite"></div>
+                </div>
+              </div>
+              <footer class="smm-new-post__footer">
+                <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-post-now" data-t="creator.social_media_manager.btn_post">Post</button>
+                <button type="button" class="smm-btn" id="smm-btn-schedule" data-t="creator.social_media_manager.btn_schedule">Schedule</button>
+              </footer>
+              <p class="smm-new-post__status" id="smm-new-post-status" hidden role="status" aria-live="polite"></p>
+            </div>
+          </div>
         </section>
       </main>
+    </div>
+  </div>
+
+  <div class="smm-submodal" id="smm-asset-picker" hidden aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="smm-submodal__backdrop" data-smm-close="asset"></div>
+    <div class="smm-submodal__panel smm-submodal__panel--wide">
+      <header class="smm-submodal__header">
+        <h3 class="smm-submodal__title" data-t="creator.social_media_manager.asset_picker_title">Choose asset</h3>
+        <button type="button" class="smm-btn smm-btn--icon" data-smm-close="asset" aria-label="Close">×</button>
+      </header>
+      <p class="smm-submodal__hint" data-t="creator.social_media_manager.asset_picker_hint">Images and videos from your library. Audio is excluded.</p>
+      <div class="smm-asset-grid" id="smm-asset-grid" role="list"></div>
+      <p class="smm-submodal__empty" id="smm-asset-empty" hidden data-t="creator.social_media_manager.asset_picker_empty">No assets yet. Upload in Video Studio or generate images first.</p>
+      <p class="smm-submodal__loading" id="smm-asset-loading" hidden data-t="creator.social_media_manager.loading_assets">Loading assets…</p>
+    </div>
+  </div>
+
+  <div class="smm-submodal" id="smm-target-confirm" hidden aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="smm-submodal__backdrop" data-smm-close="target"></div>
+    <div class="smm-submodal__panel">
+      <header class="smm-submodal__header">
+        <h3 class="smm-submodal__title" id="smm-target-confirm-title" data-t="creator.social_media_manager.confirm_targets_title">Confirm targets</h3>
+        <button type="button" class="smm-btn smm-btn--icon" data-smm-close="target" aria-label="Close">×</button>
+      </header>
+      <p class="smm-submodal__hint" data-t="creator.social_media_manager.confirm_targets_hint">Choose which accounts receive this post. Brand admin accounts are included by default.</p>
+      <div class="smm-target-list" id="smm-target-list"></div>
+      <label class="smm-field smm-field--schedule" id="smm-schedule-field" hidden>
+        <span class="smm-field__label" data-t="creator.social_media_manager.schedule_at_label">Schedule for</span>
+        <input type="datetime-local" id="smm-schedule-at" class="smm-field__input" />
+      </label>
+      <footer class="smm-submodal__footer">
+        <button type="button" class="smm-btn" data-smm-close="target" data-t="creator.social_media_manager.btn_cancel">Cancel</button>
+        <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-confirm-submit" data-t="creator.social_media_manager.btn_confirm_post">Confirm & post</button>
+      </footer>
+      <p class="smm-submodal__status" id="smm-target-status" hidden role="status" aria-live="polite"></p>
     </div>
   </div>
 </div>

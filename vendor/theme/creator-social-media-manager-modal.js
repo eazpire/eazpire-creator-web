@@ -14,6 +14,16 @@
   var oauthPopup = null;
   var oauthPollTimer = null;
 
+  /** New Post composer state */
+  var compose = {
+    asset: null,
+    targets: [],
+    defaultSelected: [],
+    channelSettings: { facebook: { post_type: 'photo' }, tiktok: { privacy_level: 'SELF_ONLY' } },
+    tiktokPrivacyOptions: ['SELF_ONLY', 'MUTUAL_FOLLOW_FRIENDS', 'PUBLIC_TO_EVERYONE'],
+    confirmMode: 'post'
+  };
+
   /** Locked product channel list. Facebook is live; others show Coming soon. */
   var CHANNELS = [
     { id: 'facebook', labelKey: 'channel_facebook', label: 'Facebook', short: 'f', connectable: true },
@@ -114,6 +124,9 @@
     closeDrawer();
     if (currentNav === 'connect') {
       loadConnections();
+    }
+    if (currentNav === 'new_post') {
+      initNewPostPanel();
     }
   }
 
@@ -427,6 +440,559 @@
     loadConnections();
   }
 
+  function channelLabel(channelId) {
+    var ch = CHANNELS.find(function (c) {
+      return c.id === channelId;
+    });
+    return ch ? i18n(ch.labelKey, ch.label) : channelId;
+  }
+
+  function getMediaKind() {
+    if (!compose.asset) return 'image';
+    return compose.asset.kind === 'video' ? 'video' : 'image';
+  }
+
+  function setNewPostStatus(msg, kind) {
+    var el = $('#smm-new-post-status');
+    if (!el) return;
+    if (!msg) {
+      el.hidden = true;
+      el.textContent = '';
+      el.classList.remove('is-error', 'is-success');
+      return;
+    }
+    el.hidden = false;
+    el.textContent = msg;
+    el.classList.toggle('is-error', kind === 'error');
+    el.classList.toggle('is-success', kind === 'success');
+  }
+
+  function hasAnyConnectedTarget() {
+    var onlineCount = 0;
+    Object.keys(channelState).forEach(function (id) {
+      var st = channelState[id];
+      if (st && st.online && Number(st.account_count || 0) > 0) onlineCount += 1;
+    });
+    return onlineCount > 0 || (compose.targets && compose.targets.some(function (t) {
+      return t.source === 'admin';
+    }));
+  }
+
+  async function loadPostTargets() {
+    var owner = getOwnerId();
+    if (!owner) return;
+    try {
+      var res = await fetch(
+        apiUrl('creator-social-post-targets') + '&media_kind=' + encodeURIComponent(getMediaKind()),
+        { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } }
+      );
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (data.ok) {
+        compose.targets = data.targets || [];
+        compose.defaultSelected = data.default_selected || [];
+      }
+    } catch (e) {}
+  }
+
+  function renderAssetViewer() {
+    var viewer = $('#smm-new-post-viewer');
+    var chooseBtn = $('#smm-btn-choose-asset');
+    if (!viewer) return;
+    if (!compose.asset || !compose.asset.url) {
+      viewer.innerHTML =
+        '<p class="smm-new-post__viewer-empty">' +
+        esc(i18n('viewer_empty', 'Pick an image or video to preview it here.')) +
+        '</p>';
+      if (chooseBtn) {
+        chooseBtn.textContent = i18n('choose_asset', 'Choose asset');
+      }
+      return;
+    }
+    if (chooseBtn) {
+      chooseBtn.textContent = i18n('change_asset', 'Change asset');
+    }
+    if (compose.asset.kind === 'video') {
+      viewer.innerHTML =
+        '<video src="' +
+        esc(compose.asset.url) +
+        '" controls playsinline preload="metadata"></video>';
+    } else {
+      viewer.innerHTML = '<img src="' + esc(compose.asset.url) + '" alt="" />';
+    }
+  }
+
+  function getConnectedChannelsForSettings() {
+    var seen = {};
+    var out = [];
+    (compose.targets || []).forEach(function (t) {
+      if (!t || !t.channel || seen[t.channel]) return;
+      if (t.source === 'admin' || (t.online && t.source === 'creator')) {
+        seen[t.channel] = true;
+        out.push(t.channel);
+      }
+    });
+    return out;
+  }
+
+  function renderChannelSettingsPanels() {
+    var wrap = $('#smm-channel-settings');
+    if (!wrap) return;
+    var channels = getConnectedChannelsForSettings();
+    if (!channels.length) {
+      wrap.innerHTML = '';
+      return;
+    }
+    var html = '';
+    channels.forEach(function (ch) {
+      var name = channelLabel(ch);
+      if (ch === 'facebook' && getMediaKind() === 'image') {
+        var postType = (compose.channelSettings.facebook && compose.channelSettings.facebook.post_type) || 'photo';
+        html +=
+          '<div class="smm-channel-panel" data-smm-channel-panel="facebook">' +
+          '<h4 class="smm-channel-panel__title">' +
+          esc(name) +
+          '</h4>' +
+          '<div class="smm-channel-panel__row">' +
+          '<label class="smm-field" style="flex:1;min-width:140px">' +
+          '<span class="smm-field__label">' +
+          esc(i18n('facebook_post_type', 'Post type')) +
+          '</span>' +
+          '<select class="smm-field__select" data-smm-fb-post-type>' +
+          '<option value="photo"' +
+          (postType === 'photo' ? ' selected' : '') +
+          '>' +
+          esc(i18n('facebook_post_photo', 'Photo post')) +
+          '</option>' +
+          '<option value="link"' +
+          (postType === 'link' ? ' selected' : '') +
+          '>' +
+          esc(i18n('facebook_post_link', 'Link post')) +
+          '</option>' +
+          '</select></label></div></div>';
+      } else if (ch === 'tiktok' && getMediaKind() === 'video') {
+        var privacy =
+          (compose.channelSettings.tiktok && compose.channelSettings.tiktok.privacy_level) || 'SELF_ONLY';
+        html +=
+          '<div class="smm-channel-panel" data-smm-channel-panel="tiktok">' +
+          '<h4 class="smm-channel-panel__title">' +
+          esc(name) +
+          '</h4>' +
+          '<div class="smm-channel-panel__row">' +
+          '<label class="smm-field" style="flex:1;min-width:160px">' +
+          '<span class="smm-field__label">' +
+          esc(i18n('tiktok_privacy', 'Privacy')) +
+          '</span>' +
+          '<select class="smm-field__select" data-smm-tiktok-privacy">';
+        compose.tiktokPrivacyOptions.forEach(function (opt) {
+          html +=
+            '<option value="' +
+            esc(opt) +
+            '"' +
+            (privacy === opt ? ' selected' : '') +
+            '>' +
+            esc(opt.replace(/_/g, ' ')) +
+            '</option>';
+        });
+        html +=
+          '</select></label></div>' +
+          '<p class="smm-channel-panel__note">' +
+          esc(i18n('tiktok_sandbox_note', 'Sandbox apps may publish private posts until TikTok app review.')) +
+          '</p></div>';
+      } else if (ch === 'instagram') {
+        html +=
+          '<div class="smm-channel-panel">' +
+          '<h4 class="smm-channel-panel__title">' +
+          esc(name) +
+          '</h4>' +
+          '<p class="smm-channel-panel__note">' +
+          esc(
+            getMediaKind() === 'video'
+              ? i18n('instagram_video_soon', 'Instagram video posts are not supported in V1.')
+              : i18n('instagram_feed_note', 'Single-image feed post via brand account.')
+          ) +
+          '</p></div>';
+      } else {
+        html +=
+          '<div class="smm-channel-panel">' +
+          '<h4 class="smm-channel-panel__title">' +
+          esc(name) +
+          '</h4>' +
+          '<p class="smm-channel-panel__note">' +
+          esc(i18n('channel_publish_soon', 'Publishing to this channel is coming soon.')) +
+          '</p></div>';
+      }
+    });
+    wrap.innerHTML = html;
+    var fbSel = wrap.querySelector('[data-smm-fb-post-type]');
+    if (fbSel) {
+      fbSel.addEventListener('change', function () {
+        compose.channelSettings.facebook = compose.channelSettings.facebook || {};
+        compose.channelSettings.facebook.post_type = fbSel.value;
+      });
+    }
+    var ttSel = wrap.querySelector('[data-smm-tiktok-privacy]');
+    if (ttSel) {
+      ttSel.addEventListener('change', function () {
+        compose.channelSettings.tiktok = compose.channelSettings.tiktok || {};
+        compose.channelSettings.tiktok.privacy_level = ttSel.value;
+      });
+    }
+  }
+
+  async function initNewPostPanel() {
+    var emptyEl = $('#smm-new-post-empty');
+    var composerEl = $('#smm-new-post-composer');
+    if (!emptyEl || !composerEl) return;
+
+    if (!getOwnerId()) {
+      emptyEl.hidden = false;
+      composerEl.hidden = true;
+      return;
+    }
+
+    await loadConnections();
+    await loadPostTargets();
+
+    if (!hasAnyConnectedTarget()) {
+      emptyEl.hidden = false;
+      composerEl.hidden = true;
+      return;
+    }
+
+    emptyEl.hidden = true;
+    composerEl.hidden = false;
+    renderAssetViewer();
+    renderChannelSettingsPanels();
+    setNewPostStatus('', null);
+  }
+
+  function closeSubmodal(name) {
+    var id = name === 'asset' ? 'smm-asset-picker' : 'smm-target-confirm';
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.hidden = true;
+    el.setAttribute('aria-hidden', 'true');
+  }
+
+  function openSubmodal(name) {
+    var id = name === 'asset' ? 'smm-asset-picker' : 'smm-target-confirm';
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.hidden = false;
+    el.removeAttribute('hidden');
+    el.setAttribute('aria-hidden', 'false');
+  }
+
+  async function loadComposeAssets() {
+    var grid = $('#smm-asset-grid');
+    var loading = $('#smm-asset-loading');
+    var empty = $('#smm-asset-empty');
+    if (!grid) return;
+    if (loading) loading.hidden = false;
+    if (empty) empty.hidden = true;
+    grid.innerHTML = '';
+    try {
+      var res = await fetch(apiUrl('creator-social-compose-assets'), {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      var items = (data.items || []).filter(function (item) {
+        return item && item.kind !== 'audio';
+      });
+      if (loading) loading.hidden = true;
+      if (!items.length) {
+        if (empty) empty.hidden = false;
+        return;
+      }
+      items.forEach(function (item) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'smm-asset-item';
+        btn.setAttribute('role', 'listitem');
+        var thumb = item.thumb_url || item.url;
+        if (item.kind === 'video') {
+          btn.innerHTML =
+            '<video src="' +
+            esc(thumb) +
+            '" muted preload="metadata"></video>' +
+            '<span class="smm-asset-item__badge">video</span>';
+        } else {
+          btn.innerHTML =
+            '<img src="' +
+            esc(thumb) +
+            '" alt="" loading="lazy" />' +
+            '<span class="smm-asset-item__badge">image</span>';
+        }
+        btn.addEventListener('click', function () {
+          compose.asset = {
+            id: item.id,
+            source: item.source,
+            kind: item.kind === 'video' ? 'video' : 'image',
+            url: item.url,
+            label: item.label || item.kind
+          };
+          renderAssetViewer();
+          loadPostTargets().then(function () {
+            renderChannelSettingsPanels();
+          });
+          closeSubmodal('asset');
+        });
+        grid.appendChild(btn);
+      });
+    } catch (e) {
+      if (loading) loading.hidden = true;
+      if (empty) {
+        empty.hidden = false;
+        empty.textContent = i18n('error_load_assets', 'Could not load assets.');
+      }
+    }
+  }
+
+  function openAssetPickerModal() {
+    openSubmodal('asset');
+    loadComposeAssets();
+  }
+
+  function renderTargetConfirmList() {
+    var list = $('#smm-target-list');
+    if (!list) return;
+    var mediaKind = getMediaKind();
+    var html = '';
+    (compose.targets || []).forEach(function (t) {
+      var checked = compose.defaultSelected.indexOf(t.id) !== -1;
+      var disabled = !t.publish_ready;
+      var sub = t.source === 'admin'
+        ? i18n('target_admin', 'Brand admin account')
+        : i18n('target_creator', 'Your account');
+      if (disabled) {
+        sub +=
+          ' · ' +
+          (mediaKind === 'video' && t.channel === 'tiktok'
+            ? i18n('target_needs_video', 'Requires video')
+            : i18n('target_not_ready', 'Not available for this post yet'));
+      }
+      html +=
+        '<label class="smm-target-item' +
+        (disabled ? ' is-disabled' : '') +
+        '">' +
+        '<input type="checkbox" data-smm-target-id="' +
+        esc(t.id) +
+        '" ' +
+        (checked && !disabled ? 'checked' : '') +
+        (disabled ? ' disabled' : '') +
+        ' />' +
+        '<span class="smm-target-item__meta">' +
+        '<span class="smm-target-item__name">' +
+        esc(t.display_name || channelLabel(t.channel)) +
+        '</span>' +
+        '<span class="smm-target-item__sub">' +
+        esc(channelLabel(t.channel) + ' · ' + sub) +
+        '</span></span></label>';
+    });
+    list.innerHTML = html || '<p class="smm-channel-panel__note">' + esc(i18n('no_targets', 'No connected accounts.')) + '</p>';
+  }
+
+  function openTargetConfirmModal(mode) {
+    compose.confirmMode = mode === 'schedule' ? 'schedule' : 'post';
+    var scheduleField = $('#smm-schedule-field');
+    var title = $('#smm-target-confirm-title');
+    var submitBtn = $('#smm-btn-confirm-submit');
+    if (scheduleField) scheduleField.hidden = compose.confirmMode !== 'schedule';
+    if (title) {
+      title.textContent =
+        compose.confirmMode === 'schedule'
+          ? i18n('confirm_schedule_title', 'Schedule post')
+          : i18n('confirm_targets_title', 'Confirm targets');
+    }
+    if (submitBtn) {
+      submitBtn.textContent =
+        compose.confirmMode === 'schedule'
+          ? i18n('btn_confirm_schedule', 'Confirm & schedule')
+          : i18n('btn_confirm_post', 'Confirm & post');
+    }
+    var status = $('#smm-target-status');
+    if (status) {
+      status.hidden = true;
+      status.textContent = '';
+    }
+    renderTargetConfirmList();
+    openSubmodal('target');
+  }
+
+  function getSelectedTargetsFromModal() {
+    var list = $('#smm-target-list');
+    if (!list) return [];
+    var selectedIds = {};
+    list.querySelectorAll('input[type="checkbox"][data-smm-target-id]:checked').forEach(function (cb) {
+      selectedIds[cb.getAttribute('data-smm-target-id')] = true;
+    });
+    return (compose.targets || []).filter(function (t) {
+      return selectedIds[t.id] && t.publish_ready;
+    });
+  }
+
+  function defaultScheduleLocalValue() {
+    var d = new Date(Date.now() + 60 * 60 * 1000);
+    d.setMinutes(0, 0, 0);
+    var pad = function (n) {
+      return String(n).padStart(2, '0');
+    };
+    return (
+      d.getFullYear() +
+      '-' +
+      pad(d.getMonth() + 1) +
+      '-' +
+      pad(d.getDate()) +
+      'T' +
+      pad(d.getHours()) +
+      ':' +
+      pad(d.getMinutes())
+    );
+  }
+
+  async function submitNewPost() {
+    var owner = getOwnerId();
+    if (!owner) return;
+    if (!compose.asset || !compose.asset.url) {
+      setNewPostStatus(i18n('error_pick_asset', 'Choose an asset first.'), 'error');
+      return;
+    }
+    var targets = getSelectedTargetsFromModal();
+    if (!targets.length) {
+      var status = $('#smm-target-status');
+      if (status) {
+        status.hidden = false;
+        status.className = 'smm-submodal__status is-error';
+        status.textContent = i18n('error_pick_targets', 'Select at least one publishable account.');
+      }
+      return;
+    }
+
+    var captionEl = $('#smm-caption');
+    var linkEl = $('#smm-link-url');
+    var caption = captionEl ? String(captionEl.value || '').trim() : '';
+    var linkUrl = linkEl ? String(linkEl.value || '').trim() : '';
+    var payload = {
+      owner_id: owner,
+      caption: caption,
+      link_url: linkUrl,
+      media_url: compose.asset.url,
+      media_kind: getMediaKind(),
+      asset_source: compose.asset.source || '',
+      asset_id: compose.asset.id || '',
+      targets: targets,
+      channel_settings: compose.channelSettings,
+      mode: compose.confirmMode
+    };
+
+    if (compose.confirmMode === 'schedule') {
+      var schedInput = $('#smm-schedule-at');
+      var localVal = schedInput ? String(schedInput.value || '').trim() : '';
+      if (!localVal) {
+        var st = $('#smm-target-status');
+        if (st) {
+          st.hidden = false;
+          st.className = 'smm-submodal__status is-error';
+          st.textContent = i18n('error_schedule_time', 'Pick a date and time.');
+        }
+        return;
+      }
+      payload.scheduled_at = new Date(localVal).toISOString();
+    }
+
+    var submitBtn = $('#smm-btn-confirm-submit');
+    if (submitBtn) submitBtn.disabled = true;
+    var modalStatus = $('#smm-target-status');
+    if (modalStatus) {
+      modalStatus.hidden = false;
+      modalStatus.className = 'smm-submodal__status';
+      modalStatus.textContent = i18n('submitting', 'Submitting…');
+    }
+
+    try {
+      var res = await fetch(apiUrl('creator-social-posts-create'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (data.ok) {
+        closeSubmodal('target');
+        setNewPostStatus(
+          data.message ||
+            (compose.confirmMode === 'schedule'
+              ? i18n('scheduled_ok', 'Post scheduled.')
+              : i18n('posted_ok', 'Post published.')),
+          'success'
+        );
+        if (compose.confirmMode === 'post' && data.partial) {
+          setNewPostStatus(i18n('posted_partial', 'Published to some channels — check Manage Posts for details.'), 'success');
+        }
+      } else {
+        if (modalStatus) {
+          modalStatus.className = 'smm-submodal__status is-error';
+          modalStatus.textContent =
+            data.message || data.error || i18n('error_submit', 'Could not submit post.');
+        }
+      }
+    } catch (e) {
+      if (modalStatus) {
+        modalStatus.className = 'smm-submodal__status is-error';
+        modalStatus.textContent = i18n('error_network', 'Network error. Please try again.');
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  }
+
+  function onSubmodalClick(e) {
+    var closeAttr = e.target && e.target.closest ? e.target.closest('[data-smm-close]') : null;
+    if (!closeAttr || !root || !root.contains(closeAttr)) return;
+    var which = closeAttr.getAttribute('data-smm-close');
+    if (which === 'asset' || which === 'target') {
+      e.preventDefault();
+      closeSubmodal(which);
+    }
+  }
+
+  function bindNewPostUi() {
+    if (!root || root._smmNewPostBound) return;
+    root._smmNewPostBound = true;
+
+    var chooseBtn = $('#smm-btn-choose-asset');
+    if (chooseBtn) chooseBtn.addEventListener('click', openAssetPickerModal);
+
+    var postBtn = $('#smm-btn-post-now');
+    if (postBtn) {
+      postBtn.addEventListener('click', function () {
+        openTargetConfirmModal('post');
+      });
+    }
+
+    var schedBtn = $('#smm-btn-schedule');
+    if (schedBtn) {
+      schedBtn.addEventListener('click', function () {
+        var schedInput = $('#smm-schedule-at');
+        if (schedInput && !schedInput.value) schedInput.value = defaultScheduleLocalValue();
+        openTargetConfirmModal('schedule');
+      });
+    }
+
+    var confirmBtn = $('#smm-btn-confirm-submit');
+    if (confirmBtn) confirmBtn.addEventListener('click', submitNewPost);
+
+    root.addEventListener('click', onSubmodalClick);
+  }
+
   function open(opts) {
     opts = opts || {};
     root = document.getElementById('creatorSocialMediaManagerModal');
@@ -437,6 +1003,7 @@
       return false;
     }
     bindUi();
+    bindNewPostUi();
     renderConnectGrid();
     setNav(opts.nav || 'overview');
     root.hidden = false;
@@ -493,9 +1060,21 @@
 
     root.addEventListener('click', onConnectActionClick);
 
+    bindNewPostUi();
+
     document.addEventListener('keydown', function (ev) {
       if (ev.key !== 'Escape') return;
       if (!root || root.hidden) return;
+      var assetModal = document.getElementById('smm-asset-picker');
+      var targetModal = document.getElementById('smm-target-confirm');
+      if (assetModal && !assetModal.hidden) {
+        closeSubmodal('asset');
+        return;
+      }
+      if (targetModal && !targetModal.hidden) {
+        closeSubmodal('target');
+        return;
+      }
       var sidebar = $('#smm-sidebar');
       if (sidebar && sidebar.classList.contains('is-drawer-open')) {
         closeDrawer();

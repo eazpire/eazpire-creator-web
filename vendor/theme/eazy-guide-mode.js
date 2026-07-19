@@ -45,6 +45,8 @@
   var speechRec = null;
   var recording = false;
   var suppressChatOpenUntil = 0;
+  var thoughtHomeParent = null;
+  var thoughtHomeNext = null;
   var snapTapState = { time: 0, x: 0, y: 0, key: "" };
   var snapTouchStart = { key: "", x: 0, y: 0, moved: false };
   var lastSnapPointerEndAt = 0;
@@ -313,24 +315,30 @@
     syncExplainUi();
   }
 
+  function resolveRegistryUrl() {
+    if (REGISTRY_URL) return REGISTRY_URL;
+    var el = document.getElementById("eazy-guide-registry-data");
+    if (el && el.getAttribute("data-src")) return el.getAttribute("data-src");
+    var attr = document.documentElement.getAttribute("data-eazy-guide-registry") || "";
+    if (attr) return attr;
+    if (window.CreatorPortalThemeBridge && typeof window.CreatorPortalThemeBridge.assetUrl === "function") {
+      return window.CreatorPortalThemeBridge.assetUrl("eazy-guide-registry.json");
+    }
+    return "/vendor/theme/eazy-guide-registry.json";
+  }
+
   function loadRegistry() {
     if (registryCache) return Promise.resolve(registryCache);
     var el = document.getElementById("eazy-guide-registry-data");
-    if (el && el.textContent) {
+    if (el && el.textContent && el.textContent.trim()) {
       try {
         registryCache = JSON.parse(el.textContent);
         return Promise.resolve(registryCache);
       } catch (e) {}
     }
-    var url =
-      REGISTRY_URL ||
-      (document.documentElement.getAttribute("data-eazy-guide-registry") || "") ||
-      "";
-    if (!url) {
-      registryCache = {};
-      return Promise.resolve(registryCache);
-    }
-    return fetch(url)
+    var url = resolveRegistryUrl();
+    REGISTRY_URL = url;
+    return fetch(url, { credentials: "same-origin" })
       .then(function (r) {
         return r.json();
       })
@@ -478,8 +486,46 @@
     el.style.removeProperty("--eaz-guide-bubble-tail-left");
   }
 
-  function showBubble(text, loading) {
+  function ensureGuideThoughtEl() {
     var el = document.getElementById("eazy-thought");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "eazy-thought";
+      el.className = "eazy-thought";
+      el.setAttribute("role", "status");
+      el.setAttribute("aria-live", "polite");
+      el.innerHTML =
+        '<span class="eazy-thought-text"></span>' +
+        '<span class="eazy-thought-tail" aria-hidden="true"></span>' +
+        '<span class="eazy-thought-dots"><span></span><span></span><span></span></span>';
+      document.body.appendChild(el);
+      return el;
+    }
+    // Chat toggle is often display:none while the mascot is docked — reparent so the bubble can show.
+    if (el.parentElement !== document.body) {
+      thoughtHomeParent = el.parentElement;
+      thoughtHomeNext = el.nextSibling;
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  function restoreGuideThoughtEl() {
+    var el = document.getElementById("eazy-thought");
+    if (!el || !thoughtHomeParent) return;
+    try {
+      if (thoughtHomeNext && thoughtHomeNext.parentNode === thoughtHomeParent) {
+        thoughtHomeParent.insertBefore(el, thoughtHomeNext);
+      } else {
+        thoughtHomeParent.appendChild(el);
+      }
+    } catch (e0) {}
+    thoughtHomeParent = null;
+    thoughtHomeNext = null;
+  }
+
+  function showBubble(text, loading) {
+    var el = ensureGuideThoughtEl();
     if (!el) return;
     var textEl = el.querySelector(".eazy-thought-text");
     if (textEl) textEl.textContent = text || "";
@@ -566,6 +612,7 @@
     el.classList.remove("show", "eazy-guide-bubble", "eazy-guide-bubble--loading");
     resetGuideBubbleLayout(el);
     unbindGuideBubbleLayout();
+    restoreGuideThoughtEl();
   }
 
   function buildPayload() {
@@ -596,11 +643,9 @@
       return;
     }
 
-    if (forceRegistryOnly || (payload.element && payload.element.guide_key && !payload.screenshot && !payload.prompt)) {
-      var local =
-        payload.element && payload.element.guide_key
-          ? explainFromRegistry(payload.element.guide_key)
-          : null;
+    // Click tips: prefer predefined registry text. Prompt/screenshot use LLM (and registry as bonus context server-side).
+    if (!payload.prompt && payload.element && payload.element.guide_key && !payload.screenshot) {
+      var local = explainFromRegistry(payload.element.guide_key);
       if (local) {
         showBubble(local, false);
         return;
@@ -799,7 +844,7 @@
     syncSelectionUi();
     loadRegistry().then(function () {
       syncSelectionUi();
-      requestExplain(true);
+      requestExplain(false);
     });
   }
 
@@ -991,12 +1036,8 @@
           if (promptLocked) clearPrompt();
           syncSelectionUi();
           syncExplainUi();
-          showBubble(i18n("creator.guide.screenshot_ready", "Screenshot selected — ask me about it."), false);
-          if (ui.promptInput) {
-            try {
-              ui.promptInput.focus();
-            } catch (eF) {}
-          }
+          // Immediate answer from vision/LLM; prompt remains for follow-up questions.
+          requestExplain(false);
         });
       })
       .catch(function () {
@@ -1342,12 +1383,10 @@
   }
 
   function init() {
-    var regEl = document.getElementById("eazy-guide-registry-data");
-    if (regEl && regEl.getAttribute("data-src")) {
-      REGISTRY_URL = regEl.getAttribute("data-src");
-    }
+    REGISTRY_URL = resolveRegistryUrl();
     bindGuideInteractionFreeze();
     bindTriggers();
+    loadRegistry().catch(function () {});
     try {
       if (localStorage.getItem("eazy_guide_discovered") !== "1") {
         scheduleDiscoverHints();

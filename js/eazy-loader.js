@@ -17,7 +17,7 @@
     if (!href || document.querySelector('link[data-portal-eazy-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href + "?v=9";
+    link.href = href + "?v=10";
     link.setAttribute("data-portal-eazy-css", href);
     document.head.appendChild(link);
   }
@@ -29,7 +29,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=9";
+      s.src = src + "?v=10";
       s.defer = true;
       s.setAttribute("data-portal-eazy-js", src);
       s.onload = function () {
@@ -69,8 +69,10 @@
     html = html
       .replace(/^https?:\/\/www\.eazpire\.com\/cdn\/shop[^\n]*\n/gm, "")
       .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>\s*/gi, "")
-      .replace(/<script(?![^>]*\ssrc=)[^>]*>[\s\S]*?<\/script>\s*/gi, "")
-      .replace(/<script[^>]*src=[^>]*>\s*<\/script>\s*/gi, "");
+      // Keep guide registry JSON bootstrap (type=application/json + data-src).
+      // Do not strip by matching the "src=" inside "data-src=".
+      .replace(/<script(?![^>]*\bid\s*=\s*["']eazy-guide-registry-data["'])(?![^>]*\btype\s*=\s*["']application\/json["'])(?![^>]*\ssrc=)[^>]*>[\s\S]*?<\/script>\s*/gi, "")
+      .replace(/<script(?![^>]*\bid\s*=\s*["']eazy-guide-registry-data["'])[^>]*\ssrc=[^>]*>\s*<\/script>\s*/gi, "");
     var wrap = document.createElement("div");
     wrap.setAttribute("data-partial", name);
     wrap.innerHTML = html;
@@ -113,9 +115,13 @@
 
   function wireGuideRegistry() {
     var el = document.getElementById("eazy-guide-registry-data");
-    if (el && !el.getAttribute("data-src")) {
-      el.setAttribute("data-src", asset("eazy-guide-registry.json"));
+    if (!el) {
+      el = document.createElement("script");
+      el.id = "eazy-guide-registry-data";
+      el.type = "application/json";
+      document.body.appendChild(el);
     }
+    el.setAttribute("data-src", asset("eazy-guide-registry.json"));
   }
 
   async function ensureEazy() {
