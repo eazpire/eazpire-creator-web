@@ -392,19 +392,37 @@
   line-height: 1.4;
   color: var(--slm-muted);
 }
-/* Convert row: Available pill, Amount input and Fiat preview sit side by side on the
-   same baseline, capped to a comfortable width so the controls never stretch edge to
-   edge across the (potentially very wide) modal footer. */
+/* Group wraps the widget row + submit button together so the button can be
+   sized to exactly match the row's width (instead of stretching full-bleed
+   across the footer) — both share the same max-width/centering here. */
+.slm-eazc-convert__group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.slm-eazc-convert__submit {
+  width: 100%;
+}
+
+/* Convert row: Available pill, Amount input and Fiat preview stay on a single
+   horizontal line (nowrap) and shrink toward their min-widths instead of
+   wrapping, so Fiat never drops below the other two controls on typical
+   modal widths (~360px+). Only truly tiny screens fall back to wrapping. */
 .slm-eazc-convert__row {
   --slm-convert-h: 48px;
   display: flex;
   align-items: stretch;
-  flex-wrap: wrap;
-  gap: 8px;
-  max-width: 460px;
-  margin: 0 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 100%;
 }
-@media (max-width: 380px) {
+@media (max-width: 300px) {
+  .slm-eazc-convert__row {
+    flex-wrap: wrap;
+  }
   .slm-eazc-convert__avail {
     flex: 1 1 100%;
     order: -1;
@@ -416,12 +434,12 @@
 .slm-eazc-convert__avail {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 0 1 128px;
-  min-width: 96px;
+  gap: 6px;
+  flex: 0 1 108px;
+  min-width: 82px;
   min-height: var(--slm-convert-h);
   box-sizing: border-box;
-  padding: 6px 10px;
+  padding: 6px 8px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(245, 158, 11, 0.06);
@@ -475,14 +493,14 @@
 }
 
 .slm-eazc-convert__input-wrap {
-  flex: 1 1 120px;
-  min-width: 90px;
+  flex: 1 1 108px;
+  min-width: 78px;
   min-height: var(--slm-convert-h);
   box-sizing: border-box;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.28);
-  padding: 4px 4px 4px 12px;
+  padding: 4px 4px 4px 10px;
   display: flex;
   align-items: stretch;
   gap: 4px;
@@ -553,14 +571,14 @@
 /* Fiat preview reuses .slm-kpi so it matches the EAZC control's box style, sized and
    aligned to sit on the exact same horizontal baseline as the Available/Amount control. */
 .slm-eazc-convert__col--fiat {
-  flex: 0 1 110px;
-  min-width: 88px;
+  flex: 0 1 100px;
+  min-width: 78px;
   min-height: var(--slm-convert-h);
   box-sizing: border-box;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 6px 10px;
+  padding: 6px 8px;
   gap: 2px;
 }
 .slm-eazc-convert__fiat-value {
