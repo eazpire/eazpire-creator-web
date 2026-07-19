@@ -17,7 +17,7 @@
     if (!href || document.querySelector('link[data-portal-eazy-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href + "?v=8";
+    link.href = href + "?v=9";
     link.setAttribute("data-portal-eazy-css", href);
     document.head.appendChild(link);
   }
@@ -29,7 +29,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src + "?v=8";
+      s.src = src + "?v=9";
       s.defer = true;
       s.setAttribute("data-portal-eazy-js", src);
       s.onload = function () {

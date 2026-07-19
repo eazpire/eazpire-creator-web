@@ -18,7 +18,8 @@
   var pendingRequest = false;
   var promptLocked = false;
   var screenshotDragActive = false;
-  var tools = { click: true, screenshot: false, prompt: false };
+  var tools = { click: true, screenshot: false };
+  var GUIDE_UI_VERSION = "2";
   var session = { element: null, screenshot: null, prompt: "", voice_transcript: "" };
   var selectedHighlightEl = null;
   var suppressExitUntil = 0;
@@ -31,9 +32,9 @@
     selectionMedia: null,
     selectionTitle: null,
     selectionMeta: null,
+    selectionClear: null,
     toolbar: null,
-    promptBar: null,
-    promptContext: null,
+    promptAsk: null,
     promptInput: null,
     screenshotOverlay: null,
     screenshotRect: null,
@@ -160,18 +161,25 @@
   }
 
   function syncSelectionUi() {
-    if (!ui.selectionBar || !ui.promptContext) return;
+    if (!ui.selectionBar) return;
     var title = selectionTitleFromSession();
     var meta = getCreatorScreen() || "";
     var show = hasSelection();
 
-    // Prefer class toggle over [hidden] — [hidden] uses display:none !important
-    if (show) ui.selectionBar.removeAttribute("hidden");
-    else ui.selectionBar.setAttribute("hidden", "");
-    ui.selectionBar.classList.toggle("is-visible", show);
-    ui.selectionTitle.textContent = title || i18n("creator.guide.selection_empty", "Selection");
-    ui.selectionMeta.textContent = meta ? meta.charAt(0).toUpperCase() + meta.slice(1) : "";
-    ui.selectionMeta.hidden = !meta;
+    // Selection + prompt live in one bar; always visible while Guide Mode is on.
+    ui.selectionBar.removeAttribute("hidden");
+    ui.selectionBar.classList.add("is-visible");
+    ui.selectionBar.classList.toggle("has-selection", show);
+
+    if (ui.selectionTitle) {
+      ui.selectionTitle.textContent = show
+        ? title || i18n("creator.guide.selection_empty", "Selection")
+        : i18n("creator.guide.selection_hint", "Select something, then ask…");
+    }
+    if (ui.selectionMeta) {
+      ui.selectionMeta.textContent = show && meta ? meta.charAt(0).toUpperCase() + meta.slice(1) : "";
+      ui.selectionMeta.hidden = !(show && meta);
+    }
 
     var mediaHtml = "";
     if (session.screenshot && session.screenshot.base64) {
@@ -185,29 +193,8 @@
     } else if (show) {
       mediaHtml = '<span class="eaz-guide-selection__icon" aria-hidden="true">◎</span>';
     }
-    ui.selectionMedia.innerHTML = mediaHtml;
-
-    // Prompt context chip (left of input) — same selection, compact
-    if (session.screenshot && session.screenshot.base64) {
-      var mime2 = session.screenshot.mime || "image/jpeg";
-      ui.promptContext.innerHTML =
-        '<img class="eaz-guide-prompt__context-thumb" alt="" src="data:' +
-        mime2 +
-        ";base64," +
-        session.screenshot.base64 +
-        '" />';
-      ui.promptContext.hidden = false;
-      ui.promptContext.classList.add("is-visible");
-    } else if (session.element && title) {
-      ui.promptContext.innerHTML =
-        '<span class="eaz-guide-prompt__context-chip">' + escapeHtml(title) + "</span>";
-      ui.promptContext.hidden = false;
-      ui.promptContext.classList.add("is-visible");
-    } else {
-      ui.promptContext.innerHTML = "";
-      ui.promptContext.hidden = true;
-      ui.promptContext.classList.remove("is-visible");
-    }
+    if (ui.selectionMedia) ui.selectionMedia.innerHTML = mediaHtml;
+    if (ui.selectionClear) ui.selectionClear.hidden = !show;
 
     document.documentElement.classList.toggle("eaz-guide-has-selection", show);
   }
@@ -245,9 +232,17 @@
     return hit || node;
   }
 
+  function setGuideMascotFacing(on) {
+    var mascot = document.getElementById("eazy-mascot");
+    var inner = mascot && mascot.querySelector(".eazy-mascot__inner");
+    if (inner) inner.classList.toggle("eazy-mascot__inner--look-left", !!on);
+    if (mascot) mascot.classList.toggle("eazy-mascot--guide-face-left", !!on);
+  }
+
   function setGuideFlag(on) {
     window.__eaz_guide_active = !!on;
     document.documentElement.classList.toggle("eaz-guide-active", !!on);
+    setGuideMascotFacing(!!on);
   }
 
   function resetSession() {
@@ -259,32 +254,31 @@
   }
 
   function shouldShowExplain() {
-    return !!(session.screenshot || promptLocked);
+    return false;
   }
 
   function syncExplainUi() {
-    if (!ui.toolbar) return;
-    var btn = ui.toolbar.querySelector('[data-tool="ask"]');
-    if (!btn) return;
-    var show = shouldShowExplain();
-    btn.hidden = !show;
-    btn.classList.toggle("is-visible", show);
-    btn.classList.toggle("is-pulsing", show && !pendingRequest);
-    btn.disabled = !!pendingRequest;
-    document.documentElement.classList.toggle("eaz-guide-has-explain", show);
+    document.documentElement.classList.toggle("eaz-guide-has-explain", !!promptLocked);
+    if (ui.promptInput) ui.promptInput.disabled = !!pendingRequest;
+    var sendBtn = ui.selectionBar && ui.selectionBar.querySelector('[data-action="send"]');
+    if (sendBtn) sendBtn.disabled = !!pendingRequest && !promptLocked;
+    var voiceBtn = ui.selectionBar && ui.selectionBar.querySelector('[data-action="voice"]');
+    if (voiceBtn) voiceBtn.disabled = !!promptLocked || !!pendingRequest;
   }
 
   function lockPromptInput(locked) {
     promptLocked = !!locked;
-    if (!ui.promptInput || !ui.promptBar) return;
+    if (!ui.promptInput || !ui.promptAsk) return;
     ui.promptInput.readOnly = promptLocked;
-    ui.promptBar.classList.toggle("is-locked", promptLocked);
-    var voiceBtn = ui.promptBar.querySelector('[data-action="voice"]');
+    ui.promptAsk.classList.toggle("is-locked", promptLocked);
+    var voiceBtn = ui.promptAsk.querySelector('[data-action="voice"]');
     if (voiceBtn) voiceBtn.disabled = promptLocked;
   }
 
   function setPromptSendMode(mode) {
-    var btn = ui.promptBar && ui.promptBar.querySelector('[data-action="send"]');
+    var btn =
+      (ui.promptAsk && ui.promptAsk.querySelector('[data-action="send"]')) ||
+      (ui.selectionBar && ui.selectionBar.querySelector('[data-action="send"]'));
     if (!btn) return;
     if (mode === "clear") {
       btn.classList.add("is-clear");
@@ -301,12 +295,13 @@
 
   function submitPrompt() {
     var text = (ui.promptInput && ui.promptInput.value ? ui.promptInput.value : "").trim();
-    if (!text) return;
+    if (!text || pendingRequest) return;
     session.prompt = text;
     session.voice_transcript = text;
     lockPromptInput(true);
     setPromptSendMode("clear");
     syncExplainUi();
+    requestExplain(false);
   }
 
   function clearPrompt() {
@@ -438,24 +433,26 @@
     if (!anchor) return;
 
     var pad = 12;
-    var gap = 10;
-    var maxW = Math.min(520, Math.max(200, window.innerWidth - pad * 2));
+    var gap = 8;
+    var maxW = Math.min(380, Math.max(200, window.innerWidth - pad * 2));
     var r = anchor.getBoundingClientRect();
-    var left = r.left + r.width / 2 - maxW / 2;
+    // Bubble sits above-left of Eazy; tail points down toward mascot (bottom-right of bubble).
+    var left = r.left + r.width * 0.35 - maxW;
     left = Math.max(pad, Math.min(left, window.innerWidth - maxW - pad));
 
-    var top = r.bottom + gap;
-    var maxH = Math.min(window.innerHeight * 0.52, window.innerHeight - top - pad);
-    if (maxH < 120 && r.top > window.innerHeight * 0.35) {
-      top = Math.max(pad, r.top - gap);
+    el.style.setProperty("--eaz-guide-bubble-width", maxW + "px");
+    var bubbleH = Math.max(el.offsetHeight || 0, 64);
+    var top = r.top - bubbleH - gap;
+    if (top < pad) {
+      top = Math.min(r.bottom + gap, window.innerHeight - bubbleH - pad);
     }
+    top = Math.max(pad, top);
 
     var anchorCenter = r.left + r.width / 2;
-    var tailLeft = Math.max(20, Math.min(anchorCenter - left, maxW - 20));
+    var tailLeft = Math.max(maxW * 0.62, Math.min(anchorCenter - left, maxW - 18));
 
     el.style.setProperty("--eaz-guide-bubble-left", left + "px");
     el.style.setProperty("--eaz-guide-bubble-top", top + "px");
-    el.style.setProperty("--eaz-guide-bubble-width", maxW + "px");
     el.style.setProperty("--eaz-guide-bubble-tail-left", tailLeft + "px");
   }
 
@@ -599,10 +596,20 @@
       return;
     }
 
-    if (payload.element && payload.element.guide_key && !payload.screenshot && !payload.prompt) {
-      var local = explainFromRegistry(payload.element.guide_key);
+    if (forceRegistryOnly || (payload.element && payload.element.guide_key && !payload.screenshot && !payload.prompt)) {
+      var local =
+        payload.element && payload.element.guide_key
+          ? explainFromRegistry(payload.element.guide_key)
+          : null;
       if (local) {
         showBubble(local, false);
+        return;
+      }
+      if (forceRegistryOnly) {
+        showBubble(
+          i18n("creator.guide.no_tip", "I don’t have a short tip for this yet — ask me in the prompt field."),
+          false
+        );
         return;
       }
     }
@@ -645,32 +652,38 @@
   }
 
   function ensureUi() {
-    if (ui.dock) return;
+    if (ui.dock && ui.dock.getAttribute("data-guide-ui") === GUIDE_UI_VERSION) return;
+    if (ui.dock && ui.dock.parentNode) {
+      try {
+        ui.dock.parentNode.removeChild(ui.dock);
+      } catch (e0) {}
+    }
+    ui.dock = null;
 
     ui.dock = document.createElement("div");
     ui.dock.className = "eaz-guide-dock";
+    ui.dock.setAttribute("data-guide-ui", GUIDE_UI_VERSION);
     ui.dock.innerHTML =
-      '<div class="eaz-guide-selection" hidden>' +
+      '<div class="eaz-guide-selection is-visible">' +
+      '<div class="eaz-guide-selection__row">' +
       '<div class="eaz-guide-selection__media"></div>' +
       '<div class="eaz-guide-selection__text">' +
       '<span class="eaz-guide-selection__title"></span>' +
       '<span class="eaz-guide-selection__meta" hidden></span>' +
       "</div>" +
-      '<button type="button" class="eaz-guide-selection__clear" data-action="clear-selection" aria-label="Clear">×</button>' +
+      '<button type="button" class="eaz-guide-selection__clear" data-action="clear-selection" aria-label="Clear" hidden>×</button>' +
       "</div>" +
-      '<div class="eaz-guide-prompt">' +
-      '<div class="eaz-guide-prompt__context" hidden></div>' +
+      '<div class="eaz-guide-selection__ask">' +
       '<input type="text" class="eaz-guide-prompt__input" autocomplete="off" />' +
       '<button type="button" class="eaz-guide-prompt__btn" data-action="voice" title="Voice">🎤</button>' +
       '<button type="button" class="eaz-guide-prompt__btn eaz-guide-prompt__btn--send" data-action="send"></button>' +
+      "</div>" +
       "</div>" +
       '<div class="eaz-guide-toolbar" role="toolbar">' +
       '<div class="eaz-guide-toolbar__row">' +
       '<button type="button" class="eaz-guide-toolbar__chip is-active" data-tool="click"></button>' +
       '<button type="button" class="eaz-guide-toolbar__chip" data-tool="screenshot"></button>' +
-      '<button type="button" class="eaz-guide-toolbar__chip" data-tool="prompt"></button>' +
       "</div>" +
-      '<button type="button" class="eaz-guide-toolbar__explain" data-tool="ask" hidden></button>' +
       "</div>";
     document.body.appendChild(ui.dock);
 
@@ -678,53 +691,63 @@
     ui.selectionMedia = ui.dock.querySelector(".eaz-guide-selection__media");
     ui.selectionTitle = ui.dock.querySelector(".eaz-guide-selection__title");
     ui.selectionMeta = ui.dock.querySelector(".eaz-guide-selection__meta");
-    ui.promptBar = ui.dock.querySelector(".eaz-guide-prompt");
-    ui.promptContext = ui.dock.querySelector(".eaz-guide-prompt__context");
+    ui.selectionClear = ui.dock.querySelector('[data-action="clear-selection"]');
+    ui.promptAsk = ui.dock.querySelector(".eaz-guide-selection__ask");
     ui.promptInput = ui.dock.querySelector(".eaz-guide-prompt__input");
     ui.toolbar = ui.dock.querySelector(".eaz-guide-toolbar");
 
-    ui.screenshotOverlay = document.createElement("div");
-    ui.screenshotOverlay.className = "eaz-guide-screenshot-overlay";
-    ui.screenshotRect = document.createElement("div");
-    ui.screenshotRect.className = "eaz-guide-screenshot-overlay__rect";
-    ui.screenshotOverlay.appendChild(ui.screenshotRect);
-    ui.screenshotPersist = document.createElement("div");
-    ui.screenshotPersist.className = "eaz-guide-screenshot-persist";
-    ui.screenshotPersist.setAttribute("aria-hidden", "true");
-    document.body.appendChild(ui.screenshotPersist);
-    document.body.appendChild(ui.screenshotOverlay);
-
-    ui.exitHint = document.createElement("div");
-    ui.exitHint.className = "eaz-guide-exit-hint";
-    document.body.appendChild(ui.exitHint);
+    if (!ui.screenshotOverlay) {
+      ui.screenshotOverlay = document.createElement("div");
+      ui.screenshotOverlay.className = "eaz-guide-screenshot-overlay";
+      ui.screenshotRect = document.createElement("div");
+      ui.screenshotRect.className = "eaz-guide-screenshot-overlay__rect";
+      ui.screenshotOverlay.appendChild(ui.screenshotRect);
+      document.body.appendChild(ui.screenshotOverlay);
+    }
+    if (!ui.screenshotPersist) {
+      ui.screenshotPersist = document.createElement("div");
+      ui.screenshotPersist.className = "eaz-guide-screenshot-persist";
+      ui.screenshotPersist.setAttribute("aria-hidden", "true");
+      document.body.appendChild(ui.screenshotPersist);
+    }
+    if (!ui.exitHint) {
+      ui.exitHint = document.createElement("div");
+      ui.exitHint.className = "eaz-guide-exit-hint";
+      document.body.appendChild(ui.exitHint);
+    }
 
     ui.toolbar.querySelector('[data-tool="click"]').textContent = i18n("creator.guide.tool_click", "Click");
-    ui.toolbar.querySelector('[data-tool="screenshot"]').textContent = i18n("creator.guide.tool_screenshot", "Screenshot");
-    ui.toolbar.querySelector('[data-tool="prompt"]').textContent = i18n("creator.guide.tool_prompt", "Prompt");
-    ui.toolbar.querySelector('[data-tool="ask"]').textContent = i18n("creator.guide.tool_ask", "Explain");
+    ui.toolbar.querySelector('[data-tool="screenshot"]').textContent = i18n(
+      "creator.guide.tool_screenshot",
+      "Screenshot"
+    );
 
     setPromptSendMode("send");
+    if (ui.promptInput) {
+      ui.promptInput.placeholder = i18n("creator.guide.prompt_placeholder", "Ask about what you see…");
+    }
 
     ui.toolbar.addEventListener("click", function (e) {
       var btn = e.target.closest("[data-tool]");
       if (!btn) return;
       var tool = btn.getAttribute("data-tool");
-      if (tool === "ask") {
-        if (shouldShowExplain()) requestExplain(false);
-        return;
+      if (tool === "click") {
+        tools.click = true;
+        tools.screenshot = false;
+      } else if (tool === "screenshot") {
+        tools.screenshot = true;
+        tools.click = false;
       }
-      tools[tool] = !tools[tool];
-      if (tool === "click" && !tools.click && !tools.screenshot && !tools.prompt) tools.click = true;
       syncToolUi();
     });
 
-    ui.selectionBar.querySelector('[data-action="clear-selection"]').addEventListener("click", function (e) {
+    ui.selectionClear.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
       clearSelection();
     });
 
-    ui.promptBar.querySelector('[data-action="send"]').addEventListener("click", function () {
+    ui.promptAsk.querySelector('[data-action="send"]').addEventListener("click", function () {
       if (promptLocked) {
         clearPrompt();
         return;
@@ -739,19 +762,19 @@
       }
     });
 
-    ui.promptBar.querySelector('[data-action="voice"]').addEventListener("click", toggleVoiceInput);
+    ui.promptAsk.querySelector('[data-action="voice"]').addEventListener("click", toggleVoiceInput);
 
     bindScreenshotOverlay();
   }
 
   function syncToolUi() {
     if (!ui.toolbar) return;
+    if (!tools.click && !tools.screenshot) tools.click = true;
+    if (tools.click && tools.screenshot) tools.screenshot = false;
     ui.toolbar.querySelectorAll("[data-tool]").forEach(function (btn) {
       var t = btn.getAttribute("data-tool");
-      if (t === "ask") return;
       btn.classList.toggle("is-active", !!tools[t]);
     });
-    ui.promptBar.classList.toggle("is-visible", !!tools.prompt);
     document.documentElement.classList.toggle("eaz-guide-screenshot-active", !!tools.screenshot);
     syncSelectionUi();
     syncExplainUi();
@@ -766,7 +789,9 @@
 
     var resolved = resolveGuideKey(target);
     session.element = resolved;
-    // Keep screenshot only if user explicitly captured; click replaces element focus
+    session.screenshot = null;
+    clearPersistRect();
+    if (promptLocked) clearPrompt();
     setSelectedHighlight(target);
     try {
       navigator.vibrate(15);
@@ -774,7 +799,7 @@
     syncSelectionUi();
     loadRegistry().then(function () {
       syncSelectionUi();
-      requestExplain(false);
+      requestExplain(true);
     });
   }
 
@@ -824,7 +849,11 @@
     );
   }
 
+  var screenshotOverlayBound = false;
+
   function bindScreenshotOverlay() {
+    if (screenshotOverlayBound) return;
+    screenshotOverlayBound = true;
     var x0 = 0;
     var y0 = 0;
     var lastCx = 0;
@@ -957,14 +986,16 @@
             mime: "image/jpeg",
             crop_rect: { left: left, top: top, width: w, height: h },
           };
-          hideBubble();
+          session.element = null;
+          clearGuideHighlights();
+          if (promptLocked) clearPrompt();
           syncSelectionUi();
           syncExplainUi();
-          if (tools.prompt) {
-            // Keep selection visible; user can ask about the crop
-            showBubble(i18n("creator.guide.screenshot_ready", "Screenshot selected — ask me about it."), false);
-          } else {
-            requestExplain(false);
+          showBubble(i18n("creator.guide.screenshot_ready", "Screenshot selected — ask me about it."), false);
+          if (ui.promptInput) {
+            try {
+              ui.promptInput.focus();
+            } catch (eF) {}
           }
         });
       })
@@ -980,7 +1011,7 @@
   function toggleVoiceInput() {
     if (promptLocked) return;
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    var btn = ui.promptBar && ui.promptBar.querySelector('[data-action="voice"]');
+    var btn = ui.promptAsk && ui.promptAsk.querySelector('[data-action="voice"]');
     if (!SpeechRecognition) {
       showBubble(i18n("creator.guide.voice_unsupported", "Voice input is not supported in this browser."), false);
       return;
@@ -1027,7 +1058,7 @@
     active = true;
     markExitSuppressed();
     markGuideDoubleClick();
-    tools = { click: true, screenshot: false, prompt: false };
+    tools = { click: true, screenshot: false };
     resetSession();
     setGuideFlag(true);
     syncToolUi();
@@ -1037,7 +1068,7 @@
       ui.promptInput.value = "";
       ui.promptInput.readOnly = false;
     }
-    if (ui.promptBar) ui.promptBar.classList.remove("is-locked");
+    if (ui.promptAsk) ui.promptAsk.classList.remove("is-locked");
     setPromptSendMode("send");
     syncSelectionUi();
     syncExplainUi();
@@ -1045,7 +1076,10 @@
       ui.exitHint.textContent = i18n("creator.guide.exit_hint", "Guide Mode — click Eazy to exit");
     }
     showBubble(
-      i18n("creator.guide.entered", "Guide Mode on! Tap any control to learn, drag a screenshot, or ask me."),
+      i18n(
+        "creator.guide.entered",
+        "Guide Mode on! Tap a control for a tip, or ask me about your selection."
+      ),
       false
     );
     loadRegistry().then(function () {
@@ -1075,12 +1109,9 @@
       ui.dock.style.removeProperty("display");
       ui.dock.style.removeProperty("visibility");
     }
-    if (ui.promptBar) {
-      ui.promptBar.classList.remove("is-visible", "is-locked");
-    }
+    if (ui.promptAsk) ui.promptAsk.classList.remove("is-locked");
     if (ui.selectionBar) {
-      ui.selectionBar.hidden = true;
-      ui.selectionBar.classList.remove("is-visible");
+      ui.selectionBar.classList.remove("has-selection");
     }
     if (ui.exitHint) ui.exitHint.textContent = "";
     return true;

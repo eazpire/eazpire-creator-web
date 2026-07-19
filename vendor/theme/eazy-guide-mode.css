@@ -1,4 +1,13 @@
 /* Eazy Guide Mode – scoped overlay UI */
+
+/* Face left toward the speech bubble while Guide Mode is active */
+html.eaz-guide-active #eazy-mascot .eazy-mascot__inner,
+html.eaz-guide-active #eazy-mascot.eazy-mascot--guide-face-left .eazy-mascot__inner,
+html.eaz-guide-active .eazy-mascot__inner.eazy-mascot__inner--look-left {
+  transform: scaleX(-1) !important;
+  animation: none !important;
+}
+
 html.eaz-guide-active .eazy-thought.eazy-guide-bubble {
   position: fixed !important;
   left: var(--eaz-guide-bubble-left, 12px);
@@ -7,10 +16,10 @@ html.eaz-guide-active .eazy-thought.eazy-guide-bubble {
   right: auto !important;
   transform: none !important;
   margin: 0 !important;
-  width: var(--eaz-guide-bubble-width, min(520px, calc(100vw - 24px)));
-  max-width: min(520px, calc(100vw - 24px));
+  width: var(--eaz-guide-bubble-width, min(380px, calc(100vw - 24px)));
+  max-width: min(380px, calc(100vw - 24px));
   min-width: 0;
-  max-height: min(52vh, calc(100vh - 96px));
+  max-height: min(42vh, calc(100vh - 96px));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 12px 14px;
@@ -28,13 +37,17 @@ html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eazy-thought-text {
   overflow-wrap: anywhere;
 }
 
+/* Tail points down toward Eazy (bottom of bubble, toward the right / mascot) */
 html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eazy-thought-tail {
-  left: var(--eaz-guide-bubble-tail-left, 50%);
-  bottom: auto;
-  top: -8px;
+  left: var(--eaz-guide-bubble-tail-left, 72%);
+  right: auto;
+  top: auto;
+  bottom: -8px;
   transform: translateX(-50%);
-  border-top: none;
-  border-bottom: 8px solid #fff;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid #fff;
+  border-bottom: none;
 }
 
 /* Subtle highlight for all interactive targets while Guide Mode is on */
@@ -97,8 +110,9 @@ html.eaz-guide-active .eaz-guide-dock {
 
 .eaz-guide-selection {
   display: none;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   padding: 8px 10px;
   border-radius: 16px;
   background: rgba(15, 10, 30, 0.94);
@@ -108,8 +122,34 @@ html.eaz-guide-active .eaz-guide-dock {
 }
 
 .eaz-guide-selection.is-visible,
-html.eaz-guide-has-selection .eaz-guide-selection.is-visible {
+html.eaz-guide-active .eaz-guide-selection.is-visible {
   display: flex !important;
+}
+
+.eaz-guide-selection__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.eaz-guide-selection:not(.has-selection) .eaz-guide-selection__media {
+  display: none;
+}
+
+.eaz-guide-selection__ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.eaz-guide-selection__ask.is-locked .eaz-guide-prompt__input {
+  opacity: 0.72;
+  cursor: default;
 }
 
 .eaz-guide-selection__media {
@@ -262,55 +302,6 @@ html.eaz-guide-has-selection .eaz-guide-selection.is-visible {
   }
 }
 
-.eaz-guide-prompt {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 14px;
-  background: rgba(15, 10, 30, 0.95);
-  border: 1px solid rgba(249, 115, 22, 0.35);
-}
-
-.eaz-guide-prompt.is-visible {
-  display: flex;
-}
-
-.eaz-guide-prompt__context {
-  flex-shrink: 0;
-  max-width: 42%;
-  display: none;
-  align-items: center;
-}
-
-.eaz-guide-prompt__context.is-visible {
-  display: flex;
-}
-
-.eaz-guide-prompt__context-thumb {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid rgba(249, 115, 22, 0.45);
-}
-
-.eaz-guide-prompt__context-chip {
-  display: inline-block;
-  max-width: 100%;
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: rgba(249, 115, 22, 0.18);
-  border: 1px solid rgba(249, 115, 22, 0.45);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .eaz-guide-prompt__input {
   flex: 1;
   min-width: 0;
@@ -323,11 +314,6 @@ html.eaz-guide-has-selection .eaz-guide-selection.is-visible {
 
 .eaz-guide-prompt__input::placeholder {
   color: rgba(255, 255, 255, 0.45);
-}
-
-.eaz-guide-prompt.is-locked .eaz-guide-prompt__input {
-  opacity: 0.72;
-  cursor: default;
 }
 
 .eaz-guide-prompt__btn {
