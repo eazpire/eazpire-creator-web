@@ -394,80 +394,164 @@
 }
 .slm-eazc-convert__row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 12px;
-  align-items: center;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 10px;
+  align-items: stretch;
 }
 @media (max-width: 420px) {
   .slm-eazc-convert__row {
     grid-template-columns: 1fr;
   }
 }
-.slm-eazc-convert__col {
+
+/* EAZC control: one card split into two equal halves (Available | Amount input) so it
+   reads as a single row and lines up with the Fiat KPI on the same baseline. */
+.slm-eazc-convert__eazc-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  min-width: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+.slm-eazc-convert__half {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  min-width: 0;
+  padding: 10px 10px;
+}
+.slm-eazc-convert__half--avail {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(245, 158, 11, 0.05);
+}
+.slm-eazc-convert__half--input {
+  justify-content: center;
+  gap: 6px;
+}
+.slm-eazc-convert__avail-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 8px rgba(245, 158, 11, 0.4));
+}
+@media (min-width: 480px) {
+  .slm-eazc-convert__avail-logo {
+    width: 50px;
+    height: 50px;
+  }
+}
+.slm-eazc-convert__avail-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   min-width: 0;
 }
-/* Fiat preview reuses .slm-kpi so it matches the EAZC KPI cards' box size exactly */
-.slm-eazc-convert__col--fiat {
-  min-width: 0;
-}
-.slm-eazc-convert__label {
-  font-size: 12px;
-  font-weight: 600;
+.slm-eazc-convert__avail-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--slm-muted);
 }
-.slm-eazc-convert__input-wrap {
-  width: 100%;
-  min-height: 48px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.28);
-  padding: 8px 14px 7px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.slm-eazc-convert__input {
-  width: 100%;
-  min-height: 0;
-  border: none;
-  background: transparent;
-  color: var(--slm-text);
-  padding: 0;
-  font: inherit;
-  font-size: 18px;
-  font-weight: 700;
+.slm-eazc-convert__avail-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #f5c542;
   font-variant-numeric: tabular-nums;
 }
-.slm-eazc-convert__input:focus {
-  outline: none;
-}
-.slm-eazc-convert__avail {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 6px;
+.slm-eazc-convert__label {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--slm-muted);
 }
-.slm-eazc-convert__avail strong {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-  color: #f5c542;
-  font-variant-numeric: tabular-nums;
+.slm-eazc-convert__input-wrap {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 6px 4px 6px 10px;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
 }
-.slm-eazc-convert__avail-coin {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
+.slm-eazc-convert__input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--slm-text);
+  padding: 0;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+.slm-eazc-convert__input::-webkit-outer-spin-button,
+.slm-eazc-convert__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.slm-eazc-convert__input:focus {
+  outline: none;
+}
+
+/* Custom stepper controls replace native number spinners; sized to match the input field height */
+.slm-eazc-convert__steppers {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 26px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.slm-eazc-convert__stepper {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  border: none;
+  margin: 0;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--slm-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.slm-eazc-convert__stepper svg {
+  width: 11px;
+  height: 11px;
+}
+.slm-eazc-convert__stepper--up {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.slm-eazc-convert__stepper:hover,
+.slm-eazc-convert__stepper:focus-visible {
+  background: rgba(245, 158, 11, 0.22);
+  color: var(--slm-accent);
+}
+.slm-eazc-convert__stepper:active {
+  background: rgba(245, 158, 11, 0.32);
+}
+
+/* Fiat preview reuses .slm-kpi so it matches the EAZC control's box style, and centers
+   its content so both sides sit on the same visual baseline when the row stretches it. */
+.slm-eazc-convert__col--fiat {
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 .slm-eazc-convert__fiat-value {
   color: #86efac;

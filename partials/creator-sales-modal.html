@@ -210,14 +210,26 @@
             <div class="slm-eazc-convert">
               <p class="slm-eazc-convert__hint" data-t="creator.sales_modal.convert_hint">Convert available EAZC to fiat at the lowest pack rate. Fiat appears in your profile balance above.</p>
               <div class="slm-eazc-convert__row">
-                <div class="slm-eazc-convert__col slm-eazc-convert__col--eazc">
-                  <label class="slm-eazc-convert__label" for="slmConvertAmount" data-t="creator.sales_modal.convert_amount_label">Amount (EAZC)</label>
-                  <div class="slm-eazc-convert__input-wrap">
-                    <input type="number" class="slm-eazc-convert__input" id="slmConvertAmount" min="100" step="1" inputmode="numeric">
-                    <div class="slm-eazc-convert__avail" aria-live="polite">
-                      <img class="slm-eazc-convert__avail-coin" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo" alt="" width="16" height="16" loading="lazy" data-eaz-coin="eazc">
-                      <span data-t="creator.sales_modal.convert_available_label">AVAILABLE</span>
-                      <strong id="slmConvertAvail">0 EAZC</strong>
+                <div class="slm-eazc-convert__eazc-box">
+                  <div class="slm-eazc-convert__half slm-eazc-convert__half--avail" aria-live="polite">
+                    <img class="slm-eazc-convert__avail-logo" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo" alt="" loading="lazy" data-eaz-coin="eazc">
+                    <div class="slm-eazc-convert__avail-info">
+                      <span class="slm-eazc-convert__avail-label" data-t="creator.sales_modal.convert_available_label">AVAILABLE</span>
+                      <strong class="slm-eazc-convert__avail-value" id="slmConvertAvail">0 EAZC</strong>
+                    </div>
+                  </div>
+                  <div class="slm-eazc-convert__half slm-eazc-convert__half--input">
+                    <label class="slm-eazc-convert__label" for="slmConvertAmount" data-t="creator.sales_modal.convert_amount_label">Amount (EAZC)</label>
+                    <div class="slm-eazc-convert__input-wrap">
+                      <input type="number" class="slm-eazc-convert__input" id="slmConvertAmount" min="100" step="1" inputmode="numeric">
+                      <div class="slm-eazc-convert__steppers">
+                        <button type="button" class="slm-eazc-convert__stepper slm-eazc-convert__stepper--up" data-slm-convert-step="1" tabindex="-1" aria-label="Increase amount">
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button type="button" class="slm-eazc-convert__stepper slm-eazc-convert__stepper--down" data-slm-convert-step="-1" tabindex="-1" aria-label="Decrease amount">
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

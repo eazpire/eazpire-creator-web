@@ -993,6 +993,21 @@
     if (fiatEl) fiatEl.textContent = formatFiatUsdFromCents(usdCents);
   }
 
+  function stepConvertAmount(delta) {
+    var amountEl = document.getElementById('slmConvertAmount');
+    if (!amountEl) return;
+    var min = Number(amountEl.min) || 100;
+    var max = amountEl.max ? Number(amountEl.max) : null;
+    var stepVal = Number(amountEl.step) || 1;
+    var current = Number(amountEl.value);
+    if (!current || isNaN(current)) current = 0;
+    var next = current + delta * stepVal;
+    if (next < min) next = min;
+    if (max != null && !isNaN(max) && next > max) next = max;
+    amountEl.value = String(next);
+    amountEl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   function setConvertMsg(text, kind) {
     var el = document.getElementById('slmConvertMsg');
     if (!el) return;
@@ -1114,6 +1129,11 @@
       amountEl.addEventListener('input', updateConvertSyncPreview);
       amountEl.addEventListener('change', updateConvertSyncPreview);
     }
+    overlay.querySelectorAll('[data-slm-convert-step]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        stepConvertAmount(Number(btn.getAttribute('data-slm-convert-step')) || 0);
+      });
+    });
     if (convertBtn) convertBtn.addEventListener('click', openEazcConfirmModal);
     if (confirmOk) confirmOk.addEventListener('click', confirmEazcConvert);
     if (confirmModal) {
