@@ -3484,6 +3484,7 @@
       }
     });
 
+    // SMM open owned by creator-social-media-manager-modal.js (delegation).
     wrap.querySelectorAll('[data-smm-open]').forEach(function (btn) {
       if (btn._smmOpenBound) return;
       btn._smmOpenBound = true;

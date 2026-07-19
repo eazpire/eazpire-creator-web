@@ -578,6 +578,8 @@
       });
     });
 
+    // Social Media Manager open is owned by creator-social-media-manager-modal.js
+    // (delegation + MutationObserver). Keep a late fallback if that script loads after bind().
     document.querySelectorAll('[data-smm-open]').forEach(function (btn) {
       if (btn._smmOpenBound) return;
       btn._smmOpenBound = true;
@@ -586,7 +588,11 @@
         e.stopPropagation();
         if (window.CreatorSocialMediaManager && typeof window.CreatorSocialMediaManager.open === 'function') {
           window.CreatorSocialMediaManager.open();
+          return;
         }
+        try {
+          console.warn('[MarketingScreen] CreatorSocialMediaManager not loaded yet');
+        } catch (err) {}
       });
     });
 

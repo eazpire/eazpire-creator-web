@@ -98,14 +98,21 @@
 
   function open(opts) {
     opts = opts || {};
-    bindUi();
     root = document.getElementById('creatorSocialMediaManagerModal');
-    if (!root) return;
+    if (!root) {
+      try {
+        console.warn('[SocialMediaManager] modal root #creatorSocialMediaManagerModal not in DOM');
+      } catch (e) {}
+      return false;
+    }
+    bindUi();
     renderConnectGrid();
     setNav(opts.nav || 'overview');
     root.hidden = false;
+    root.removeAttribute('hidden');
     root.setAttribute('aria-hidden', 'false');
     try { document.body.classList.add('smm-modal-open'); } catch (e) {}
+    return true;
   }
 
   function close() {
@@ -160,10 +167,31 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindUi);
-  } else {
+  function onDelegatedOpenClick(e) {
+    var btn = e.target && e.target.closest ? e.target.closest('[data-smm-open]') : null;
+    if (!btn) return;
+    // Mark so legacy marketing/desktop fallbacks skip a second open.
+    btn._smmOpenBound = true;
+    e.preventDefault();
+    e.stopPropagation();
+    open();
+  }
+
+  function boot() {
     bindUi();
+    if (!document._smmOpenDelegationBound) {
+      document._smmOpenDelegationBound = true;
+      document.addEventListener('click', onDelegatedOpenClick, true);
+    }
+    document.addEventListener('creator-marketing-ready', function () {
+      bindUi();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
   }
 
   window.CreatorSocialMediaManager = {
