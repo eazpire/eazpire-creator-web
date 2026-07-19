@@ -40,18 +40,21 @@
       
       <div class="cmkt-level cmkt-level--children" data-mkt-branch="content-publish" hidden>
         <div class="cmkt-trunk" aria-hidden="true"></div>
-        <div class="cmkt-children-grid">
+        <div class="cmkt-children-grid cmkt-children-grid--publish">
           <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="hero-images" data-mkt-for="content-publish" aria-expanded="false" data-eazy-guide="marketing.publish-heroes">
             <span class="cmkt-card__icon" aria-hidden="true">🖼️</span>
             <span class="cmkt-card__title" data-t="creator.marketing.hero_images">Hero Images</span>
           </button>
-          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="videos" data-mkt-for="content-publish" aria-expanded="false" data-eazy-guide="marketing.publish-videos">
-            <span class="cmkt-card__icon" aria-hidden="true">🎬</span>
-            <span class="cmkt-card__title" data-t="creator.marketing.videos">Videos</span>
-          </button>
-          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="images" data-mkt-for="content-publish" aria-expanded="false" data-eazy-guide="marketing.publish-images">
-            <span class="cmkt-card__icon" aria-hidden="true">📷</span>
-            <span class="cmkt-card__title" data-t="creator.marketing.images">Images</span>
+          <button
+            type="button"
+            class="creator-video-tool-card cmkt-card--function"
+            data-mkt-function="social-media-manager"
+            data-smm-open
+            data-eazy-guide="marketing.social-media-manager"
+          >
+            <span class="creator-video-tool-card__icon" aria-hidden="true">📣</span>
+            <span class="creator-video-tool-card__title" data-t="creator.social_media_manager.title">Social Media Manager</span>
+            <span class="creator-video-tool-card__desc" data-t="creator.social_media_manager.card_desc">Connect your accounts and publish posts.</span>
           </button>
         </div>
       </div>
@@ -87,24 +90,6 @@
               <div id="creatorHeroImagesLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
               <div id="creatorHeroImagesEmpty" class="creator-hero-images-empty" style="display:none">No hero images yet.</div>
               <div id="creatorHeroImagesGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
-            </div>
-          </div>
-        </div>
-        <div class="creator-marketing-panel-content" data-content="videos">
-          <div class="creator-videos-publish-panel" id="creatorVideosPublishPanel">
-            <div class="creator-hero-images-grid-wrap">
-              <div id="creatorVideosLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
-              <div id="creatorVideosEmpty" class="creator-hero-images-empty" style="display:none">No videos yet.</div>
-              <div id="creatorVideosGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
-            </div>
-          </div>
-        </div>
-        <div class="creator-marketing-panel-content" data-content="images">
-          <div class="creator-publish-images-panel" id="creatorPublishImagesPanel">
-            <div class="creator-hero-images-grid-wrap">
-              <div id="creatorPublishImagesLoading" class="creator-hero-images-loading" style="display:none">Loading...</div>
-              <div id="creatorPublishImagesEmpty" class="creator-hero-images-empty" style="display:none">No saved images yet.</div>
-              <div id="creatorPublishImagesGrid" class="creator-hero-images-grid creator-hero-images-grid--2"></div>
             </div>
           </div>
         </div>

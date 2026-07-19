@@ -1,0 +1,97 @@
+<div
+  id="creatorSocialMediaManagerModal"
+  class="smm-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="smm-modal-title"
+>
+  <div class="smm-modal__shell">
+    <header class="smm-modal__header">
+      <div class="smm-modal__header-left">
+        <button
+          type="button"
+          class="smm-btn smm-btn--icon smm-btn--menu"
+          id="smm-btn-menu"
+          aria-label="Open menu"
+          title="Open menu"
+        >
+          <span aria-hidden="true">☰</span>
+        </button>
+        <h2 id="smm-modal-title" class="smm-modal__title" data-t="creator.social_media_manager.title">Social Media Manager</h2>
+      </div>
+      <button
+        type="button"
+        class="smm-btn smm-btn--icon"
+        id="smm-btn-close"
+        aria-label="Close"
+      >
+        ×
+      </button>
+    </header>
+
+    <div class="smm-body">
+      <aside class="smm-sidebar" id="smm-sidebar" aria-label="Menu">
+        <nav class="smm-sidebar__nav">
+          <button type="button" class="smm-sidebar__item is-active" data-smm-nav="overview" data-t="creator.social_media_manager.nav_overview">Overview</button>
+          <button type="button" class="smm-sidebar__item" data-smm-nav="connect" data-t="creator.social_media_manager.nav_connect">Connect</button>
+          <button type="button" class="smm-sidebar__item" data-smm-nav="manage_posts" data-t="creator.social_media_manager.nav_manage_posts">Manage Posts</button>
+          <button type="button" class="smm-sidebar__item" data-smm-nav="new_post" data-t="creator.social_media_manager.nav_new_post">New Post</button>
+        </nav>
+        <button
+          type="button"
+          class="smm-rail"
+          id="smm-sidebar-toggle"
+          aria-label="Toggle sidebar"
+          aria-expanded="true"
+        >
+          ‹
+        </button>
+      </aside>
+
+      <div class="smm-drawer-scrim" id="smm-drawer-scrim" hidden></div>
+
+      <main class="smm-main" id="smm-main">
+        <section class="smm-panel is-active" data-smm-panel="overview">
+          <h3 class="smm-panel__title" data-t="creator.social_media_manager.overview_title">Overview</h3>
+          <p class="smm-panel__stub" data-t="creator.social_media_manager.overview_stub">Connection and post metrics will appear here once accounts are connected.</p>
+          <div class="smm-metrics-grid" aria-hidden="true">
+            <div class="smm-metric-card smm-metric-card--placeholder">
+              <span class="smm-metric-card__label" data-t="creator.social_media_manager.metric_connected">Connected</span>
+              <span class="smm-metric-card__value">—</span>
+            </div>
+            <div class="smm-metric-card smm-metric-card--placeholder">
+              <span class="smm-metric-card__label" data-t="creator.social_media_manager.metric_published">Published</span>
+              <span class="smm-metric-card__value">—</span>
+            </div>
+            <div class="smm-metric-card smm-metric-card--placeholder">
+              <span class="smm-metric-card__label" data-t="creator.social_media_manager.metric_scheduled">Scheduled</span>
+              <span class="smm-metric-card__value">—</span>
+            </div>
+            <div class="smm-metric-card smm-metric-card--placeholder">
+              <span class="smm-metric-card__label" data-t="creator.social_media_manager.metric_failed">Needs attention</span>
+              <span class="smm-metric-card__value">—</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="smm-panel" data-smm-panel="connect" hidden>
+          <h3 class="smm-panel__title" data-t="creator.social_media_manager.connect_title">Connect</h3>
+          <p class="smm-panel__stub" data-t="creator.social_media_manager.connect_stub">Connect your own pages and accounts. Brand admin accounts are selected automatically when you post.</p>
+          <div class="smm-connect-grid" id="smm-connect-grid" data-smm-connect-grid></div>
+        </section>
+
+        <section class="smm-panel" data-smm-panel="manage_posts" hidden>
+          <h3 class="smm-panel__title" data-t="creator.social_media_manager.manage_posts_title">Manage Posts</h3>
+          <p class="smm-panel__stub" data-t="creator.social_media_manager.manage_posts_stub">Your published and scheduled posts will show here.</p>
+        </section>
+
+        <section class="smm-panel" data-smm-panel="new_post" hidden>
+          <h3 class="smm-panel__title" data-t="creator.social_media_manager.new_post_title">New Post</h3>
+          <p class="smm-panel__stub" data-t="creator.social_media_manager.new_post_stub">Compose and schedule posts after you connect at least one account.</p>
+        </section>
+      </main>
+    </div>
+  </div>
+</div>

@@ -421,6 +421,7 @@
   flex-direction: column;
   min-width: 0;
   padding: 10px 10px;
+  overflow: hidden;
 }
 .slm-eazc-convert__half--avail {
   align-items: center;
@@ -429,21 +430,31 @@
   gap: 6px;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(245, 158, 11, 0.05);
+  min-height: 64px;
+  max-height: 96px;
 }
 .slm-eazc-convert__half--input {
   justify-content: center;
   gap: 6px;
 }
+/* Hard-capped so the coin can never grow beyond the Available half, even if a global
+   `img { width: 100%; height: auto }` reset (see base.css) applies before this rule loads. */
 .slm-eazc-convert__avail-logo {
+  display: block;
+  flex-shrink: 0;
   width: 42px;
   height: 42px;
+  max-width: 42px;
+  max-height: 42px;
   object-fit: contain;
   filter: drop-shadow(0 3px 8px rgba(245, 158, 11, 0.4));
 }
 @media (min-width: 480px) {
   .slm-eazc-convert__avail-logo {
-    width: 50px;
-    height: 50px;
+    width: 52px;
+    height: 52px;
+    max-width: 52px;
+    max-height: 52px;
   }
 }
 .slm-eazc-convert__avail-info {

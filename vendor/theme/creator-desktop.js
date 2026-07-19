@@ -3484,6 +3484,18 @@
       }
     });
 
+    wrap.querySelectorAll('[data-smm-open]').forEach(function (btn) {
+      if (btn._smmOpenBound) return;
+      btn._smmOpenBound = true;
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.CreatorSocialMediaManager && typeof window.CreatorSocialMediaManager.open === 'function') {
+          window.CreatorSocialMediaManager.open();
+        }
+      });
+    });
+
     window.CreatorDesktopMarketing = {
       switchSubTab: switchSubTab,
       switchContentTab: switchContentTab

@@ -336,6 +336,8 @@
       loadCss(asset("creator-video-studio-modal.css"));
       await injectPartial("creator-video-generator-modal.html");
       loadCss(asset("creator-video-generator-modal.css"));
+      await injectPartial("creator-social-media-manager-modal.html");
+      loadCss(asset("creator-social-media-manager-modal.css"));
       await injectPartial("creator-hero-images-modal.html");
       loadCss(asset("creator-hero-images-modal.css"));
 
@@ -368,6 +370,7 @@
         asset("creator-video-studio-modal.js"),
         asset("creator-video-studio-asset-tools.js"),
         asset("creator-video-generator-modal.js"),
+        asset("creator-social-media-manager-modal.js"),
       ]);
     })();
 

@@ -266,22 +266,34 @@
     var panel = getVisiblePanelForParent(currentParent);
     if (panel && !isPanelVisible(panel)) panel = null;
 
-    // Level 1: parent → categories
+    // Level 1: parent → categories (+ Content Publish function cards in same row)
     if (branch) {
       var childrenGrid = branch.querySelector('.cmkt-children-grid');
       var childCards = childrenGrid
         ? Array.prototype.slice.call(childrenGrid.querySelectorAll('.cmkt-card--child'))
         : [];
-      if (childCards.length) {
-        drawCmktFork(branch, parentCard, childCards, animate);
+      var publishFunctionCards = [];
+      if (currentParent === 'content-publish' && childrenGrid) {
+        publishFunctionCards = Array.prototype.slice.call(
+          childrenGrid.querySelectorAll('.creator-video-tool-card, .cmkt-card--function, [data-mkt-function]')
+        ).filter(function (el) {
+          if (!el || el.hidden) return false;
+          var r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        });
+      }
+      var level1Targets = childCards.concat(publishFunctionCards);
+      if (level1Targets.length) {
+        drawCmktFork(branch, parentCard, level1Targets, animate);
       }
     } else if (panel && currentParent === 'promotions') {
       // Promotion has no category row — short stem under parent
       drawCmktStub(panel, parentCard, animate);
     }
 
-    // Level 2: active category → function cards (same fork style)
-    if (panel && currentContentTab) {
+    // Level 2: active category → function cards (Video Studio / Generator, etc.)
+    // Skip when function cards already sit in the children row (Content Publish).
+    if (panel && currentContentTab && currentParent !== 'content-publish') {
       var activeChild = document.querySelector(
         '.cmkt-card--child.is-active[data-mkt-for="' + currentParent + '"][data-mkt-child="' + currentContentTab + '"]'
       );
@@ -498,9 +510,14 @@
       if (window.CreatorHeroImagesModal && typeof window.CreatorHeroImagesModal.close === 'function') {
         window.CreatorHeroImagesModal.close();
       }
-      showPublishLeaf(child);
-      if (child === 'hero-images' && window.HeroImagesScreen && typeof window.HeroImagesScreen.loadHeroImages === 'function') {
-        window.HeroImagesScreen.loadHeroImages();
+      // Videos/Images publish children removed (IDEA-040) — only Hero Images leaf remains
+      if (child === 'hero-images') {
+        showPublishLeaf(child);
+        if (window.HeroImagesScreen && typeof window.HeroImagesScreen.loadHeroImages === 'function') {
+          window.HeroImagesScreen.loadHeroImages();
+        }
+      } else {
+        hideAllContentPanels();
       }
     }
 
@@ -558,6 +575,18 @@
       if (!child || !parent) return;
       btn.addEventListener('click', function () {
         selectChild(parent, child);
+      });
+    });
+
+    document.querySelectorAll('[data-smm-open]').forEach(function (btn) {
+      if (btn._smmOpenBound) return;
+      btn._smmOpenBound = true;
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.CreatorSocialMediaManager && typeof window.CreatorSocialMediaManager.open === 'function') {
+          window.CreatorSocialMediaManager.open();
+        }
       });
     });
 

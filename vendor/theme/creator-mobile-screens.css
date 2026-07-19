@@ -2873,6 +2873,46 @@ html.creator-creations-bulk-overlay-open {
   position: relative;
   z-index: 1;
 }
+/* Content Publish: Hero Images + Social Media Manager function card */
+.cmkt-children-grid--publish {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+/* Tool-card base (also in video-generator CSS; kept here so Publish row styles without that modal) */
+.cmkt-children-grid--publish .creator-video-tool-card {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  min-height: 84px;
+  padding: 14px 12px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.cmkt-children-grid--publish .creator-video-tool-card:hover {
+  border-color: rgba(249, 115, 22, 0.55);
+  background: rgba(249, 115, 22, 0.12);
+  transform: translateY(-1px);
+}
+.cmkt-children-grid--publish .creator-video-tool-card__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.cmkt-children-grid--publish .creator-video-tool-card__title {
+  font-size: 12px;
+  font-weight: 800;
+}
+.cmkt-children-grid--publish .creator-video-tool-card__desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.35;
+}
 /* Parent→child connectors — thick Journey-style gold stem (active parent only) */
 .cmkt-level--children,
 .creator-marketing-panel {

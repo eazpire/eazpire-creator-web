@@ -663,15 +663,20 @@
     "summary": "Grid of hero images ready or already online.",
     "tips": ["Empty state appears when you have none yet."]
   },
+  "marketing.social-media-manager": {
+    "title": "Social Media Manager",
+    "summary": "Connect your social accounts and publish posts from one place.",
+    "tips": ["Opens a fullscreen manager. Connect shows networks; posting comes in a later update."]
+  },
   "marketing.publish-videos": {
     "title": "Published Videos",
-    "summary": "Grid of saved marketing videos.",
-    "tips": ["Open a card for preview outside Guide Mode."]
+    "summary": "Replaced by Social Media Manager under Content Publish.",
+    "tips": ["Use Social Media Manager instead."]
   },
   "marketing.publish-images": {
     "title": "Published Images",
-    "summary": "Grid of saved marketing images.",
-    "tips": ["Coming soon until image publish is enabled."]
+    "summary": "Replaced by Social Media Manager under Content Publish.",
+    "tips": ["Use Social Media Manager instead."]
   },
   "marketing.promo-tab-active": {
     "title": "Active Promotions",

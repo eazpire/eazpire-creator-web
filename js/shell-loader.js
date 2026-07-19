@@ -7,7 +7,8 @@
 
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
-  var RUNTIME_V = "14-mkt-visual-20260719a";
+  // Bumped for footer EAZV -> Creator Settings (EAZ tab) fix (never falls back to sales modal).
+  var RUNTIME_V = "15-eazv-footer-fix-20260719a";
   var secondaryScreensPromise = null;
 
   function scheduleIdle(fn, timeoutMs) {
