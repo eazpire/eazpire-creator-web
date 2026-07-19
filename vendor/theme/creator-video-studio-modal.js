@@ -1110,7 +1110,7 @@
       ),
       tiktok_failed: i18n(
         'link_error_tiktok_failed',
-        'Could not extract media from that TikTok link. The post may be private or region-locked — save the file and use Device instead.'
+        'Could not extract media from that TikTok link. The post may be private, deleted, or region-locked — save the file and use Device instead.'
       ),
       instagram_failed: i18n(
         'link_error_instagram_failed',
@@ -1131,7 +1131,10 @@
       invalid_url: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
       missing_url: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
       file_too_large: i18n('file_too_large', 'File too large (max 500 MB)'),
-      fetch_failed: i18n('link_error_fetch_failed', 'Could not download that link.'),
+      fetch_failed: i18n(
+        'link_error_fetch_failed',
+        'Could not download the media file (CDN blocked or expired). Save the file and use Device instead.'
+      ),
     };
     return (data && map[data.error]) || i18n('link_error_generic', 'Could not add media from that link.');
   }
