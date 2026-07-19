@@ -13,6 +13,13 @@
   var channelState = {};
   var oauthPopup = null;
   var oauthPollTimer = null;
+  var disconnectConfirmPending = null;
+
+  var SUBMODAL_IDS = {
+    asset: 'smm-asset-picker',
+    target: 'smm-target-confirm',
+    disconnect: 'smm-disconnect-confirm'
+  };
 
   /** New Post composer state */
   var compose = {
@@ -122,6 +129,10 @@
       else panel.setAttribute('hidden', '');
     });
     closeDrawer();
+    var main = $('#smm-main');
+    if (main) {
+      main.classList.toggle('is-new-post-active', currentNav === 'new_post');
+    }
     if (currentNav === 'connect') {
       loadConnections();
     }
@@ -366,12 +377,7 @@
       setConnectMessage(i18n('error_login_required', 'Please sign in to connect accounts.'), true);
       return;
     }
-    var okConfirm = window.confirm(
-      i18n(
-        'confirm_disconnect',
-        'Disconnect all linked accounts for this channel from eazpire?'
-      )
-    );
+    var okConfirm = await openDisconnectConfirmModal(channelId);
     if (!okConfirm) return;
     setConnectMessage(i18n('disconnecting', 'Disconnecting…'), false);
     try {
@@ -669,20 +675,55 @@
   }
 
   function closeSubmodal(name) {
-    var id = name === 'asset' ? 'smm-asset-picker' : 'smm-target-confirm';
-    var el = document.getElementById(id);
+    var id = SUBMODAL_IDS[name];
+    var el = id ? document.getElementById(id) : null;
     if (!el) return;
     el.hidden = true;
     el.setAttribute('aria-hidden', 'true');
   }
 
   function openSubmodal(name) {
-    var id = name === 'asset' ? 'smm-asset-picker' : 'smm-target-confirm';
-    var el = document.getElementById(id);
+    var id = SUBMODAL_IDS[name];
+    var el = id ? document.getElementById(id) : null;
     if (!el) return;
     el.hidden = false;
     el.removeAttribute('hidden');
     el.setAttribute('aria-hidden', 'false');
+  }
+
+  function resolveDisconnectConfirm(confirmed) {
+    if (!disconnectConfirmPending) return;
+    var pending = disconnectConfirmPending;
+    disconnectConfirmPending = null;
+    closeSubmodal('disconnect');
+    pending.resolve(!!confirmed);
+  }
+
+  function openDisconnectConfirmModal(channelId) {
+    return new Promise(function (resolve) {
+      var titleEl = $('#smm-disconnect-confirm-title');
+      var bodyEl = $('#smm-disconnect-confirm-body');
+      var cancelBtn = $('#smm-btn-disconnect-cancel');
+      var confirmBtn = $('#smm-btn-disconnect-confirm');
+      var channelName = channelLabel(channelId);
+      if (titleEl) {
+        titleEl.textContent = i18n('confirm_disconnect_title', 'Disconnect channel?');
+      }
+      if (bodyEl) {
+        bodyEl.textContent = i18n(
+          'confirm_disconnect_body',
+          i18n(
+            'confirm_disconnect',
+            'Disconnect all linked accounts for this channel from eazpire?'
+          )
+        ).replace(/\{channel\}/g, channelName);
+      }
+      if (cancelBtn) cancelBtn.textContent = i18n('btn_cancel', 'Cancel');
+      if (confirmBtn) confirmBtn.textContent = i18n('btn_disconnect', 'Disconnect');
+      disconnectConfirmPending = { resolve: resolve, channelId: channelId };
+      openSubmodal('disconnect');
+      if (confirmBtn) confirmBtn.focus();
+    });
   }
 
   async function loadComposeAssets() {
@@ -958,15 +999,40 @@
     var closeAttr = e.target && e.target.closest ? e.target.closest('[data-smm-close]') : null;
     if (!closeAttr || !root || !root.contains(closeAttr)) return;
     var which = closeAttr.getAttribute('data-smm-close');
-    if (which === 'asset' || which === 'target') {
+    if (which === 'asset' || which === 'target' || which === 'disconnect') {
       e.preventDefault();
-      closeSubmodal(which);
+      if (which === 'disconnect') resolveDisconnectConfirm(false);
+      else closeSubmodal(which);
     }
+  }
+
+  function setAssetsCollapsed(collapsed) {
+    var composer = $('#smm-new-post-composer');
+    var toggle = $('#smm-assets-toggle');
+    if (!composer || !toggle) return;
+    composer.classList.toggle('is-assets-collapsed', !!collapsed);
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    toggle.setAttribute(
+      'aria-label',
+      collapsed
+        ? i18n('assets_expand', 'Expand assets section')
+        : i18n('assets_collapse', 'Collapse assets section')
+    );
   }
 
   function bindNewPostUi() {
     if (!root || root._smmNewPostBound) return;
     root._smmNewPostBound = true;
+
+    var assetsToggle = $('#smm-assets-toggle');
+    if (assetsToggle) {
+      assetsToggle.addEventListener('click', function () {
+        var composer = $('#smm-new-post-composer');
+        if (!composer) return;
+        setAssetsCollapsed(!composer.classList.contains('is-assets-collapsed'));
+      });
+      setAssetsCollapsed(false);
+    }
 
     var chooseBtn = $('#smm-btn-choose-asset');
     if (chooseBtn) chooseBtn.addEventListener('click', openAssetPickerModal);
@@ -1060,15 +1126,27 @@
 
     root.addEventListener('click', onConnectActionClick);
 
+    var disconnectConfirmBtn = $('#smm-btn-disconnect-confirm');
+    if (disconnectConfirmBtn) {
+      disconnectConfirmBtn.addEventListener('click', function () {
+        resolveDisconnectConfirm(true);
+      });
+    }
+
     bindNewPostUi();
 
     document.addEventListener('keydown', function (ev) {
       if (ev.key !== 'Escape') return;
       if (!root || root.hidden) return;
       var assetModal = document.getElementById('smm-asset-picker');
+      var disconnectModal = document.getElementById('smm-disconnect-confirm');
       var targetModal = document.getElementById('smm-target-confirm');
       if (assetModal && !assetModal.hidden) {
         closeSubmodal('asset');
+        return;
+      }
+      if (disconnectModal && !disconnectModal.hidden) {
+        resolveDisconnectConfirm(false);
         return;
       }
       if (targetModal && !targetModal.hidden) {

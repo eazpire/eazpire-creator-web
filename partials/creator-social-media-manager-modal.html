@@ -96,13 +96,25 @@
             </div>
             <div class="smm-new-post__composer" id="smm-new-post-composer" hidden>
               <div class="smm-new-post__subheader">
-                <span class="smm-new-post__assets-label" data-t="creator.social_media_manager.assets_label">Assets</span>
+                <button
+                  type="button"
+                  class="smm-new-post__subheader-toggle"
+                  id="smm-assets-toggle"
+                  aria-expanded="true"
+                  aria-controls="smm-new-post-assets-panel"
+                  aria-label="Collapse assets section"
+                >
+                  <span class="smm-new-post__subheader-chevron" aria-hidden="true"></span>
+                  <span class="smm-new-post__assets-label" data-t="creator.social_media_manager.assets_label">Assets</span>
+                </button>
                 <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-choose-asset" data-t="creator.social_media_manager.choose_asset">Choose asset</button>
               </div>
-              <div class="smm-new-post__body">
+              <div class="smm-new-post__assets-panel" id="smm-new-post-assets-panel">
                 <div class="smm-new-post__viewer" id="smm-new-post-viewer">
                   <p class="smm-new-post__viewer-empty" data-t="creator.social_media_manager.viewer_empty">Pick an image or video to preview it here.</p>
                 </div>
+              </div>
+              <div class="smm-new-post__scroll smm-scroll-hide">
                 <div class="smm-new-post__fields">
                   <label class="smm-field">
                     <span class="smm-field__label" data-t="creator.social_media_manager.caption_label">Caption</span>
@@ -116,10 +128,12 @@
                 </div>
               </div>
               <footer class="smm-new-post__footer">
-                <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-post-now" data-t="creator.social_media_manager.btn_post">Post</button>
-                <button type="button" class="smm-btn" id="smm-btn-schedule" data-t="creator.social_media_manager.btn_schedule">Schedule</button>
+                <p class="smm-new-post__status" id="smm-new-post-status" hidden role="status" aria-live="polite"></p>
+                <div class="smm-new-post__footer-actions">
+                  <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-post-now" data-t="creator.social_media_manager.btn_post">Post</button>
+                  <button type="button" class="smm-btn" id="smm-btn-schedule" data-t="creator.social_media_manager.btn_schedule">Schedule</button>
+                </div>
               </footer>
-              <p class="smm-new-post__status" id="smm-new-post-status" hidden role="status" aria-live="polite"></p>
             </div>
           </div>
         </section>
@@ -159,6 +173,21 @@
         <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-confirm-submit" data-t="creator.social_media_manager.btn_confirm_post">Confirm & post</button>
       </footer>
       <p class="smm-submodal__status" id="smm-target-status" hidden role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div class="smm-submodal smm-submodal--confirm" id="smm-disconnect-confirm" hidden aria-hidden="true" role="alertdialog" aria-modal="true" aria-labelledby="smm-disconnect-confirm-title" aria-describedby="smm-disconnect-confirm-body">
+    <div class="smm-submodal__backdrop" data-smm-close="disconnect"></div>
+    <div class="smm-submodal__panel smm-submodal__panel--confirm">
+      <header class="smm-submodal__header">
+        <h3 class="smm-submodal__title" id="smm-disconnect-confirm-title" data-t="creator.social_media_manager.confirm_disconnect_title">Disconnect channel?</h3>
+        <button type="button" class="smm-btn smm-btn--icon" data-smm-close="disconnect" aria-label="Close">×</button>
+      </header>
+      <p class="smm-submodal__hint smm-submodal__hint--confirm" id="smm-disconnect-confirm-body" data-t="creator.social_media_manager.confirm_disconnect_body">Disconnect all linked accounts for this channel from eazpire?</p>
+      <footer class="smm-submodal__footer">
+        <button type="button" class="smm-btn" id="smm-btn-disconnect-cancel" data-smm-close="disconnect" data-t="creator.social_media_manager.btn_cancel">Cancel</button>
+        <button type="button" class="smm-btn smm-btn--danger" id="smm-btn-disconnect-confirm" data-t="creator.social_media_manager.btn_disconnect">Disconnect</button>
+      </footer>
     </div>
   </div>
 </div>

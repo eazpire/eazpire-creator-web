@@ -35,11 +35,48 @@
     { id: 'A2EUQ1WTGCTBG2', code: 'CA', label: 'Amazon.ca' },
   ];
 
+  var FLAG_CDN = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.2/flags/4x3/';
+  var REGION_FLAG_CODES = {
+    UK: 'gb',
+    AE: 'ae',
+    SA: 'sa',
+    US: 'us',
+    CA: 'ca',
+    DE: 'de',
+    FR: 'fr',
+    IT: 'it',
+    ES: 'es',
+    NL: 'nl',
+    BE: 'be',
+    PL: 'pl',
+    SE: 'se',
+    IE: 'ie',
+    TR: 'tr',
+    IN: 'in',
+    EG: 'eg',
+    MX: 'mx',
+  };
+
+  var VARIANT_VIEW_ORDER = { front: 0, back: 1 };
+
+  var CHANNEL_LOGOS = {
+    eazpire:
+      '<img class="cppm__channel-logo-img" src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950" alt="" width="40" height="40" loading="lazy" decoding="async">',
+    amazon:
+      '<svg class="cppm__channel-logo-svg cppm__channel-logo-svg--amazon" viewBox="0 0 64 64" aria-hidden="true"><text x="4" y="26" fill="currentColor" font-size="22" font-weight="800" font-family="Inter,Arial,sans-serif">amazon</text><path fill="#fbbf24" d="M8 38c8-10 18-14 24-14s18 4 26 14"/><path fill="#fbbf24" d="M46 36l14 8-4 10"/></svg>',
+    etsy:
+      '<svg class="cppm__channel-logo-svg cppm__channel-logo-svg--etsy" viewBox="0 0 64 64" aria-hidden="true"><text x="6" y="40" fill="currentColor" font-size="28" font-weight="800" font-family="Georgia,serif">etsy</text></svg>',
+    ebay:
+      '<svg class="cppm__channel-logo-svg cppm__channel-logo-svg--ebay" viewBox="0 0 64 64" aria-hidden="true"><text x="4" y="28" fill="#e53238" font-size="16" font-weight="800" font-family="Inter,Arial,sans-serif">e</text><text x="18" y="28" fill="#0064d2" font-size="16" font-weight="800" font-family="Inter,Arial,sans-serif">b</text><text x="32" y="28" fill="#f5af02" font-size="16" font-weight="800" font-family="Inter,Arial,sans-serif">a</text><text x="46" y="28" fill="#86b817" font-size="16" font-weight="800" font-family="Inter,Arial,sans-serif">y</text></svg>',
+  };
+
   var root = null;
   var isOpen = false;
   var collapsed = false;
   var activePanel = 'overview';
   var ctx = null;
+  var productMockupsByView = null;
+  var variantsLoadToken = 0;
   var channelState = {};
   var amazonExpanded = false;
   var studioLoadPromise = null;
@@ -109,6 +146,165 @@
   function viewLabel(key) {
     var k = String(key || 'front').replace(/_/g, ' ');
     return k.charAt(0).toUpperCase() + k.slice(1);
+  }
+
+  function regionFlagCode(code) {
+    var c = String(code || '').trim().toUpperCase();
+    if (REGION_FLAG_CODES[c]) return REGION_FLAG_CODES[c];
+    return c ? c.toLowerCase() : 'un';
+  }
+
+  function regionFlagHtml(code) {
+    var c = String(code || '').trim().toUpperCase();
+    if (c === 'UK') c = 'GB';
+    if (c.length !== 2) return '';
+    var a = c.charCodeAt(0);
+    var b = c.charCodeAt(1);
+    if (a < 65 || a > 90 || b < 65 || b > 90) return '';
+    var emoji = String.fromCodePoint(0x1f1e6 + a - 65, 0x1f1e6 + b - 65);
+    return '<span class="cppm__region-flag" aria-hidden="true">' + emoji + '</span>';
+  }
+
+  function channelLogoHtml(id) {
+    var html = CHANNEL_LOGOS[id];
+    if (!html) return '';
+    return '<span class="cppm__channel-logo" aria-hidden="true">' + html + '</span>';
+  }
+
+  function normalizeVariantViewKey(raw) {
+    var v = String(raw || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+    if (!v || v === 'other') return null;
+    if (v.indexOf('folded') !== -1) return null;
+    if (v === 'front' || v.indexOf('front') === 0) return 'front';
+    if (v === 'back' || v === 'back_2' || v === 'back2' || v.indexOf('back') === 0) return 'back';
+    if (v.indexOf('back') !== -1 && v.indexOf('feedback') === -1) return 'back';
+    if (v.indexOf('front') !== -1) return 'front';
+    return VARIANT_VIEW_ORDER[v] != null ? v : null;
+  }
+
+  function viewFromPrintifySrc(url) {
+    if (!url) return null;
+    try {
+      var u = new URL(String(url));
+      var cam = u.searchParams.get('camera_label') || u.searchParams.get('camera') || '';
+      if (cam) return normalizeVariantViewKey(cam);
+      var path = String(u.pathname || '').toLowerCase();
+      if (path.indexOf('/back') !== -1 || path.indexOf('_back') !== -1) return 'back';
+      if (path.indexOf('/front') !== -1 || path.indexOf('_front') !== -1) return 'front';
+    } catch (_e) {}
+    return null;
+  }
+
+  function parseAltColorView(altRaw) {
+    var alt = String(altRaw || '').trim();
+    if (!alt || alt.indexOf('|') === -1) return null;
+    var parts = alt.split('|').map(function (p) {
+      return String(p || '').trim();
+    });
+    if (!parts[0]) return null;
+    var color = parts[0];
+    var viewPart = parts[1] || '';
+    if (viewPart === 'preview-default' && parts[2]) viewPart = parts[2];
+    var viewKey = normalizeVariantViewKey(viewPart);
+    return viewKey ? { color: color, viewKey: viewKey } : null;
+  }
+
+  function mockUrlFromEntry(entry) {
+    if (!entry) return null;
+    if (typeof entry === 'string') return entry.trim() || null;
+    if (typeof entry === 'object') {
+      return (
+        String(entry.image_url || entry.url || entry.src || entry.preview_url || '').trim() || null
+      );
+    }
+    return null;
+  }
+
+  function parsePrintifyImagesToByView(printifyImages) {
+    var byView = Object.create(null);
+    if (!Array.isArray(printifyImages) || !printifyImages.length) return byView;
+    printifyImages.forEach(function (raw) {
+      var url = mockUrlFromEntry(raw);
+      if (!url) return;
+      var color = null;
+      var viewKey = null;
+      if (raw && typeof raw === 'object') {
+        var parsed =
+          parseAltColorView(raw.alt) ||
+          parseAltColorView(raw.label) ||
+          parseAltColorView(raw.alt_text);
+        if (parsed) {
+          color = parsed.color;
+          viewKey = parsed.viewKey;
+        }
+        if (!viewKey && raw.position) viewKey = normalizeVariantViewKey(raw.position);
+        if (!viewKey && raw.view_key) viewKey = normalizeVariantViewKey(raw.view_key);
+        if (!color && raw.color) color = String(raw.color).trim();
+      }
+      if (!viewKey) viewKey = viewFromPrintifySrc(url);
+      if (!viewKey || !color) return;
+      if (!byView[viewKey]) byView[viewKey] = Object.create(null);
+      if (!byView[viewKey][color]) byView[viewKey][color] = url;
+    });
+    return byView;
+  }
+
+  function mergeByViewMaps(base, extra) {
+    var out = Object.create(null);
+    function copyFrom(src) {
+      if (!src || typeof src !== 'object') return;
+      Object.keys(src).forEach(function (viewRaw) {
+        var viewKey = normalizeVariantViewKey(viewRaw);
+        if (!viewKey || VARIANT_VIEW_ORDER[viewKey] == null) return;
+        var colors = src[viewRaw];
+        if (!colors || typeof colors !== 'object') return;
+        if (!out[viewKey]) out[viewKey] = Object.create(null);
+        Object.keys(colors).forEach(function (colorName) {
+          var url = mockUrlFromEntry(colors[colorName]);
+          if (!url || out[viewKey][colorName]) return;
+          out[viewKey][colorName] = url;
+        });
+      });
+    }
+    copyFrom(base);
+    copyFrom(extra);
+    return out;
+  }
+
+  function countByViewUrls(byView) {
+    var n = 0;
+    if (!byView) return 0;
+    Object.keys(byView).forEach(function (vk) {
+      n += Object.keys(byView[vk] || {}).length;
+    });
+    return n;
+  }
+
+  function buildVariantGroupsFromProductMockups(byView) {
+    var groups = [];
+    if (!byView || typeof byView !== 'object') return groups;
+    Object.keys(byView).forEach(function (viewRaw) {
+      var viewKey = normalizeVariantViewKey(viewRaw);
+      if (!viewKey || VARIANT_VIEW_ORDER[viewKey] == null) return;
+      var colors = byView[viewRaw];
+      if (!colors || typeof colors !== 'object') return;
+      var items = [];
+      Object.keys(colors).forEach(function (colorName) {
+        var url = mockUrlFromEntry(colors[colorName]);
+        if (!url) return;
+        items.push({ color: colorName, url: url });
+      });
+      items = dedupeItemsByColor(items);
+      if (!items.length) return;
+      groups.push({ viewKey: viewKey, items: items });
+    });
+    groups.sort(function (a, b) {
+      return (VARIANT_VIEW_ORDER[a.viewKey] || 99) - (VARIANT_VIEW_ORDER[b.viewKey] || 99);
+    });
+    return groups;
   }
 
   function ensureDom() {
@@ -356,7 +552,6 @@
     el.innerHTML = html;
   }
 
-  var VARIANT_VIEW_ORDER = { front: 0, back: 1 };
   var SIZE_COLOR_LABEL_RE =
     /^(?:XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|5XL|\d+)\s*\/\s*(.+)$/i;
 
@@ -382,60 +577,76 @@
     return out;
   }
 
-  function buildVariantGroups(defaultsResp) {
-    var byView = Object.create(null);
-    var printAreas = (defaultsResp && defaultsResp.print_areas) || [];
+  function extractCatalogByView(defaultsResp) {
+    var out = Object.create(null);
+    if (!defaultsResp) return out;
+    var printAreas = defaultsResp.print_areas || [];
     for (var i = 0; i < printAreas.length; i++) {
       var pa = printAreas[i];
-      var viewKey = String(pa.print_area_key || 'front').toLowerCase();
-      if (VARIANT_VIEW_ORDER[viewKey] == null) continue;
+      var viewKey = normalizeVariantViewKey(pa.print_area_key || 'front');
+      if (!viewKey) continue;
       var byColor = pa.mockup_images_by_color || null;
-      var items = [];
       if (byColor && typeof byColor === 'object') {
+        if (!out[viewKey]) out[viewKey] = Object.create(null);
         Object.keys(byColor).forEach(function (colorName) {
-          items.push({ color: colorName, url: byColor[colorName] });
+          if (!out[viewKey][colorName]) out[viewKey][colorName] = byColor[colorName];
         });
       } else if (pa.template_url) {
-        items.push({ color: pa.template_color || viewLabel(viewKey), url: pa.template_url });
+        if (!out[viewKey]) out[viewKey] = Object.create(null);
+        var tc = pa.template_color || viewLabel(viewKey);
+        if (!out[viewKey][tc]) out[viewKey][tc] = pa.template_url;
       }
-      items = dedupeItemsByColor(items);
-      if (!items.length) continue;
-      if (!byView[viewKey]) byView[viewKey] = { viewKey: viewKey, items: [] };
-      // Prefer richer color set; merge unique colors.
-      var existing = byView[viewKey].items;
-      var have = Object.create(null);
-      existing.forEach(function (it) {
-        have[String(it.color).toLowerCase()] = true;
-      });
-      items.forEach(function (it) {
-        var k = String(it.color).toLowerCase();
-        if (have[k]) return;
-        have[k] = true;
-        existing.push(it);
+    }
+    return out;
+  }
+
+  function buildVariantGroups(defaultsResp, byViewProduct) {
+    var byView = mergeByViewMaps({}, byViewProduct);
+    var productUrlCount = countByViewUrls(byView);
+    var catalogByView = extractCatalogByView(defaultsResp);
+
+    if (productUrlCount === 0) {
+      byView = mergeByViewMaps(byView, catalogByView);
+    } else if (countByViewUrls(catalogByView) > 0) {
+      ['front', 'back'].forEach(function (vk) {
+        if (!byView[vk] || !Object.keys(byView[vk]).length) {
+          if (catalogByView[vk]) {
+            var patch = Object.create(null);
+            patch[vk] = catalogByView[vk];
+            byView = mergeByViewMaps(byView, patch);
+          }
+        }
       });
     }
 
-    var groups = Object.keys(byView)
-      .map(function (k) {
-        return byView[k];
-      })
-      .sort(function (a, b) {
-        return (VARIANT_VIEW_ORDER[a.viewKey] || 99) - (VARIANT_VIEW_ORDER[b.viewKey] || 99);
-      });
+    var groups = buildVariantGroupsFromProductMockups(byView);
+    groups.sort(function (a, b) {
+      return (VARIANT_VIEW_ORDER[a.viewKey] || 99) - (VARIANT_VIEW_ORDER[b.viewKey] || 99);
+    });
 
     if (!groups.length && ctx && ctx.imageUrl) {
+      var fallbackView = inferPrimaryViewFromProductName(ctx.productName) || 'front';
       groups.push({
-        viewKey: 'front',
+        viewKey: fallbackView,
         items: [{ color: ctx.productName || 'Product', url: ctx.imageUrl }],
       });
     }
     return groups;
   }
 
-  function renderVariantsPanel(defaultsResp) {
+  function inferPrimaryViewFromProductName(name) {
+    var s = String(name || '').toLowerCase();
+    if (s.indexOf('backprint') !== -1 || s.indexOf('back print') !== -1 || s.indexOf('back-print') !== -1) {
+      return 'back';
+    }
+    return 'front';
+  }
+
+  function renderVariantsPanel(defaultsResp, byViewProduct) {
     var el = root && root.querySelector('[data-cppm-panel="variants"]');
     if (!el) return;
-    var groups = buildVariantGroups(defaultsResp);
+    var mergedByView = byViewProduct || productMockupsByView;
+    var groups = buildVariantGroups(defaultsResp, mergedByView);
     if (!groups.length) {
       el.innerHTML =
         '<h3 class="cppm__section-title" data-t="creator.product_preview.variants">' +
@@ -585,6 +796,7 @@
       '"' +
       (id === 'amazon' ? ' data-cppm-channel-tile="amazon"' : '') +
       ' role="listitem">' +
+      channelLogoHtml(id) +
       '<div class="cppm__channel-tile-top">' +
       '<h4 class="cppm__channel-name" data-t="' +
       esc(dataT) +
@@ -681,9 +893,11 @@
         var st = getState('amazon', reg.code);
         html +=
           '<div class="cppm__region-card" role="listitem">' +
+          '<div class="cppm__region-head">' +
+          regionFlagHtml(reg.code) +
           '<h5 class="cppm__region-name">' +
           esc(reg.label) +
-          '</h5>' +
+          '</h5></div>' +
           statusLabel(st) +
           '<div class="cppm__channel-actions">' +
           actionButtons('amazon', reg.code, st) +
@@ -801,6 +1015,63 @@
     }
   }
 
+  function loadProductMockups() {
+    if (!ctx) return Promise.resolve(null);
+    var token = ++variantsLoadToken;
+
+    if (ctx.mockupsByView && countByViewUrls(ctx.mockupsByView) > 0) {
+      productMockupsByView = mergeByViewMaps({}, ctx.mockupsByView);
+    }
+
+    var parts = [];
+    if (ctx.publishedDesignId) {
+      parts.push('published_design_id=' + encodeURIComponent(String(ctx.publishedDesignId)));
+    }
+    if (ctx.designId) parts.push('design_id=' + encodeURIComponent(String(ctx.designId)));
+    if (ctx.productKey) parts.push('product_key=' + encodeURIComponent(ctx.productKey));
+    if (ctx.printifyProductId) {
+      parts.push('printify_product_id=' + encodeURIComponent(String(ctx.printifyProductId)));
+    }
+    if (!parts.length) {
+      return Promise.resolve(productMockupsByView);
+    }
+
+    return fetchJSON(apiBase() + '?op=get-published-product-mockups&' + parts.join('&'))
+      .then(function (data) {
+        if (!isOpen || token !== variantsLoadToken) return productMockupsByView;
+        if (data && data.ok && data.by_view) {
+          productMockupsByView = mergeByViewMaps(productMockupsByView, data.by_view);
+        }
+        if (countByViewUrls(productMockupsByView) === 0 && ctx.printifyImages) {
+          productMockupsByView = mergeByViewMaps(
+            productMockupsByView,
+            parsePrintifyImagesToByView(ctx.printifyImages)
+          );
+        }
+        return productMockupsByView;
+      })
+      .catch(function (err) {
+        console.warn('[ProductPreviewModal] product mockups failed', err);
+        return productMockupsByView;
+      });
+  }
+
+  function loadVariantPanels() {
+    var token = ++variantsLoadToken;
+    var defaultsPromise = ctx.productKey
+      ? fetchJSON(
+          apiBase() + '?op=get-mockup-defaults&product_key=' + encodeURIComponent(ctx.productKey)
+        )
+      : Promise.resolve(null);
+    return Promise.all([loadProductMockups(), defaultsPromise]).then(function (results) {
+      if (!isOpen || token !== variantsLoadToken) return;
+      var mockData = results[0];
+      var defaultsResp = results[1];
+      if (mockData) productMockupsByView = mockData;
+      renderVariantsPanel(defaultsResp && defaultsResp.ok !== false ? defaultsResp : null, mockData);
+    });
+  }
+
   function open(opts) {
     opts = opts || {};
     ensureDom();
@@ -814,13 +1085,19 @@
       designId: opts.designId || null,
       imageUrl: opts.imageUrl || opts.renderedSrc || null,
       publishedDesignId: opts.publishedDesignId || null,
+      printifyProductId: opts.printifyProductId || null,
+      printifyImages: Array.isArray(opts.printifyImages) ? opts.printifyImages : null,
+      mockupsByView:
+        opts.mockupsByView && typeof opts.mockupsByView === 'object' ? opts.mockupsByView : null,
     };
+    productMockupsByView = null;
+    variantsLoadToken = 0;
 
     var titleEl = root.querySelector('[data-cppm-title]');
     if (titleEl) titleEl.textContent = ctx.productName;
 
     renderOverviewPanel();
-    renderVariantsPanel(null);
+    renderVariantsPanel(null, ctx.mockupsByView);
     renderChannelsPanel();
     setPanel('overview');
 
@@ -829,15 +1106,8 @@
     isOpen = true;
     document.body.style.overflow = 'hidden';
 
-    if (ctx.productKey) {
-      fetchJSON(apiBase() + '?op=get-mockup-defaults&product_key=' + encodeURIComponent(ctx.productKey))
-        .then(function (data) {
-          if (!isOpen) return;
-          if (data && data.ok !== false) renderVariantsPanel(data);
-        })
-        .catch(function (err) {
-          console.warn('[ProductPreviewModal] mockup defaults failed', err);
-        });
+    if (ctx.productKey || ctx.publishedDesignId || ctx.designId) {
+      loadVariantPanels();
     }
   }
 
@@ -848,6 +1118,7 @@
     isOpen = false;
     document.body.style.overflow = '';
     ctx = null;
+    productMockupsByView = null;
   }
 
   window.CreatorProductPreviewModal = {

@@ -237,6 +237,35 @@
   min-height: 0;
   overflow: auto;
   padding: 20px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cppm__body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.cppm,
+.cppm__panel,
+.cppm__channel-stats,
+.cppm__variants,
+.cppm__channels-track,
+.cppm__amazon-regions {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cppm::-webkit-scrollbar,
+.cppm__panel::-webkit-scrollbar,
+.cppm__channel-stats::-webkit-scrollbar,
+.cppm__variants::-webkit-scrollbar,
+.cppm__channels-track::-webkit-scrollbar,
+.cppm__amazon-regions::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .cppm__panel[hidden] {
@@ -447,6 +476,43 @@
   border: 1px solid transparent;
   box-sizing: border-box;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+}
+
+.cppm__channel-logo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 40px;
+  margin-bottom: 2px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.cppm__channel-logo-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 10px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+}
+
+.cppm__channel-logo-svg {
+  width: 40px;
+  height: 40px;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+}
+
+.cppm__channel-tile--amazon .cppm__channel-logo-svg {
+  color: #fbbf24;
+}
+
+.cppm__channel-tile--etsy .cppm__channel-logo-svg {
+  color: #f472b6;
+}
+
+.cppm__channel-tile--ebay .cppm__channel-logo-svg {
+  color: #60a5fa;
 }
 
 .cppm__channel-tile--eazpire {
@@ -693,6 +759,30 @@
   animation-delay: 0.16s;
 }
 
+.cppm__region-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cppm__region-flag {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.cppm__channel-logo-svg--amazon {
+  width: 88px;
+  height: 40px;
+  color: #f8fafc;
+}
+
 @keyframes cppm-region-in {
   from {
     opacity: 0;
@@ -709,6 +799,11 @@
   font-size: 13px;
   font-weight: 700;
   color: #fef3c7;
+}
+
+.cppm__region-head .cppm__region-name {
+  flex: 1;
+  min-width: 0;
 }
 
 .cppm__carousel-btn--channels {

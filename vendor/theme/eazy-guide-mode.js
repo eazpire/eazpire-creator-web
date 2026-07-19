@@ -47,6 +47,9 @@
   var suppressChatOpenUntil = 0;
   var thoughtHomeParent = null;
   var thoughtHomeNext = null;
+  var bubblePages = [];
+  var bubblePageIndex = 0;
+  var bubbleSwipe = { x: 0, y: 0, active: false };
   var snapTapState = { time: 0, x: 0, y: 0, key: "" };
   var snapTouchStart = { key: "", x: 0, y: 0, moved: false };
   var lastSnapPointerEndAt = 0;
@@ -361,6 +364,48 @@
     return parts.join("\n\n");
   }
 
+  function registryPages(entry) {
+    if (!entry) return [];
+    if (Array.isArray(entry.pages) && entry.pages.length) {
+      return entry.pages
+        .map(function (p) {
+          return {
+            category: String((p && p.category) || "Info").trim() || "Info",
+            body: String((p && p.body) || "").trim(),
+          };
+        })
+        .filter(function (p) {
+          return p.body;
+        });
+    }
+    var pages = [];
+    if (entry.summary) pages.push({ category: "Overview", body: String(entry.summary) });
+    if (entry.tips && entry.tips.length) {
+      entry.tips.forEach(function (tip, i) {
+        pages.push({
+          category: entry.tips.length > 1 ? "Tip " + (i + 1) : "Tip",
+          body: String(tip),
+        });
+      });
+    }
+    if (!pages.length && entry.title) pages.push({ category: "Overview", body: String(entry.title) });
+    return pages;
+  }
+
+  function pagesFromPlainText(text) {
+    var raw = String(text || "").trim();
+    if (!raw) return [];
+    var chunks = raw.split(/\n{2,}/).map(function (s) {
+      return s.trim();
+    }).filter(Boolean);
+    if (chunks.length <= 1) {
+      return [{ category: "Answer", body: raw }];
+    }
+    return chunks.map(function (body, i) {
+      return { category: i === 0 ? "Answer" : "More", body: body };
+    });
+  }
+
   function resolveGuideKey(el) {
     if (!el || !el.closest) return null;
     var node = el;
@@ -441,23 +486,22 @@
     if (!anchor) return;
 
     var pad = 12;
-    var gap = 8;
-    var maxW = Math.min(380, Math.max(200, window.innerWidth - pad * 2));
+    var gap = 10;
+    var maxW = Math.min(340, Math.max(220, window.innerWidth - pad * 2));
     var r = anchor.getBoundingClientRect();
-    // Bubble sits above-left of Eazy; tail points down toward mascot (bottom-right of bubble).
-    var left = r.left + r.width * 0.35 - maxW;
+    // Bubble sits down-left of Eazy; tail on top-right points up to the mascot.
+    var left = r.left + r.width * 0.55 - maxW;
     left = Math.max(pad, Math.min(left, window.innerWidth - maxW - pad));
 
     el.style.setProperty("--eaz-guide-bubble-width", maxW + "px");
-    var bubbleH = Math.max(el.offsetHeight || 0, 64);
-    var top = r.top - bubbleH - gap;
-    if (top < pad) {
-      top = Math.min(r.bottom + gap, window.innerHeight - bubbleH - pad);
+    var bubbleH = Math.max(el.offsetHeight || 0, 96);
+    var top = r.bottom + gap;
+    if (top + bubbleH > window.innerHeight - pad) {
+      top = Math.max(pad, r.top - bubbleH - gap);
     }
-    top = Math.max(pad, top);
 
     var anchorCenter = r.left + r.width / 2;
-    var tailLeft = Math.max(maxW * 0.62, Math.min(anchorCenter - left, maxW - 18));
+    var tailLeft = Math.max(maxW * 0.72, Math.min(anchorCenter - left, maxW - 22));
 
     el.style.setProperty("--eaz-guide-bubble-left", left + "px");
     el.style.setProperty("--eaz-guide-bubble-top", top + "px");
@@ -494,18 +538,35 @@
       el.className = "eazy-thought";
       el.setAttribute("role", "status");
       el.setAttribute("aria-live", "polite");
-      el.innerHTML =
-        '<span class="eazy-thought-text"></span>' +
-        '<span class="eazy-thought-tail" aria-hidden="true"></span>' +
-        '<span class="eazy-thought-dots"><span></span><span></span><span></span></span>';
       document.body.appendChild(el);
-      return el;
-    }
-    // Chat toggle is often display:none while the mascot is docked — reparent so the bubble can show.
-    if (el.parentElement !== document.body) {
+    } else if (el.parentElement !== document.body) {
+      // Chat toggle is often display:none while the mascot is docked — reparent so the bubble can show.
       thoughtHomeParent = el.parentElement;
       thoughtHomeNext = el.nextSibling;
       document.body.appendChild(el);
+    }
+
+    if (!el.querySelector(".eaz-guide-bubble__shell")) {
+      el.innerHTML =
+        '<div class="eaz-guide-bubble__shell">' +
+        '<button type="button" class="eaz-guide-bubble__close" data-guide-bubble-close aria-label="' +
+        escapeHtml(i18n("creator.guide.close", "Close")) +
+        '">×</button>' +
+        '<div class="eaz-guide-bubble__viewport" data-guide-bubble-viewport>' +
+        '<div class="eaz-guide-bubble__track" data-guide-bubble-track></div>' +
+        "</div>" +
+        '<div class="eaz-guide-bubble__pager" data-guide-bubble-pager hidden>' +
+        '<button type="button" class="eaz-guide-bubble__nav" data-guide-bubble-prev aria-label="' +
+        escapeHtml(i18n("creator.guide.prev_page", "Previous")) +
+        '">‹</button>' +
+        '<div class="eaz-guide-bubble__dots" data-guide-bubble-dots></div>' +
+        '<button type="button" class="eaz-guide-bubble__nav" data-guide-bubble-next aria-label="' +
+        escapeHtml(i18n("creator.guide.next_page", "Next")) +
+        '">›</button>' +
+        "</div>" +
+        "</div>" +
+        '<span class="eazy-thought-tail eaz-guide-bubble__tail" aria-hidden="true"></span>';
+      bindGuideBubbleControls(el);
     }
     return el;
   }
@@ -524,11 +585,143 @@
     thoughtHomeNext = null;
   }
 
-  function showBubble(text, loading) {
+  function bindGuideBubbleControls(el) {
+    if (!el || el.getAttribute("data-guide-bubble-bound") === "1") return;
+    el.setAttribute("data-guide-bubble-bound", "1");
+
+    el.addEventListener("click", function (e) {
+      if (e.target.closest("[data-guide-bubble-close]")) {
+        e.preventDefault();
+        e.stopPropagation();
+        hideBubble();
+        return;
+      }
+      if (e.target.closest("[data-guide-bubble-prev]")) {
+        e.preventDefault();
+        setBubblePage(bubblePageIndex - 1);
+        return;
+      }
+      if (e.target.closest("[data-guide-bubble-next]")) {
+        e.preventDefault();
+        setBubblePage(bubblePageIndex + 1);
+        return;
+      }
+      var dot = e.target.closest("[data-guide-bubble-dot]");
+      if (dot) {
+        e.preventDefault();
+        setBubblePage(parseInt(dot.getAttribute("data-guide-bubble-dot"), 10) || 0);
+      }
+    });
+
+    var viewport = el.querySelector("[data-guide-bubble-viewport]");
+    if (!viewport) return;
+    viewport.addEventListener(
+      "touchstart",
+      function (e) {
+        var t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+        bubbleSwipe = { x: t.clientX, y: t.clientY, active: true };
+      },
+      { passive: true }
+    );
+    viewport.addEventListener(
+      "touchend",
+      function (e) {
+        if (!bubbleSwipe.active) return;
+        var t = e.changedTouches && e.changedTouches[0];
+        bubbleSwipe.active = false;
+        if (!t) return;
+        var dx = t.clientX - bubbleSwipe.x;
+        var dy = t.clientY - bubbleSwipe.y;
+        if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+        if (dx < 0) setBubblePage(bubblePageIndex + 1);
+        else setBubblePage(bubblePageIndex - 1);
+      },
+      { passive: true }
+    );
+  }
+
+  function setBubblePage(index) {
+    if (!bubblePages.length) return;
+    bubblePageIndex = Math.max(0, Math.min(bubblePages.length - 1, index));
+    var el = document.getElementById("eazy-thought");
+    if (!el) return;
+    var track = el.querySelector("[data-guide-bubble-track]");
+    if (track) {
+      track.style.transform = "translateX(" + -bubblePageIndex * 100 + "%)";
+    }
+    var dots = el.querySelectorAll("[data-guide-bubble-dots] button");
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].classList.toggle("is-active", i === bubblePageIndex);
+    }
+    var prev = el.querySelector("[data-guide-bubble-prev]");
+    var next = el.querySelector("[data-guide-bubble-next]");
+    if (prev) prev.disabled = bubblePageIndex <= 0;
+    if (next) next.disabled = bubblePageIndex >= bubblePages.length - 1;
+    positionGuideBubble();
+  }
+
+  function renderBubblePages(el, pages, loading) {
+    var track = el.querySelector("[data-guide-bubble-track]");
+    var pager = el.querySelector("[data-guide-bubble-pager]");
+    var dots = el.querySelector("[data-guide-bubble-dots]");
+    if (!track) return;
+
+    bubblePages = pages && pages.length ? pages : [{ category: "", body: "" }];
+    bubblePageIndex = 0;
+
+    if (loading) {
+      track.innerHTML =
+        '<div class="eaz-guide-bubble__page">' +
+        '<div class="eaz-guide-bubble__loading"><span class="eaz-guide-bubble__spinner"></span>' +
+        '<span class="eaz-guide-bubble__body"></span></div></div>';
+      var body = track.querySelector(".eaz-guide-bubble__body");
+      if (body) body.textContent = bubblePages[0].body || "";
+      if (pager) pager.hidden = true;
+      track.style.transform = "translateX(0)";
+      return;
+    }
+
+    track.innerHTML = bubblePages
+      .map(function (page) {
+        return (
+          '<div class="eaz-guide-bubble__page">' +
+          (page.category
+            ? '<div class="eaz-guide-bubble__category">' + escapeHtml(page.category) + "</div>"
+            : "") +
+          '<div class="eaz-guide-bubble__body">' +
+          escapeHtml(page.body) +
+          "</div></div>"
+        );
+      })
+      .join("");
+
+    if (dots) {
+      dots.innerHTML = bubblePages
+        .map(function (_, i) {
+          return (
+            '<button type="button" class="eaz-guide-bubble__dot' +
+            (i === 0 ? " is-active" : "") +
+            '" data-guide-bubble-dot="' +
+            i +
+            '" aria-label="Page ' +
+            (i + 1) +
+            '"></button>'
+          );
+        })
+        .join("");
+    }
+    if (pager) pager.hidden = bubblePages.length <= 1;
+    setBubblePage(0);
+  }
+
+  function showBubble(textOrPages, loading) {
     var el = ensureGuideThoughtEl();
     if (!el) return;
-    var textEl = el.querySelector(".eazy-thought-text");
-    if (textEl) textEl.textContent = text || "";
+    var pages = Array.isArray(textOrPages) ? textOrPages : pagesFromPlainText(textOrPages);
+    if (!pages.length && loading) {
+      pages = [{ category: "", body: String(textOrPages || "") }];
+    }
     el.classList.remove("eazy-thought--dream");
     el.classList.add("show", "eazy-guide-bubble");
     if (loading) el.classList.add("eazy-guide-bubble--loading");
@@ -536,9 +729,20 @@
       el.classList.remove("eazy-guide-bubble--loading");
       scheduleClearPersistRect();
     }
+    renderBubblePages(el, pages, !!loading);
     bindGuideBubbleLayout();
     positionGuideBubble();
     requestAnimationFrame(positionGuideBubble);
+  }
+
+  function showRegistryBubble(entry) {
+    var pages = registryPages(entry);
+    if (!pages.length) return false;
+    if (entry && entry.title && pages[0] && pages[0].category === "Overview") {
+      pages = [{ category: entry.title, body: pages[0].body }].concat(pages.slice(1));
+    }
+    showBubble(pages, false);
+    return true;
   }
 
   var _persistClearTimer = null;
@@ -610,6 +814,8 @@
     var el = document.getElementById("eazy-thought");
     if (!el) return;
     el.classList.remove("show", "eazy-guide-bubble", "eazy-guide-bubble--loading");
+    bubblePages = [];
+    bubblePageIndex = 0;
     resetGuideBubbleLayout(el);
     unbindGuideBubbleLayout();
     restoreGuideThoughtEl();
@@ -632,7 +838,7 @@
 
   function explainFromRegistry(key) {
     if (!key || !registryCache || !registryCache[key]) return null;
-    return registryText(registryCache[key]);
+    return registryCache[key];
   }
 
   function requestExplain(forceRegistryOnly) {
@@ -643,11 +849,10 @@
       return;
     }
 
-    // Click tips: prefer predefined registry text. Prompt/screenshot use LLM (and registry as bonus context server-side).
+    // Click tips: prefer predefined registry pages. Prompt/screenshot use LLM.
     if (!payload.prompt && payload.element && payload.element.guide_key && !payload.screenshot) {
-      var local = explainFromRegistry(payload.element.guide_key);
-      if (local) {
-        showBubble(local, false);
+      var localEntry = explainFromRegistry(payload.element.guide_key);
+      if (localEntry && showRegistryBubble(localEntry)) {
         return;
       }
       if (forceRegistryOnly) {
@@ -1117,10 +1322,15 @@
       ui.exitHint.textContent = i18n("creator.guide.exit_hint", "Guide Mode — click Eazy to exit");
     }
     showBubble(
-      i18n(
-        "creator.guide.entered",
-        "Guide Mode on! Tap a control for a tip, or ask me about your selection."
-      ),
+      [
+        {
+          category: "Guide Mode",
+          body: i18n(
+            "creator.guide.entered",
+            "Guide Mode on! Tap a control for a tip, or ask me about your selection."
+          ),
+        },
+      ],
       false
     );
     loadRegistry().then(function () {

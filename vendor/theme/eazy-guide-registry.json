@@ -6,6 +6,32 @@
       "Choose interests that match you to get better suggestions.",
       "You can select up to 10 interests.",
       "New interest? Type it and I will suggest matching terms."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Choose interests that match you to get better product and design suggestions across the shop and creator tools."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Interests to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Choose interests that match you to get better suggestions."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You can select up to 10 interests."
+      },
+      {
+        "category": "Tip 3",
+        "body": "New interest? Type it and I will suggest matching terms."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "community": {
@@ -15,6 +41,32 @@
       "Share your referral link to grow your network.",
       "Your network has 10 levels and each level earns commission.",
       "Use promo codes to win new partners."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Grow your network with referral links and earn commission across up to 10 levels."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Community to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Share your referral link to grow your network."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Your network has 10 levels and each level earns commission."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Use promo codes to win new partners."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "generate-design": {
@@ -25,6 +77,36 @@
       "You can upload your own image as a reference.",
       "Try different styles for unique designs.",
       "After generation, you can publish the design directly."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Create AI designs from a text prompt or reference image, then save and publish them."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Design Generator to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "The more detailed your prompt, the better the result."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You can upload your own image as a reference."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Try different styles for unique designs."
+      },
+      {
+        "category": "Tip 4",
+        "body": "After generation, you can publish the design directly."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "my-creations": {
@@ -34,6 +116,32 @@
       "Click a design to see more options.",
       "You can filter designs by date or type.",
       "Unsaved designs are deleted after 30 days."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Browse, filter, and manage all designs you have generated or uploaded."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap My Creations to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Click a design to see more options."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You can filter designs by date or type."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Unsaved designs are deleted after 30 days."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "publish": {
@@ -43,6 +151,32 @@
       "Select a design first, then choose products.",
       "You can publish to multiple products at once.",
       "After publishing, you can find the product in the shop."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Place your design on print-on-demand products and publish them to the shop."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Publish Products to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Select a design first, then choose products."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You can publish to multiple products at once."
+      },
+      {
+        "category": "Tip 3",
+        "body": "After publishing, you can find the product in the shop."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "my-products": {
@@ -51,6 +185,28 @@
     "tips": [
       "Published products appear in your creator storefront.",
       "You can update mockups and metadata from here."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "View products you have published and manage their visibility in the shop."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap My Products to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Published products appear in your creator storefront."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You can update mockups and metadata from here."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "active-jobs": {
@@ -59,6 +215,28 @@
     "tips": [
       "Jobs run in the background while you browse.",
       "You will get a notification when a job completes."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Track in-progress generation and publishing jobs."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Active Jobs to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Jobs run in the background while you browse."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You will get a notification when a job completes."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "favorites": {
@@ -67,6 +245,28 @@
     "tips": [
       "Tap the heart icon on a product to favorite it.",
       "Favorites sync when you are logged in."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Save products you like and find them again quickly."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Favorites to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Tap the heart icon on a product to favorite it."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Favorites sync when you are logged in."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "gift-cards": {
@@ -75,6 +275,28 @@
     "tips": [
       "Gift cards can be shared with friends and family.",
       "Redeem a code at checkout."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Purchase or redeem Eazpire gift cards."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Gift Cards to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Gift cards can be shared with friends and family."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Redeem a code at checkout."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "promo-codes": {
@@ -83,6 +305,28 @@
     "tips": [
       "Promo codes can offer discounts or track referrals.",
       "Share codes from your community dashboard."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Create and share promo codes for your community."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Promo Codes to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Promo codes can offer discounts or track referrals."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Share codes from your community dashboard."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "size-ai": {
@@ -92,6 +336,32 @@
       "Enter your measurements and I will suggest the best size.",
       "Reference sizes help for more accurate recommendations.",
       "The recommendation applies to all product types."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Get size recommendations based on your measurements."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Size AI to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Enter your measurements and I will suggest the best size."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Reference sizes help for more accurate recommendations."
+      },
+      {
+        "category": "Tip 3",
+        "body": "The recommendation applies to all product types."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "my-orders": {
@@ -101,6 +371,32 @@
       "Click an order for details and tracking.",
       "If there is an issue with an order, report it.",
       "You can see your last 10 orders here."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "View order history, details, and tracking information."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap My Orders to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Click an order for details and tracking."
+      },
+      {
+        "category": "Tip 2",
+        "body": "If there is an issue with an order, report it."
+      },
+      {
+        "category": "Tip 3",
+        "body": "You can see your last 10 orders here."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "product-search": {
@@ -110,6 +406,32 @@
       "Enter a search term or choose a category.",
       "You can add products directly to your cart.",
       "Mark favorites with the heart icon for later."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Search the shop by keyword or browse categories."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Product Search to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Enter a search term or choose a category."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You can add products directly to your cart."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Mark favorites with the heart icon for later."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "browse-shop": {
@@ -119,6 +441,32 @@
       "Discover new products and trends.",
       "Recommendations are based on your interests.",
       "You can search for something specific anytime."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Discover products, trends, and personalized recommendations."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Browse Shop to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Discover new products and trends."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Recommendations are based on your interests."
+      },
+      {
+        "category": "Tip 3",
+        "body": "You can search for something specific anytime."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "wardrobe": {
@@ -128,6 +476,32 @@
       "Combine up to 9 items per outfit.",
       "Generate an AI image of your outfit.",
       "You can save up to 20 outfits."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Combine up to 9 items into outfits and generate AI outfit previews."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Wardrobe to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Combine up to 9 items per outfit."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Generate an AI image of your outfit."
+      },
+      {
+        "category": "Tip 3",
+        "body": "You can save up to 20 outfits."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "my-mockups": {
@@ -137,6 +511,32 @@
       "Upload a photo and I will generate mockups for different products.",
       "Choose the right person type for more realistic results.",
       "Mockups work great as product previews."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Upload photos and generate product mockups."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap My Mockups to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Upload a photo and I will generate mockups for different products."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Choose the right person type for more realistic results."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Mockups work great as product previews."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "hero-images": {
@@ -146,6 +546,32 @@
       "Hero Images cost EAZV and appear as shop title images.",
       "Choose up to 5 products for one hero image.",
       "Published hero images rotate randomly on your shop page."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Create rotating hero banners for your shop storefront (costs EAZV)."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Hero Images to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Hero Images cost EAZV and appear as shop title images."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Choose up to 5 products for one hero image."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Published hero images rotate randomly on your shop page."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "creator-image": {
@@ -155,6 +581,32 @@
       "Your avatar is optimized to 512x512 and your cover to 800x300.",
       "You can upload images or generate them with AI.",
       "Your creator image appears on your profile and products."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Set your avatar and cover image shown on your creator profile."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Creator Image to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Your avatar is optimized to 512x512 and your cover to 800x300."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You can upload images or generate them with AI."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Your creator image appears on your profile and products."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "creator-settings": {
@@ -164,6 +616,32 @@
       "You can create up to 5 creator names.",
       "The active creator defines the name you publish under.",
       "Filter settings decide which products you see."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Manage creator names, filters, EAZ, and publishing defaults."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Creator Settings to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "You can create up to 5 creator names."
+      },
+      {
+        "category": "Tip 2",
+        "body": "The active creator defines the name you publish under."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Filter settings decide which products you see."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "balance": {
@@ -173,6 +651,32 @@
       "Spend EAZV on generations, hero images, and skill unlocks.",
       "Earn EAZV via activity, daily refill, packs, or converting EAZC.",
       "Your max balance increases with your level."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "EAZV is your spendable in-app currency for premium Creator features."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap EAZV Balance to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Spend EAZV on generations, hero images, and skill unlocks."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Earn EAZV via activity, daily refill, packs, or converting EAZC."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Your max balance increases with your level."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "level": {
@@ -182,6 +686,32 @@
       "Your level determines your maximum EAZV balance.",
       "You gain XP through activities like creating designs and publishing products.",
       "There are multiple levels and each unlocks new benefits."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Your level unlocks benefits and raises your maximum EAZV balance."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Creator Level to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Your level determines your maximum EAZV balance."
+      },
+      {
+        "category": "Tip 2",
+        "body": "You gain XP through activities like creating designs and publishing products."
+      },
+      {
+        "category": "Tip 3",
+        "body": "There are multiple levels and each unlocks new benefits."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "mentor-support": {
@@ -190,6 +720,28 @@
     "tips": [
       "Support creators you follow or collaborate with.",
       "Tips may use EAZ or shop checkout depending on the flow."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Tip or support other creators in the community."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Support a Creator to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Support creators you follow or collaborate with."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Tips may use EAZ or shop checkout depending on the flow."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "chat-input": {
@@ -199,6 +751,32 @@
       "Ask anything about the shop or creator tools.",
       "Use the + button for a new conversation.",
       "Type Support to reach a human."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Type a message or use functions from the carousel above the input."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Chat Input to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Ask anything about the shop or creator tools."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Use the + button for a new conversation."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Type Support to reach a human."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "chat-functions": {
@@ -207,6 +785,28 @@
     "tips": [
       "Tap a function icon to start a guided flow.",
       "Customize visible functions in the Eazy tab with the eye icon."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Quick access to Eazy functions like design generation, orders, and settings."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Function Carousel to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Tap a function icon to start a guided flow."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Customize visible functions in the Eazy tab with the eye icon."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control is part of the Creator workspace."
+      }
     ]
   },
   "chrome.brand": {
@@ -215,6 +815,28 @@
     "tips": [
       "You are in the Creator area for designs, marketing, and automations.",
       "Use Shop mode when you want to browse the storefront instead."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Brand mark for your Creator workspace. Outside Guide Mode it opens the Creator portal home."
+      },
+      {
+        "category": "How to use",
+        "body": "Tap the brand mark outside Guide Mode to return to the Creator home experience."
+      },
+      {
+        "category": "Tip 1",
+        "body": "You are in the Creator area for designs, marketing, and automations."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Use Shop mode when you want to browse the storefront instead."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.journey-star": {
@@ -224,6 +846,32 @@
       "Complete open tasks to progress.",
       "Claim XP when a task is finished.",
       "Journey unlocks help you grow step by step."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Opens your Creator Journey — guided tasks that teach the tools and reward XP."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Creator Journey to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Complete open tasks to progress."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Claim XP when a task is finished."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Journey unlocks help you grow step by step."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.xp-info": {
@@ -232,6 +880,28 @@
     "tips": [
       "XP comes from creator activity such as designs and publishes.",
       "Your progress bar shows how far you are to the next level."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Opens a short explanation of XP and how leveling works."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap XP Info to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "XP comes from creator activity such as designs and publishes."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Your progress bar shows how far you are to the next level."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.copy-link": {
@@ -240,6 +910,28 @@
     "tips": [
       "Share the link so others can find your storefront.",
       "Pairs well with the Share button next to it."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Copies your creator share link to the clipboard."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Copy Link to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Share the link so others can find your storefront."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Pairs well with the Share button next to it."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.share": {
@@ -248,6 +940,28 @@
     "tips": [
       "Great for inviting fans and partners.",
       "Works best when you are logged in."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Shares your creator link via the device share sheet or a fallback."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Share to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Great for inviting fans and partners."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Works best when you are logged in."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.screen-title": {
@@ -256,6 +970,28 @@
     "tips": [
       "The title updates when you switch screens.",
       "Use the sidebar (desktop) or swipe / menu (mobile) to change screens."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Shows which Creator screen you are on (Dashboard, Generator, Creations, Marketing, or Automations)."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Page Title to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "The title updates when you switch screens."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Use the sidebar (desktop) or swipe / menu (mobile) to change screens."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.eazy": {
@@ -264,6 +1000,28 @@
     "tips": [
       "In Guide Mode, tap any highlighted control to learn what it does.",
       "Use Prompt to ask deeper questions about your selection."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Your assistant. Double-click while snapped to enter Guide Mode; single-click to exit Guide Mode."
+      },
+      {
+        "category": "How to use",
+        "body": "Double-click (or double-tap) while snapped to enter Guide Mode. Single-click exits Guide Mode. Outside Guide Mode it opens chat."
+      },
+      {
+        "category": "Tip 1",
+        "body": "In Guide Mode, tap any highlighted control to learn what it does."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Use Prompt to ask deeper questions about your selection."
+      },
+      {
+        "category": "Good to know",
+        "body": "Guide Mode freezes navigation so you can explore safely without leaving the screen."
+      }
     ]
   },
   "chrome.audio-visualizer": {
@@ -272,22 +1030,104 @@
     "tips": [
       "Pick tracks that fit your creative mood.",
       "Use the playback controls beside the visualizer."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Opens the creator audio library for background music during your session."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Audio Library to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Pick tracks that fit your creative mood."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Use the playback controls beside the visualizer."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.audio-back": {
     "title": "Rewind",
     "summary": "Jumps the current track back about 10 seconds.",
-    "tips": ["Use with Play/Pause and Next for quick control."]
+    "tips": [
+      "Use with Play/Pause and Next for quick control."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Jumps the current track back about 10 seconds."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Rewind to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Use with Play/Pause and Next for quick control."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.audio-play": {
     "title": "Play / Pause",
     "summary": "Starts or pauses the current audio track.",
-    "tips": ["Open the visualizer to browse the full audio library."]
+    "tips": [
+      "Open the visualizer to browse the full audio library."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Starts or pauses the current audio track."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Play / Pause to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Open the visualizer to browse the full audio library."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.audio-fwd": {
     "title": "Next Track",
     "summary": "Skips to another track (random next).",
-    "tips": ["Useful while you keep working in Creator."]
+    "tips": [
+      "Useful while you keep working in Creator."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Skips to another track (random next)."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Next Track to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Useful while you keep working in Creator."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.eazc": {
     "title": "EAZC Balance",
@@ -296,6 +1136,32 @@
       "Available and pending EAZC are shown here.",
       "Convert EAZC to EAZV in Settings → EAZ if you want to spend inside Creator.",
       "Cash out via Balance & Payouts."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Your earnings balance (EAZC) from sales and community. Opens Balance & Payouts."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap EAZC Balance to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Available and pending EAZC are shown here."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Convert EAZC to EAZV in Settings → EAZ if you want to spend inside Creator."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Cash out via Balance & Payouts."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.settings": {
@@ -304,6 +1170,28 @@
     "tips": [
       "Manage creator names and preferences here.",
       "EAZV details and conversion live in the EAZ tab."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Opens Creator Settings for profile, EAZ, filters, and publishing defaults."
+      },
+      {
+        "category": "How to use",
+        "body": "Opens Creator settings: profile, preferences, and account options."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Manage creator names and preferences here."
+      },
+      {
+        "category": "Tip 2",
+        "body": "EAZV details and conversion live in the EAZ tab."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.mode-shop": {
@@ -312,12 +1200,54 @@
     "tips": [
       "Use Shop to browse and buy.",
       "Creator is for designing, publishing, and marketing."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Switches from Creator tools to the shop experience."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Shop Mode to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Use Shop to browse and buy."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Creator is for designing, publishing, and marketing."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.mode-creator": {
     "title": "Creator Mode",
     "summary": "You are in the Creator workspace for designs, marketing, and automations.",
-    "tips": ["Stay here to create and manage your catalog."]
+    "tips": [
+      "Stay here to create and manage your catalog."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "You are in the Creator workspace for designs, marketing, and automations."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Creator Mode to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Stay here to create and manage your catalog."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.limit-uploads": {
     "title": "Daily Uploads",
@@ -325,6 +1255,28 @@
     "tips": [
       "Limits reset on the countdown timer.",
       "Higher levels or EAZV skills can raise allowances."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "How many image uploads you have left today."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Daily Uploads to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Limits reset on the countdown timer."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Higher levels or EAZV skills can raise allowances."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.limit-generations": {
@@ -333,67 +1285,329 @@
     "tips": [
       "Each generate counts toward this limit.",
       "Watch the reset timer on the right."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "How many AI design generations you have left today."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Daily Generations to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Each generate counts toward this limit."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Watch the reset timer on the right."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "chrome.limit-publishes": {
     "title": "Daily Publishes",
     "summary": "How many product publishes you have left today.",
-    "tips": ["Publishing a design to a product uses this quota."]
+    "tips": [
+      "Publishing a design to a product uses this quota."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "How many product publishes you have left today."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Daily Publishes to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Publishing a design to a product uses this quota."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.limit-countdown": {
     "title": "Limit Reset Timer",
     "summary": "Time remaining until daily upload, generation, and publish limits reset.",
-    "tips": ["Plan heavy create or publish sessions before reset if you are near the cap."]
+    "tips": [
+      "Plan heavy create or publish sessions before reset if you are near the cap."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Time remaining until daily upload, generation, and publish limits reset."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Limit Reset Timer to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Plan heavy create or publish sessions before reset if you are near the cap."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.nav-dashboard": {
     "title": "Dashboard",
     "summary": "Home overview: level, journey, stats, and quick actions.",
-    "tips": ["Start here for progress and shortcuts."]
+    "tips": [
+      "Start here for progress and shortcuts."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Home overview: level, journey, stats, and quick actions."
+      },
+      {
+        "category": "How to use",
+        "body": "Open Dashboard from the sidebar to see your level, journey tasks, and overview cards. Use quick actions to jump into Generator, Creations, Marketing, or Automations."
+      },
+      {
+        "category": "Tip",
+        "body": "Start here for progress and shortcuts."
+      },
+      {
+        "category": "Good to know",
+        "body": "Dashboard is the best place to check progress before starting a longer creative session."
+      }
+    ]
   },
   "chrome.nav-generator": {
     "title": "Generator",
     "summary": "Create new AI designs from a prompt and optional reference images.",
-    "tips": ["Best place to start a new design."]
+    "tips": [
+      "Best place to start a new design."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Create new AI designs from a prompt and optional reference images."
+      },
+      {
+        "category": "How to use",
+        "body": "Open Generator, enter a prompt, optionally add a reference image, then start generation. Results land in Creations when ready."
+      },
+      {
+        "category": "Tip",
+        "body": "Best place to start a new design."
+      },
+      {
+        "category": "Good to know",
+        "body": "Clear prompts and a strong reference image usually produce more consistent designs."
+      }
+    ]
   },
   "chrome.nav-creations": {
     "title": "Creations",
     "summary": "Your design library and published products.",
-    "tips": ["Switch between Designs and Products tabs."]
+    "tips": [
+      "Switch between Designs and Products tabs."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Your design library and published products."
+      },
+      {
+        "category": "How to use",
+        "body": "Open Creations and switch Designs / Products. Search or filter, then tap a card to preview, edit, or manage visibility."
+      },
+      {
+        "category": "Tip",
+        "body": "Switch between Designs and Products tabs."
+      },
+      {
+        "category": "Good to know",
+        "body": "Inactive designs stay in your library but are hidden from shop-facing flows."
+      }
+    ]
   },
   "chrome.nav-marketing": {
     "title": "Marketing",
     "summary": "Content creation, publishing, and promotions for your shop.",
-    "tips": ["Skill-tree layout: create → publish → promote."]
+    "tips": [
+      "Skill-tree layout: create → publish → promote."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Content creation, publishing, and promotions for your shop."
+      },
+      {
+        "category": "How to use",
+        "body": "Open Marketing and follow the skill tree: create content, publish to channels, then promote. Expand a branch to open the matching tools."
+      },
+      {
+        "category": "Tip",
+        "body": "Skill-tree layout: create → publish → promote."
+      },
+      {
+        "category": "Good to know",
+        "body": "Finish create → publish before heavy promotion so assets stay in sync."
+      }
+    ]
   },
   "chrome.nav-automations": {
     "title": "Automations",
     "summary": "Schedule recurring design generation and later publish or marketing jobs.",
-    "tips": ["Design Generator automations are available first."]
+    "tips": [
+      "Design Generator automations are available first."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Schedule recurring design generation and later publish or marketing jobs."
+      },
+      {
+        "category": "How to use",
+        "body": "Open Automations, pick a tab (Design Generator first), then add or manage scheduled jobs. Active / Scheduled / Expired filters help you find the right runs."
+      },
+      {
+        "category": "Tip",
+        "body": "Design Generator automations are available first."
+      },
+      {
+        "category": "Good to know",
+        "body": "Start with Design Generator automations; publish and marketing jobs unlock as the feature expands."
+      }
+    ]
   },
   "chrome.mobile-menu": {
     "title": "Menu",
     "summary": "Opens the mobile navigation drawer.",
-    "tips": ["Switch screens or Shop/Creator mode from here."]
+    "tips": [
+      "Switch screens or Shop/Creator mode from here."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Opens the mobile navigation drawer."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Menu to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Switch screens or Shop/Creator mode from here."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.mobile-dots": {
     "title": "Screen Indicators",
     "summary": "Shows which mobile screen you are on. Swipe left or right to change screens.",
-    "tips": ["Five dots = five Creator screens."]
+    "tips": [
+      "Five dots = five Creator screens."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Shows which mobile screen you are on. Swipe left or right to change screens."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Screen Indicators to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Five dots = five Creator screens."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.copyright": {
     "title": "Copyright",
     "summary": "eazpire brand and year notice.",
-    "tips": ["Informational only."]
+    "tips": [
+      "Informational only."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "eazpire brand and year notice."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Copyright to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Informational only."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.terms": {
     "title": "Terms & Policies",
     "summary": "Opens legal terms and policies for the Creator platform.",
-    "tips": ["Read these before publishing commercially."]
+    "tips": [
+      "Read these before publishing commercially."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Opens legal terms and policies for the Creator platform."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Terms & Policies to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Read these before publishing commercially."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.language": {
     "title": "Language",
     "summary": "Changes the UI language for Creator.",
-    "tips": ["Your choice is remembered for later visits."]
+    "tips": [
+      "Your choice is remembered for later visits."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Changes the UI language for Creator."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Language to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Your choice is remembered for later visits."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
+    ]
   },
   "chrome.eazv": {
     "title": "EAZV Balance",
@@ -402,6 +1616,32 @@
       "Different from EAZC (earnings).",
       "Earn via activity, convert from EAZC, or buy packs.",
       "Opens EAZ settings."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Spendable in-app currency for features such as generate, hero images, and unlocks."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap EAZV Balance to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Different from EAZC (earnings)."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Earn via activity, convert from EAZC, or buy packs."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Opens EAZ settings."
+      },
+      {
+        "category": "Good to know",
+        "body": "This belongs to the shared Creator chrome (header, limits, or footer)."
+      }
     ]
   },
   "dashboard.journey-section": {
@@ -410,17 +1650,79 @@
     "tips": [
       "Finish open tasks, then claim XP.",
       "The progress bar shows overall completion."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Guided onboarding tasks that teach Creator tools and reward XP."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Your Creator Journey to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Finish open tasks, then claim XP."
+      },
+      {
+        "category": "Tip 2",
+        "body": "The progress bar shows overall completion."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
     ]
   },
   "dashboard.journey-tab-open": {
     "title": "Open Tasks",
     "summary": "Journey tasks you still need to complete.",
-    "tips": ["Outside Guide Mode, tap a task to jump to the right screen."]
+    "tips": [
+      "Outside Guide Mode, tap a task to jump to the right screen."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Journey tasks you still need to complete."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Open Tasks to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Outside Guide Mode, tap a task to jump to the right screen."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.journey-tab-completed": {
     "title": "Completed Tasks",
     "summary": "Journey tasks you already finished.",
-    "tips": ["Review what you have unlocked."]
+    "tips": [
+      "Review what you have unlocked."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Journey tasks you already finished."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Completed Tasks to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Review what you have unlocked."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.journey-item": {
     "title": "Journey Task",
@@ -428,77 +1730,384 @@
     "tips": [
       "Some tasks open settings or other screens.",
       "Look for claim XP when a task is ready."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "A single journey step. Completing it earns XP."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Journey Task to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Some tasks open settings or other screens."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Look for claim XP when a task is ready."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
     ]
   },
   "dashboard.overview": {
     "title": "Overview",
     "summary": "Snapshot of your creator activity: designs, products, heroes, and sales on mobile.",
-    "tips": ["Cards jump to the matching screen outside Guide Mode."]
+    "tips": [
+      "Cards jump to the matching screen outside Guide Mode."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Snapshot of your creator activity: designs, products, heroes, and sales on mobile."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Overview to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Cards jump to the matching screen outside Guide Mode."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.stat-sales": {
     "title": "Sales",
     "summary": "Opens your sales and earnings overview.",
-    "tips": ["Shown in the mobile overview row.", "Tracks eazpire and Amazon sales context."]
+    "tips": [
+      "Shown in the mobile overview row.",
+      "Tracks eazpire and Amazon sales context."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Opens your sales and earnings overview."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Sales to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Shown in the mobile overview row."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Tracks eazpire and Amazon sales context."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.stat-designs": {
     "title": "Designs",
     "summary": "Count of generated and uploaded designs. Opens Creations → Designs.",
-    "tips": ["Generated vs uploaded are shown separately."]
+    "tips": [
+      "Generated vs uploaded are shown separately."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Count of generated and uploaded designs. Opens Creations → Designs."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Designs to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Generated vs uploaded are shown separately."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.stat-products": {
     "title": "Products",
     "summary": "Count of online and offline products. Opens Creations → Products.",
-    "tips": ["Online means visible in the shop."]
+    "tips": [
+      "Online means visible in the shop."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Count of online and offline products. Opens Creations → Products."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Products to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Online means visible in the shop."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.stat-heroes": {
     "title": "Hero Images",
     "summary": "Count of generated and online hero banners. Opens Marketing.",
-    "tips": ["Heroes rotate on your shop storefront."]
+    "tips": [
+      "Heroes rotate on your shop storefront."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Count of generated and online hero banners. Opens Marketing."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Hero Images to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Heroes rotate on your shop storefront."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.quick-actions": {
     "title": "Quick Actions",
     "summary": "Shortcuts to the most used Creator flows.",
-    "tips": ["Same destinations as the sidebar, with short descriptions."]
+    "tips": [
+      "Same destinations as the sidebar, with short descriptions."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Shortcuts to the most used Creator flows."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Quick Actions to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Same destinations as the sidebar, with short descriptions."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.qa-generator": {
     "title": "Design Generator",
     "summary": "Jump to the Generator to create a new design.",
-    "tips": ["Fastest path to a new artwork."]
+    "tips": [
+      "Fastest path to a new artwork."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Jump to the Generator to create a new design."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Design Generator to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Fastest path to a new artwork."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.qa-designs": {
     "title": "My Designs",
     "summary": "Jump to Creations → Designs to manage artwork.",
-    "tips": ["Activate, filter, or open a design from there."]
+    "tips": [
+      "Activate, filter, or open a design from there."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Jump to Creations → Designs to manage artwork."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap My Designs to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Activate, filter, or open a design from there."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.qa-content": {
     "title": "Content Creation",
     "summary": "Jump to Marketing to create hero images and other content.",
-    "tips": ["Part of the marketing skill tree."]
+    "tips": [
+      "Part of the marketing skill tree."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Jump to Marketing to create hero images and other content."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Content Creation to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Part of the marketing skill tree."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.qa-products": {
     "title": "My Products",
     "summary": "Jump to Creations → Products.",
-    "tips": ["Manage published listings."]
+    "tips": [
+      "Manage published listings."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Jump to Creations → Products."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap My Products to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Manage published listings."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.qa-automations": {
     "title": "Automations",
     "summary": "Jump to Automations to schedule design generation.",
-    "tips": ["Useful once you have a repeatable prompt style."]
+    "tips": [
+      "Useful once you have a repeatable prompt style."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Jump to Automations to schedule design generation."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Automations to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Useful once you have a repeatable prompt style."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "dashboard.section-reorder": {
     "title": "Reorder Sections",
     "summary": "Drag handle to change the order of dashboard sections on mobile.",
-    "tips": ["Personalize what appears first."]
+    "tips": [
+      "Personalize what appears first."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Drag handle to change the order of dashboard sections on mobile."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Reorder Sections to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Personalize what appears first."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Dashboard screen."
+      }
+    ]
   },
   "generator.target-product": {
     "title": "Target Product",
     "summary": "Choose which product type the design should fit, or Anything for flexibility.",
-    "tips": ["Anything keeps the design usable across more products."]
+    "tips": [
+      "Anything keeps the design usable across more products."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Choose which product type the design should fit, or Anything for flexibility."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Target Product to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Anything keeps the design usable across more products."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
+    ]
   },
   "generator.design-type": {
     "title": "Design Type",
     "summary": "Style family for generation (for example Classic).",
-    "tips": ["Different types change look and composition."]
+    "tips": [
+      "Different types change look and composition."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Style family for generation (for example Classic)."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Design Type to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Different types change look and composition."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
+    ]
   },
   "generator.upload": {
     "title": "Upload Reference",
@@ -506,22 +2115,104 @@
     "tips": [
       "Clear photos and simple subjects work best.",
       "Counts toward daily uploads."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Optional reference image to guide the AI."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Upload Reference to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Clear photos and simple subjects work best."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Counts toward daily uploads."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
     ]
   },
   "generator.reference-images": {
     "title": "Reference Images",
     "summary": "Selected references and how strongly they influence the result.",
-    "tips": ["Remove or adjust influence before generating."]
+    "tips": [
+      "Remove or adjust influence before generating."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Selected references and how strongly they influence the result."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Reference Images to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Remove or adjust influence before generating."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
+    ]
   },
   "generator.suggest": {
     "title": "Suggest",
     "summary": "Fills or improves the prompt with AI suggestions.",
-    "tips": ["Good when you need a starting idea."]
+    "tips": [
+      "Good when you need a starting idea."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Fills or improves the prompt with AI suggestions."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Suggest to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Good when you need a starting idea."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
+    ]
   },
   "generator.clear": {
     "title": "Clear",
     "summary": "Clears the prompt and related draft fields.",
-    "tips": ["Use before starting a completely new idea."]
+    "tips": [
+      "Use before starting a completely new idea."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Clears the prompt and related draft fields."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Clear to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Use before starting a completely new idea."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
+    ]
   },
   "generator.prompt": {
     "title": "Design Prompt",
@@ -529,12 +2220,54 @@
     "tips": [
       "Mention subject, style, colors, and mood.",
       "Pair with a reference image if needed."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Describe the design you want. More detail usually means better results."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Design Prompt to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Mention subject, style, colors, and mood."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Pair with a reference image if needed."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
     ]
   },
   "generator.more-options": {
     "title": "More Options",
     "summary": "Extra generation settings and advanced controls.",
-    "tips": ["Open when you need finer control than the main form."]
+    "tips": [
+      "Open when you need finer control than the main form."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Extra generation settings and advanced controls."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap More Options to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Open when you need finer control than the main form."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
+    ]
   },
   "generator.generate": {
     "title": "Start Generation",
@@ -542,52 +2275,254 @@
     "tips": [
       "Confirm cost before running.",
       "Results appear in Creations and notifications."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Starts an AI design job. Costs EAZV and uses a daily generation slot."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Start Generation to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Confirm cost before running."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Results appear in Creations and notifications."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Generator screen."
+      }
     ]
   },
   "creations.tab-designs": {
     "title": "Designs Tab",
     "summary": "All designs you generated or uploaded.",
-    "tips": ["Open a card for preview and actions."]
+    "tips": [
+      "Open a card for preview and actions."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "All designs you generated or uploaded."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Designs Tab to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Open a card for preview and actions."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.tab-products": {
     "title": "Products Tab",
     "summary": "Products published from your designs.",
-    "tips": ["Online and offline status is managed here."]
+    "tips": [
+      "Online and offline status is managed here."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Products published from your designs."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Products Tab to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Online and offline status is managed here."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.view-mode": {
     "title": "View Mode",
     "summary": "Switch between 2-column, 3-column, or list layout.",
-    "tips": ["Pick denser grids when browsing many items."]
+    "tips": [
+      "Pick denser grids when browsing many items."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Switch between 2-column, 3-column, or list layout."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap View Mode to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Pick denser grids when browsing many items."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.search": {
     "title": "Search",
     "summary": "Filter the current list by text.",
-    "tips": ["Works on Designs and Products."]
+    "tips": [
+      "Works on Designs and Products."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Filter the current list by text."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Search to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Works on Designs and Products."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.filter": {
     "title": "Filter",
     "summary": "Narrow by status, type, or other criteria.",
-    "tips": ["Combine with search for faster finding."]
+    "tips": [
+      "Combine with search for faster finding."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Narrow by status, type, or other criteria."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Filter to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Combine with search for faster finding."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.upload": {
     "title": "Upload Design",
     "summary": "Upload your own artwork into the library.",
-    "tips": ["Uses a daily upload slot."]
+    "tips": [
+      "Uses a daily upload slot."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Upload your own artwork into the library."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Upload Design to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Uses a daily upload slot."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.activity-active": {
     "title": "Active Designs",
     "summary": "Designs currently active in your library.",
-    "tips": ["Active designs can be used for products."]
+    "tips": [
+      "Active designs can be used for products."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Designs currently active in your library."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Active Designs to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Active designs can be used for products."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.activity-inactive": {
     "title": "Inactive Designs",
     "summary": "Designs you deactivated or locked.",
-    "tips": ["Reactivate or unlock when needed."]
+    "tips": [
+      "Reactivate or unlock when needed."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Designs you deactivated or locked."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Inactive Designs to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Reactivate or unlock when needed."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.count": {
     "title": "Item Count",
     "summary": "How many designs or products match the current filters.",
-    "tips": ["Updates as you search or filter."]
+    "tips": [
+      "Updates as you search or filter."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "How many designs or products match the current filters."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Item Count to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Updates as you search or filter."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.design-card": {
     "title": "Design Card",
@@ -595,22 +2530,104 @@
     "tips": [
       "Product badge shows linked products.",
       "Activate or deactivate controls library state."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "One design. Opens preview or Design Studio outside Guide Mode."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Design Card to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Product badge shows linked products."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Activate or deactivate controls library state."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
     ]
   },
   "creations.products-badge": {
     "title": "Linked Products",
     "summary": "Number of products created from this design.",
-    "tips": ["Opens product context from the design."]
+    "tips": [
+      "Opens product context from the design."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Number of products created from this design."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Linked Products to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Opens product context from the design."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.library-btn": {
     "title": "Activate / Deactivate / Unlock",
     "summary": "Changes whether the design is available in your library.",
-    "tips": ["Unlock may cost EAZV depending on your rules."]
+    "tips": [
+      "Unlock may cost EAZV depending on your rules."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Changes whether the design is available in your library."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Activate / Deactivate / Unlock to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Unlock may cost EAZV depending on your rules."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "creations.product-card": {
     "title": "Product Card",
     "summary": "One published product. Opens product preview or editor outside Guide Mode.",
-    "tips": ["Check online vs offline status in Overview."]
+    "tips": [
+      "Check online vs offline status in Overview."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "One published product. Opens product preview or editor outside Guide Mode."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Product Card to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Check online vs offline status in Overview."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Creations screen."
+      }
+    ]
   },
   "marketing.content-creation": {
     "title": "Content Creation",
@@ -618,17 +2635,79 @@
     "tips": [
       "Expand to see creation tools.",
       "Hero Images open a dedicated create flow."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Create marketing assets: hero images, video, and later images."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Content Creation to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Expand to see creation tools."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Hero Images open a dedicated create flow."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
     ]
   },
   "marketing.content-publish": {
     "title": "Content Publish",
     "summary": "Manage assets you already created — libraries and publish status.",
-    "tips": ["Separate from creation: here you review what you have."]
+    "tips": [
+      "Separate from creation: here you review what you have."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Manage assets you already created — libraries and publish status."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Content Publish to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Separate from creation: here you review what you have."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.promotion": {
     "title": "Promotion",
     "summary": "Shop promotions and discounts for your storefront.",
-    "tips": ["Create active or upcoming offers from here."]
+    "tips": [
+      "Create active or upcoming offers from here."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Shop promotions and discounts for your storefront."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Promotion to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Create active or upcoming offers from here."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.hero-images-create": {
     "title": "Hero Images (Create)",
@@ -636,112 +2715,554 @@
     "tips": [
       "Up to 5 products per hero.",
       "Published heroes rotate on your shop."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Create rotating shop title or hero banners. Costs EAZV."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Hero Images (Create) to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Up to 5 products per hero."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Published heroes rotate on your shop."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
     ]
   },
   "marketing.video-create": {
     "title": "Video",
     "summary": "Create marketing video content.",
-    "tips": ["Opens Video Studio and Video Generator tools."]
+    "tips": [
+      "Opens Video Studio and Video Generator tools."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Create marketing video content."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Video to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Opens Video Studio and Video Generator tools."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.images-create": {
     "title": "Images",
     "summary": "Extra image creation tools — coming soon.",
-    "tips": ["Placeholder until the feature ships."]
+    "tips": [
+      "Placeholder until the feature ships."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Extra image creation tools — coming soon."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Images to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Placeholder until the feature ships."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.video-studio": {
     "title": "Video Studio",
     "summary": "Edit and assemble marketing videos from tracks and saved projects.",
-    "tips": ["Use for longer edited clips."]
+    "tips": [
+      "Use for longer edited clips."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Edit and assemble marketing videos from tracks and saved projects."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Video Studio to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Use for longer edited clips."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.video-generator": {
     "title": "Video Generator",
     "summary": "Generate motion or video clips for marketing.",
-    "tips": ["Faster path when you want AI-assisted motion."]
+    "tips": [
+      "Faster path when you want AI-assisted motion."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Generate motion or video clips for marketing."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Video Generator to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Faster path when you want AI-assisted motion."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.publish-heroes": {
     "title": "Published Hero Images",
     "summary": "Grid of hero images ready or already online.",
-    "tips": ["Empty state appears when you have none yet."]
+    "tips": [
+      "Empty state appears when you have none yet."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Grid of hero images ready or already online."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Published Hero Images to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Empty state appears when you have none yet."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.social-media-manager": {
     "title": "Social Media Manager",
     "summary": "Connect your social accounts and publish posts from one place.",
-    "tips": ["Opens a fullscreen manager. Connect shows networks; posting comes in a later update."]
+    "tips": [
+      "Opens a fullscreen manager. Connect shows networks; posting comes in a later update."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Connect your social accounts and publish posts from one place."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Social Media Manager to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Opens a fullscreen manager. Connect shows networks; posting comes in a later update."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.publish-videos": {
     "title": "Published Videos",
     "summary": "Replaced by Social Media Manager under Content Publish.",
-    "tips": ["Use Social Media Manager instead."]
+    "tips": [
+      "Use Social Media Manager instead."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Replaced by Social Media Manager under Content Publish."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Published Videos to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Use Social Media Manager instead."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.publish-images": {
     "title": "Published Images",
     "summary": "Replaced by Social Media Manager under Content Publish.",
-    "tips": ["Use Social Media Manager instead."]
+    "tips": [
+      "Use Social Media Manager instead."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Replaced by Social Media Manager under Content Publish."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Published Images to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Use Social Media Manager instead."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.promo-tab-active": {
     "title": "Active Promotions",
     "summary": "Promotions currently live in your shop.",
-    "tips": ["Edit a card to change discount or dates."]
+    "tips": [
+      "Edit a card to change discount or dates."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Promotions currently live in your shop."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Active Promotions to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Edit a card to change discount or dates."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.promo-tab-upcoming": {
     "title": "Upcoming Promotions",
     "summary": "Scheduled promotions that have not started yet.",
-    "tips": ["Prepare campaigns before go-live."]
+    "tips": [
+      "Prepare campaigns before go-live."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Scheduled promotions that have not started yet."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Upcoming Promotions to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Prepare campaigns before go-live."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.promo-tab-ended": {
     "title": "Ended Promotions",
     "summary": "Past promotions for history.",
-    "tips": ["Useful for repeating successful offers."]
+    "tips": [
+      "Useful for repeating successful offers."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Past promotions for history."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Ended Promotions to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Useful for repeating successful offers."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.promo-tab-all": {
     "title": "All Promotions",
     "summary": "Full list regardless of status.",
-    "tips": ["Fast overview across campaigns."]
+    "tips": [
+      "Fast overview across campaigns."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Full list regardless of status."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap All Promotions to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Fast overview across campaigns."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.promo-new": {
     "title": "New Promotion",
     "summary": "Start a new shop promotion.",
-    "tips": ["Set discount, dates, and targeting in the editor."]
+    "tips": [
+      "Set discount, dates, and targeting in the editor."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Start a new shop promotion."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap New Promotion to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Set discount, dates, and targeting in the editor."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "marketing.promo-card": {
     "title": "Promotion Card",
     "summary": "One promotion with status and discount summary.",
-    "tips": ["Opens the editor for that promotion outside Guide Mode."]
+    "tips": [
+      "Opens the editor for that promotion outside Guide Mode."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "One promotion with status and discount summary."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Promotion Card to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Opens the editor for that promotion outside Guide Mode."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Marketing screen."
+      }
+    ]
   },
   "automations.tab-design": {
     "title": "Design Generator Automations",
     "summary": "Schedule recurring design generation jobs.",
-    "tips": ["Main automation area available today."]
+    "tips": [
+      "Main automation area available today."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Schedule recurring design generation jobs."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Design Generator Automations to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Main automation area available today."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
+    ]
   },
   "automations.tab-publish": {
     "title": "Publish Automations",
     "summary": "Automate publishing flows — coming soon.",
-    "tips": ["Placeholder until enabled."]
+    "tips": [
+      "Placeholder until enabled."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Automate publishing flows — coming soon."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Publish Automations to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Placeholder until enabled."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
+    ]
   },
   "automations.tab-marketing": {
     "title": "Marketing Automations",
     "summary": "Automate marketing posts or content — coming soon.",
-    "tips": ["Placeholder until enabled."]
+    "tips": [
+      "Placeholder until enabled."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Automate marketing posts or content — coming soon."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Marketing Automations to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Placeholder until enabled."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
+    ]
   },
   "automations.status-active": {
     "title": "Active",
     "summary": "Automations currently running.",
-    "tips": ["Toggle Active on a card to pause or resume."]
+    "tips": [
+      "Toggle Active on a card to pause or resume."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Automations currently running."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Active to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Toggle Active on a card to pause or resume."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
+    ]
   },
   "automations.status-scheduled": {
     "title": "Scheduled",
     "summary": "Automations waiting for their next run.",
-    "tips": ["Check last run and generation counts on cards."]
+    "tips": [
+      "Check last run and generation counts on cards."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Automations waiting for their next run."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Scheduled to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Check last run and generation counts on cards."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
+    ]
   },
   "automations.status-expired": {
     "title": "Expired",
     "summary": "Automations that finished or expired.",
-    "tips": ["Recreate or edit if you need them again."]
+    "tips": [
+      "Recreate or edit if you need them again."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Automations that finished or expired."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Expired to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Recreate or edit if you need them again."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
+    ]
   },
   "automations.add": {
     "title": "Add Automation",
     "summary": "Create a new automation rule.",
-    "tips": ["Define schedule, prompt style, and limits in the create flow."]
+    "tips": [
+      "Define schedule, prompt style, and limits in the create flow."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Create a new automation rule."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Add Automation to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Define schedule, prompt style, and limits in the create flow."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
+    ]
   },
   "automations.card": {
     "title": "Automation Card",
@@ -750,11 +3271,57 @@
       "Title opens edit outside Guide Mode.",
       "Preview opens overview.",
       "Active switch pauses new runs."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "One automation: title, created date, last run, and generations."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Automation Card to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip 1",
+        "body": "Title opens edit outside Guide Mode."
+      },
+      {
+        "category": "Tip 2",
+        "body": "Preview opens overview."
+      },
+      {
+        "category": "Tip 3",
+        "body": "Active switch pauses new runs."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
     ]
   },
   "automations.active-toggle": {
     "title": "Active Switch",
     "summary": "Pause or resume this automation without deleting it.",
-    "tips": ["Paused jobs stop new runs."]
+    "tips": [
+      "Paused jobs stop new runs."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Pause or resume this automation without deleting it."
+      },
+      {
+        "category": "How to use",
+        "body": "In Guide Mode, tap Active Switch to learn about it. Outside Guide Mode, use it as a normal Creator control."
+      },
+      {
+        "category": "Tip",
+        "body": "Paused jobs stop new runs."
+      },
+      {
+        "category": "Good to know",
+        "body": "This control lives on the Automations screen."
+      }
+    ]
   }
 }

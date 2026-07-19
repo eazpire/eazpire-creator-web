@@ -1366,6 +1366,9 @@
         mockup_image: toImageString(p.mockup_image) || null,
         preview_image: toImageString(p.preview_image) || null,
         printify_images: Array.isArray(p.printify_images) ? p.printify_images : null,
+        printify_product_id: p.printify_product_id || null,
+        mockups_by_view:
+          p.mockups_by_view && typeof p.mockups_by_view === 'object' ? p.mockups_by_view : null,
         product_key: p.product_key,
         product_name: p.product_name,
         shopify_handle: p.shopify_handle || null,
@@ -2459,7 +2462,7 @@
   function withPortalCacheBust(url) {
     if (!url) return url;
     if (String(url).indexOf('?') !== -1) return url;
-    var v = window.__CREATOR_PORTAL_ASSET_V || 'ppm-20260719c';
+    var v = window.__CREATOR_PORTAL_ASSET_V || 'ppm-fix-20260719d';
     return String(url) + '?v=' + v;
   }
 
@@ -2537,6 +2540,12 @@
       imageUrl: imageUrl,
       renderedSrc: imageUrl,
       publishedDesignId: prod.published_design_id || null,
+      printifyProductId: prod.printify_product_id || null,
+      printifyImages: Array.isArray(prod.printify_images) ? prod.printify_images : null,
+      mockupsByView:
+        prod.mockups_by_view && typeof prod.mockups_by_view === 'object'
+          ? prod.mockups_by_view
+          : null,
     };
 
     ensureProductPreviewModal()

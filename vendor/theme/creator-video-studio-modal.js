@@ -1120,6 +1120,10 @@
         'link_error_youtube_failed',
         'Could not extract media from that YouTube link (experimental). Try again later, or save the file and use Device instead.'
       ),
+      snapchat_failed: i18n(
+        'link_error_snapchat_failed',
+        'Could not extract media from that Snapchat link. Only public Spotlights / stories work — expired or private snaps: save the file and use Device instead.'
+      ),
       unsupported_content_type: i18n(
         'link_error_content_type',
         "That link doesn't point directly to a video, audio, or image file."
