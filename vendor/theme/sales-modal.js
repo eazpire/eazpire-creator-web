@@ -933,11 +933,12 @@
     if (networkDateTo) networkDateTo.value = toYMD(now);
   }
 
-  var cashoutCfg = {
+  var convertCfg = {
     eaz_cents_per_eaz: 10,
     fiat_currency: 'USD',
     min_convert_eaz: 100,
-    available_eaz: 0
+    available_eaz: 0,
+    pendingAmount: 0
   };
 
   function fmtEazAmount(n) {
@@ -945,51 +946,55 @@
     return v % 1 === 0 ? String(v) : v.toFixed(2);
   }
 
-  function cashoutI18n(key, fallback) {
+  function convertI18n(key, fallback) {
     var map = {
-      preview: (overlay && overlay.dataset.i18nCashoutPreview) || '≈ {{amount}} (lowest rate)',
-      min: (overlay && overlay.dataset.i18nCashoutMin) || 'Minimum {{min}} EAZC required.',
-      success: (overlay && overlay.dataset.i18nCashoutSuccess) || 'Conversion complete. Fiat is now available for payout.',
-      fail: (overlay && overlay.dataset.i18nCashoutFail) || 'Conversion failed.'
+      min: (overlay && overlay.dataset.i18nConvertMinEazc) || 'Minimum {{min}} EAZC required.',
+      fail: (overlay && overlay.dataset.i18nConvertFail) || 'Conversion failed.',
+      celebrating: (overlay && overlay.dataset.i18nConvertCelebrating) || 'Converting EAZC…',
+      celebrateTitle: (overlay && overlay.dataset.i18nConvertCelebrateTitle) || 'Converted!',
+      celebrateSubtitle:
+        (overlay && overlay.dataset.i18nConvertCelebrateSubtitle) ||
+        '{{eazc}} EAZC → {{fiat}} added to your fiat balance.'
     };
     return map[key] || fallback || '';
   }
 
-  function formatFiatFromUsdCents(cents) {
+  function formatFiatUsdFromCents(cents) {
     var usd = Number(cents || 0) / 100;
-    var target = normalizeCurrencyCode(
-      (typeof window !== 'undefined' && window.__EAZ_PRESENTMENT_CURRENCY) ||
-        cashoutCfg.fiat_currency ||
-        earningsDisplayCurrency ||
-        'USD',
-      'USD'
-    );
-    if (typeof window.EazShopMoney !== 'undefined' && typeof window.EazShopMoney.convertUsdToPresentment === 'function') {
-      try {
-        return window.EazShopMoney.convertUsdToPresentment(usd, target);
-      } catch (_e) { /* fall through */ }
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(usd);
+    } catch (_e) {
+      return '$' + usd.toFixed(2);
     }
-    return formatMoney(usd, target);
   }
 
-  function updateCashoutPreview() {
-    var preview = document.getElementById('slmCashoutPreview');
-    var amountEl = document.getElementById('slmCashoutAmount');
-    var availEl = document.getElementById('slmCashoutAvail');
-    if (availEl) availEl.textContent = fmtEazAmount(cashoutCfg.available_eaz) + ' EAZC';
-    if (!preview) return;
+  function getConvertAmount() {
+    var amountEl = document.getElementById('slmConvertAmount');
+    return Number(amountEl && amountEl.value);
+  }
+
+  function updateConvertSyncPreview() {
+    var amountEl = document.getElementById('slmConvertAmount');
+    var availEl = document.getElementById('slmConvertAvail');
+    var fiatEl = document.getElementById('slmConvertFiatSync');
+    if (availEl) availEl.textContent = fmtEazAmount(convertCfg.available_eaz) + ' EAZC';
     var amount = Number(amountEl && amountEl.value);
-    var rate = cashoutCfg.eaz_cents_per_eaz || 10;
+    var rate = convertCfg.eaz_cents_per_eaz || 10;
     if (!amount || amount <= 0 || !rate) {
-      preview.textContent = '';
+      if (fiatEl) fiatEl.textContent = formatFiatUsdFromCents(0);
       return;
     }
     var usdCents = Math.round(amount * rate);
-    preview.textContent = cashoutI18n('preview').replace(/\{\{amount\}\}/g, formatFiatFromUsdCents(usdCents));
+    if (fiatEl) fiatEl.textContent = formatFiatUsdFromCents(usdCents);
   }
 
-  function setCashoutMsg(text, kind) {
-    var el = document.getElementById('slmCashoutMsg');
+  function setConvertMsg(text, kind) {
+    var el = document.getElementById('slmConvertMsg');
     if (!el) return;
     el.hidden = !text;
     el.textContent = text || '';
@@ -997,22 +1002,79 @@
     if (kind) el.classList.add(kind === 'error' ? 'is-error' : 'is-success');
   }
 
-  async function runCashout(op) {
+  function closeEazcConfirmModal() {
+    var modal = document.getElementById('slmEazcConfirmModal');
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function openEazcConfirmModal() {
+    var amount = getConvertAmount();
+    var min = convertCfg.min_convert_eaz || 100;
+    var rate = convertCfg.eaz_cents_per_eaz || 10;
+    if (!amount || amount < min) {
+      setConvertMsg(convertI18n('min').replace(/\{\{min\}\}/g, String(min)), 'error');
+      return;
+    }
+    if (amount > convertCfg.available_eaz + 1e-9) {
+      setConvertMsg(convertI18n('fail'), 'error');
+      return;
+    }
+    setConvertMsg('', null);
+    var usdCents = Math.round(amount * rate);
+    var after = Math.max(0, convertCfg.available_eaz - amount);
+    var eazcEl = document.getElementById('slmEazcConfirmEazc');
+    var rateEl = document.getElementById('slmEazcConfirmRate');
+    var fiatEl = document.getElementById('slmEazcConfirmFiat');
+    var afterEl = document.getElementById('slmEazcConfirmAfter');
+    if (eazcEl) eazcEl.textContent = fmtEazAmount(amount) + ' EAZC';
+    if (rateEl) rateEl.textContent = formatFiatUsdFromCents(rate) + ' / EAZC';
+    if (fiatEl) fiatEl.textContent = formatFiatUsdFromCents(usdCents);
+    if (afterEl) afterEl.textContent = fmtEazAmount(after) + ' EAZC';
+    var modal = document.getElementById('slmEazcConfirmModal');
+    if (!modal) return;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function showEazcConvertCelebration(eazcAmount, fiatText) {
+    if (!convertAnimation) return;
+    var animText = convertAnimation.querySelector('.slm-convert-animation__text');
+    convertAnimation.classList.add('is-open', 'is-celebration', 'is-eazc-convert');
+    convertAnimation.setAttribute('aria-hidden', 'false');
+    if (animText) {
+      var title = convertAnimation.dataset.i18nEazcCelebrateTitle || convertI18n('celebrateTitle');
+      var subtitleTpl =
+        convertAnimation.dataset.i18nEazcCelebrateSubtitle || convertI18n('celebrateSubtitle');
+      var subtitle = subtitleTpl
+        .replace(/\{\{eazc\}\}/g, fmtEazAmount(eazcAmount))
+        .replace(/\{\{fiat\}\}/g, fiatText);
+      animText.textContent = title + ' — ' + subtitle;
+    }
+  }
+
+  async function confirmEazcConvert() {
     var ownerId = getOwnerId();
-    var amountEl = document.getElementById('slmCashoutAmount');
-    var amount = Number(amountEl && amountEl.value);
-    var min = cashoutCfg.min_convert_eaz || 100;
-    if (!ownerId || !amount || amount < min) {
-      setCashoutMsg(cashoutI18n('min').replace(/\{\{min\}\}/g, String(min)), 'error');
-      return;
+    var amountEl = document.getElementById('slmConvertAmount');
+    var amount = getConvertAmount();
+    var rate = convertCfg.eaz_cents_per_eaz || 10;
+    var usdCents = Math.round(amount * rate);
+    var fiatText = formatFiatUsdFromCents(usdCents);
+    closeEazcConfirmModal();
+    if (!ownerId || !amount) return;
+    if (convertAnimation) {
+      var animText = convertAnimation.querySelector('.slm-convert-animation__text');
+      convertAnimation.classList.add('is-open');
+      convertAnimation.classList.remove('is-celebration');
+      convertAnimation.setAttribute('aria-hidden', 'false');
+      if (animText) {
+        animText.textContent =
+          convertAnimation.dataset.i18nEazcCelebrating || convertI18n('celebrating');
+      }
     }
-    if (amount > cashoutCfg.available_eaz + 1e-9) {
-      setCashoutMsg(cashoutI18n('fail'), 'error');
-      return;
-    }
-    setCashoutMsg('', null);
     try {
-      var url = getApiBase() + '/apps/creator-dispatch?op=' + encodeURIComponent(op);
+      var url = getApiBase() + '/apps/creator-dispatch?op=convert-eaz-to-fiat';
       var res = await fetch(url, {
         method: 'POST',
         credentials: 'include',
@@ -1022,37 +1084,49 @@
       var data = await res.json();
       if (!data || !data.ok) throw new Error((data && data.error) || 'failed');
       if (amountEl) amountEl.value = '';
-      updateCashoutPreview();
-      setCashoutMsg(cashoutI18n('success'), 'success');
+      updateConvertSyncPreview();
+      showEazcConvertCelebration(amount, fiatText);
       await loadOverviewData();
       if (typeof window.reloadCreatorDashboardBalances === 'function') {
         window.reloadCreatorDashboardBalances();
       } else if (typeof window.loadCreatorSalesBalance === 'function') {
         window.loadCreatorSalesBalance(0);
       }
+      setTimeout(function () {
+        showConvertAnimation(false);
+        if (convertAnimation) convertAnimation.classList.remove('is-eazc-convert');
+      }, 2200);
     } catch (_e) {
-      setCashoutMsg(cashoutI18n('fail'), 'error');
+      showConvertAnimation(false);
+      if (convertAnimation) convertAnimation.classList.remove('is-eazc-convert');
+      setConvertMsg(convertI18n('fail'), 'error');
     }
   }
 
-  function bindCashoutUi() {
-    if (!overlay || overlay.__slmCashoutBound) return;
-    overlay.__slmCashoutBound = true;
-    var amountEl = document.getElementById('slmCashoutAmount');
-    var fiatBtn = document.getElementById('slmCashoutFiatBtn');
-    var gcBtn = document.getElementById('slmCashoutGcBtn');
+  function bindConvertUi() {
+    if (!overlay || overlay.__slmConvertBound) return;
+    overlay.__slmConvertBound = true;
+    var amountEl = document.getElementById('slmConvertAmount');
+    var convertBtn = document.getElementById('slmConvertBtn');
+    var confirmOk = document.getElementById('slmEazcConfirmOk');
+    var confirmModal = document.getElementById('slmEazcConfirmModal');
     if (amountEl) {
-      amountEl.addEventListener('input', updateCashoutPreview);
-      amountEl.addEventListener('change', updateCashoutPreview);
+      amountEl.addEventListener('input', updateConvertSyncPreview);
+      amountEl.addEventListener('change', updateConvertSyncPreview);
     }
-    if (fiatBtn) fiatBtn.addEventListener('click', function () { runCashout('convert-eaz-to-fiat'); });
-    if (gcBtn) gcBtn.addEventListener('click', function () { runCashout('convert-eaz-to-gift-card'); });
+    if (convertBtn) convertBtn.addEventListener('click', openEazcConfirmModal);
+    if (confirmOk) confirmOk.addEventListener('click', confirmEazcConvert);
+    if (confirmModal) {
+      confirmModal.querySelectorAll('[data-slm-eazc-confirm-close]').forEach(function (el) {
+        el.addEventListener('click', closeEazcConfirmModal);
+      });
+    }
   }
 
   async function loadOverviewData() {
     const ownerId = getOwnerId();
     if (!ownerId) return;
-    bindCashoutUi();
+    bindConvertUi();
     const fiatAvailableEl = document.getElementById('slmFiatAvailable');
     const fiatPaidOutEl = document.getElementById('slmFiatPaidOut');
     const fiatLifetimeEl = document.getElementById('slmFiatLifetime');
@@ -1125,16 +1199,17 @@
         if (eazcPendingEl) eazcPendingEl.textContent = fmtEazAmount(eazcPending) + ' EAZC';
         if (eazcConvertedEl) eazcConvertedEl.textContent = fmtEazAmount(eazcConverted) + ' EAZC';
         if (eazcLifetimeEl) eazcLifetimeEl.textContent = fmtEazAmount(eazcLifetime) + ' EAZC';
-        cashoutCfg.eaz_cents_per_eaz = Number(earned.eaz_cents_per_eaz || 10);
-        cashoutCfg.fiat_currency = earned.fiat_currency || 'USD';
-        cashoutCfg.min_convert_eaz = Number(earned.min_convert_eaz || 100);
-        cashoutCfg.available_eaz = eazcAvail;
-        var amountInput = document.getElementById('slmCashoutAmount');
+        convertCfg.eaz_cents_per_eaz = Number(earned.eaz_cents_per_eaz || 10);
+        convertCfg.fiat_currency = earned.fiat_currency || 'USD';
+        convertCfg.min_convert_eaz = Number(earned.min_convert_eaz || 100);
+        convertCfg.available_eaz = eazcAvail;
+        convertCfg.pendingAmount = eazcPending;
+        var amountInput = document.getElementById('slmConvertAmount');
         if (amountInput) {
-          amountInput.min = String(cashoutCfg.min_convert_eaz);
-          amountInput.max = String(Math.max(eazcAvail, cashoutCfg.min_convert_eaz));
+          amountInput.min = String(convertCfg.min_convert_eaz);
+          amountInput.max = String(Math.max(eazcAvail, convertCfg.min_convert_eaz));
         }
-        updateCashoutPreview();
+        updateConvertSyncPreview();
       }
 
       var payoutsListEl = document.getElementById('slmPayoutsList');

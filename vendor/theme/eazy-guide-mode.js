@@ -150,7 +150,9 @@
     var meta = getCreatorScreen() || "";
     var show = hasSelection();
 
-    ui.selectionBar.hidden = !show;
+    // Prefer class toggle over [hidden] — [hidden] uses display:none !important
+    if (show) ui.selectionBar.removeAttribute("hidden");
+    else ui.selectionBar.setAttribute("hidden", "");
     ui.selectionBar.classList.toggle("is-visible", show);
     ui.selectionTitle.textContent = title || i18n("creator.guide.selection_empty", "Selection");
     ui.selectionMeta.textContent = meta ? meta.charAt(0).toUpperCase() + meta.slice(1) : "";
@@ -763,10 +765,6 @@
   }
 
   function bindGuideInteractionFreeze() {
-    function isInteractiveHit(node) {
-      return !!findInteractiveTarget(node);
-    }
-
     function blockAndInspect(e) {
       if (!active) return;
       if (tools.screenshot) return;
@@ -774,34 +772,23 @@
       if (isInsideGuideUi(t)) return;
       if (getSnapTarget(t)) return;
 
-      // Freeze interactive targets only (keep page scroll working)
-      if (!isInteractiveHit(t) && e.type === "click") {
-        // Still allow inspecting labeled text nodes via closest walk
-        inspectTarget(t);
-        e.preventDefault();
-        e.stopPropagation();
-        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
-        return;
-      }
-
+      // Freeze navigation/actions, then explain selection.
+      // Important: do NOT preventDefault on pointerdown — that cancels the click event.
       e.preventDefault();
       e.stopPropagation();
       if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
 
-      if (tools.click && e.type === "click") {
+      if (tools.click) {
         inspectTarget(t);
       }
     }
 
     document.addEventListener("click", blockAndInspect, true);
     document.addEventListener(
-      "pointerdown",
+      "auxclick",
       function (e) {
         if (!active || tools.screenshot) return;
         if (isInsideGuideUi(e.target) || getSnapTarget(e.target)) return;
-        if (e.pointerType === "mouse" && e.button !== 0) return;
-        // Only block activation on interactive controls (not touch scroll)
-        if (!isInteractiveHit(e.target)) return;
         e.preventDefault();
         e.stopPropagation();
       },

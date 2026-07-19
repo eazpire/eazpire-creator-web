@@ -100,8 +100,8 @@ html.eaz-guide-active canvas[role="button"] {
 }
 
 .eaz-guide-selection.is-visible,
-html.eaz-guide-has-selection .eaz-guide-selection {
-  display: flex;
+html.eaz-guide-has-selection .eaz-guide-selection.is-visible {
+  display: flex !important;
 }
 
 .eaz-guide-selection__media {

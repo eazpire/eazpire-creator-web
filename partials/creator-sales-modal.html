@@ -26,10 +26,11 @@
   data-i18n-convert-min="Minimum 5.00 EUR required"
   data-i18n-bank-coming-soon="Bank transfer is coming soon."
   data-i18n-cta-submit="Request payout"
-  data-i18n-cashout-preview="≈  (lowest rate)"
-  data-i18n-cashout-min="Minimum  EAZC required."
-  data-i18n-cashout-success="Conversion complete. Fiat is now available for payout."
-  data-i18n-cashout-fail="Conversion failed.">
+  data-i18n-convert-min-eazc="Minimum  EAZC required."
+  data-i18n-convert-fail="Conversion failed."
+  data-i18n-convert-celebrate-title="Converted!"
+  data-i18n-convert-celebrate-subtitle=" EAZC →  added to your fiat balance."
+  data-i18n-convert-celebrating="Converting EAZC…">
   <div class="slm-drawer-backdrop" id="slmDrawerBackdrop" aria-hidden="true"></div>
   <nav class="slm-drawer" id="slmDrawer" aria-label="Page navigation">
     <button type="button" class="slm-drawer__close" id="slmDrawerClose" aria-label="Close menu">×</button>
@@ -183,7 +184,7 @@
                   <strong class="slm-kpi__value slm-kpi__value--eazc" id="slmEazcAvailable">—</strong>
                 </article>
                 <article class="slm-kpi">
-                  <span class="slm-kpi__label" data-t="creator.sales_modal.pending">Pending</span>
+                  <span class="slm-kpi__label" data-t="creator.sales_modal.pending" title="Pending EAZC comes from sales still inside the return window. It becomes available when that period ends.">Pending</span>
                   <strong class="slm-kpi__value slm-kpi__value--eazc" id="slmEazcPending">—</strong>
                 </article>
                 <article class="slm-kpi">
@@ -195,35 +196,34 @@
                   <strong class="slm-kpi__value slm-kpi__value--eazc" id="slmEazcLifetime">—</strong>
                 </article>
               </div>
+              <p class="slm-pending-hint" data-t="creator.sales_modal.pending_hint">Pending EAZC comes from sales still inside the return window. It becomes available when that period ends.</p>
             </div>
           </div>
 
-          <div class="slm-section slm-section--cashout" id="slmCashoutSection">
+          <div class="slm-section slm-section--convert" id="slmConvertSection">
             <div class="slm-section__header" style="pointer-events:none">
-              <span class="slm-section__title" data-t="creator.sales_modal.cashout_title">Cash out</span>
+              <span class="slm-section__title" data-t="creator.sales_modal.convert_title">Convert</span>
             </div>
             <div class="slm-section__body">
-              <div class="slm-cashout">
-                <p class="slm-cashout__hint" id="slmCashoutHint" data-t="creator.sales_modal.cashout_hint">Convert available EAZC to fiat at the lowest pack rate. Fiat then becomes available for payout.</p>
-                <div class="slm-cashout__amount-row">
-                  <div class="slm-cashout__field">
-                    <label class="slm-cashout__label" for="slmCashoutAmount" data-t="creator.sales_modal.cashout_amount_label">Amount (EAZC)</label>
-                    <input type="number" class="slm-cashout__input" id="slmCashoutAmount" min="100" step="1" inputmode="numeric">
+              <div class="slm-eazc-convert">
+                <p class="slm-eazc-convert__hint" data-t="creator.sales_modal.convert_hint">Convert available EAZC to fiat at the lowest pack rate. Fiat appears in your profile balance above.</p>
+                <div class="slm-eazc-convert__row">
+                  <div class="slm-eazc-convert__col slm-eazc-convert__col--eazc">
+                    <label class="slm-eazc-convert__label" for="slmConvertAmount" data-t="creator.sales_modal.convert_amount_label">Amount (EAZC)</label>
+                    <input type="number" class="slm-eazc-convert__input" id="slmConvertAmount" min="100" step="1" inputmode="numeric">
+                    <div class="slm-eazc-convert__avail" aria-live="polite">
+                      <img class="slm-eazc-convert__avail-coin" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo" alt="" width="16" height="16" loading="lazy" data-eaz-coin="eazc">
+                      <span data-t="creator.sales_modal.convert_available_label">AVAILABLE</span>
+                      <strong id="slmConvertAvail">0 EAZC</strong>
+                    </div>
                   </div>
-                  <div class="slm-cashout__avail" aria-live="polite">
-                    <span class="slm-cashout__avail-label">
-                      <img class="slm-cashout__avail-coin" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo" alt="" width="18" height="18" loading="lazy" data-eaz-coin="eazc">
-                      <span data-t="creator.sales_modal.cashout_available_label">AVAILABLE</span>
-                    </span>
-                    <span class="slm-cashout__avail-value" id="slmCashoutAvail">— EAZC</span>
+                  <div class="slm-eazc-convert__col slm-eazc-convert__col--fiat" aria-live="polite">
+                    <span class="slm-eazc-convert__label" data-t="creator.sales_modal.convert_fiat_label">Fiat (USD)</span>
+                    <strong class="slm-eazc-convert__fiat-value" id="slmConvertFiatSync">$0.00</strong>
                   </div>
                 </div>
-                <p class="slm-cashout__preview" id="slmCashoutPreview" aria-live="polite"></p>
-                <div class="slm-cashout__actions">
-                  <button type="button" class="slm-cta slm-cta--primary" id="slmCashoutFiatBtn" data-t="creator.sales_modal.cashout_fiat">Convert to fiat</button>
-                  <button type="button" class="slm-cta slm-cta--secondary" id="slmCashoutGcBtn" data-t="creator.sales_modal.cashout_gift_card">Convert to gift card</button>
-                </div>
-                <p class="slm-cashout__msg" id="slmCashoutMsg" hidden></p>
+                <button type="button" class="slm-cta slm-cta--primary slm-cta--full" id="slmConvertBtn" data-t="creator.sales_modal.convert_btn">Convert</button>
+                <p class="slm-eazc-convert__msg" id="slmConvertMsg" hidden></p>
               </div>
             </div>
           </div>
@@ -501,6 +501,37 @@
   </section>
 
   
+  <div class="slm-eazc-confirm" id="slmEazcConfirmModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="slmEazcConfirmTitle">
+    <div class="slm-eazc-confirm__backdrop" data-slm-eazc-confirm-close></div>
+    <div class="slm-eazc-confirm__panel">
+      <h3 class="slm-eazc-confirm__title" id="slmEazcConfirmTitle" data-t="creator.sales_modal.convert_confirm_title">Confirm conversion</h3>
+      <p class="slm-eazc-confirm__intro" data-t="creator.sales_modal.convert_confirm_intro">Please review the details before converting.</p>
+      <dl class="slm-eazc-confirm__details">
+        <div class="slm-eazc-confirm__row">
+          <dt data-t="creator.sales_modal.convert_confirm_eazc">EAZC to convert</dt>
+          <dd id="slmEazcConfirmEazc">—</dd>
+        </div>
+        <div class="slm-eazc-confirm__row">
+          <dt data-t="creator.sales_modal.convert_confirm_rate">Rate (lowest pack)</dt>
+          <dd id="slmEazcConfirmRate">—</dd>
+        </div>
+        <div class="slm-eazc-confirm__row">
+          <dt data-t="creator.sales_modal.convert_confirm_fiat">You receive (fiat)</dt>
+          <dd id="slmEazcConfirmFiat">—</dd>
+        </div>
+        <div class="slm-eazc-confirm__row">
+          <dt data-t="creator.sales_modal.convert_confirm_available_after">EAZC available after</dt>
+          <dd id="slmEazcConfirmAfter">—</dd>
+        </div>
+      </dl>
+      <div class="slm-eazc-confirm__actions">
+        <button type="button" class="slm-eazc-confirm__cancel" data-slm-eazc-confirm-close>Cancel</button>
+        <button type="button" class="slm-eazc-confirm__ok" id="slmEazcConfirmOk" data-t="creator.sales_modal.convert_confirm_btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  
   <div class="slm-withdraw-modal" id="slmWithdrawModal" aria-hidden="true"
     data-i18n-balance="You have %{amount} available."
     data-i18n-withdraw-bonus-preview="You will receive %{total} payout (+10% bonus)."
@@ -547,13 +578,17 @@
   <div class="slm-convert-animation" id="slmConvertAnimation" aria-hidden="true"
     data-i18n-wise-processing="Requesting bank payout..."
     data-i18n-celebrate-title="Congratulations!"
-    data-i18n-celebrate-subtitle="Your shop credit was added instantly.">
+    data-i18n-celebrate-subtitle="Your shop credit was added instantly."
+    data-i18n-eazc-celebrating="Converting EAZC…"
+    data-i18n-eazc-celebrate-title="Converted!"
+    data-i18n-eazc-celebrate-subtitle=" EAZC →  added to your fiat balance.">
     <div class="slm-convert-animation__inner">
+      <div class="slm-convert-animation__burst" aria-hidden="true"></div>
       <div class="slm-convert-animation__spinner"></div>
       <span class="slm-convert-animation__text">Converting to shop credit...</span>
       <div class="slm-convert-animation__rain" aria-hidden="true">
-        <span>€</span><span>💸</span><span>€</span><span>💰</span><span>€</span>
-        <span>💸</span><span>€</span><span>💰</span><span>€</span><span>💸</span>
+        <span>$</span><span>✨</span><span>$</span><span>💰</span><span>$</span>
+        <span>✨</span><span>$</span><span>💰</span><span>$</span><span>✨</span>
       </div>
     </div>
   </div>
