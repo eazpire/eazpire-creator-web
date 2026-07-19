@@ -95,29 +95,35 @@
               <p class="smm-panel__stub" data-t="creator.social_media_manager.new_post_stub">Compose and schedule posts after you connect at least one account.</p>
             </div>
             <div class="smm-new-post__composer" id="smm-new-post-composer" hidden>
-              <div class="smm-new-post__subheader">
-                <button
-                  type="button"
-                  class="smm-new-post__subheader-toggle"
-                  id="smm-assets-toggle"
-                  aria-expanded="true"
-                  aria-controls="smm-new-post-assets-panel"
-                  aria-label="Collapse assets section"
-                >
-                  <span class="smm-new-post__subheader-chevron" aria-hidden="true"></span>
-                  <span class="smm-new-post__assets-label" data-t="creator.social_media_manager.assets_label">Assets</span>
-                </button>
-              </div>
-              <div class="smm-new-post__assets-panel" id="smm-new-post-assets-panel">
-                <div class="smm-new-post__viewer" id="smm-new-post-viewer">
-                  <div class="smm-new-post__viewer-empty-wrap">
-                    <p class="smm-new-post__viewer-empty" data-t="creator.social_media_manager.viewer_empty">Pick an image or video to preview it here.</p>
-                    <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-choose-asset" data-t="creator.social_media_manager.choose_asset">Choose asset</button>
-                  </div>
-                </div>
-              </div>
-              <div class="smm-new-post__scroll smm-scroll-hide">
+              <div class="smm-new-post__scroll smm-scroll-hide" id="smm-new-post-scroll">
                 <div class="smm-new-post__fields">
+                  <section class="smm-compose-section" id="smm-section-assets" data-smm-section="assets">
+                    <div class="smm-compose-section__header">
+                      <button
+                        type="button"
+                        class="smm-compose-section__toggle"
+                        id="smm-assets-toggle"
+                        aria-expanded="true"
+                        aria-controls="smm-new-post-assets-panel"
+                        aria-label="Collapse assets section"
+                      >
+                        <span class="smm-compose-section__chevron" aria-hidden="true"></span>
+                        <span class="smm-compose-section__label" data-t="creator.social_media_manager.assets_label">Assets</span>
+                      </button>
+                    </div>
+                    <div class="smm-compose-section__body" id="smm-new-post-assets-panel">
+                      <div class="smm-new-post__viewer" id="smm-new-post-viewer">
+                        <button type="button" class="smm-new-post__viewer-add" id="smm-btn-choose-asset" data-t="creator.social_media_manager.choose_asset">
+                          <span class="smm-new-post__viewer-add-icon" aria-hidden="true">+</span>
+                          <span class="smm-new-post__viewer-add-label">Choose asset</span>
+                          <span class="smm-new-post__viewer-add-hint" data-t="creator.social_media_manager.viewer_empty">
+                            Pick an image or video to preview it here.
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
                   <label class="smm-field">
                     <span class="smm-field__label" data-t="creator.social_media_manager.caption_label">Caption</span>
                     <textarea id="smm-caption" class="smm-field__textarea" rows="5" maxlength="2200" placeholder="Write your post caption…"></textarea>
@@ -126,14 +132,59 @@
                     <span class="smm-field__label" data-t="creator.social_media_manager.link_label">Link URL (optional)</span>
                     <input type="url" id="smm-link-url" class="smm-field__input" placeholder="https://…" autocomplete="off" />
                   </label>
-                  <div class="smm-channel-settings" id="smm-channel-settings" aria-live="polite"></div>
+
+                  <section class="smm-compose-section" id="smm-section-channels" data-smm-section="channels">
+                    <div class="smm-compose-section__header">
+                      <button
+                        type="button"
+                        class="smm-compose-section__toggle"
+                        id="smm-channels-toggle"
+                        aria-expanded="true"
+                        aria-controls="smm-channels-panel"
+                        aria-label="Collapse channels section"
+                      >
+                        <span class="smm-compose-section__chevron" aria-hidden="true"></span>
+                        <span class="smm-compose-section__label" data-t="creator.social_media_manager.channels_label">Channels</span>
+                      </button>
+                    </div>
+                    <div class="smm-compose-section__body" id="smm-channels-panel">
+                      <div class="smm-channel-carousel" id="smm-channel-carousel" aria-live="polite"></div>
+                      <div class="smm-channel-options" id="smm-channel-options" hidden></div>
+                    </div>
+                  </section>
+
+                  <section class="smm-compose-section" id="smm-section-schedule" data-smm-section="schedule">
+                    <div class="smm-compose-section__header">
+                      <button
+                        type="button"
+                        class="smm-compose-section__toggle"
+                        id="smm-schedule-toggle"
+                        aria-expanded="false"
+                        aria-controls="smm-schedule-panel"
+                        aria-label="Expand schedule section"
+                      >
+                        <span class="smm-compose-section__chevron" aria-hidden="true"></span>
+                        <span class="smm-compose-section__label" data-t="creator.social_media_manager.schedule_label">Schedule</span>
+                      </button>
+                      <label class="smm-switch" title="Enable schedule">
+                        <input type="checkbox" id="smm-schedule-enable" />
+                        <span class="smm-switch__ui" aria-hidden="true"></span>
+                        <span class="smm-visually-hidden" data-t="creator.social_media_manager.schedule_enable">Enable schedule</span>
+                      </label>
+                    </div>
+                    <div class="smm-compose-section__body" id="smm-schedule-panel" hidden>
+                      <label class="smm-field">
+                        <span class="smm-field__label" data-t="creator.social_media_manager.schedule_at_label">Schedule for</span>
+                        <input type="datetime-local" id="smm-schedule-at" class="smm-field__input" />
+                      </label>
+                    </div>
+                  </section>
                 </div>
               </div>
               <footer class="smm-new-post__footer">
                 <p class="smm-new-post__status" id="smm-new-post-status" hidden role="status" aria-live="polite"></p>
                 <div class="smm-new-post__footer-actions">
                   <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-post-now" data-t="creator.social_media_manager.btn_post">Post</button>
-                  <button type="button" class="smm-btn" id="smm-btn-schedule" data-t="creator.social_media_manager.btn_schedule">Schedule</button>
                 </div>
               </footer>
             </div>
@@ -161,15 +212,11 @@
     <div class="smm-submodal__backdrop" data-smm-close="target"></div>
     <div class="smm-submodal__panel">
       <header class="smm-submodal__header">
-        <h3 class="smm-submodal__title" id="smm-target-confirm-title" data-t="creator.social_media_manager.confirm_targets_title">Confirm targets</h3>
+        <h3 class="smm-submodal__title" id="smm-target-confirm-title" data-t="creator.social_media_manager.confirm_post_title">Confirm post</h3>
         <button type="button" class="smm-btn smm-btn--icon" data-smm-close="target" aria-label="Close">×</button>
       </header>
-      <p class="smm-submodal__hint" data-t="creator.social_media_manager.confirm_targets_hint">Choose which accounts receive this post. Brand admin accounts are included by default.</p>
-      <div class="smm-target-list" id="smm-target-list"></div>
-      <label class="smm-field smm-field--schedule" id="smm-schedule-field" hidden>
-        <span class="smm-field__label" data-t="creator.social_media_manager.schedule_at_label">Schedule for</span>
-        <input type="datetime-local" id="smm-schedule-at" class="smm-field__input" />
-      </label>
+      <p class="smm-submodal__hint" data-t="creator.social_media_manager.confirm_post_hint">Review your post settings, then confirm.</p>
+      <div class="smm-confirm-summary" id="smm-confirm-summary"></div>
       <footer class="smm-submodal__footer">
         <button type="button" class="smm-btn" data-smm-close="target" data-t="creator.social_media_manager.btn_cancel">Cancel</button>
         <button type="button" class="smm-btn smm-btn--primary" id="smm-btn-confirm-submit" data-t="creator.social_media_manager.btn_confirm_post">Confirm & post</button>

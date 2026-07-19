@@ -26,6 +26,9 @@
     asset: null,
     targets: [],
     defaultSelected: [],
+    channelEnabled: {},
+    expandedChannel: null,
+    scheduleEnabled: false,
     channelSettings: { facebook: { post_type: 'photo' }, tiktok: { privacy_level: 'SELF_ONLY' } },
     tiktokPrivacyOptions: ['SELF_ONLY', 'MUTUAL_FOLLOW_FRIENDS', 'PUBLIC_TO_EVERYONE'],
     confirmMode: 'post'
@@ -502,20 +505,63 @@
     } catch (e) {}
   }
 
+  function channelLogoShort(channelId) {
+    var ch = CHANNELS.find(function (c) {
+      return c.id === channelId;
+    });
+    return ch ? ch.short : String(channelId || '?').slice(0, 2);
+  }
+
+  function getConnectedChannelsForSettings() {
+    var seen = {};
+    var out = [];
+    (compose.targets || []).forEach(function (t) {
+      if (!t || !t.channel || seen[t.channel]) return;
+      if (t.source === 'admin' || (t.online && t.source === 'creator')) {
+        seen[t.channel] = true;
+        out.push(t.channel);
+      }
+    });
+    Object.keys(channelState || {}).forEach(function (id) {
+      var st = channelState[id];
+      if (!st || !st.online || Number(st.account_count || 0) < 1) return;
+      if (seen[id]) return;
+      seen[id] = true;
+      out.push(id);
+    });
+    return out;
+  }
+
+  function syncChannelEnabledDefaults() {
+    var channels = getConnectedChannelsForSettings();
+    var next = {};
+    channels.forEach(function (ch) {
+      next[ch] = compose.channelEnabled[ch] !== false;
+    });
+    compose.channelEnabled = next;
+    if (compose.expandedChannel && !next[compose.expandedChannel]) {
+      compose.expandedChannel = null;
+    }
+  }
+
+  function isChannelEnabled(channelId) {
+    return !!compose.channelEnabled[channelId];
+  }
+
   function renderAssetViewer() {
     var viewer = $('#smm-new-post-viewer');
     if (!viewer) return;
     if (!compose.asset || !compose.asset.url) {
       viewer.classList.remove('has-asset');
       viewer.innerHTML =
-        '<div class="smm-new-post__viewer-empty-wrap">' +
-        '<p class="smm-new-post__viewer-empty">' +
-        esc(i18n('viewer_empty', 'Pick an image or video to preview it here.')) +
-        '</p>' +
-        '<button type="button" class="smm-btn smm-btn--primary" id="smm-btn-choose-asset">' +
+        '<button type="button" class="smm-new-post__viewer-add" id="smm-btn-choose-asset">' +
+        '<span class="smm-new-post__viewer-add-icon" aria-hidden="true">+</span>' +
+        '<span class="smm-new-post__viewer-add-label">' +
         esc(i18n('choose_asset', 'Choose asset')) +
-        '</button>' +
-        '</div>';
+        '</span>' +
+        '<span class="smm-new-post__viewer-add-hint">' +
+        esc(i18n('viewer_empty', 'Pick an image or video to preview it here.')) +
+        '</span></button>';
       return;
     }
     viewer.classList.add('has-asset');
@@ -532,121 +578,216 @@
       '</button>';
   }
 
-  function getConnectedChannelsForSettings() {
-    var seen = {};
-    var out = [];
-    (compose.targets || []).forEach(function (t) {
-      if (!t || !t.channel || seen[t.channel]) return;
-      if (t.source === 'admin' || (t.online && t.source === 'creator')) {
-        seen[t.channel] = true;
-        out.push(t.channel);
+  function buildChannelOptionsHtml(ch) {
+    var name = channelLabel(ch);
+    var html =
+      '<div class="smm-channel-panel" data-smm-channel-panel="' +
+      esc(ch) +
+      '"><h4 class="smm-channel-panel__title">' +
+      esc(name) +
+      '</h4>';
+    if (ch === 'facebook') {
+      var postType = (compose.channelSettings.facebook && compose.channelSettings.facebook.post_type) || 'photo';
+      html +=
+        '<div class="smm-channel-panel__row">' +
+        '<label class="smm-field" style="flex:1;min-width:140px">' +
+        '<span class="smm-field__label">' +
+        esc(i18n('facebook_post_type', 'Post type')) +
+        '</span>' +
+        '<select class="smm-field__select" data-smm-fb-post-type>' +
+        '<option value="photo"' +
+        (postType === 'photo' ? ' selected' : '') +
+        '>' +
+        esc(i18n('facebook_post_photo', 'Photo post')) +
+        '</option>' +
+        '<option value="link"' +
+        (postType === 'link' ? ' selected' : '') +
+        '>' +
+        esc(i18n('facebook_post_link', 'Link post')) +
+        '</option>' +
+        '</select></label></div>';
+    } else if (ch === 'tiktok') {
+      if (getMediaKind() !== 'video') {
+        html +=
+          '<p class="smm-channel-panel__note">' +
+          esc(i18n('tiktok_needs_video', 'TikTok posts require a video asset.')) +
+          '</p>';
       }
-    });
-    return out;
+      var privacy =
+        (compose.channelSettings.tiktok && compose.channelSettings.tiktok.privacy_level) || 'SELF_ONLY';
+      html +=
+        '<div class="smm-channel-panel__row">' +
+        '<label class="smm-field" style="flex:1;min-width:160px">' +
+        '<span class="smm-field__label">' +
+        esc(i18n('tiktok_privacy', 'Privacy')) +
+        '</span>' +
+        '<select class="smm-field__select" data-smm-tiktok-privacy">';
+      compose.tiktokPrivacyOptions.forEach(function (opt) {
+        html +=
+          '<option value="' +
+          esc(opt) +
+          '"' +
+          (privacy === opt ? ' selected' : '') +
+          '>' +
+          esc(opt.replace(/_/g, ' ')) +
+          '</option>';
+      });
+      html +=
+        '</select></label></div>' +
+        '<p class="smm-channel-panel__note">' +
+        esc(i18n('tiktok_sandbox_note', 'Sandbox apps may publish private posts until TikTok app review.')) +
+        '</p>';
+    } else if (ch === 'instagram') {
+      html +=
+        '<p class="smm-channel-panel__note">' +
+        esc(
+          getMediaKind() === 'video'
+            ? i18n('instagram_video_soon', 'Instagram video posts are not supported in V1.')
+            : i18n('instagram_feed_note', 'Single-image feed post via brand account.')
+        ) +
+        '</p>';
+    } else {
+      html +=
+        '<p class="smm-channel-panel__note">' +
+        esc(i18n('channel_publish_soon', 'Publishing to this channel is coming soon.')) +
+        '</p>';
+    }
+    html += '</div>';
+    return html;
   }
 
-  function renderChannelSettingsPanels() {
-    var wrap = $('#smm-channel-settings');
-    if (!wrap) return;
-    var channels = getConnectedChannelsForSettings();
-    if (!channels.length) {
-      wrap.innerHTML = '';
+  function renderChannelOptions() {
+    var options = $('#smm-channel-options');
+    if (!options) return;
+    var ch = compose.expandedChannel;
+    if (!ch || !isChannelEnabled(ch)) {
+      options.hidden = true;
+      options.innerHTML = '';
       return;
     }
-    var html = '';
-    channels.forEach(function (ch) {
-      var name = channelLabel(ch);
-      if (ch === 'facebook' && getMediaKind() === 'image') {
-        var postType = (compose.channelSettings.facebook && compose.channelSettings.facebook.post_type) || 'photo';
-        html +=
-          '<div class="smm-channel-panel" data-smm-channel-panel="facebook">' +
-          '<h4 class="smm-channel-panel__title">' +
-          esc(name) +
-          '</h4>' +
-          '<div class="smm-channel-panel__row">' +
-          '<label class="smm-field" style="flex:1;min-width:140px">' +
-          '<span class="smm-field__label">' +
-          esc(i18n('facebook_post_type', 'Post type')) +
-          '</span>' +
-          '<select class="smm-field__select" data-smm-fb-post-type>' +
-          '<option value="photo"' +
-          (postType === 'photo' ? ' selected' : '') +
-          '>' +
-          esc(i18n('facebook_post_photo', 'Photo post')) +
-          '</option>' +
-          '<option value="link"' +
-          (postType === 'link' ? ' selected' : '') +
-          '>' +
-          esc(i18n('facebook_post_link', 'Link post')) +
-          '</option>' +
-          '</select></label></div></div>';
-      } else if (ch === 'tiktok' && getMediaKind() === 'video') {
-        var privacy =
-          (compose.channelSettings.tiktok && compose.channelSettings.tiktok.privacy_level) || 'SELF_ONLY';
-        html +=
-          '<div class="smm-channel-panel" data-smm-channel-panel="tiktok">' +
-          '<h4 class="smm-channel-panel__title">' +
-          esc(name) +
-          '</h4>' +
-          '<div class="smm-channel-panel__row">' +
-          '<label class="smm-field" style="flex:1;min-width:160px">' +
-          '<span class="smm-field__label">' +
-          esc(i18n('tiktok_privacy', 'Privacy')) +
-          '</span>' +
-          '<select class="smm-field__select" data-smm-tiktok-privacy">';
-        compose.tiktokPrivacyOptions.forEach(function (opt) {
-          html +=
-            '<option value="' +
-            esc(opt) +
-            '"' +
-            (privacy === opt ? ' selected' : '') +
-            '>' +
-            esc(opt.replace(/_/g, ' ')) +
-            '</option>';
-        });
-        html +=
-          '</select></label></div>' +
-          '<p class="smm-channel-panel__note">' +
-          esc(i18n('tiktok_sandbox_note', 'Sandbox apps may publish private posts until TikTok app review.')) +
-          '</p></div>';
-      } else if (ch === 'instagram') {
-        html +=
-          '<div class="smm-channel-panel">' +
-          '<h4 class="smm-channel-panel__title">' +
-          esc(name) +
-          '</h4>' +
-          '<p class="smm-channel-panel__note">' +
-          esc(
-            getMediaKind() === 'video'
-              ? i18n('instagram_video_soon', 'Instagram video posts are not supported in V1.')
-              : i18n('instagram_feed_note', 'Single-image feed post via brand account.')
-          ) +
-          '</p></div>';
-      } else {
-        html +=
-          '<div class="smm-channel-panel">' +
-          '<h4 class="smm-channel-panel__title">' +
-          esc(name) +
-          '</h4>' +
-          '<p class="smm-channel-panel__note">' +
-          esc(i18n('channel_publish_soon', 'Publishing to this channel is coming soon.')) +
-          '</p></div>';
-      }
-    });
-    wrap.innerHTML = html;
-    var fbSel = wrap.querySelector('[data-smm-fb-post-type]');
+    options.hidden = false;
+    options.innerHTML = buildChannelOptionsHtml(ch);
+    var fbSel = options.querySelector('[data-smm-fb-post-type]');
     if (fbSel) {
       fbSel.addEventListener('change', function () {
         compose.channelSettings.facebook = compose.channelSettings.facebook || {};
         compose.channelSettings.facebook.post_type = fbSel.value;
       });
     }
-    var ttSel = wrap.querySelector('[data-smm-tiktok-privacy]');
+    var ttSel = options.querySelector('[data-smm-tiktok-privacy]');
     if (ttSel) {
       ttSel.addEventListener('change', function () {
         compose.channelSettings.tiktok = compose.channelSettings.tiktok || {};
         compose.channelSettings.tiktok.privacy_level = ttSel.value;
       });
+    }
+  }
+
+  function renderChannelCarousel() {
+    var wrap = $('#smm-channel-carousel');
+    if (!wrap) return;
+    syncChannelEnabledDefaults();
+    var channels = getConnectedChannelsForSettings();
+    if (!channels.length) {
+      wrap.innerHTML =
+        '<p class="smm-channel-panel__note">' +
+        esc(i18n('no_targets', 'No connected accounts.')) +
+        '</p>';
+      renderChannelOptions();
+      return;
+    }
+    var html = '<div class="smm-channel-carousel__track">';
+    channels.forEach(function (ch) {
+      var enabled = isChannelEnabled(ch);
+      var expanded = enabled && compose.expandedChannel === ch;
+      html +=
+        '<div class="smm-channel-tile' +
+        (enabled ? '' : ' is-disabled') +
+        (expanded ? ' is-expanded' : '') +
+        '" data-smm-channel-tile="' +
+        esc(ch) +
+        '">' +
+        '<div class="smm-channel-tile__top">' +
+        '<button type="button" class="smm-channel-tile__hit" data-smm-channel-expand="' +
+        esc(ch) +
+        '"' +
+        (enabled ? '' : ' disabled') +
+        '>' +
+        '<span class="smm-channel-card__logo smm-channel-card__logo--' +
+        esc(ch) +
+        '">' +
+        esc(channelLogoShort(ch)) +
+        '</span>' +
+        '<span class="smm-channel-tile__name">' +
+        esc(channelLabel(ch)) +
+        '</span></button>' +
+        '<label class="smm-switch smm-switch--compact" title="' +
+        esc(i18n('channel_enable', 'Enable channel')) +
+        '">' +
+        '<input type="checkbox" data-smm-channel-enable="' +
+        esc(ch) +
+        '"' +
+        (enabled ? ' checked' : '') +
+        ' />' +
+        '<span class="smm-switch__ui" aria-hidden="true"></span>' +
+        '</label></div></div>';
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+    renderChannelOptions();
+  }
+
+  function setSectionCollapsed(sectionId, collapsed) {
+    var section = document.getElementById('smm-section-' + sectionId);
+    var toggle = document.getElementById('smm-' + sectionId + '-toggle');
+    var panel =
+      sectionId === 'assets'
+        ? $('#smm-new-post-assets-panel')
+        : sectionId === 'channels'
+          ? $('#smm-channels-panel')
+          : $('#smm-schedule-panel');
+    if (!section || !toggle) return;
+    section.classList.toggle('is-collapsed', !!collapsed);
+    if (panel) {
+      if (sectionId === 'schedule') {
+        panel.hidden = !compose.scheduleEnabled || !!collapsed;
+      } else {
+        panel.hidden = !!collapsed;
+      }
+    }
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    var expandKey = sectionId + '_expand';
+    var collapseKey = sectionId + '_collapse';
+    var expandFallback =
+      sectionId === 'assets'
+        ? 'Expand assets section'
+        : sectionId === 'channels'
+          ? 'Expand channels section'
+          : 'Expand schedule section';
+    var collapseFallback =
+      sectionId === 'assets'
+        ? 'Collapse assets section'
+        : sectionId === 'channels'
+          ? 'Collapse channels section'
+          : 'Collapse schedule section';
+    toggle.setAttribute(
+      'aria-label',
+      collapsed ? i18n(expandKey, expandFallback) : i18n(collapseKey, collapseFallback)
+    );
+  }
+
+  function setScheduleEnabled(enabled) {
+    compose.scheduleEnabled = !!enabled;
+    var enableEl = $('#smm-schedule-enable');
+    if (enableEl) enableEl.checked = compose.scheduleEnabled;
+    var section = $('#smm-section-schedule');
+    if (section) section.classList.toggle('is-schedule-on', compose.scheduleEnabled);
+    if (compose.scheduleEnabled) {
+      var schedInput = $('#smm-schedule-at');
+      if (schedInput && !schedInput.value) schedInput.value = defaultScheduleLocalValue();
+      setSectionCollapsed('schedule', false);
+    } else {
+      setSectionCollapsed('schedule', true);
     }
   }
 
@@ -672,8 +813,14 @@
 
     emptyEl.hidden = true;
     composerEl.hidden = false;
+    compose.channelEnabled = {};
+    compose.expandedChannel = null;
+    syncChannelEnabledDefaults();
     renderAssetViewer();
-    renderChannelSettingsPanels();
+    renderChannelCarousel();
+    setSectionCollapsed('assets', false);
+    setSectionCollapsed('channels', false);
+    setScheduleEnabled(false);
     setNewPostStatus('', null);
   }
 
@@ -783,7 +930,7 @@
           };
           renderAssetViewer();
           loadPostTargets().then(function () {
-            renderChannelSettingsPanels();
+            renderChannelCarousel();
           });
           closeSubmodal('asset');
         });
@@ -803,82 +950,101 @@
     loadComposeAssets();
   }
 
-  function renderTargetConfirmList() {
-    var list = $('#smm-target-list');
-    if (!list) return;
-    var mediaKind = getMediaKind();
-    var html = '';
-    (compose.targets || []).forEach(function (t) {
-      var checked = compose.defaultSelected.indexOf(t.id) !== -1;
-      var disabled = !t.publish_ready;
-      var sub = t.source === 'admin'
-        ? i18n('target_admin', 'Brand admin account')
-        : i18n('target_creator', 'Your account');
-      if (disabled) {
-        sub +=
-          ' · ' +
-          (mediaKind === 'video' && t.channel === 'tiktok'
-            ? i18n('target_needs_video', 'Requires video')
-            : i18n('target_not_ready', 'Not available for this post yet'));
-      }
-      html +=
-        '<label class="smm-target-item' +
-        (disabled ? ' is-disabled' : '') +
-        '">' +
-        '<input type="checkbox" data-smm-target-id="' +
-        esc(t.id) +
-        '" ' +
-        (checked && !disabled ? 'checked' : '') +
-        (disabled ? ' disabled' : '') +
-        ' />' +
-        '<span class="smm-target-item__meta">' +
-        '<span class="smm-target-item__name">' +
-        esc(t.display_name || channelLabel(t.channel)) +
-        '</span>' +
-        '<span class="smm-target-item__sub">' +
-        esc(channelLabel(t.channel) + ' · ' + sub) +
-        '</span></span></label>';
+  function getSelectedTargetsFromComposer() {
+    return (compose.targets || []).filter(function (t) {
+      return t && t.publish_ready && isChannelEnabled(t.channel);
     });
-    list.innerHTML = html || '<p class="smm-channel-panel__note">' + esc(i18n('no_targets', 'No connected accounts.')) + '</p>';
   }
 
-  function openTargetConfirmModal(mode) {
-    compose.confirmMode = mode === 'schedule' ? 'schedule' : 'post';
-    var scheduleField = $('#smm-schedule-field');
+  function formatChannelSettingsSummary(ch) {
+    if (ch === 'facebook') {
+      var postType = (compose.channelSettings.facebook && compose.channelSettings.facebook.post_type) || 'photo';
+      return postType === 'link'
+        ? i18n('facebook_post_link', 'Link post')
+        : i18n('facebook_post_photo', 'Photo post');
+    }
+    if (ch === 'tiktok') {
+      var privacy =
+        (compose.channelSettings.tiktok && compose.channelSettings.tiktok.privacy_level) || 'SELF_ONLY';
+      return i18n('tiktok_privacy', 'Privacy') + ': ' + privacy.replace(/_/g, ' ');
+    }
+    return '';
+  }
+
+  function renderConfirmSummary() {
+    var wrap = $('#smm-confirm-summary');
+    if (!wrap) return;
+    var captionEl = $('#smm-caption');
+    var linkEl = $('#smm-link-url');
+    var caption = captionEl ? String(captionEl.value || '').trim() : '';
+    var linkUrl = linkEl ? String(linkEl.value || '').trim() : '';
+    var assetLabel = compose.asset
+      ? (compose.asset.label || compose.asset.kind || 'asset') +
+        (compose.asset.kind ? ' (' + compose.asset.kind + ')' : '')
+      : i18n('confirm_summary_none', '—');
+    var enabledChannels = getConnectedChannelsForSettings().filter(isChannelEnabled);
+    var channelLines = enabledChannels
+      .map(function (ch) {
+        var settings = formatChannelSettingsSummary(ch);
+        return settings ? channelLabel(ch) + ' — ' + settings : channelLabel(ch);
+      })
+      .join('<br>');
+    var scheduleText = i18n('confirm_summary_immediate', 'Post now');
+    if (compose.scheduleEnabled) {
+      var schedInput = $('#smm-schedule-at');
+      var localVal = schedInput ? String(schedInput.value || '').trim() : '';
+      scheduleText = localVal || i18n('confirm_summary_none', '—');
+    }
+    wrap.innerHTML =
+      '<dl class="smm-confirm-summary__list">' +
+      '<div><dt>' +
+      esc(i18n('confirm_summary_asset', 'Asset')) +
+      '</dt><dd>' +
+      esc(assetLabel) +
+      '</dd></div>' +
+      '<div><dt>' +
+      esc(i18n('confirm_summary_caption', 'Caption')) +
+      '</dt><dd>' +
+      esc(caption || i18n('confirm_summary_none', '—')) +
+      '</dd></div>' +
+      '<div><dt>' +
+      esc(i18n('confirm_summary_link', 'Link')) +
+      '</dt><dd>' +
+      esc(linkUrl || i18n('confirm_summary_none', '—')) +
+      '</dd></div>' +
+      '<div><dt>' +
+      esc(i18n('confirm_summary_channels', 'Channels')) +
+      '</dt><dd>' +
+      (channelLines || esc(i18n('confirm_summary_none', '—'))) +
+      '</dd></div>' +
+      '<div><dt>' +
+      esc(i18n('confirm_summary_schedule', 'Schedule')) +
+      '</dt><dd>' +
+      esc(scheduleText) +
+      '</dd></div></dl>';
+  }
+
+  function openTargetConfirmModal() {
+    compose.confirmMode = compose.scheduleEnabled ? 'schedule' : 'post';
     var title = $('#smm-target-confirm-title');
     var submitBtn = $('#smm-btn-confirm-submit');
-    if (scheduleField) scheduleField.hidden = compose.confirmMode !== 'schedule';
     if (title) {
-      title.textContent =
-        compose.confirmMode === 'schedule'
-          ? i18n('confirm_schedule_title', 'Schedule post')
-          : i18n('confirm_targets_title', 'Confirm targets');
+      title.textContent = compose.scheduleEnabled
+        ? i18n('confirm_schedule_title', 'Schedule post')
+        : i18n('confirm_post_title', 'Confirm post');
     }
     if (submitBtn) {
-      submitBtn.textContent =
-        compose.confirmMode === 'schedule'
-          ? i18n('btn_confirm_schedule', 'Confirm & schedule')
-          : i18n('btn_confirm_post', 'Confirm & post');
+      submitBtn.textContent = compose.scheduleEnabled
+        ? i18n('btn_confirm_schedule', 'Confirm & schedule')
+        : i18n('btn_confirm_post', 'Confirm & post');
     }
     var status = $('#smm-target-status');
     if (status) {
       status.hidden = true;
       status.textContent = '';
     }
-    renderTargetConfirmList();
+    renderConfirmSummary();
     openSubmodal('target');
-  }
-
-  function getSelectedTargetsFromModal() {
-    var list = $('#smm-target-list');
-    if (!list) return [];
-    var selectedIds = {};
-    list.querySelectorAll('input[type="checkbox"][data-smm-target-id]:checked').forEach(function (cb) {
-      selectedIds[cb.getAttribute('data-smm-target-id')] = true;
-    });
-    return (compose.targets || []).filter(function (t) {
-      return selectedIds[t.id] && t.publish_ready;
-    });
   }
 
   function defaultScheduleLocalValue() {
@@ -907,7 +1073,7 @@
       setNewPostStatus(i18n('error_pick_asset', 'Choose an asset first.'), 'error');
       return;
     }
-    var targets = getSelectedTargetsFromModal();
+    var targets = getSelectedTargetsFromComposer();
     if (!targets.length) {
       var status = $('#smm-target-status');
       if (status) {
@@ -1009,58 +1175,76 @@
     }
   }
 
-  function setAssetsCollapsed(collapsed) {
-    var composer = $('#smm-new-post-composer');
-    var toggle = $('#smm-assets-toggle');
-    if (!composer || !toggle) return;
-    composer.classList.toggle('is-assets-collapsed', !!collapsed);
-    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    toggle.setAttribute(
-      'aria-label',
-      collapsed
-        ? i18n('assets_expand', 'Expand assets section')
-        : i18n('assets_collapse', 'Collapse assets section')
-    );
-  }
-
   function bindNewPostUi() {
     if (!root || root._smmNewPostBound) return;
     root._smmNewPostBound = true;
 
-    var assetsToggle = $('#smm-assets-toggle');
-    if (assetsToggle) {
-      assetsToggle.addEventListener('click', function () {
-        var composer = $('#smm-new-post-composer');
-        if (!composer) return;
-        setAssetsCollapsed(!composer.classList.contains('is-assets-collapsed'));
+    function bindSectionToggle(sectionId) {
+      var toggle = document.getElementById('smm-' + sectionId + '-toggle');
+      if (!toggle) return;
+      toggle.addEventListener('click', function () {
+        var section = document.getElementById('smm-section-' + sectionId);
+        if (!section) return;
+        if (sectionId === 'schedule' && !compose.scheduleEnabled) return;
+        setSectionCollapsed(sectionId, !section.classList.contains('is-collapsed'));
       });
-      setAssetsCollapsed(false);
+    }
+    bindSectionToggle('assets');
+    bindSectionToggle('channels');
+    bindSectionToggle('schedule');
+
+    var scroll = $('#smm-new-post-scroll');
+    if (scroll && !scroll._smmComposeBound) {
+      scroll._smmComposeBound = true;
+      scroll.addEventListener('click', function (e) {
+        var chooseBtn = e.target && e.target.closest ? e.target.closest('#smm-btn-choose-asset') : null;
+        if (chooseBtn && scroll.contains(chooseBtn)) {
+          e.preventDefault();
+          openAssetPickerModal();
+          return;
+        }
+        var expandBtn =
+          e.target && e.target.closest ? e.target.closest('[data-smm-channel-expand]') : null;
+        if (expandBtn && scroll.contains(expandBtn) && !expandBtn.disabled) {
+          e.preventDefault();
+          var chEx = expandBtn.getAttribute('data-smm-channel-expand');
+          if (!isChannelEnabled(chEx)) return;
+          compose.expandedChannel = compose.expandedChannel === chEx ? null : chEx;
+          renderChannelCarousel();
+        }
+      });
+      scroll.addEventListener('change', function (e) {
+        var enableInput = e.target && e.target.getAttribute
+          ? e.target
+          : null;
+        if (
+          !enableInput ||
+          !enableInput.getAttribute ||
+          !enableInput.getAttribute('data-smm-channel-enable')
+        ) {
+          return;
+        }
+        if (!scroll.contains(enableInput)) return;
+        var chEn = enableInput.getAttribute('data-smm-channel-enable');
+        compose.channelEnabled[chEn] = !!enableInput.checked;
+        if (!enableInput.checked && compose.expandedChannel === chEn) {
+          compose.expandedChannel = null;
+        }
+        renderChannelCarousel();
+      });
     }
 
-    var assetsPanel = $('#smm-new-post-assets-panel');
-    if (assetsPanel && !assetsPanel._smmChooseBound) {
-      assetsPanel._smmChooseBound = true;
-      assetsPanel.addEventListener('click', function (e) {
-        var btn = e.target && e.target.closest ? e.target.closest('#smm-btn-choose-asset') : null;
-        if (!btn || !assetsPanel.contains(btn)) return;
-        e.preventDefault();
-        openAssetPickerModal();
+    var scheduleEnable = $('#smm-schedule-enable');
+    if (scheduleEnable) {
+      scheduleEnable.addEventListener('change', function () {
+        setScheduleEnabled(!!scheduleEnable.checked);
       });
     }
 
     var postBtn = $('#smm-btn-post-now');
     if (postBtn) {
       postBtn.addEventListener('click', function () {
-        openTargetConfirmModal('post');
-      });
-    }
-
-    var schedBtn = $('#smm-btn-schedule');
-    if (schedBtn) {
-      schedBtn.addEventListener('click', function () {
-        var schedInput = $('#smm-schedule-at');
-        if (schedInput && !schedInput.value) schedInput.value = defaultScheduleLocalValue();
-        openTargetConfirmModal('schedule');
+        openTargetConfirmModal();
       });
     }
 
@@ -1122,8 +1306,10 @@
     if (sideToggle) {
       sideToggle.addEventListener('click', function () {
         var sidebar = $('#smm-sidebar');
+        var body = root.querySelector('.smm-body');
         if (!sidebar) return;
         var collapsed = sidebar.classList.toggle('is-collapsed');
+        if (body) body.classList.toggle('is-sidebar-collapsed', collapsed);
         sideToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
         sideToggle.textContent = collapsed ? '›' : '‹';
       });
