@@ -392,105 +392,97 @@
   line-height: 1.4;
   color: var(--slm-muted);
 }
+/* Convert row: Available pill, Amount input and Fiat preview sit side by side on the
+   same baseline, capped to a comfortable width so the controls never stretch edge to
+   edge across the (potentially very wide) modal footer. */
 .slm-eazc-convert__row {
-  display: grid;
-  grid-template-columns: 1.7fr 1fr;
-  gap: 10px;
+  --slm-convert-h: 48px;
+  display: flex;
   align-items: stretch;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 460px;
+  margin: 0 auto;
 }
-@media (max-width: 420px) {
-  .slm-eazc-convert__row {
-    grid-template-columns: 1fr;
+@media (max-width: 380px) {
+  .slm-eazc-convert__avail {
+    flex: 1 1 100%;
+    order: -1;
   }
 }
 
-/* EAZC control: one card split into two equal halves (Available | Amount input) so it
-   reads as a single row and lines up with the Fiat KPI on the same baseline. */
-.slm-eazc-convert__eazc-box {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: stretch;
-  min-width: 0;
+/* Available pill: coin + label/value as a compact left sibling of the amount input
+   (never stacked above it), matching the input box's height. */
+.slm-eazc-convert__avail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 128px;
+  min-width: 96px;
+  min-height: var(--slm-convert-h);
+  box-sizing: border-box;
+  padding: 6px 10px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.22);
-  overflow: hidden;
+  background: rgba(245, 158, 11, 0.06);
 }
-.slm-eazc-convert__half {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 10px 10px;
-  overflow: hidden;
-}
-.slm-eazc-convert__half--avail {
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 6px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(245, 158, 11, 0.05);
-  min-height: 64px;
-  max-height: 96px;
-}
-.slm-eazc-convert__half--input {
-  justify-content: center;
-  gap: 6px;
-}
-/* Hard-capped so the coin can never grow beyond the Available half, even if a global
+/* Hard-capped so the coin can never grow beyond this pill, even if a global
    `img { width: 100%; height: auto }` reset (see base.css) applies before this rule loads. */
 .slm-eazc-convert__avail-logo {
   display: block;
   flex-shrink: 0;
-  width: 42px;
-  height: 42px;
-  max-width: 42px;
-  max-height: 42px;
+  width: 26px;
+  height: 26px;
+  max-width: 26px;
+  max-height: 26px;
   object-fit: contain;
-  filter: drop-shadow(0 3px 8px rgba(245, 158, 11, 0.4));
+  filter: drop-shadow(0 2px 6px rgba(245, 158, 11, 0.4));
 }
-@media (min-width: 480px) {
-  .slm-eazc-convert__avail-logo {
-    width: 52px;
-    height: 52px;
-    max-width: 52px;
-    max-height: 52px;
-  }
-}
-.slm-eazc-convert__avail-info {
+.slm-eazc-convert__avail-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 .slm-eazc-convert__avail-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--slm-muted);
+  white-space: nowrap;
 }
 .slm-eazc-convert__avail-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   color: #f5c542;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
+
+/* Kept for accessibility (associates the input with a name) but hidden visually —
+   the pill layout no longer has room for a separate "Amount" caption. */
 .slm-eazc-convert__label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--slm-muted);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
+
 .slm-eazc-convert__input-wrap {
-  width: 100%;
-  min-height: 44px;
+  flex: 1 1 120px;
+  min-width: 90px;
+  min-height: var(--slm-convert-h);
+  box-sizing: border-box;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.28);
-  padding: 6px 4px 6px 10px;
+  padding: 4px 4px 4px 12px;
   display: flex;
   align-items: stretch;
   gap: 4px;
@@ -518,51 +510,58 @@
   outline: none;
 }
 
-/* Custom stepper controls replace native number spinners; sized to match the input field height */
+/* Custom stepper controls replace native number spinners: dark/orange treatment to
+   match the modal theme instead of plain white squares, stretched to the input's height. */
 .slm-eazc-convert__steppers {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  width: 26px;
-  border-radius: 7px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  align-self: stretch;
+  width: 28px;
+  gap: 3px;
+  padding: 3px 0;
 }
 .slm-eazc-convert__stepper {
   flex: 1;
   display: grid;
   place-items: center;
-  border: none;
   margin: 0;
   padding: 0;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--slm-muted);
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--slm-accent);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 .slm-eazc-convert__stepper svg {
-  width: 11px;
-  height: 11px;
-}
-.slm-eazc-convert__stepper--up {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  width: 12px;
+  height: 12px;
 }
 .slm-eazc-convert__stepper:hover,
 .slm-eazc-convert__stepper:focus-visible {
-  background: rgba(245, 158, 11, 0.22);
-  color: var(--slm-accent);
+  background: rgba(245, 158, 11, 0.28);
+  border-color: var(--slm-accent);
+  color: var(--slm-accent-hover);
+  outline: none;
 }
 .slm-eazc-convert__stepper:active {
-  background: rgba(245, 158, 11, 0.32);
+  background: rgba(245, 158, 11, 0.4);
+  transform: scale(0.94);
 }
 
-/* Fiat preview reuses .slm-kpi so it matches the EAZC control's box style, and centers
-   its content so both sides sit on the same visual baseline when the row stretches it. */
+/* Fiat preview reuses .slm-kpi so it matches the EAZC control's box style, sized and
+   aligned to sit on the exact same horizontal baseline as the Available/Amount control. */
 .slm-eazc-convert__col--fiat {
-  min-width: 0;
+  flex: 0 1 110px;
+  min-width: 88px;
+  min-height: var(--slm-convert-h);
+  box-sizing: border-box;
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding: 6px 10px;
+  gap: 2px;
 }
 .slm-eazc-convert__fiat-value {
   color: #86efac;
