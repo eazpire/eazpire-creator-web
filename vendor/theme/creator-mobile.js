@@ -923,15 +923,23 @@
   }
 
   // Footer: EAZ balance → Creator Settings (EAZ tab); other balance chips → sales modal
+  function resolveFooterEazSub(fromEl) {
+    var wrap = fromEl && fromEl.closest ? fromEl.closest('.creator-global-footer__balance--eaz') : null;
+    if (!wrap) wrap = document.querySelector('.creator-global-footer__balance--eaz');
+    return wrap && wrap.getAttribute('data-footer-eaz-mode') === 'starter' ? 'starter' : 'balance';
+  }
+
   function openFooterEazInCreatorSettings(fromEl) {
+    var sub = resolveFooterEazSub(fromEl);
+    var opts = { tab: 'eaz', eazSub: sub };
     try {
+      if (window.CreatorPortalFeatures && typeof window.CreatorPortalFeatures.openSettings === 'function') {
+        window.CreatorPortalFeatures.openSettings(opts);
+        return true;
+      }
       if (window.CreatorSettingsV2Modal && typeof window.CreatorSettingsV2Modal.open === 'function') {
         ensureSettingsOverlayMount();
-        var sub = 'balance';
-        var wrap = fromEl && fromEl.closest ? fromEl.closest('.creator-global-footer__balance--eaz') : null;
-        if (!wrap) wrap = document.querySelector('.creator-global-footer__balance--eaz');
-        if (wrap && wrap.getAttribute('data-footer-eaz-mode') === 'starter') sub = 'starter';
-        window.CreatorSettingsV2Modal.open({ tab: 'eaz', eazSub: sub });
+        window.CreatorSettingsV2Modal.open(opts);
         return true;
       }
     } catch (_e) {}
@@ -941,10 +949,10 @@
   document.addEventListener('click', function (e) {
     var bal = e.target.closest('.creator-global-footer__balance');
     if (!bal) return;
+    // EAZV footer must never open Balance & Payouts — only Creator Settings → EAZ.
     if (bal.classList.contains('creator-global-footer__balance--eaz')) {
-      if (openFooterEazInCreatorSettings(bal)) {
-        return;
-      }
+      openFooterEazInCreatorSettings(bal);
+      return;
     }
     if (typeof window.openSalesModal === 'function') {
       window.openSalesModal();

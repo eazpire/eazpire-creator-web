@@ -533,7 +533,7 @@
     return state.journey;
   }
 
-  async function openSettings(tab) {
+  async function openSettings(tabOrOpts) {
     if (!requireLogin()) {
       if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.login === "function") {
         global.CreatorPortalAuth.login();
@@ -542,7 +542,13 @@
     }
     await ensureSettings();
     if (global.CreatorSettingsV2Modal && typeof global.CreatorSettingsV2Modal.open === "function") {
-      global.CreatorSettingsV2Modal.open(tab ? { tab: tab } : undefined);
+      var opts = undefined;
+      if (typeof tabOrOpts === "string" && tabOrOpts) {
+        opts = { tab: tabOrOpts };
+      } else if (tabOrOpts && typeof tabOrOpts === "object") {
+        opts = tabOrOpts;
+      }
+      global.CreatorSettingsV2Modal.open(opts);
     }
   }
 
@@ -552,7 +558,12 @@
       if (!btn) return;
       e.preventDefault();
       var tab = btn.getAttribute("data-settings-tab") || "";
-      openSettings(tab || undefined);
+      var eazSub = btn.getAttribute("data-settings-eaz-sub") || "";
+      if (tab && eazSub) {
+        openSettings({ tab: tab, eazSub: eazSub });
+      } else {
+        openSettings(tab || undefined);
+      }
     });
   }
 

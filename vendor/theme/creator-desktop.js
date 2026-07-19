@@ -2111,6 +2111,13 @@
     var eazBtn = document.getElementById('creatorDesktopEazBalance');
     if (eazBtn) {
       eazBtn.addEventListener('click', function () {
+        var sub = eazBtn.getAttribute('data-footer-eaz-mode') === 'starter' ? 'starter' : 'balance';
+        var opts = { tab: 'eaz', eazSub: sub };
+        // Portal: lazy-load settings; never fall back to Balance & Payouts for footer EAZV.
+        if (window.CreatorPortalFeatures && typeof window.CreatorPortalFeatures.openSettings === 'function') {
+          window.CreatorPortalFeatures.openSettings(opts);
+          return;
+        }
         if (window.CreatorSettingsV2Modal && typeof window.CreatorSettingsV2Modal.open === 'function') {
           var overlay = document.getElementById('csmOverlay');
           if (overlay && overlay.parentElement && overlay.parentElement !== document.body) {
@@ -2126,11 +2133,8 @@
               }
             } catch (_e) {}
           }
-          var sub = eazBtn.getAttribute('data-footer-eaz-mode') === 'starter' ? 'starter' : 'balance';
-          window.CreatorSettingsV2Modal.open({ tab: 'eaz', eazSub: sub });
-          return;
+          window.CreatorSettingsV2Modal.open(opts);
         }
-        if (window.openSalesModal) window.openSalesModal();
       });
     }
 
