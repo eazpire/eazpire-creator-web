@@ -687,6 +687,23 @@
   letter-spacing: 0.03em;
 }
 
+.cj-tree-card__lock-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.cj-tree-card__lock-stack .cj-tree-card__level-badge {
+  position: static;
+}
+
+.cj-tree-card__skill-badge {
+  background: rgba(251, 191, 36, 0.22);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
 .cj-tree-card.is-unlocked .cj-tree-card__frame {
   border-color: rgba(255, 200, 60, 0.85);
 }
@@ -1500,6 +1517,13 @@
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
+}
+
+/* Active Level tab: keep panel shell visible (JS toggles loading/content/error). */
+#cjPanelLevel.is-active #creator-level-panel {
+  display: block !important;
+  visibility: visible !important;
+  min-height: 120px;
 }
 
 .cj-section-title {

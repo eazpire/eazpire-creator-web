@@ -134,28 +134,38 @@
     var addLabel = i18n('btn_add', 'Add');
     var disconnectLabel = i18n('btn_disconnect', 'Disconnect');
     var comingSoonLabel = i18n('coming_soon', 'Coming soon');
+    var skillLockedLabel = i18n('skill_not_unlocked', 'Not unlocked yet');
     var html = '';
 
     CHANNELS.forEach(function (ch) {
-      var st = channelState[ch.id] || { online: false, account_count: 0, connectable: !!ch.connectable };
+      var st = channelState[ch.id] || {
+        online: false,
+        account_count: 0,
+        connectable: !!ch.connectable,
+        skill_unlocked: true
+      };
       var name = i18n(ch.labelKey, ch.label);
       var online = !!st.online && Number(st.account_count || 0) > 0;
       var count = Number(st.account_count || 0) || 0;
-      var connectable = ch.connectable !== false && st.connectable !== false;
+      var skillUnlocked = typeof st.skill_unlocked === 'boolean' ? st.skill_unlocked : true;
+      var connectable = !!st.connectable;
       var statusText = online
         ? onlineLabel + (count > 0 ? ' · ' + count : '')
         : offlineLabel;
       var actions = '';
+      var hintLabel = !skillUnlocked
+        ? skillLockedLabel
+        : (!connectable ? comingSoonLabel : '');
 
-      if (!connectable) {
+      if (!skillUnlocked || !connectable) {
         actions =
           '<button type="button" class="smm-btn smm-btn--card smm-btn--disabled" disabled title="' +
-          esc(comingSoonLabel) +
+          esc(hintLabel || comingSoonLabel) +
           '">' +
           esc(connectLabel) +
           '</button>' +
           '<span class="smm-channel-card__hint">' +
-          esc(comingSoonLabel) +
+          esc(hintLabel || comingSoonLabel) +
           '</span>';
       } else if (online) {
         actions =
@@ -184,6 +194,7 @@
         '<div class="smm-channel-card ' +
         (online ? 'is-online' : 'is-offline') +
         (connectable ? '' : ' is-coming-soon') +
+        (skillUnlocked ? '' : ' is-skill-locked') +
         '" data-smm-channel="' +
         esc(ch.id) +
         '">' +
@@ -237,6 +248,8 @@
           online: !!ch.online,
           account_count: Number(ch.account_count || 0) || 0,
           connectable: !!ch.connectable,
+          skill_unlocked: !!ch.skill_unlocked,
+          channel_ready: !!ch.channel_ready,
           accounts: ch.accounts || []
         };
       });

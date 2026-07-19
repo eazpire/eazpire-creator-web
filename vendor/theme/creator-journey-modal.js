@@ -1332,7 +1332,42 @@
     if (reason === 'channel_required') {
       return t('creator.journey.channel_required_short', 'Unlock channel first');
     }
+    if (reason === 'skill_required') {
+      return t('creator.journey.skill_required_short', 'Unlock Skill first');
+    }
     return '';
+  }
+
+  /** One or two lock badges (e.g. Level + Unlock Skill first for social listing limits). */
+  function lockBadgesHtml(node, opts) {
+    opts = opts || {};
+    var primary = lockBadgeLabel(node, opts);
+    var secondaryReason = node && node.secondary_locked_reason;
+    var badges = [];
+    if (primary) {
+      badges.push(
+        '<span class="cj-tree-card__eaz-badge cj-tree-card__level-badge">' +
+          escapeHtml(primary) +
+          '</span>'
+      );
+    }
+    if (secondaryReason && secondaryReason !== (opts.lockReason || node.locked_reason)) {
+      var secondaryLabel = lockBadgeLabel(node, {
+        levelLocked: secondaryReason === 'level_required',
+        lockReason: secondaryReason,
+        requiredLevel: opts.requiredLevel
+      });
+      if (secondaryLabel && secondaryLabel !== primary) {
+        badges.push(
+          '<span class="cj-tree-card__eaz-badge cj-tree-card__level-badge cj-tree-card__skill-badge">' +
+            escapeHtml(secondaryLabel) +
+            '</span>'
+        );
+      }
+    }
+    if (!badges.length) return '';
+    if (badges.length === 1) return badges[0];
+    return '<div class="cj-tree-card__lock-stack">' + badges.join('') + '</div>';
   }
 
   function nodeVisuallyLocked(node, opts) {
@@ -1421,17 +1456,12 @@
     );
     if (node.unlocked && !skipUnlockedBadge) {
       badgeHtml = renderUnlockedBadgeHtml(node);
-    } else if (levelLocked || lockReason) {
-      // Locked: clear reason instead of misleading EAZV progress (e.g. 0/200).
-      var lockLabel = lockBadgeLabel(node, {
+    } else if (levelLocked || lockReason || (node && node.secondary_locked_reason)) {
+      badgeHtml = lockBadgesHtml(node, {
         levelLocked: levelLocked,
         lockReason: lockReason,
         requiredLevel: opts.requiredLevel
       });
-      if (lockLabel) {
-        badgeHtml = '<span class="cj-tree-card__eaz-badge cj-tree-card__level-badge">' +
-          escapeHtml(lockLabel) + '</span>';
-      }
     } else if (!freePick && !unlockReady) {
       // Partial commits keep the EAZV progress badge (e.g. 0/80).
       badgeHtml = '<span class="cj-tree-card__eaz-badge">' +
@@ -1910,9 +1940,47 @@
     return html;
   }
 
+  function renderCarouselSkillTree(nodes) {
+    var list = (nodes || []).filter(function (n) { return !n.parent_key; })
+      .slice()
+      .sort(function (a, b) {
+        return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0) ||
+          (Number(a.min_level) || 0) - (Number(b.min_level) || 0) ||
+          nodeTitle(a).localeCompare(nodeTitle(b), undefined, { sensitivity: 'base' });
+      });
+    var split = splitUnlockedLocked(list);
+    if (!list.length) {
+      return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+    }
+    var html = '<div class="cj-product-sections">';
+    if (split.unlocked.length) {
+      html += '<section class="cj-product-section cj-unlocked-skills">' +
+        renderSectionHead(t('creator.journey.unlocked_skills', 'Unlocked'), '', '') +
+        renderCarouselShell(split.unlocked.map(renderTreeCard).join('')) +
+        '</section>';
+    }
+    if (split.locked.length) {
+      html += '<section class="cj-product-section">' +
+        renderSectionHead(t('creator.journey.available_skills', 'Available'), '', '') +
+        renderCarouselShell(split.locked.map(renderTreeCard).join('')) +
+        '</section>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  var CAROUSEL_SKILL_CATEGORIES = {
+    social: true,
+    creator_name: true,
+    hero: true,
+    promotion: true,
+    automation: true
+  };
+
   function renderGenericSkillTree(nodes) {
     var list = nodes || [];
     var category = list[0] && list[0].category;
+    if (CAROUSEL_SKILL_CATEGORIES[category]) return renderCarouselSkillTree(list);
     // Royalty tiers chain via parent_key (sequence), not a UI nest — show every tier.
     var showSequential = category === 'royalty';
     var visible = showSequential
@@ -2438,6 +2506,18 @@
       act.actionHtml + '</div></article>';
   }
 
+  function isHeroLevelNode(node) {
+    if (!node || node.category !== 'hero') return false;
+    if (node.metadata && node.metadata.hero_slot_kind === 'level') return true;
+    return String(node.node_key || '').indexOf('hero_slot_level:') === 0;
+  }
+
+  function heroSlotCapLabel(node) {
+    var cap = node && node.metadata && node.metadata.slot_cap;
+    if (cap == null || cap === '') return '';
+    return tpl('creator.journey.hero_slot_count_label', '{{ n }} slots', { n: String(cap) });
+  }
+
   function renderTreeCard(node) {
     if (node.category === 'market') return renderMarketCard(node);
     if (node.category === 'channel') return renderChannelCard(node);
@@ -2449,21 +2529,27 @@
     var act = cardActionState(node, lock.levelLocked);
 
     var cls = 'cj-tree-card cj-tree-card--' + String(node.category || 'skill').replace(/_/g, '-');
+    if (isHeroLevelNode(node)) cls += ' cj-tree-card--hero-level';
     if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
     var infoChrome = skillCardInfoChrome(node, false);
+    var frameOpts = {
+      hasAction: act.hasAction,
+      levelLocked: lock.levelLocked,
+      lockReason: lock.lockReason
+    };
+    if (isHeroLevelNode(node)) {
+      frameOpts.iconSvg = heroSlotIconSvg(node.hero_slot || node.metadata && node.metadata.slot_level);
+      frameOpts.limitLabel = heroSlotCapLabel(node);
+    }
 
     return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
       infoChrome.cardAttrs + lock.titleAttr + '>' +
       '<div class="cj-tree-card__stack">' +
-      renderTreeCardFrame(node, {
-        hasAction: act.hasAction,
-        levelLocked: lock.levelLocked,
-        lockReason: lock.lockReason
-      }) +
+      renderTreeCardFrame(node, frameOpts) +
       infoChrome.infoBtn +
       act.actionHtml + '</div></article>';
   }
@@ -3132,6 +3218,8 @@
       html = renderCreationLimitTree(filtered);
     } else if (treeFilter === 'listing_limit') {
       html = renderListingLimitTree(filtered);
+    } else if (CAROUSEL_SKILL_CATEGORIES[treeFilter]) {
+      html = renderCarouselSkillTree(filtered);
     } else {
       html = renderGenericSkillTree(filtered);
     }

@@ -164,9 +164,25 @@
     if (contentElement) contentElement.style.display = 'none';
   }
 
+  function hasVisiblePresentation() {
+    function isShown(el) {
+      if (!el) return false;
+      var d = el.style.display;
+      return d && d !== 'none';
+    }
+    return isShown(loadingElement) || isShown(errorElement) || isShown(contentElement);
+  }
+
   function syncPresentationState() {
     if (!panelElement) return;
-    if (!isLevelTabActive()) hideAllPresentationStates();
+    // Never blank the Level pane while the Level tab is active — only hide when leaving.
+    if (!isLevelTabActive()) {
+      hideAllPresentationStates();
+      return;
+    }
+    if (!hasVisiblePresentation()) {
+      showLoading();
+    }
   }
 
   /**
@@ -277,25 +293,59 @@
     syncOwnerIdToPanel(ownerId);
 
     if (!ownerId) {
-      showError(window.CreatorI18n?.pleaseLogin || 'Bitte einloggen');
+      showError(
+        (window.CreatorI18n && window.CreatorI18n.pleaseLogin) ||
+          'Please sign in to view your level.'
+      );
       return;
     }
 
     var shared = getSharedLevelData();
     if (shared && shared.ok) {
-      renderLevelData(shared);
+      try {
+        renderLevelData(shared);
+      } catch (renderErr) {
+        console.error('[Creator Level Panel] render failed (shared):', renderErr);
+        showError(
+          ((window.CreatorI18n && window.CreatorI18n.error) || 'Error') +
+            ': Could not display level data.'
+        );
+      }
       return;
     }
 
-    // wenn schon ein Request läuft -> nicht nochmal starten
-    if (inflightPromise) return;
+    // Join in-flight request instead of bailing with a blank pane (prior hideAll race).
+    if (inflightPromise) {
+      showLoading();
+      try {
+        var joined = await inflightPromise;
+        if (!isLevelTabActive()) return;
+        if (joined && joined.ok) {
+          renderLevelData(joined);
+        } else {
+          showError(
+            ((window.CreatorI18n && window.CreatorI18n.error) || 'Error') +
+              ': ' +
+              ((joined && joined.error) || 'Could not load level.')
+          );
+        }
+      } catch (joinErr) {
+        if (!isLevelTabActive()) return;
+        showError(
+          ((window.CreatorI18n && window.CreatorI18n.error) || 'Error') +
+            ': ' +
+            (joinErr && joinErr.message ? joinErr.message : 'Please try again.')
+        );
+      }
+      return;
+    }
 
     showLoading();
 
     try {
       var data = await waitForSharedLevelLoad();
       if (data && data.ok) {
-        renderLevelData(data);
+        if (isLevelTabActive()) renderLevelData(data);
         return;
       }
 
@@ -307,17 +357,18 @@
         inflightPromise = fetch(url, {
           method: 'GET',
           headers: { 'Accept': 'application/json' }
+        }).then(async function (response) {
+          if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+          }
+          const text = await response.text();
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            throw new Error('Antwort ist kein JSON (erste 120 Zeichen): ' + text.slice(0, 120));
+          }
         });
-        const response = await inflightPromise;
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const text = await response.text();
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          throw new Error('Antwort ist kein JSON (erste 120 Zeichen): ' + text.slice(0, 120));
-        }
+        data = await inflightPromise;
       }
 
       if (!data || !data.ok) {
@@ -325,12 +376,24 @@
       }
 
       window.__EAZ_JOURNEY_LEVEL_DATA__ = data;
-      renderLevelData(data);
+      if (isLevelTabActive()) renderLevelData(data);
     } catch (error) {
       console.error('[Creator Level Panel] Fehler beim Laden der Level-Daten:', error);
-      showError((window.CreatorI18n?.error || 'Fehler') + ': ' + (error && error.message ? error.message : 'Bitte versuche es später erneut.'));
+      if (isLevelTabActive()) {
+        showError(
+          ((window.CreatorI18n && window.CreatorI18n.error) || 'Error') +
+            ': ' +
+            (error && error.message ? error.message : 'Please try again later.')
+        );
+      }
     } finally {
       inflightPromise = null;
+      if (isLevelTabActive() && !hasVisiblePresentation()) {
+        showError(
+          ((window.CreatorI18n && window.CreatorI18n.error) || 'Error') +
+            ': Level data is temporarily unavailable.'
+        );
+      }
     }
   }
 
@@ -338,6 +401,13 @@
    * Rendert die Level-Daten in die UI
    */
   function renderLevelData(data) {
+    if (!data || typeof data !== 'object') {
+      showError(
+        ((window.CreatorI18n && window.CreatorI18n.error) || 'Error') +
+          ': Invalid level payload.'
+      );
+      return;
+    }
     // ✅ defensive defaults
     const total_xp = Number(data.total_xp || 0);
     const current_level = Number(data.current_level || 1);
