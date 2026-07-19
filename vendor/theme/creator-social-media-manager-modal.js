@@ -1,25 +1,32 @@
 /**
- * Creator Social Media Manager modal (IDEA-040 Phase A) — shell + Connect stubs
+ * Creator Social Media Manager modal (IDEA-040 Phase B) — Connect + Facebook OAuth
  */
 (function () {
   'use strict';
 
+  var API_BASE = (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL
+    ? window.CREATOR_API_CONFIG.BASE_URL + '/apps/creator-dispatch'
+    : 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch');
+
   var root = null;
   var currentNav = 'overview';
+  var channelState = {};
+  var oauthPopup = null;
+  var oauthPollTimer = null;
 
-  /** Locked product channel list (Phase A: Offline unless wired later). */
+  /** Locked product channel list. Facebook is live; others show Coming soon. */
   var CHANNELS = [
-    { id: 'facebook', labelKey: 'channel_facebook', label: 'Facebook', short: 'f' },
-    { id: 'instagram', labelKey: 'channel_instagram', label: 'Instagram', short: 'Ig' },
-    { id: 'threads', labelKey: 'channel_threads', label: 'Threads', short: '@' },
-    { id: 'tiktok', labelKey: 'channel_tiktok', label: 'TikTok', short: 'Tk' },
-    { id: 'youtube', labelKey: 'channel_youtube', label: 'YouTube', short: 'YT' },
-    { id: 'snapchat', labelKey: 'channel_snapchat', label: 'Snapchat', short: 'Sc' },
-    { id: 'pinterest', labelKey: 'channel_pinterest', label: 'Pinterest', short: 'P' },
-    { id: 'tumblr', labelKey: 'channel_tumblr', label: 'Tumblr', short: 't' },
-    { id: 'linkedin', labelKey: 'channel_linkedin', label: 'LinkedIn', short: 'in' },
-    { id: 'mastodon', labelKey: 'channel_mastodon', label: 'Mastodon', short: 'M' },
-    { id: 'bluesky', labelKey: 'channel_bluesky', label: 'Bluesky', short: 'bsky' }
+    { id: 'facebook', labelKey: 'channel_facebook', label: 'Facebook', short: 'f', connectable: true },
+    { id: 'instagram', labelKey: 'channel_instagram', label: 'Instagram', short: 'Ig', connectable: false },
+    { id: 'threads', labelKey: 'channel_threads', label: 'Threads', short: '@', connectable: false },
+    { id: 'tiktok', labelKey: 'channel_tiktok', label: 'TikTok', short: 'Tk', connectable: false },
+    { id: 'youtube', labelKey: 'channel_youtube', label: 'YouTube', short: 'YT', connectable: false },
+    { id: 'snapchat', labelKey: 'channel_snapchat', label: 'Snapchat', short: 'Sc', connectable: false },
+    { id: 'pinterest', labelKey: 'channel_pinterest', label: 'Pinterest', short: 'P', connectable: false },
+    { id: 'tumblr', labelKey: 'channel_tumblr', label: 'Tumblr', short: 't', connectable: false },
+    { id: 'linkedin', labelKey: 'channel_linkedin', label: 'LinkedIn', short: 'in', connectable: false },
+    { id: 'mastodon', labelKey: 'channel_mastodon', label: 'Mastodon', short: 'M', connectable: false },
+    { id: 'bluesky', labelKey: 'channel_bluesky', label: 'Bluesky', short: 'bsky', connectable: false }
   ];
 
   function isBadTranslationString(s) {
@@ -42,8 +49,40 @@
     return fallback;
   }
 
+  function getOwnerId() {
+    if (typeof window.__EAZ_OWNER_ID !== 'undefined' && window.__EAZ_OWNER_ID != null) {
+      return String(window.__EAZ_OWNER_ID);
+    }
+    var meta = document.querySelector('meta[name="creator-owner-id"]');
+    return meta ? meta.getAttribute('content') : null;
+  }
+
+  function apiUrl(op) {
+    var owner = getOwnerId();
+    var u = API_BASE + '?op=' + encodeURIComponent(op);
+    if (owner) {
+      u += '&owner_id=' + encodeURIComponent(owner) + '&logged_in_customer_id=' + encodeURIComponent(owner);
+    }
+    return u;
+  }
+
   function $(sel, el) {
     return (el || root).querySelector(sel);
+  }
+
+  function setConnectMessage(msg, isError) {
+    var el = $('#smm-connect-msg');
+    if (!el) return;
+    if (!msg) {
+      el.textContent = '';
+      el.hidden = true;
+      el.classList.remove('is-error', 'is-info');
+      return;
+    }
+    el.textContent = msg;
+    el.hidden = false;
+    el.classList.toggle('is-error', !!isError);
+    el.classList.toggle('is-info', !isError);
   }
 
   function closeDrawer() {
@@ -73,27 +112,291 @@
       else panel.setAttribute('hidden', '');
     });
     closeDrawer();
+    if (currentNav === 'connect') {
+      loadConnections();
+    }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   function renderConnectGrid() {
     var grid = $('#smm-connect-grid');
-    if (!grid || grid._smmRendered) return;
-    grid._smmRendered = true;
+    if (!grid) return;
     var offlineLabel = i18n('status_offline', 'Offline');
     var onlineLabel = i18n('status_online', 'Online');
+    var connectLabel = i18n('btn_connect', 'Connect');
+    var addLabel = i18n('btn_add', 'Add');
+    var disconnectLabel = i18n('btn_disconnect', 'Disconnect');
+    var comingSoonLabel = i18n('coming_soon', 'Coming soon');
     var html = '';
+
     CHANNELS.forEach(function (ch) {
+      var st = channelState[ch.id] || { online: false, account_count: 0, connectable: !!ch.connectable };
       var name = i18n(ch.labelKey, ch.label);
-      // Phase A: all Offline; Online glow class reserved for future OAuth
-      var online = false;
+      var online = !!st.online && Number(st.account_count || 0) > 0;
+      var count = Number(st.account_count || 0) || 0;
+      var connectable = ch.connectable !== false && st.connectable !== false;
+      var statusText = online
+        ? onlineLabel + (count > 0 ? ' · ' + count : '')
+        : offlineLabel;
+      var actions = '';
+
+      if (!connectable) {
+        actions =
+          '<button type="button" class="smm-btn smm-btn--card smm-btn--disabled" disabled title="' +
+          esc(comingSoonLabel) +
+          '">' +
+          esc(connectLabel) +
+          '</button>' +
+          '<span class="smm-channel-card__hint">' +
+          esc(comingSoonLabel) +
+          '</span>';
+      } else if (online) {
+        actions =
+          '<div class="smm-channel-card__btn-row">' +
+          '<button type="button" class="smm-btn smm-btn--card smm-btn--primary" data-smm-action="add" data-smm-channel="' +
+          esc(ch.id) +
+          '">' +
+          esc(addLabel) +
+          '</button>' +
+          '<button type="button" class="smm-btn smm-btn--card smm-btn--danger" data-smm-action="disconnect" data-smm-channel="' +
+          esc(ch.id) +
+          '">' +
+          esc(disconnectLabel) +
+          '</button>' +
+          '</div>';
+      } else {
+        actions =
+          '<button type="button" class="smm-btn smm-btn--card smm-btn--primary" data-smm-action="connect" data-smm-channel="' +
+          esc(ch.id) +
+          '">' +
+          esc(connectLabel) +
+          '</button>';
+      }
+
       html +=
-        '<div class="smm-channel-card ' + (online ? 'is-online' : 'is-offline') + '" data-smm-channel="' + ch.id + '">' +
-        '<span class="smm-channel-card__logo smm-channel-card__logo--' + ch.id + '" aria-hidden="true">' + ch.short + '</span>' +
-        '<span class="smm-channel-card__name">' + name + '</span>' +
-        '<span class="smm-channel-card__status">' + (online ? onlineLabel : offlineLabel) + '</span>' +
+        '<div class="smm-channel-card ' +
+        (online ? 'is-online' : 'is-offline') +
+        (connectable ? '' : ' is-coming-soon') +
+        '" data-smm-channel="' +
+        esc(ch.id) +
+        '">' +
+        '<span class="smm-channel-card__logo smm-channel-card__logo--' +
+        esc(ch.id) +
+        '" aria-hidden="true">' +
+        esc(ch.short) +
+        '</span>' +
+        '<span class="smm-channel-card__name">' +
+        esc(name) +
+        '</span>' +
+        '<span class="smm-channel-card__status">' +
+        esc(statusText) +
+        '</span>' +
+        '<div class="smm-channel-card__actions">' +
+        actions +
+        '</div>' +
         '</div>';
     });
     grid.innerHTML = html;
+  }
+
+  async function loadConnections() {
+    var owner = getOwnerId();
+    if (!owner) {
+      setConnectMessage(i18n('error_login_required', 'Please sign in to connect accounts.'), true);
+      renderConnectGrid();
+      return;
+    }
+    setConnectMessage(i18n('loading_connections', 'Loading connections…'), false);
+    try {
+      var res = await fetch(apiUrl('creator-social-connections'), {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!data.ok) {
+        setConnectMessage(
+          data.message || data.error || i18n('error_load_failed', 'Could not load connections.'),
+          true
+        );
+        renderConnectGrid();
+        return;
+      }
+      channelState = {};
+      (data.channels || []).forEach(function (ch) {
+        channelState[ch.id] = {
+          online: !!ch.online,
+          account_count: Number(ch.account_count || 0) || 0,
+          connectable: !!ch.connectable,
+          accounts: ch.accounts || []
+        };
+      });
+      setConnectMessage('', false);
+      renderConnectGrid();
+    } catch (e) {
+      setConnectMessage(i18n('error_network', 'Network error. Please try again.'), true);
+      renderConnectGrid();
+    }
+  }
+
+  function stopOAuthWatch() {
+    if (oauthPollTimer) {
+      clearInterval(oauthPollTimer);
+      oauthPollTimer = null;
+    }
+    oauthPopup = null;
+  }
+
+  function watchOAuthPopup(popup) {
+    stopOAuthWatch();
+    oauthPopup = popup;
+    oauthPollTimer = setInterval(function () {
+      try {
+        if (!oauthPopup || oauthPopup.closed) {
+          stopOAuthWatch();
+          loadConnections();
+        }
+      } catch (e) {
+        stopOAuthWatch();
+        loadConnections();
+      }
+    }, 800);
+  }
+
+  async function startFacebookOAuth() {
+    var owner = getOwnerId();
+    if (!owner) {
+      setConnectMessage(i18n('error_login_required', 'Please sign in to connect accounts.'), true);
+      return;
+    }
+    setConnectMessage(i18n('oauth_starting', 'Opening Facebook…'), false);
+    try {
+      var res = await fetch(apiUrl('creator-social-oauth-start'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ channel: 'facebook', owner_id: owner })
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!data.ok || !data.authorize_url) {
+        var msg =
+          data.message ||
+          (data.error === 'missing_meta_app_id'
+            ? i18n('error_meta_not_configured', 'Facebook App is not configured yet.')
+            : data.error === 'channel_not_ready'
+              ? i18n('coming_soon', 'Coming soon')
+              : i18n('error_oauth_start', 'Could not start Facebook connect.'));
+        setConnectMessage(msg, true);
+        return;
+      }
+      var w = 640;
+      var h = 720;
+      var left = Math.max(0, (window.screen.width - w) / 2);
+      var top = Math.max(0, (window.screen.height - h) / 2);
+      var popup = window.open(
+        data.authorize_url,
+        'eazpire_smm_facebook_oauth',
+        'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top + ',noopener=no'
+      );
+      if (!popup) {
+        setConnectMessage(
+          i18n('error_popup_blocked', 'Popup blocked. Allow popups for this site and try again.'),
+          true
+        );
+        return;
+      }
+      setConnectMessage(i18n('oauth_waiting', 'Finish connecting in the Facebook window…'), false);
+      watchOAuthPopup(popup);
+    } catch (e) {
+      setConnectMessage(i18n('error_network', 'Network error. Please try again.'), true);
+    }
+  }
+
+  async function disconnectChannel(channelId) {
+    var owner = getOwnerId();
+    if (!owner) {
+      setConnectMessage(i18n('error_login_required', 'Please sign in to connect accounts.'), true);
+      return;
+    }
+    var okConfirm = window.confirm(
+      i18n(
+        'confirm_disconnect',
+        'Disconnect all linked accounts for this channel from eazpire?'
+      )
+    );
+    if (!okConfirm) return;
+    setConnectMessage(i18n('disconnecting', 'Disconnecting…'), false);
+    try {
+      var res = await fetch(apiUrl('creator-social-disconnect'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ channel: channelId, owner_id: owner })
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!data.ok) {
+        setConnectMessage(
+          data.message || data.error || i18n('error_disconnect', 'Could not disconnect.'),
+          true
+        );
+        return;
+      }
+      setConnectMessage(i18n('disconnected', 'Disconnected.'), false);
+      await loadConnections();
+    } catch (e) {
+      setConnectMessage(i18n('error_network', 'Network error. Please try again.'), true);
+    }
+  }
+
+  function onConnectActionClick(e) {
+    var btn = e.target && e.target.closest ? e.target.closest('[data-smm-action]') : null;
+    if (!btn || !root || !root.contains(btn)) return;
+    e.preventDefault();
+    var action = btn.getAttribute('data-smm-action');
+    var channel = btn.getAttribute('data-smm-channel');
+    if (!action || !channel) return;
+    if (action === 'connect' || action === 'add') {
+      if (channel === 'facebook') startFacebookOAuth();
+      else setConnectMessage(i18n('coming_soon', 'Coming soon'), true);
+      return;
+    }
+    if (action === 'disconnect') {
+      disconnectChannel(channel);
+    }
+  }
+
+  function onOAuthMessage(ev) {
+    var data = ev && ev.data;
+    if (!data || data.type !== 'eazpire-smm-oauth') return;
+    stopOAuthWatch();
+    if (data.ok) {
+      setConnectMessage(
+        i18n('oauth_success', 'Account connected.') +
+          (data.saved ? ' (' + data.saved + ')' : ''),
+        false
+      );
+    } else {
+      setConnectMessage(
+        data.error === 'connect_failed'
+          ? i18n('error_oauth_failed', 'Facebook connect did not finish. Try again.')
+          : String(data.error || i18n('error_oauth_failed', 'Facebook connect did not finish. Try again.')),
+        true
+      );
+    }
+    loadConnections();
   }
 
   function open(opts) {
@@ -111,7 +414,9 @@
     root.hidden = false;
     root.removeAttribute('hidden');
     root.setAttribute('aria-hidden', 'false');
-    try { document.body.classList.add('smm-modal-open'); } catch (e) {}
+    try {
+      document.body.classList.add('smm-modal-open');
+    } catch (e) {}
     return true;
   }
 
@@ -121,7 +426,10 @@
     root.hidden = true;
     root.setAttribute('aria-hidden', 'true');
     closeDrawer();
-    try { document.body.classList.remove('smm-modal-open'); } catch (e) {}
+    stopOAuthWatch();
+    try {
+      document.body.classList.remove('smm-modal-open');
+    } catch (e) {}
   }
 
   function bindUi() {
@@ -155,6 +463,8 @@
       });
     });
 
+    root.addEventListener('click', onConnectActionClick);
+
     document.addEventListener('keydown', function (ev) {
       if (ev.key !== 'Escape') return;
       if (!root || root.hidden) return;
@@ -170,7 +480,6 @@
   function onDelegatedOpenClick(e) {
     var btn = e.target && e.target.closest ? e.target.closest('[data-smm-open]') : null;
     if (!btn) return;
-    // Mark so legacy marketing/desktop fallbacks skip a second open.
     btn._smmOpenBound = true;
     e.preventDefault();
     e.stopPropagation();
@@ -182,6 +491,10 @@
     if (!document._smmOpenDelegationBound) {
       document._smmOpenDelegationBound = true;
       document.addEventListener('click', onDelegatedOpenClick, true);
+    }
+    if (!document._smmOAuthMsgBound) {
+      document._smmOAuthMsgBound = true;
+      window.addEventListener('message', onOAuthMessage);
     }
     document.addEventListener('creator-marketing-ready', function () {
       bindUi();
@@ -200,6 +513,7 @@
     setNav: function (nav) {
       if (!root || root.hidden) open({ nav: nav });
       else setNav(nav);
-    }
+    },
+    refreshConnections: loadConnections
   };
 })();
