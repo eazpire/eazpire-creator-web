@@ -770,10 +770,12 @@
       title: ctx.productName || ctx.productKey,
       product_key: ctx.productKey,
     };
+    var productKey = ctx.productKey;
+    close();
     ensureStudioScript()
       .then(function () {
         if (window.CreatorDesignStudioModal && typeof window.CreatorDesignStudioModal.open === 'function') {
-          window.CreatorDesignStudioModal.open(design, ctx.productKey, meta);
+          window.CreatorDesignStudioModal.open(design, productKey, meta);
         } else {
           window.alert(t('studio_unavailable', 'Design Studio could not be opened.'));
         }

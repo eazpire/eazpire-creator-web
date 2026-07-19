@@ -123,6 +123,9 @@
   var eazyOutsideBound = false;
   /** Variant Settings mock layout: 'single' | 'grid' */
   var variantGridMode = 'single';
+  /** Expand/collapse state for Variants tab color rows (not tied to preview color). */
+  var variantOpenColors = Object.create(null);
+  var variantPanelInitialized = false;
   var activeAssetKey = null;
   var assetSelected = false;
   var isOpen = false;
@@ -2948,11 +2951,28 @@
 
     var activeColor = resolveColorKey();
     var activeNorm = normColorKey(activeColor);
-    var openColors = {};
+
     panelVariantsEl.querySelectorAll('.cds-color-group.is-open').forEach(function (el) {
       var ck = decodeURIComponent(el.getAttribute('data-color-group') || '');
-      if (ck) openColors[ck] = true;
+      if (ck) variantOpenColors[ck] = true;
     });
+
+    if (!variantPanelInitialized && keys.length) {
+      var seedColor = null;
+      for (var sk = 0; sk < keys.length; sk++) {
+        var skColor = keys[sk];
+        var skMock = resolveMockColorKeyForVariantColor(skColor);
+        if (
+          activeNorm &&
+          (normColorKey(skColor) === activeNorm || normColorKey(skMock) === activeNorm)
+        ) {
+          seedColor = skColor;
+          break;
+        }
+      }
+      variantOpenColors[seedColor || keys[0]] = true;
+      variantPanelInitialized = true;
+    }
 
     for (var g = 0; g < keys.length; g++) {
       var color = keys[g];
@@ -2972,7 +2992,7 @@
       var isActiveColor =
         activeNorm &&
         (normColorKey(color) === activeNorm || normColorKey(mockKeyForColor) === activeNorm);
-      var openByDefault = isActiveColor || openColors[color] || (g === 0 && !activeNorm);
+      var openByDefault = !!variantOpenColors[color];
       var colorLocked = unlockedItems.length === 0;
 
       html +=
@@ -3003,7 +3023,7 @@
         t('designStudioPreviewColor', 'Preview this color') +
         '"></button>';
       html +=
-        '<button type="button" class="cds-color-name" data-cds-color-toggle>' +
+        '<button type="button" class="cds-color-name">' +
         color +
         ' <span class="cds-color-count">(' +
         selectedInColor.length +
@@ -3015,7 +3035,7 @@
           : '') +
         '</button>';
       html +=
-        '<button type="button" class="cds-color-toggle" data-cds-color-toggle aria-label="Toggle sizes">▾</button>';
+        '<button type="button" class="cds-color-toggle" aria-label="Toggle sizes">▾</button>';
       html += '</div><div class="cds-color-body">';
       if (colorLocked) {
         html +=
@@ -3077,15 +3097,26 @@
       });
     });
 
-    panelVariantsEl.querySelectorAll('[data-cds-color-toggle]').forEach(function (el) {
-      el.addEventListener('click', function (e) {
-        e.preventDefault();
-        var group = el.closest('.cds-color-group');
-        if (group) group.classList.toggle('is-open');
+    panelVariantsEl.querySelectorAll('.cds-color-head').forEach(function (head) {
+      head.addEventListener('click', function (e) {
+        if (e.target.closest('[data-color-all]') || e.target.closest('[data-cds-color-preview]')) {
+          return;
+        }
+        var group = head.closest('.cds-color-group');
+        if (!group) return;
+        group.classList.toggle('is-open');
+        var colorKey = decodeURIComponent(group.getAttribute('data-color-group') || '');
+        if (colorKey) {
+          if (group.classList.contains('is-open')) variantOpenColors[colorKey] = true;
+          else delete variantOpenColors[colorKey];
+        }
       });
     });
 
     panelVariantsEl.querySelectorAll('[data-color-all]').forEach(function (cb) {
+      cb.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
       cb.addEventListener('change', function () {
         var colorKey = decodeURIComponent(cb.getAttribute('data-color-all') || '');
         var items = (groups[colorKey] || []).filter(function (v) {
@@ -5073,6 +5104,7 @@
             placement: currentPlacementPayload(),
             by_position: buildPreviewByPositionPayload(),
             allowed_color_keys: Object.keys(adminPoolColorMeta()),
+            read_only: !isDirty(),
           }),
         }
       );
@@ -6255,6 +6287,8 @@
     assetSelected = true;
     activeSettingsTab = 'design';
     variantGridMode = 'single';
+    variantOpenColors = Object.create(null);
+    variantPanelInitialized = false;
 
     if (subtitleEl) {
       subtitleEl.textContent = (productMeta && productMeta.title) || ctxProductKey;
