@@ -64,14 +64,15 @@ html.eaz-guide-active .eaz-creator-promotions-card,
 html.eaz-guide-active .creator-todo-item,
 html.eaz-guide-active .cmkt-card,
 html.eaz-guide-active canvas[role="button"] {
-  outline: 1px solid rgba(255, 200, 120, 0.32) !important;
+  outline: 2px solid rgba(255, 180, 80, 0.55) !important;
   outline-offset: 2px;
-  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.12) !important;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2) !important;
 }
 
 .eaz-guide-dock {
   position: fixed;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  /* Sit above the creator footer (48-52px) so Click/Screenshot/Prompt stays visible */
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -81,6 +82,13 @@ html.eaz-guide-active canvas[role="button"] {
   width: min(440px, calc(100vw - 24px));
   z-index: 2147483001;
   pointer-events: none;
+}
+
+/* Force dock visible whenever Guide Mode is on (overrides stale inline display:none) */
+html.eaz-guide-active .eaz-guide-dock {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .eaz-guide-dock > * {

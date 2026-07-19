@@ -5,6 +5,9 @@
 (function () {
   "use strict";
 
+  if (window.__eazGuideModeInit) return;
+  window.__eazGuideModeInit = true;
+
   var API_BASE =
     (window.CreatorChatActions && window.CreatorChatActions.API_BASE) ||
     "https://creator-engine.eazpire.workers.dev/apps/creator-dispatch";
@@ -18,6 +21,9 @@
   var tools = { click: true, screenshot: false, prompt: false };
   var session = { element: null, screenshot: null, prompt: "", voice_transcript: "" };
   var selectedHighlightEl = null;
+  var suppressExitUntil = 0;
+  var freezeBound = false;
+  var EXIT_SUPPRESS_MS = 1200;
 
   var ui = {
     dock: null,
@@ -55,6 +61,15 @@
 
   function shouldSuppressChatOpen() {
     return Date.now() < suppressChatOpenUntil;
+  }
+
+  function shouldSuppressExit() {
+    return Date.now() < suppressExitUntil;
+  }
+
+  function markExitSuppressed() {
+    suppressExitUntil = Date.now() + EXIT_SUPPRESS_MS;
+    suppressChatOpenUntil = Math.max(suppressChatOpenUntil, suppressExitUntil);
   }
 
   function i18n(key, fallback) {
@@ -727,7 +742,6 @@
     ui.promptBar.querySelector('[data-action="voice"]').addEventListener("click", toggleVoiceInput);
 
     bindScreenshotOverlay();
-    bindGuideInteractionFreeze();
   }
 
   function syncToolUi() {
@@ -765,6 +779,9 @@
   }
 
   function bindGuideInteractionFreeze() {
+    if (freezeBound) return;
+    freezeBound = true;
+
     function blockAndInspect(e) {
       if (!active) return;
       if (tools.screenshot) return;
@@ -774,16 +791,17 @@
 
       // Freeze navigation/actions, then explain selection.
       // Important: do NOT preventDefault on pointerdown — that cancels the click event.
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
       e.stopPropagation();
       if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
 
-      if (tools.click) {
+      if (tools.click && (e.type === "click" || e.type === "touchend")) {
         inspectTarget(t);
       }
     }
 
     document.addEventListener("click", blockAndInspect, true);
+    document.addEventListener("touchend", blockAndInspect, { capture: true, passive: false });
     document.addEventListener(
       "auxclick",
       function (e) {
@@ -1000,10 +1018,15 @@
   }
 
   function enterGuideMode() {
-    if (active) return;
+    if (active) {
+      showGuideUi();
+      return;
+    }
     if (!isSnapped()) return;
     ensureUi();
     active = true;
+    markExitSuppressed();
+    markGuideDoubleClick();
     tools = { click: true, screenshot: false, prompt: false };
     resetSession();
     setGuideFlag(true);
@@ -1018,7 +1041,9 @@
     setPromptSendMode("send");
     syncSelectionUi();
     syncExplainUi();
-    ui.exitHint.textContent = i18n("creator.guide.exit_hint", "Guide Mode — click Eazy to exit");
+    if (ui.exitHint) {
+      ui.exitHint.textContent = i18n("creator.guide.exit_hint", "Guide Mode — click Eazy to exit");
+    }
     showBubble(
       i18n("creator.guide.entered", "Guide Mode on! Tap any control to learn, drag a screenshot, or ask me."),
       false
@@ -1033,6 +1058,7 @@
 
   function exitGuideMode() {
     if (!active) return false;
+    if (shouldSuppressExit()) return false;
     active = false;
     setGuideFlag(false);
     document.documentElement.classList.remove("eaz-guide-has-explain");
@@ -1045,7 +1071,10 @@
       ui.promptInput.value = "";
       ui.promptInput.readOnly = false;
     }
-    if (ui.dock) ui.dock.style.display = "none";
+    if (ui.dock) {
+      ui.dock.style.removeProperty("display");
+      ui.dock.style.removeProperty("visibility");
+    }
     if (ui.promptBar) {
       ui.promptBar.classList.remove("is-visible", "is-locked");
     }
@@ -1058,21 +1087,35 @@
   }
 
   function showGuideUi() {
-    if (ui.dock) ui.dock.style.display = "";
+    ensureUi();
+    if (!ui.dock) return;
+    if (!document.body.contains(ui.dock)) document.body.appendChild(ui.dock);
+    if (ui.exitHint && !document.body.contains(ui.exitHint)) document.body.appendChild(ui.exitHint);
+    if (ui.screenshotOverlay && !document.body.contains(ui.screenshotOverlay)) {
+      document.body.appendChild(ui.screenshotOverlay);
+    }
+    if (ui.screenshotPersist && !document.body.contains(ui.screenshotPersist)) {
+      document.body.appendChild(ui.screenshotPersist);
+    }
+    ui.dock.style.removeProperty("display");
+    ui.dock.style.removeProperty("visibility");
+    ui.dock.hidden = false;
   }
 
   function onEazyDoubleClick(e) {
     if (!isSnapped()) return;
     e.preventDefault();
     e.stopPropagation();
-    if (active) return;
-    markGuideDoubleClick();
+    if (active) {
+      showGuideUi();
+      return;
+    }
     enterGuideMode();
-    showGuideUi();
   }
 
   function onEazySingleClick(e) {
     if (!active) return false;
+    if (shouldSuppressExit()) return true;
     e.preventDefault();
     e.stopPropagation();
     exitGuideMode();
@@ -1226,6 +1269,7 @@
       return active;
     },
     shouldSuppressChatOpen: shouldSuppressChatOpen,
+    shouldSuppressExit: shouldSuppressExit,
   };
 
   var _discoverHideTimer = null;
@@ -1271,6 +1315,7 @@
     if (regEl && regEl.getAttribute("data-src")) {
       REGISTRY_URL = regEl.getAttribute("data-src");
     }
+    bindGuideInteractionFreeze();
     bindTriggers();
     try {
       if (localStorage.getItem("eazy_guide_discovered") !== "1") {

@@ -2771,6 +2771,7 @@
     function doToggle() {
       if (_iconDragged) return;
       if (window.EazyGuide && window.EazyGuide.shouldSuppressChatOpen && window.EazyGuide.shouldSuppressChatOpen()) return;
+      if (window.EazyGuide && window.EazyGuide.shouldSuppressExit && window.EazyGuide.shouldSuppressExit()) return;
       if (window.EazyGuide && window.EazyGuide.isActive && window.EazyGuide.isActive()) {
         window.EazyGuide.exit();
         return;
