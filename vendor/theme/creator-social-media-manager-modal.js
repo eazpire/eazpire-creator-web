@@ -19,7 +19,7 @@
     { id: 'facebook', labelKey: 'channel_facebook', label: 'Facebook', short: 'f', connectable: true },
     { id: 'instagram', labelKey: 'channel_instagram', label: 'Instagram', short: 'Ig', connectable: false },
     { id: 'threads', labelKey: 'channel_threads', label: 'Threads', short: '@', connectable: false },
-    { id: 'tiktok', labelKey: 'channel_tiktok', label: 'TikTok', short: 'Tk', connectable: false },
+    { id: 'tiktok', labelKey: 'channel_tiktok', label: 'TikTok', short: 'Tk', connectable: true },
     { id: 'youtube', labelKey: 'channel_youtube', label: 'YouTube', short: 'YT', connectable: false },
     { id: 'snapchat', labelKey: 'channel_snapchat', label: 'Snapchat', short: 'Sc', connectable: false },
     { id: 'pinterest', labelKey: 'channel_pinterest', label: 'Pinterest', short: 'P', connectable: false },
@@ -285,19 +285,22 @@
     }, 800);
   }
 
-  async function startFacebookOAuth() {
+  async function startChannelOAuth(channelId) {
     var owner = getOwnerId();
     if (!owner) {
       setConnectMessage(i18n('error_login_required', 'Please sign in to connect accounts.'), true);
       return;
     }
-    setConnectMessage(i18n('oauth_starting', 'Opening Facebook…'), false);
+    var startingKey = channelId === 'tiktok' ? 'oauth_starting_tiktok' : 'oauth_starting';
+    var waitingKey = channelId === 'tiktok' ? 'oauth_waiting_tiktok' : 'oauth_waiting';
+    var popupName = channelId === 'tiktok' ? 'eazpire_smm_tiktok_oauth' : 'eazpire_smm_facebook_oauth';
+    setConnectMessage(i18n(startingKey, channelId === 'tiktok' ? 'Opening TikTok…' : 'Opening Facebook…'), false);
     try {
       var res = await fetch(apiUrl('creator-social-oauth-start'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ channel: 'facebook', owner_id: owner })
+        body: JSON.stringify({ channel: channelId, owner_id: owner })
       });
       var data = await res.json().catch(function () {
         return {};
@@ -307,9 +310,13 @@
           data.message ||
           (data.error === 'missing_meta_app_id'
             ? i18n('error_meta_not_configured', 'Facebook App is not configured yet.')
+            : data.error === 'missing_tiktok_client_key'
+              ? i18n('error_tiktok_not_configured', 'TikTok App is not configured yet.')
             : data.error === 'channel_not_ready'
               ? i18n('coming_soon', 'Coming soon')
-              : i18n('error_oauth_start', 'Could not start Facebook connect.'));
+              : channelId === 'tiktok'
+                ? i18n('error_oauth_start_tiktok', 'Could not start TikTok connect.')
+                : i18n('error_oauth_start', 'Could not start Facebook connect.'));
         setConnectMessage(msg, true);
         return;
       }
@@ -319,7 +326,7 @@
       var top = Math.max(0, (window.screen.height - h) / 2);
       var popup = window.open(
         data.authorize_url,
-        'eazpire_smm_facebook_oauth',
+        popupName,
         'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top + ',noopener=no'
       );
       if (!popup) {
@@ -329,11 +336,15 @@
         );
         return;
       }
-      setConnectMessage(i18n('oauth_waiting', 'Finish connecting in the Facebook window…'), false);
+      setConnectMessage(i18n(waitingKey, channelId === 'tiktok' ? 'Finish connecting in the TikTok window…' : 'Finish connecting in the Facebook window…'), false);
       watchOAuthPopup(popup);
     } catch (e) {
       setConnectMessage(i18n('error_network', 'Network error. Please try again.'), true);
     }
+  }
+
+  async function startFacebookOAuth() {
+    return startChannelOAuth('facebook');
   }
 
   async function disconnectChannel(channelId) {
@@ -382,7 +393,7 @@
     var channel = btn.getAttribute('data-smm-channel');
     if (!action || !channel) return;
     if (action === 'connect' || action === 'add') {
-      if (channel === 'facebook') startFacebookOAuth();
+      if (channel === 'facebook' || channel === 'tiktok') startChannelOAuth(channel);
       else setConnectMessage(i18n('coming_soon', 'Coming soon'), true);
       return;
     }
@@ -402,9 +413,13 @@
         false
       );
     } else {
+      var channelLabel = data.channel === 'tiktok' ? 'TikTok' : 'Facebook';
       setConnectMessage(
         data.error === 'connect_failed'
-          ? i18n('error_oauth_failed', 'Facebook connect did not finish. Try again.')
+          ? i18n(
+              data.channel === 'tiktok' ? 'error_oauth_failed_tiktok' : 'error_oauth_failed',
+              channelLabel + ' connect did not finish. Try again.'
+            )
           : String(data.error || i18n('error_oauth_failed', 'Facebook connect did not finish. Try again.')),
         true
       );
