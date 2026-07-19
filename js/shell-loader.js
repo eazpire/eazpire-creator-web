@@ -7,7 +7,7 @@
 
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
-  var RUNTIME_V = "11";
+  var RUNTIME_V = "12";
   var secondaryScreensPromise = null;
 
   function scheduleIdle(fn, timeoutMs) {

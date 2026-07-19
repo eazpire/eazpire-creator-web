@@ -171,42 +171,61 @@
   }
 
   function fmtHeaderEazc(n) {
-    var v = Number(n || 0);
-    if (!Number.isFinite(v)) v = 0;
-    return v % 1 === 0
-      ? String(v)
-      : v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    var v = Number(n);
+    if (!Number.isFinite(v) || v < 0) v = 0;
+    return v % 1 === 0 ? String(v) : v.toFixed(2);
   }
 
-  function applySalesPayoutToDom(formatted, unitLabel, balanceEl, desktopSalesEl, unitEls) {
+  function headerEazcFromBalancePayload(data) {
+    if (!data || data.ok === false) return 0;
+    if (data.balance_eazc_header != null && Number.isFinite(Number(data.balance_eazc_header))) {
+      return Number(data.balance_eazc_header);
+    }
+    var avail = Number(
+      data.balance_eazc_available != null ? data.balance_eazc_available : data.balance_earned_available || 0
+    );
+    var locked = Number(
+      data.balance_eazc_locked != null ? data.balance_eazc_locked : data.balance_earned_locked || 0
+    );
+    if (!Number.isFinite(avail)) avail = 0;
+    if (!Number.isFinite(locked)) locked = 0;
+    return avail + locked;
+  }
+
+  /** Creator header: Available + Pending EAZC (never fiat). */
+  window.applyCreatorHeaderEazcBalance = function (amountOrPayload) {
+    var amount =
+      amountOrPayload != null && typeof amountOrPayload === 'object'
+        ? headerEazcFromBalancePayload(amountOrPayload)
+        : Number(amountOrPayload);
+    if (!Number.isFinite(amount) || amount < 0) amount = 0;
+    var formatted = fmtHeaderEazc(amount);
+    var balanceEl = document.getElementById('global-sales-balance-value');
+    var desktopSalesEl = document.getElementById('creator-desktop-sales-balance-value');
+    var unitEls = document.querySelectorAll('[data-sales-balance-unit]');
     if (balanceEl) {
       balanceEl.textContent = formatted;
       balanceEl.style.color = '';
+      balanceEl.dataset.eazcHeader = '1';
     }
     if (desktopSalesEl) {
       desktopSalesEl.textContent = formatted;
       desktopSalesEl.style.color = '';
+      desktopSalesEl.dataset.eazcHeader = '1';
     }
     unitEls.forEach(function (u) {
-      u.textContent = unitLabel;
-    });
-    document.querySelectorAll('.creator-desktop-header [data-sales-balance-unit]').forEach(function (u) {
-      u.textContent = unitLabel;
-    });
-  }
-
-  function clearSalesPayoutDom(balanceEl, desktopSalesEl, unitEls) {
-    if (balanceEl) balanceEl.textContent = '—';
-    if (desktopSalesEl) desktopSalesEl.textContent = '—';
-    unitEls.forEach(function (u) {
       u.textContent = 'EAZC';
     });
     document.querySelectorAll('.creator-desktop-header [data-sales-balance-unit]').forEach(function (u) {
       u.textContent = 'EAZC';
     });
-  }
+    window.__salesBalanceCache.amount = amount;
+    window.__salesBalanceCache.currency = 'EAZC';
+    window.__salesBalanceCache.timestamp = Date.now();
+    return amount;
+  };
 
-  // Header: Available + Pending EAZC (not fiat). Opens Balance & Payouts.
+  // Header: Available + Pending EAZC via get-balance (same source as EAZV footer). Never fiat.
   window.loadCreatorSalesBalance = async function (retryCount) {
       retryCount = retryCount || 0;
       var balanceEl = document.getElementById('global-sales-balance-value');
@@ -215,60 +234,64 @@
       if (!balanceEl && !desktopSalesEl && unitEls.length === 0) return;
       var ownerId = resolveOwnerId();
       if (!ownerId) {
-        if (retryCount < 5) setTimeout(function () { window.loadCreatorSalesBalance(retryCount + 1); }, 500 * (retryCount + 1));
-        else clearSalesPayoutDom(balanceEl, desktopSalesEl, unitEls);
+        if (retryCount < 5) {
+          setTimeout(function () { window.loadCreatorSalesBalance(retryCount + 1); }, 500 * (retryCount + 1));
+        } else {
+          window.applyCreatorHeaderEazcBalance(0);
+        }
         return;
       }
       window.__EAZ_OWNER_ID = ownerId;
       if (window.__salesBalanceCache.loading && retryCount === 0) {
-        await window.__salesBalanceCache.loading;
+        try {
+          await window.__salesBalanceCache.loading;
+        } catch (_e) { /* ignore */ }
+        if (
+          window.__salesBalanceCache.currency === 'EAZC' &&
+          window.__salesBalanceCache.amount != null
+        ) {
+          window.applyCreatorHeaderEazcBalance(window.__salesBalanceCache.amount);
+        }
         return;
       }
       if (
         retryCount === 0 &&
+        window.__salesBalanceCache.currency === 'EAZC' &&
         window.__salesBalanceCache.timestamp &&
         Date.now() - window.__salesBalanceCache.timestamp < BALANCE_CACHE_MS &&
         window.__salesBalanceCache.amount != null
       ) {
-        applySalesPayoutToDom(
-          fmtHeaderEazc(window.__salesBalanceCache.amount),
-          'EAZC',
-          balanceEl,
-          desktopSalesEl,
-          unitEls
-        );
+        window.applyCreatorHeaderEazcBalance(window.__salesBalanceCache.amount);
         return;
+      }
+      // Drop stale fiat cache from older builds
+      if (window.__salesBalanceCache.currency && window.__salesBalanceCache.currency !== 'EAZC') {
+        window.__salesBalanceCache.amount = null;
+        window.__salesBalanceCache.timestamp = 0;
+        window.__salesBalanceCache.currency = null;
       }
       window.__salesBalanceCache.loading = (async function () {
         try {
           var data = await Promise.race([
-            window.creatorApiFetch('get-earned-balance', { owner_id: ownerId }),
+            window.creatorApiFetch('get-balance', { owner_id: ownerId }),
             new Promise(function (_, reject) {
               setTimeout(function () { reject(new Error('balance_timeout')); }, 12000);
             })
           ]);
+          var amount = 0;
           if (data && data.ok !== false) {
-            var amount =
-              data.balance_eazc_header != null
-                ? Number(data.balance_eazc_header)
-                : Number(data.balance_eazc_available || data.balance_earned_available || 0) +
-                  Number(data.balance_eazc_locked || data.balance_earned_locked || 0);
-            var formatted = fmtHeaderEazc(amount);
-            applySalesPayoutToDom(formatted, 'EAZC', balanceEl, desktopSalesEl, unitEls);
-            window.__salesBalanceCache.amount = amount;
-            window.__salesBalanceCache.currency = 'EAZC';
-            window.__salesBalanceCache.timestamp = Date.now();
-            window.dispatchEvent(
-              new CustomEvent('eazBalanceUpdated', { detail: { balance: amount, currency: 'EAZC', kind: 'eazc_header' } })
-            );
-            if (window.EazCoinBrand && typeof window.EazCoinBrand.applyCoinImages === 'function') {
-              window.EazCoinBrand.applyCoinImages(document);
-            }
+            amount = window.applyCreatorHeaderEazcBalance(data);
           } else {
-            clearSalesPayoutDom(balanceEl, desktopSalesEl, unitEls);
+            window.applyCreatorHeaderEazcBalance(0);
+          }
+          window.dispatchEvent(
+            new CustomEvent('eazBalanceUpdated', { detail: { balance: amount, currency: 'EAZC', kind: 'eazc_header' } })
+          );
+          if (window.EazCoinBrand && typeof window.EazCoinBrand.applyCoinImages === 'function') {
+            window.EazCoinBrand.applyCoinImages(document);
           }
         } catch (e) {
-          clearSalesPayoutDom(balanceEl, desktopSalesEl, unitEls);
+          window.applyCreatorHeaderEazcBalance(0);
           if (retryCount < 3) {
             setTimeout(function () { window.loadCreatorSalesBalance(retryCount + 1); }, 2500);
           }
@@ -319,6 +342,9 @@
       data.balance_eazc_available != null
         ? Number(data.balance_eazc_available)
         : Number(data.balance_earned_available || 0);
+    if (typeof window.applyCreatorHeaderEazcBalance === 'function') {
+      window.applyCreatorHeaderEazcBalance(data);
+    }
   }
 
   function loadCreatorEazBalance(retryCount) {

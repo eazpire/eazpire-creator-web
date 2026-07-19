@@ -113,6 +113,9 @@
           global.__eazBalanceCache.value = balanceValue;
           global.__eazBalanceCache.timestamp = Date.now();
           applyEazBalanceToElements(balanceEls, formattedBalance, { color: "#f97316", loaded: "1" });
+          if (typeof global.applyCreatorHeaderEazcBalance === "function") {
+            global.applyCreatorHeaderEazcBalance(data);
+          }
           global.dispatchEvent(new CustomEvent("eazBalanceUpdated", { detail: { balance: balanceValue } }));
         } else {
           applyEazBalanceToElements(balanceEls, "—", { color: "#ef4444", loaded: "0" });
