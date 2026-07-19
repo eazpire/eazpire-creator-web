@@ -2856,6 +2856,7 @@ html.creator-creations-bulk-overlay-open {
   margin: 0 auto;
   width: 100%;
   position: relative;
+  overflow: visible;
   z-index: 1;
 }
 .cmkt-level {
@@ -2917,6 +2918,8 @@ html.creator-creations-bulk-overlay-open {
 .cmkt-level--children,
 .creator-marketing-panel {
   position: relative;
+  /* Allow SVG forks that start above the host (parent card outside host) */
+  overflow: visible;
 }
 .cmkt-trunk {
   position: relative;
@@ -2925,6 +2928,8 @@ html.creator-creations-bulk-overlay-open {
   width: 4px;
   /* Fallback center stem; JS anchors under active parent via --cmkt-connector-x */
   left: calc(var(--cmkt-connector-x, 50%) - 50%);
+  /* Layout spacer only — gold paint comes from SVG connector */
+  pointer-events: none;
 }
 .cmkt-trunk::before {
   content: '';
@@ -2953,7 +2958,7 @@ html.creator-creations-bulk-overlay-open {
   content: none !important;
   display: none !important;
 }
-/* Journey-style SVG fork (parent → bar → each child) */
+/* Journey-style SVG fork (parent bottom → continuous stem → bar → children) */
 .cmkt-connector {
   position: absolute;
   left: 0;
@@ -2995,10 +3000,11 @@ html.creator-creations-bulk-overlay-open {
     transition: none !important;
   }
 }
-/* SVG replaces CSS trunk stem when present */
+/* SVG replaces CSS trunk stem when present — hide fully so no double stem / gap */
 .cmkt-level--children.has-cmkt-connector .cmkt-trunk::before,
 .creator-marketing-panel.has-cmkt-connector .cmkt-trunk::before {
   opacity: 0;
+  visibility: hidden;
 }
 
 .cmkt-card {
@@ -3124,6 +3130,7 @@ html.creator-creations-bulk-overlay-open {
   flex: 1;
   min-height: 0;
   margin-top: 4px;
+  overflow: visible;
 }
 .creator-marketing-panel--hidden { display: none !important; }
 /* Video Studio footer bar removed — never show on videos workspace */

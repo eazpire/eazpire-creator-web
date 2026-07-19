@@ -161,8 +161,30 @@
   }
 
   /**
-   * Journey-style gold fork: stem from anchor card → bar → each target card.
+   * Continuous gold fork path (one stroke for dash draw-in):
+   * parent bottom → stem → bar → snake down/up each child (L only, no M gaps).
+   */
+  function buildCmktForkPathD(parentX, childXs, pathStartY, barY, pathEndY) {
+    var sorted = childXs.slice().sort(function (a, b) { return a - b; });
+    var pathD =
+      'M' + parentX + ',' + pathStartY +
+      ' L' + parentX + ',' + barY +
+      ' L' + sorted[0] + ',' + barY;
+    var i;
+    for (i = 0; i < sorted.length; i++) {
+      pathD += ' L' + sorted[i] + ',' + pathEndY;
+      if (i < sorted.length - 1) {
+        pathD += ' L' + sorted[i] + ',' + barY +
+          ' L' + sorted[i + 1] + ',' + barY;
+      }
+    }
+    return pathD;
+  }
+
+  /**
+   * Journey-style gold fork: stem from parent card bottom → bar → each target card.
    * host = branch or panel that owns the absolute SVG connector.
+   * Parent may sit above the host (category→functions); connector.top can be negative.
    */
   function drawCmktFork(host, fromCard, toCards, animate) {
     if (!host || !fromCard || !toCards || !toCards.length) return false;
@@ -173,22 +195,19 @@
       var r = card.getBoundingClientRect();
       return Math.round(r.left + r.width / 2 - hostRect.left);
     });
-    var minX = Math.min.apply(null, childXs);
-    var maxX = Math.max.apply(null, childXs);
-    var firstChildTop = Math.round(toCards[0].getBoundingClientRect().top - hostRect.top);
-    var h = Math.max(CMKT_STROKE + 8, firstChildTop);
+    // Anchor flush under parent bottom (may be < 0 when parent is outside host).
+    var connectorTop = Math.round(fromRect.bottom - hostRect.top);
+    var childTopInHost = Math.round(Math.min.apply(null, toCards.map(function (card) {
+      return card.getBoundingClientRect().top - hostRect.top;
+    })));
+    var h = Math.max(CMKT_STROKE + 8, childTopInHost - connectorTop);
     var pathStartY = CMKT_STROKE_HALF;
-    var barY = Math.round(Math.max(pathStartY + 10, h * 0.48));
-    var pathEndY = Math.max(barY + 8, h - CMKT_STROKE_HALF);
+    var pathEndY = Math.max(pathStartY + 16, h - CMKT_STROKE_HALF);
+    // Bar near children (inverted-U), stem stays continuous from parent → bar.
+    var barY = Math.round(pathStartY + (pathEndY - pathStartY) * 0.78);
+    barY = Math.max(pathStartY + 12, Math.min(barY, pathEndY - 10));
 
-    var pathD =
-      'M' + localParentX + ',' + pathStartY +
-      ' L' + localParentX + ',' + barY +
-      ' M' + minX + ',' + barY +
-      ' L' + maxX + ',' + barY;
-    childXs.forEach(function (x) {
-      pathD += ' M' + x + ',' + barY + ' L' + x + ',' + pathEndY;
-    });
+    var pathD = buildCmktForkPathD(localParentX, childXs, pathStartY, barY, pathEndY);
 
     var tree = document.getElementById('creatorMarketingTree') || document.querySelector('#creatorMarketing .cmkt-tree');
     var treeRect = tree ? tree.getBoundingClientRect() : hostRect;
@@ -199,7 +218,7 @@
     var connector = ensureCmktConnector(host);
     host.classList.add('has-cmkt-connector');
     connector.hidden = false;
-    connector.style.top = '0px';
+    connector.style.top = connectorTop + 'px';
     connector.style.height = h + 'px';
     setCmktPath(connector, hostRect.width, h, pathD, animate);
     return true;
@@ -211,7 +230,12 @@
     var hostRect = host.getBoundingClientRect();
     var fromRect = fromCard.getBoundingClientRect();
     var localParentX = Math.round(fromRect.left + fromRect.width / 2 - hostRect.left);
-    var trunkH = leafTrunk ? Math.max(CMKT_STROKE, Math.round(leafTrunk.getBoundingClientRect().height)) : 28;
+    // Same parent-bottom anchoring as forks (no gap under parent).
+    var connectorTop = Math.round(fromRect.bottom - hostRect.top);
+    var trunkBottom = leafTrunk
+      ? Math.round(leafTrunk.getBoundingClientRect().bottom - hostRect.top)
+      : Math.round(connectorTop + 28);
+    var trunkH = Math.max(CMKT_STROKE + 8, trunkBottom - connectorTop);
     var tree = document.getElementById('creatorMarketingTree') || document.querySelector('#creatorMarketing .cmkt-tree');
     var treeRect = tree ? tree.getBoundingClientRect() : hostRect;
     var parentXTree = Math.round(fromRect.left + fromRect.width / 2 - treeRect.left);
@@ -220,7 +244,7 @@
     var connector = ensureCmktConnector(host);
     host.classList.add('has-cmkt-connector');
     connector.hidden = false;
-    connector.style.top = '0px';
+    connector.style.top = connectorTop + 'px';
     connector.style.height = trunkH + 'px';
     setCmktPath(
       connector,
