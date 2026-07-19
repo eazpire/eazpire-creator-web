@@ -76,14 +76,11 @@ html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eaz-guide-bubble__viewpor
 }
 
 html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eaz-guide-bubble__track {
-  display: flex;
+  display: block;
   width: 100%;
-  transition: transform 0.28s ease;
-  will-change: transform;
 }
 
 html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eaz-guide-bubble__page {
-  flex: 0 0 100%;
   width: 100%;
   box-sizing: border-box;
   padding-right: 4px;
@@ -178,23 +175,28 @@ html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eaz-guide-bubble__dots {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 14px;
   flex: 1;
+  padding: 0 8px;
 }
 
 html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eaz-guide-bubble__dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   border: none;
   padding: 0;
+  margin: 0;
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.28);
   cursor: pointer;
+  box-shadow: none;
 }
 
 html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eaz-guide-bubble__dot.is-active {
   background: #f97316;
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.22);
+  transform: scale(1.15);
+  box-shadow: none;
 }
 
 /* Tail points up toward Eazy (top-right of bubble) */
@@ -220,36 +222,45 @@ html.eaz-guide-active .eazy-thought.eazy-guide-bubble .eazy-thought-text {
   display: none !important;
 }
 
-/* Subtle highlight for all interactive targets while Guide Mode is on */
-html.eaz-guide-active button:not(.eaz-guide-toolbar__chip):not(.eaz-guide-toolbar__explain):not(.eaz-guide-prompt__btn):not(.eaz-guide-selection__clear),
-html.eaz-guide-active a,
-html.eaz-guide-active [role="button"],
-html.eaz-guide-active [data-desktop-switch],
-html.eaz-guide-active [data-goto],
-html.eaz-guide-active [data-nav],
-html.eaz-guide-active [data-mkt-parent],
-html.eaz-guide-active [data-mkt-child],
-html.eaz-guide-active [data-eazy-guide],
-html.eaz-guide-active [data-tab],
-html.eaz-guide-active [data-maintab],
-html.eaz-guide-active [data-statusfilter],
-html.eaz-guide-active [data-promo-tab],
-html.eaz-guide-active [data-automations-add],
-html.eaz-guide-active [data-limit],
-html.eaz-guide-active [data-open-settings],
-html.eaz-guide-active [data-open-sales-modal],
-html.eaz-guide-active [data-creator-terms-trigger],
-html.eaz-guide-active input,
-html.eaz-guide-active textarea,
-html.eaz-guide-active select,
-html.eaz-guide-active .creator-creations-card,
-html.eaz-guide-active .eaz-creator-promotions-card,
-html.eaz-guide-active .creator-todo-item,
-html.eaz-guide-active .cmkt-card,
-html.eaz-guide-active canvas[role="button"] {
-  outline: 2px solid rgba(255, 180, 80, 0.55) !important;
+/* Desktop: highlight interactive targets only on hover (keeps UI calm). */
+@media (hover: hover) and (pointer: fine) {
+  html.eaz-guide-active button:not(.eaz-guide-toolbar__chip):not(.eaz-guide-toolbar__explain):not(.eaz-guide-prompt__btn):not(.eaz-guide-selection__clear):hover,
+  html.eaz-guide-active a:hover,
+  html.eaz-guide-active [role="button"]:hover,
+  html.eaz-guide-active [data-desktop-switch]:hover,
+  html.eaz-guide-active [data-goto]:hover,
+  html.eaz-guide-active [data-nav]:hover,
+  html.eaz-guide-active [data-mkt-parent]:hover,
+  html.eaz-guide-active [data-mkt-child]:hover,
+  html.eaz-guide-active [data-eazy-guide]:hover,
+  html.eaz-guide-active [data-tab]:hover,
+  html.eaz-guide-active [data-maintab]:hover,
+  html.eaz-guide-active [data-statusfilter]:hover,
+  html.eaz-guide-active [data-promo-tab]:hover,
+  html.eaz-guide-active [data-automations-add]:hover,
+  html.eaz-guide-active [data-limit]:hover,
+  html.eaz-guide-active [data-open-settings]:hover,
+  html.eaz-guide-active [data-open-sales-modal]:hover,
+  html.eaz-guide-active [data-creator-terms-trigger]:hover,
+  html.eaz-guide-active input:hover,
+  html.eaz-guide-active textarea:hover,
+  html.eaz-guide-active select:hover,
+  html.eaz-guide-active .creator-creations-card:hover,
+  html.eaz-guide-active .eaz-creator-promotions-card:hover,
+  html.eaz-guide-active .creator-todo-item:hover,
+  html.eaz-guide-active .cmkt-card:hover,
+  html.eaz-guide-active canvas[role="button"]:hover {
+    outline: 2px solid rgba(255, 180, 80, 0.7) !important;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.22) !important;
+  }
+}
+
+/* Mobile/Android: press-to-highlight (no hover). Selected target stays via .eazy-guide-highlight */
+html.eaz-guide-active .eazy-guide-touch-focus {
+  outline: 2px solid rgba(255, 180, 80, 0.85) !important;
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.28) !important;
 }
 
 .eaz-guide-dock {
@@ -299,8 +310,25 @@ html.eaz-guide-active .eaz-guide-selection.is-visible {
 .eaz-guide-selection__row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 40px;
+}
+
+.eaz-guide-selection__tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.eaz-guide-selection__tools .eaz-guide-toolbar__chip {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.eaz-guide-toolbar {
+  display: none !important;
 }
 
 .eaz-guide-selection:not(.has-selection) .eaz-guide-selection__media {

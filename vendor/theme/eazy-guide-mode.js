@@ -19,7 +19,7 @@
   var promptLocked = false;
   var screenshotDragActive = false;
   var tools = { click: true, screenshot: false };
-  var GUIDE_UI_VERSION = "2";
+  var GUIDE_UI_VERSION = "3";
   var session = { element: null, screenshot: null, prompt: "", voice_transcript: "" };
   var selectedHighlightEl = null;
   var suppressExitUntil = 0;
@@ -133,6 +133,15 @@
       node.closest(".eaz-guide-selection") ||
       node.closest(".eaz-guide-screenshot-overlay") ||
       node.closest(".eaz-guide-exit-hint") ||
+      // Speech bubble (close, pager, body) must never trigger inspect/freeze
+      node.closest("#eazy-thought") ||
+      node.closest(".eazy-guide-bubble") ||
+      node.closest(".eaz-guide-bubble__shell") ||
+      node.closest("[data-guide-bubble-close]") ||
+      node.closest("[data-guide-bubble-prev]") ||
+      node.closest("[data-guide-bubble-next]") ||
+      node.closest("[data-guide-bubble-dot]") ||
+      node.closest("[data-guide-bubble-pager]") ||
       node.closest("#eazy-mascot") ||
       node.closest("#creator-chat-toggle")
     );
@@ -395,6 +404,19 @@
   function pagesFromPlainText(text) {
     var raw = String(text || "").trim();
     if (!raw) return [];
+    // Prefer numbered sections from the short guide prompt shape.
+    var numbered = raw.split(/\n(?=\d+\)\s)/).map(function (s) {
+      return s.trim();
+    }).filter(Boolean);
+    if (numbered.length > 1) {
+      return numbered.map(function (body, i) {
+        var m = body.match(/^\d+\)\s*([\s\S]*)$/);
+        return {
+          category: i === 0 ? "Answer" : "Step " + (i + 1),
+          body: m ? m[1].trim() : body,
+        };
+      });
+    }
     var chunks = raw.split(/\n{2,}/).map(function (s) {
       return s.trim();
     }).filter(Boolean);
@@ -404,6 +426,27 @@
     return chunks.map(function (body, i) {
       return { category: i === 0 ? "Answer" : "More", body: body };
     });
+  }
+
+  function pageHtml(page, loading) {
+    if (loading) {
+      return (
+        '<div class="eaz-guide-bubble__page">' +
+        '<div class="eaz-guide-bubble__loading"><span class="eaz-guide-bubble__spinner"></span>' +
+        '<span class="eaz-guide-bubble__body">' +
+        escapeHtml((page && page.body) || "") +
+        "</span></div></div>"
+      );
+    }
+    return (
+      '<div class="eaz-guide-bubble__page">' +
+      (page && page.category
+        ? '<div class="eaz-guide-bubble__category">' + escapeHtml(page.category) + "</div>"
+        : "") +
+      '<div class="eaz-guide-bubble__body">' +
+      escapeHtml((page && page.body) || "") +
+      "</div></div>"
+    );
   }
 
   function resolveGuideKey(el) {
@@ -589,29 +632,62 @@
     if (!el || el.getAttribute("data-guide-bubble-bound") === "1") return;
     el.setAttribute("data-guide-bubble-bound", "1");
 
-    el.addEventListener("click", function (e) {
-      if (e.target.closest("[data-guide-bubble-close]")) {
-        e.preventDefault();
-        e.stopPropagation();
-        hideBubble();
-        return;
-      }
-      if (e.target.closest("[data-guide-bubble-prev]")) {
-        e.preventDefault();
-        setBubblePage(bubblePageIndex - 1);
-        return;
-      }
-      if (e.target.closest("[data-guide-bubble-next]")) {
-        e.preventDefault();
-        setBubblePage(bubblePageIndex + 1);
-        return;
-      }
-      var dot = e.target.closest("[data-guide-bubble-dot]");
-      if (dot) {
-        e.preventDefault();
-        setBubblePage(parseInt(dot.getAttribute("data-guide-bubble-dot"), 10) || 0);
-      }
-    });
+    function isBubbleControl(target) {
+      return !!(
+        target &&
+        target.closest &&
+        (target.closest("[data-guide-bubble-close]") ||
+          target.closest("[data-guide-bubble-prev]") ||
+          target.closest("[data-guide-bubble-next]") ||
+          target.closest("[data-guide-bubble-dot]") ||
+          target.closest("[data-guide-bubble-pager]"))
+      );
+    }
+
+    function onBubbleControlPointer(e) {
+      // Capture phase on controls only — keep page text scrollable.
+      if (!isBubbleControl(e.target)) return;
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+    }
+
+    el.addEventListener("pointerdown", onBubbleControlPointer, true);
+    el.addEventListener("touchstart", onBubbleControlPointer, { capture: true, passive: false });
+    el.addEventListener(
+      "click",
+      function (e) {
+        if (e.target.closest("[data-guide-bubble-close]")) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+          hideBubble();
+          return;
+        }
+        if (e.target.closest("[data-guide-bubble-prev]")) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+          setBubblePage(bubblePageIndex - 1);
+          return;
+        }
+        if (e.target.closest("[data-guide-bubble-next]")) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+          setBubblePage(bubblePageIndex + 1);
+          return;
+        }
+        var dot = e.target.closest("[data-guide-bubble-dot]");
+        if (dot) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+          setBubblePage(parseInt(dot.getAttribute("data-guide-bubble-dot"), 10) || 0);
+        }
+      },
+      true
+    );
 
     var viewport = el.querySelector("[data-guide-bubble-viewport]");
     if (!viewport) return;
@@ -647,8 +723,12 @@
     var el = document.getElementById("eazy-thought");
     if (!el) return;
     var track = el.querySelector("[data-guide-bubble-track]");
+    var page = bubblePages[bubblePageIndex] || { category: "", body: "" };
+    var loading = el.classList.contains("eazy-guide-bubble--loading");
+    // Render one page at a time so pagination always swaps content (no CSS carousel glitches).
     if (track) {
-      track.style.transform = "translateX(" + -bubblePageIndex * 100 + "%)";
+      track.style.transform = "";
+      track.innerHTML = pageHtml(page, loading && bubblePageIndex === 0 && bubblePages.length === 1);
     }
     var dots = el.querySelectorAll("[data-guide-bubble-dots] button");
     for (var i = 0; i < dots.length; i++) {
@@ -670,48 +750,29 @@
     bubblePages = pages && pages.length ? pages : [{ category: "", body: "" }];
     bubblePageIndex = 0;
 
+    if (dots) {
+      dots.innerHTML =
+        bubblePages.length > 1
+          ? bubblePages
+              .map(function (_, i) {
+                return (
+                  '<button type="button" class="eaz-guide-bubble__dot' +
+                  (i === 0 ? " is-active" : "") +
+                  '" data-guide-bubble-dot="' +
+                  i +
+                  '" aria-label="Page ' +
+                  (i + 1) +
+                  '"></button>'
+                );
+              })
+              .join("")
+          : "";
+    }
+    if (pager) pager.hidden = loading || bubblePages.length <= 1;
     if (loading) {
-      track.innerHTML =
-        '<div class="eaz-guide-bubble__page">' +
-        '<div class="eaz-guide-bubble__loading"><span class="eaz-guide-bubble__spinner"></span>' +
-        '<span class="eaz-guide-bubble__body"></span></div></div>';
-      var body = track.querySelector(".eaz-guide-bubble__body");
-      if (body) body.textContent = bubblePages[0].body || "";
-      if (pager) pager.hidden = true;
-      track.style.transform = "translateX(0)";
+      track.innerHTML = pageHtml(bubblePages[0], true);
       return;
     }
-
-    track.innerHTML = bubblePages
-      .map(function (page) {
-        return (
-          '<div class="eaz-guide-bubble__page">' +
-          (page.category
-            ? '<div class="eaz-guide-bubble__category">' + escapeHtml(page.category) + "</div>"
-            : "") +
-          '<div class="eaz-guide-bubble__body">' +
-          escapeHtml(page.body) +
-          "</div></div>"
-        );
-      })
-      .join("");
-
-    if (dots) {
-      dots.innerHTML = bubblePages
-        .map(function (_, i) {
-          return (
-            '<button type="button" class="eaz-guide-bubble__dot' +
-            (i === 0 ? " is-active" : "") +
-            '" data-guide-bubble-dot="' +
-            i +
-            '" aria-label="Page ' +
-            (i + 1) +
-            '"></button>'
-          );
-        })
-        .join("");
-    }
-    if (pager) pager.hidden = bubblePages.length <= 1;
     setBubblePage(0);
   }
 
@@ -735,11 +796,17 @@
     requestAnimationFrame(positionGuideBubble);
   }
 
-  function showRegistryBubble(entry) {
+  function showRegistryBubble(entry, selectionLabel) {
     var pages = registryPages(entry);
     if (!pages.length) return false;
-    if (entry && entry.title && pages[0] && pages[0].category === "Overview") {
-      pages = [{ category: entry.title, body: pages[0].body }].concat(pages.slice(1));
+    var label = String(selectionLabel || "").trim();
+    var heading = label || (entry && entry.title) || "";
+    if (heading && pages[0]) {
+      var overviewBody = pages[0].body;
+      if (label && entry && entry.title && label.toLowerCase() !== String(entry.title).toLowerCase()) {
+        overviewBody = overviewBody + "\n\nSelected: " + label;
+      }
+      pages = [{ category: heading, body: overviewBody }].concat(pages.slice(1));
     }
     showBubble(pages, false);
     return true;
@@ -852,7 +919,7 @@
     // Click tips: prefer predefined registry pages. Prompt/screenshot use LLM.
     if (!payload.prompt && payload.element && payload.element.guide_key && !payload.screenshot) {
       var localEntry = explainFromRegistry(payload.element.guide_key);
-      if (localEntry && showRegistryBubble(localEntry)) {
+      if (localEntry && showRegistryBubble(localEntry, payload.element.label)) {
         return;
       }
       if (forceRegistryOnly) {
@@ -882,17 +949,32 @@
       .then(function (data) {
         pendingRequest = false;
         syncExplainUi();
-        if (data.ok && data.text) {
-          showBubble(data.text, false);
+        if (data.ok) {
+          if (data.source === "registry" && data.guide_key) {
+            var regEntry = explainFromRegistry(data.guide_key);
+            if (regEntry && showRegistryBubble(regEntry, payload.element && payload.element.label)) {
+              return;
+            }
+          }
+          if (Array.isArray(data.pages) && data.pages.length) {
+            showBubble(data.pages, false);
+          } else if (data.text) {
+            showBubble(data.text, false);
+          } else {
+            showBubble(
+              data.message || data.error || i18n("creator.guide.error", "Sorry, I could not explain that right now."),
+              false
+            );
+          }
           if (data.voice_message_id && typeof window.playEazyGuideVoice === "function") {
             window.playEazyGuideVoice(data.voice_message_id);
           }
-        } else {
-          showBubble(
-            data.message || data.error || i18n("creator.guide.error", "Sorry, I could not explain that right now."),
-            false
-          );
+          return;
         }
+        showBubble(
+          data.message || data.error || i18n("creator.guide.error", "Sorry, I could not explain that right now."),
+          false
+        );
       })
       .catch(function () {
         pendingRequest = false;
@@ -921,18 +1003,16 @@
       '<span class="eaz-guide-selection__title"></span>' +
       '<span class="eaz-guide-selection__meta" hidden></span>' +
       "</div>" +
+      '<div class="eaz-guide-selection__tools" role="toolbar" aria-label="Guide tools">' +
+      '<button type="button" class="eaz-guide-toolbar__chip is-active" data-tool="click"></button>' +
+      '<button type="button" class="eaz-guide-toolbar__chip" data-tool="screenshot"></button>' +
+      "</div>" +
       '<button type="button" class="eaz-guide-selection__clear" data-action="clear-selection" aria-label="Clear" hidden>×</button>' +
       "</div>" +
       '<div class="eaz-guide-selection__ask">' +
       '<input type="text" class="eaz-guide-prompt__input" autocomplete="off" />' +
       '<button type="button" class="eaz-guide-prompt__btn" data-action="voice" title="Voice">🎤</button>' +
       '<button type="button" class="eaz-guide-prompt__btn eaz-guide-prompt__btn--send" data-action="send"></button>' +
-      "</div>" +
-      "</div>" +
-      '<div class="eaz-guide-toolbar" role="toolbar">' +
-      '<div class="eaz-guide-toolbar__row">' +
-      '<button type="button" class="eaz-guide-toolbar__chip is-active" data-tool="click"></button>' +
-      '<button type="button" class="eaz-guide-toolbar__chip" data-tool="screenshot"></button>' +
       "</div>" +
       "</div>";
     document.body.appendChild(ui.dock);
@@ -944,7 +1024,7 @@
     ui.selectionClear = ui.dock.querySelector('[data-action="clear-selection"]');
     ui.promptAsk = ui.dock.querySelector(".eaz-guide-selection__ask");
     ui.promptInput = ui.dock.querySelector(".eaz-guide-prompt__input");
-    ui.toolbar = ui.dock.querySelector(".eaz-guide-toolbar");
+    ui.toolbar = ui.dock.querySelector(".eaz-guide-selection__tools");
 
     if (!ui.screenshotOverlay) {
       ui.screenshotOverlay = document.createElement("div");
@@ -966,30 +1046,30 @@
       document.body.appendChild(ui.exitHint);
     }
 
-    ui.toolbar.querySelector('[data-tool="click"]').textContent = i18n("creator.guide.tool_click", "Click");
-    ui.toolbar.querySelector('[data-tool="screenshot"]').textContent = i18n(
-      "creator.guide.tool_screenshot",
-      "Screenshot"
-    );
+    if (ui.toolbar) {
+      var clickChip = ui.toolbar.querySelector('[data-tool="click"]');
+      var shotChip = ui.toolbar.querySelector('[data-tool="screenshot"]');
+      if (clickChip) clickChip.textContent = i18n("creator.guide.tool_click", "Click");
+      if (shotChip) shotChip.textContent = i18n("creator.guide.tool_screenshot", "Screenshot");
+      ui.toolbar.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-tool]");
+        if (!btn) return;
+        var tool = btn.getAttribute("data-tool");
+        if (tool === "click") {
+          tools.click = true;
+          tools.screenshot = false;
+        } else if (tool === "screenshot") {
+          tools.screenshot = true;
+          tools.click = false;
+        }
+        syncToolUi();
+      });
+    }
 
     setPromptSendMode("send");
     if (ui.promptInput) {
       ui.promptInput.placeholder = i18n("creator.guide.prompt_placeholder", "Ask about what you see…");
     }
-
-    ui.toolbar.addEventListener("click", function (e) {
-      var btn = e.target.closest("[data-tool]");
-      if (!btn) return;
-      var tool = btn.getAttribute("data-tool");
-      if (tool === "click") {
-        tools.click = true;
-        tools.screenshot = false;
-      } else if (tool === "screenshot") {
-        tools.screenshot = true;
-        tools.click = false;
-      }
-      syncToolUi();
-    });
 
     ui.selectionClear.addEventListener("click", function (e) {
       e.preventDefault();
@@ -1018,13 +1098,15 @@
   }
 
   function syncToolUi() {
-    if (!ui.toolbar) return;
     if (!tools.click && !tools.screenshot) tools.click = true;
     if (tools.click && tools.screenshot) tools.screenshot = false;
-    ui.toolbar.querySelectorAll("[data-tool]").forEach(function (btn) {
-      var t = btn.getAttribute("data-tool");
-      btn.classList.toggle("is-active", !!tools[t]);
-    });
+    var root = ui.toolbar || ui.dock;
+    if (root) {
+      root.querySelectorAll("[data-tool]").forEach(function (btn) {
+        var t = btn.getAttribute("data-tool");
+        btn.classList.toggle("is-active", !!tools[t]);
+      });
+    }
     document.documentElement.classList.toggle("eaz-guide-screenshot-active", !!tools.screenshot);
     syncSelectionUi();
     syncExplainUi();
@@ -1094,6 +1176,43 @@
         if (isInsideGuideUi(e.target)) return;
         e.preventDefault();
         e.stopPropagation();
+      },
+      true
+    );
+
+    // Mobile/Android: no hover — briefly highlight the interactive target under the finger.
+    var touchFocusEl = null;
+    function clearTouchFocus() {
+      if (touchFocusEl) {
+        touchFocusEl.classList.remove("eazy-guide-touch-focus");
+        touchFocusEl = null;
+      }
+    }
+    document.addEventListener(
+      "pointerdown",
+      function (e) {
+        if (!active || tools.screenshot) return;
+        if (e.pointerType === "mouse") return;
+        if (isInsideGuideUi(e.target) || getSnapTarget(e.target)) return;
+        clearTouchFocus();
+        var target = findInteractiveTarget(e.target);
+        if (!target) return;
+        touchFocusEl = target;
+        target.classList.add("eazy-guide-touch-focus");
+      },
+      true
+    );
+    document.addEventListener(
+      "pointerup",
+      function () {
+        clearTouchFocus();
+      },
+      true
+    );
+    document.addEventListener(
+      "pointercancel",
+      function () {
+        clearTouchFocus();
       },
       true
     );

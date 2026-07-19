@@ -1135,6 +1135,18 @@
         'link_error_fetch_failed',
         'Could not download the media file (CDN blocked or expired). Save the file and use Device instead.'
       ),
+      rate_limit_minute: i18n(
+        'link_error_rate_limit_minute',
+        'Too many link imports. Please wait a minute and try again.'
+      ),
+      rate_limit_day: i18n(
+        'link_error_rate_limit_day',
+        'Daily link import limit reached. Try again tomorrow or use Device upload.'
+      ),
+      queue_not_configured: i18n(
+        'link_error_not_configured',
+        'Link download service not configured. Please contact support.'
+      ),
     };
     return (data && map[data.error]) || i18n('link_error_generic', 'Could not add media from that link.');
   }
@@ -1218,6 +1230,37 @@
     preview.hidden = false;
   }
 
+  function sleep(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  async function pollLinkIngestStatus(assetId, statusEl) {
+    var maxAttempts = 120;
+    var intervalMs = 2000;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      if (statusEl && attempt > 0 && attempt % 3 === 0) {
+        statusEl.textContent = i18n('link_processing', 'Downloading media in the background…');
+      }
+      var res = await fetch(
+        apiUrl('video-studio-link-ingest-status') + '&asset_id=' + encodeURIComponent(assetId),
+        { credentials: 'include' }
+      );
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (data.status === 'ready' && data.asset) {
+        return { ok: true, asset: data.asset, warning: data.warning || null };
+      }
+      if (data.status === 'failed' || data.error) {
+        return { ok: false, data: data };
+      }
+      await sleep(intervalMs);
+    }
+    return { ok: false, data: { error: 'timeout', message: i18n('link_error_generic', 'Could not add media from that link.') } };
+  }
+
   async function submitLinkDownload() {
     var statusEl = document.getElementById('cvs-link-status');
     var downloadBtn = document.getElementById('cvs-link-submit');
@@ -1237,7 +1280,7 @@
       var data = await res.json().catch(function () {
         return { ok: false };
       });
-      if (!data.ok || !data.asset) {
+      if (!data.ok && !data.asset_id) {
         if (statusEl) {
           statusEl.textContent = linkIngestErrorMessage(data);
           statusEl.className = 'cvs-link-status';
@@ -1245,10 +1288,52 @@
         if (downloadBtn) downloadBtn.disabled = false;
         return;
       }
-      libraryAssets.unshift(data.asset);
-      await attachAssetToProject(data.asset.id);
+
+      var asset = data.asset || null;
+      var warning = data.warning || null;
+
+      if (data.cached && asset) {
+        /* dedupe hit — asset already in library */
+      } else if (data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
+        if (statusEl) {
+          statusEl.textContent = i18n('link_queued', 'Import queued — preparing download…');
+          statusEl.className = 'cvs-link-status is-info';
+        }
+        var polled = await pollLinkIngestStatus(data.asset_id, statusEl);
+        if (!polled.ok || !polled.asset) {
+          if (statusEl) {
+            statusEl.textContent = linkIngestErrorMessage(polled.data || { error: 'fetch_failed' });
+            statusEl.className = 'cvs-link-status';
+          }
+          if (downloadBtn) downloadBtn.disabled = false;
+          return;
+        }
+        asset = polled.asset;
+        warning = polled.warning || warning;
+      } else if (data.status === 'ready' && asset) {
+        /* synchronous cached response */
+      } else {
+        if (statusEl) {
+          statusEl.textContent = linkIngestErrorMessage(data);
+          statusEl.className = 'cvs-link-status';
+        }
+        if (downloadBtn) downloadBtn.disabled = false;
+        return;
+      }
+
+      if (!asset) {
+        if (statusEl) {
+          statusEl.textContent = linkIngestErrorMessage(data);
+          statusEl.className = 'cvs-link-status';
+        }
+        if (downloadBtn) downloadBtn.disabled = false;
+        return;
+      }
+
+      libraryAssets.unshift(asset);
+      await attachAssetToProject(asset.id);
       if (statusEl) {
-        statusEl.textContent = data.warning
+        statusEl.textContent = warning
           ? i18n('link_added_with_warning', 'Added — audio-only extraction was not available, saved the original media.')
           : i18n('link_added', 'Added to project sidebar');
         statusEl.className = 'cvs-link-status is-success';
