@@ -3633,10 +3633,11 @@ body.creator-video-motion-info-modal-open {
   gap: 12px;
 }
 
-/* Desktop content-creation: model/background/prompt in one row */
-.creator-desktop-marketing-host .creator-content-creation-hero .creator-hero-upload-container,
-.creator-desktop-content-creation .creator-content-creation-hero .creator-hero-upload-container,
-.creator-content-creation-hero--desktop .creator-hero-upload-container {
+/* Desktop content-creation: model/background/prompt in one row
+   (NOT inside #creatorHeroImagesModal — that must stay full-bleed) */
+.creator-desktop-marketing-host .creator-content-creation-hero:not(#creatorContentCreationHero) .creator-hero-upload-container,
+.creator-desktop-content-creation .creator-content-creation-hero:not(#creatorContentCreationHero) .creator-hero-upload-container,
+.creator-content-creation-hero--desktop:not(#creatorContentCreationHero) .creator-hero-upload-container {
   width: min(780px, calc(100% - 220px));
   margin: 0 auto;
   display: grid;
@@ -3646,6 +3647,15 @@ body.creator-video-motion-info-modal-open {
     "uploads uploads prompt";
   column-gap: 14px;
   row-gap: 14px;
+}
+
+/* Full-bleed Hero Images modal — defeat any desktop cage that still matches */
+#creatorHeroImagesModal .creator-hero-upload-container,
+.chim-modal-root .creator-hero-upload-container,
+.creator-desktop-marketing-host #creatorHeroImagesModal .creator-hero-upload-container {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
 }
 
 .creator-desktop-marketing-host .creator-content-creation-hero .creator-hero-product-selector,

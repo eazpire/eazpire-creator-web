@@ -2873,16 +2873,16 @@ html.creator-creations-bulk-overlay-open {
   position: relative;
   z-index: 1;
 }
-/* Parent→child connectors — match Journey skill-tree gold stem */
+/* Parent→child connectors — thick Journey-style gold stem (active parent only) */
 .cmkt-level--children,
 .creator-marketing-panel {
   position: relative;
 }
 .cmkt-trunk {
   position: relative;
-  height: 28px;
+  height: 40px;
   margin: 0 auto;
-  width: 3px;
+  width: 4px;
   /* Fallback center stem; JS anchors under active parent via --cmkt-connector-x */
   left: calc(var(--cmkt-connector-x, 50%) - 50%);
 }
@@ -2892,43 +2892,39 @@ html.creator-creations-bulk-overlay-open {
   left: 50%;
   top: 0;
   bottom: 0;
-  width: 3px;
+  width: 4px;
   transform: translateX(-50%);
-  background: rgba(255, 200, 60, 0.95);
-  box-shadow: 0 0 10px rgba(255, 157, 0, 0.45);
-  border-radius: 1px;
+  background: linear-gradient(180deg, #ffb020 0%, #f97316 55%, #ffcc4d 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 180, 40, 0.35),
+    0 0 14px rgba(255, 157, 0, 0.75),
+    0 0 28px rgba(249, 115, 22, 0.45);
+  border-radius: 2px;
   pointer-events: none;
 }
 .cmkt-trunk--leaf {
-  height: 22px;
+  height: 28px;
 }
 .cmkt-level--children {
   margin-top: 0;
 }
+/* No faint full-width T-bar / crosshair — SVG fork from active parent only */
 .cmkt-level--children .cmkt-children-grid::before {
-  content: '';
-  position: absolute;
-  top: -14px;
-  left: 8%;
-  right: 8%;
-  height: 3px;
-  background: rgba(255, 200, 60, 0.9);
-  box-shadow: 0 0 10px rgba(255, 157, 0, 0.4);
-  border-radius: 1px;
-  pointer-events: none;
-  z-index: 0;
+  content: none !important;
+  display: none !important;
 }
-/* Orthogonal SVG connector (Journey-style) when parent is off-center */
+/* Journey-style SVG fork (parent → bar → each child) */
 .cmkt-connector {
   position: absolute;
   left: 0;
   top: 0;
   width: 100%;
-  height: 28px;
+  height: 40px;
   margin: 0;
   z-index: 5;
   pointer-events: none;
   background: transparent;
+  overflow: visible;
 }
 .cmkt-connector[hidden] {
   display: none !important;
@@ -2942,14 +2938,17 @@ html.creator-creations-bulk-overlay-open {
 }
 .cmkt-connector__path {
   fill: none;
-  stroke: rgba(255, 200, 60, 0.95);
-  stroke-width: 3;
-  stroke-linecap: butt;
-  stroke-linejoin: miter;
-  filter: drop-shadow(0 0 10px rgba(255, 157, 0, 0.45));
+  stroke: #ffb020;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter:
+    drop-shadow(0 0 4px rgba(255, 200, 60, 0.95))
+    drop-shadow(0 0 12px rgba(249, 115, 22, 0.75));
 }
-/* Orthogonal SVG replaces only the vertical trunk; keep the bright T-bar */
-.cmkt-level--children.has-cmkt-connector .cmkt-trunk::before {
+/* SVG replaces CSS trunk stem when present */
+.cmkt-level--children.has-cmkt-connector .cmkt-trunk::before,
+.creator-marketing-panel.has-cmkt-connector .cmkt-trunk::before {
   opacity: 0;
 }
 
@@ -2967,32 +2966,44 @@ html.creator-creations-bulk-overlay-open {
   padding: 14px 8px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.14);
+  /* Solid fallback only — photo lives on ::after so shorthand bg cannot wipe it */
   background-color: #0c1018;
-  background-image: none;
-  background-size: cover;
-  background-position: center;
+  background-image: none !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   color: #f5f5f7;
   cursor: pointer;
   text-align: center;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
-/* Dark scrim over photo — inactive cards stay dimmer; icons/titles stay above */
-.cmkt-card::before {
+/* Photo layer (immune to button background shorthand) */
+.cmkt-card::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(165deg, rgba(8, 10, 18, 0.78) 0%, rgba(6, 8, 16, 0.88) 100%);
-  transition: background 0.18s ease;
+  background-color: #121826;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scale(1.02);
+}
+/* Scrim over photo — light enough that imagery reads; inactive dimmer */
+.cmkt-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(165deg, rgba(8, 10, 18, 0.42) 0%, rgba(6, 8, 16, 0.58) 100%);
+  transition: background 0.18s ease, opacity 0.18s ease;
 }
 .cmkt-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 157, 0, 0.55);
 }
 .cmkt-card:hover::before {
-  background: linear-gradient(165deg, rgba(8, 10, 18, 0.62) 0%, rgba(6, 8, 16, 0.72) 100%);
+  background: linear-gradient(165deg, rgba(8, 10, 18, 0.28) 0%, rgba(6, 8, 16, 0.42) 100%);
 }
 .cmkt-card.is-active {
   border-color: rgba(255, 200, 60, 0.95);
@@ -3003,29 +3014,33 @@ html.creator-creations-bulk-overlay-open {
   filter: none;
 }
 .cmkt-card.is-active::before {
-  background: linear-gradient(165deg, rgba(20, 12, 4, 0.42) 0%, rgba(8, 8, 16, 0.55) 55%, rgba(249, 115, 22, 0.18) 100%);
+  background: linear-gradient(165deg, rgba(20, 12, 4, 0.22) 0%, rgba(8, 8, 16, 0.38) 55%, rgba(249, 115, 22, 0.2) 100%);
 }
-/* Non-selected siblings slightly darkened when a peer is active */
+/* Non-selected siblings clearly dimmed when a peer is active */
 .cmkt-parents-grid:has(.cmkt-card.is-active) .cmkt-card--parent:not(.is-active),
 .cmkt-children-grid:has(.cmkt-card.is-active) .cmkt-card--child:not(.is-active) {
-  filter: brightness(0.72) saturate(0.85);
+  filter: brightness(0.55) saturate(0.75);
+}
+.cmkt-parents-grid:has(.cmkt-card.is-active) .cmkt-card--parent:not(.is-active)::before,
+.cmkt-children-grid:has(.cmkt-card.is-active) .cmkt-card--child:not(.is-active)::before {
+  background: linear-gradient(165deg, rgba(4, 6, 12, 0.72) 0%, rgba(2, 4, 10, 0.82) 100%);
 }
 .cmkt-card__icon,
 .cmkt-card__title {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 .cmkt-card__icon {
   font-size: 22px;
   line-height: 1;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.75);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
 }
 .cmkt-card__title {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.25;
   color: inherit;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 .cmkt-card--child {
   min-height: 84px;
@@ -3034,23 +3049,23 @@ html.creator-creations-bulk-overlay-open {
   font-size: 11px;
 }
 
-/* Thematic card backgrounds (self-hosted Unsplash — see IDEA-039) */
-.cmkt-card--parent[data-mkt-parent="content-creation"] {
+/* Thematic card backgrounds on ::after (see IDEA-039) */
+.cmkt-card--parent[data-mkt-parent="content-creation"]::after {
   background-image: url('cmkt-bg-content-creation.jpg');
 }
-.cmkt-card--parent[data-mkt-parent="content-publish"] {
+.cmkt-card--parent[data-mkt-parent="content-publish"]::after {
   background-image: url('cmkt-bg-content-publish.jpg');
 }
-.cmkt-card--parent[data-mkt-parent="promotions"] {
+.cmkt-card--parent[data-mkt-parent="promotions"]::after {
   background-image: url('cmkt-bg-promotions.jpg');
 }
-.cmkt-card--child[data-mkt-child="hero-images"] {
+.cmkt-card--child[data-mkt-child="hero-images"]::after {
   background-image: url('cmkt-bg-hero-images.jpg');
 }
-.cmkt-card--child[data-mkt-child="videos"] {
+.cmkt-card--child[data-mkt-child="videos"]::after {
   background-image: url('cmkt-bg-videos.jpg');
 }
-.cmkt-card--child[data-mkt-child="images"] {
+.cmkt-card--child[data-mkt-child="images"]::after {
   background-image: url('cmkt-bg-images.jpg');
 }
 
@@ -3795,13 +3810,16 @@ body.creator-video-motion-info-modal-open {
   padding: 20px 16px;
   border: 2px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  background: rgba(17, 24, 39, 0.8);
+  /* background-color only — never shorthand `background` (wipes photo layers) */
+  background-color: rgba(17, 24, 39, 0.8);
+  background-image: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
   text-align: center;
   min-height: 110px;
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 .creator-hero-product-category:hover:not(.creator-hero-product-category--disabled) {
   border-color: rgba(249, 115, 22, 0.6);
@@ -3810,7 +3828,7 @@ body.creator-video-motion-info-modal-open {
 }
 .creator-hero-product-category--selected {
   border-color: rgba(249, 115, 22, 0.8);
-  background: rgba(249, 115, 22, 0.12);
+  background-color: rgba(249, 115, 22, 0.12);
   box-shadow: 0 6px 20px rgba(249, 115, 22, 0.2);
 }
 .creator-hero-product-category--disabled {

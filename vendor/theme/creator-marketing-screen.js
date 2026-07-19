@@ -37,7 +37,7 @@
     return document.getElementById('creatorMarketing');
   }
 
-  var CMKT_STROKE = 3;
+  var CMKT_STROKE = 4;
   var CMKT_STROKE_HALF = CMKT_STROKE / 2;
 
   function ensureCmktConnector(branch) {
@@ -64,13 +64,32 @@
     var connector = branch.querySelector(':scope > .cmkt-connector');
     if (connector) {
       connector.hidden = true;
+      connector.style.removeProperty('top');
+      connector.style.removeProperty('height');
       var svg = connector.querySelector('svg');
       if (svg) svg.remove();
     }
   }
 
+  function setCmktPath(connector, width, height, pathD) {
+    if (!connector) return;
+    var svg = connector.querySelector('svg');
+    if (!svg) {
+      svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('aria-hidden', 'true');
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('class', 'cmkt-connector__path');
+      svg.appendChild(path);
+      connector.appendChild(svg);
+    }
+    svg.setAttribute('viewBox', '0 0 ' + Math.max(1, Math.round(width)) + ' ' + Math.max(1, Math.round(height)));
+    var pathEl = svg.querySelector('.cmkt-connector__path');
+    if (pathEl) pathEl.setAttribute('d', pathD);
+  }
+
   /**
-   * Journey-style gold stem: anchor under active parent; orthogonal SVG when off-center.
+   * Journey-style gold fork: thick stem from ACTIVE parent only → bar → each child.
+   * No faint full-grid crosshair.
    */
   function positionCmktConnectors() {
     var tree = document.getElementById('creatorMarketingTree') || document.querySelector('#creatorMarketing .cmkt-tree');
@@ -79,10 +98,11 @@
     document.querySelectorAll('[data-mkt-branch]').forEach(function (branch) {
       clearCmktConnector(branch);
     });
-    document.querySelectorAll('#creatorMarketing .creator-marketing-panel .cmkt-trunk').forEach(function (trunk) {
-      trunk.style.removeProperty('left');
-      var panel = trunk.closest('.creator-marketing-panel');
-      if (panel) panel.style.removeProperty('--cmkt-connector-x');
+    document.querySelectorAll('#creatorMarketing .creator-marketing-panel').forEach(function (panel) {
+      clearCmktConnector(panel);
+      panel.style.removeProperty('--cmkt-connector-x');
+      var leafTrunk = panel.querySelector(':scope > .cmkt-trunk');
+      if (leafTrunk) leafTrunk.style.removeProperty('left');
     });
 
     if (!currentParent) return;
@@ -100,52 +120,62 @@
 
     var treeRect = tree.getBoundingClientRect();
     var parentRect = parentCard.getBoundingClientRect();
-    var parentX = Math.round(parentRect.left + parentRect.width / 2 - treeRect.left);
-    var pct = treeRect.width > 0 ? ((parentX / treeRect.width) * 100).toFixed(2) + '%' : '50%';
+    var parentXTree = Math.round(parentRect.left + parentRect.width / 2 - treeRect.left);
+    var pct = treeRect.width > 0 ? ((parentXTree / treeRect.width) * 100).toFixed(2) + '%' : '50%';
 
     if (branch) {
       branch.style.setProperty('--cmkt-connector-x', pct);
       var childrenGrid = branch.querySelector('.cmkt-children-grid');
       if (!childrenGrid) return;
-      var branchRect = branch.getBoundingClientRect();
-      var gridRect = childrenGrid.getBoundingClientRect();
-      var localParentX = Math.round(parentRect.left + parentRect.width / 2 - branchRect.left);
-      var gridCenterX = Math.round(gridRect.left + gridRect.width / 2 - branchRect.left);
-      var top = Math.round(0);
-      var trunk = branch.querySelector(':scope > .cmkt-trunk');
-      var trunkH = trunk ? Math.max(CMKT_STROKE, Math.round(trunk.getBoundingClientRect().height)) : 28;
-      var bottom = trunkH;
-      var h = Math.max(CMKT_STROKE, bottom - top);
+      var childCards = Array.prototype.slice.call(childrenGrid.querySelectorAll('.cmkt-card--child'));
+      if (!childCards.length) return;
 
-      if (Math.abs(localParentX - gridCenterX) > 6) {
-        var connector = ensureCmktConnector(branch);
-        branch.classList.add('has-cmkt-connector');
-        connector.hidden = false;
-        connector.style.top = '0px';
-        connector.style.height = h + 'px';
-        var pathStartY = CMKT_STROKE_HALF;
-        var pathEndY = h - CMKT_STROKE_HALF;
-        var elbowY = Math.round(pathStartY + (pathEndY - pathStartY) * 0.55);
-        var pathD =
-          'M' + localParentX + ',' + pathStartY +
-          ' L' + localParentX + ',' + elbowY +
-          ' L' + gridCenterX + ',' + elbowY +
-          ' L' + gridCenterX + ',' + pathEndY;
-        var svg = connector.querySelector('svg');
-        if (!svg) {
-          svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          svg.setAttribute('aria-hidden', 'true');
-          var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          path.setAttribute('class', 'cmkt-connector__path');
-          svg.appendChild(path);
-          connector.appendChild(svg);
-        }
-        svg.setAttribute('viewBox', '0 0 ' + Math.round(branchRect.width) + ' ' + h);
-        svg.querySelector('.cmkt-connector__path').setAttribute('d', pathD);
-      }
+      var branchRect = branch.getBoundingClientRect();
+      var localParentX = Math.round(parentRect.left + parentRect.width / 2 - branchRect.left);
+      var childXs = childCards.map(function (card) {
+        var r = card.getBoundingClientRect();
+        return Math.round(r.left + r.width / 2 - branchRect.left);
+      });
+      var minX = Math.min.apply(null, childXs);
+      var maxX = Math.max.apply(null, childXs);
+      var firstChildTop = Math.round(childCards[0].getBoundingClientRect().top - branchRect.top);
+      var h = Math.max(CMKT_STROKE + 8, firstChildTop);
+      var pathStartY = CMKT_STROKE_HALF;
+      var barY = Math.round(Math.max(pathStartY + 10, h * 0.48));
+      var pathEndY = Math.max(barY + 8, h - CMKT_STROKE_HALF);
+
+      var pathD =
+        'M' + localParentX + ',' + pathStartY +
+        ' L' + localParentX + ',' + barY +
+        ' M' + minX + ',' + barY +
+        ' L' + maxX + ',' + barY;
+      childXs.forEach(function (x) {
+        pathD += ' M' + x + ',' + barY + ' L' + x + ',' + pathEndY;
+      });
+
+      var connector = ensureCmktConnector(branch);
+      branch.classList.add('has-cmkt-connector');
+      connector.hidden = false;
+      connector.style.top = '0px';
+      connector.style.height = h + 'px';
+      setCmktPath(connector, branchRect.width, h, pathD);
     } else if (panel) {
       panel.style.setProperty('--cmkt-connector-x', pct);
       var leafTrunk = panel.querySelector(':scope > .cmkt-trunk');
+      var panelRect = panel.getBoundingClientRect();
+      var localParentX = Math.round(parentRect.left + parentRect.width / 2 - panelRect.left);
+      var trunkH = leafTrunk ? Math.max(CMKT_STROKE, Math.round(leafTrunk.getBoundingClientRect().height)) : 28;
+      var connector = ensureCmktConnector(panel);
+      panel.classList.add('has-cmkt-connector');
+      connector.hidden = false;
+      connector.style.top = '0px';
+      connector.style.height = trunkH + 'px';
+      setCmktPath(
+        connector,
+        panelRect.width,
+        trunkH,
+        'M' + localParentX + ',' + CMKT_STROKE_HALF + ' L' + localParentX + ',' + (trunkH - CMKT_STROKE_HALF)
+      );
       if (leafTrunk) {
         leafTrunk.style.left = 'calc(' + pct + ' - 50%)';
       }
