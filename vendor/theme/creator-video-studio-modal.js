@@ -1099,11 +1099,22 @@
 
   function linkIngestErrorMessage(data) {
     if (data && data.message) return data.message;
+    var code = (data && (data.error_code || data.error)) || '';
     var map = {
       link_service_not_configured:
         (data && data.platform ? data.platform + ': ' : '') +
         i18n('link_error_not_configured', 'Link download service not configured. Please contact support.'),
       cobalt_failed: i18n('link_error_cobalt_failed', 'Could not extract media from that link.'),
+      cobalt_unreachable: i18n(
+        'link_error_cobalt_unreachable',
+        'The link-download service is temporarily unreachable. Try again shortly.'
+      ),
+      cobalt_bad_response: i18n(
+        'link_error_cobalt_unreachable',
+        'The link-download service is temporarily unreachable. Try again shortly.'
+      ),
+      cobalt_http_error: i18n('link_error_cobalt_failed', 'Could not extract media from that link.'),
+      cobalt_unsupported_response: i18n('link_error_cobalt_failed', 'Could not extract media from that link.'),
       facebook_failed: i18n(
         'link_error_facebook_failed',
         'Could not find a public video on that Facebook link. Only public videos/reels work — save the file and use Device instead.'
@@ -1130,6 +1141,16 @@
       ),
       invalid_url: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
       missing_url: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
+      url_scheme_blocked: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
+      url_credentials_not_allowed: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
+      url_private_or_metadata_blocked: i18n(
+        'link_error_private_url',
+        'That link points to a private or blocked address. Save the file and use Device instead.'
+      ),
+      empty_download: i18n(
+        'link_error_empty_download',
+        'The download was empty. The link may have expired — save the file and use Device instead.'
+      ),
       file_too_large: i18n('file_too_large', 'File too large (max 500 MB)'),
       fetch_failed: i18n(
         'link_error_fetch_failed',
@@ -1152,14 +1173,16 @@
         'link_error_not_configured',
         'Link download service not configured. Please contact support.'
       ),
-      asset_not_found: i18n('link_error_generic', 'Could not add media from that link.'),
+      asset_not_found: i18n('link_error_asset_not_found', 'Import record not found. Try importing the link again.'),
       timeout: i18n('link_error_timeout', 'Import timed out. Try again in a moment.'),
       resolve_failed: i18n('link_error_generic', 'Could not add media from that link.'),
     };
     if (data && data.error === 'already_in_assets') {
       return i18n('link_already_in_assets', 'Already in your assets.');
     }
-    return (data && map[data.error]) || i18n('link_error_generic', 'Could not add media from that link.');
+    if (code && map[code]) return map[code];
+    if (code && code.indexOf(' ') === -1) return code;
+    return i18n('link_error_generic', 'Could not add media from that link.');
   }
 
   function currentLinkFormat() {
@@ -1226,7 +1249,7 @@
     } catch (e) {
       console.warn('[VideoStudio] link extract failed', e);
       if (statusEl) {
-        statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+        statusEl.textContent = linkIngestErrorMessage({ error: 'network_error', message: String(e && e.message ? e.message : 'Network error') });
         statusEl.className = 'cvs-link-status';
       }
     } finally {
@@ -1282,7 +1305,7 @@
       }
       await sleep(intervalMs);
     }
-    return { ok: false, data: { error: 'timeout', message: i18n('link_error_generic', 'Could not add media from that link.') } };
+    return { ok: false, data: { error: 'timeout', error_code: 'timeout', message: linkIngestErrorMessage({ error: 'timeout' }) } };
   }
 
   async function submitLinkDownload() {
@@ -1391,7 +1414,7 @@
     } catch (e) {
       console.warn('[VideoStudio] link download failed', e);
       if (statusEl) {
-        statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+        statusEl.textContent = linkIngestErrorMessage({ error: 'network_error', message: String(e && e.message ? e.message : 'Network error') });
         statusEl.className = 'cvs-link-status';
       }
       if (downloadBtn) downloadBtn.disabled = false;

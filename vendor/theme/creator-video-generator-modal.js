@@ -214,6 +214,125 @@
     }
   }
 
+  function linkIngestErrorMessage(data) {
+    if (data && data.message) return data.message;
+    var code = (data && (data.error_code || data.error)) || '';
+    var map = {
+      link_service_not_configured: i18n(
+        'link_error_not_configured',
+        'Link download service not configured. Please contact support.'
+      ),
+      cobalt_failed: i18n('link_error_cobalt_failed', 'Could not extract media from that link.'),
+      cobalt_unreachable: i18n(
+        'link_error_cobalt_unreachable',
+        'The link-download service is temporarily unreachable. Try again shortly.'
+      ),
+      facebook_failed: i18n(
+        'link_error_facebook_failed',
+        'Could not find a public video on that Facebook link. Only public videos/reels work — save the file and use Device instead.'
+      ),
+      tiktok_failed: i18n(
+        'link_error_tiktok_failed',
+        'Could not extract media from that TikTok link. The post may be private, deleted, or region-locked — save the file and use Device instead.'
+      ),
+      instagram_failed: i18n(
+        'link_error_instagram_failed',
+        'Could not extract public media from that Instagram link. Private or login-only posts are not supported — save the file and use Device instead.'
+      ),
+      youtube_failed: i18n(
+        'link_error_youtube_failed',
+        'Could not extract media from that YouTube link (experimental). Try again later, or save the file and use Device instead.'
+      ),
+      snapchat_failed: i18n(
+        'link_error_snapchat_failed',
+        'Could not extract media from that Snapchat link. Only public Spotlights / stories work — expired or private snaps: save the file and use Device instead.'
+      ),
+      unsupported_content_type: i18n(
+        'link_error_content_type',
+        "That link doesn't point directly to a video, audio, or image file."
+      ),
+      invalid_url: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
+      missing_url: i18n('link_error_invalid_url', 'Please enter a valid URL.'),
+      url_private_or_metadata_blocked: i18n(
+        'link_error_private_url',
+        'That link points to a private or blocked address. Save the file and use Device instead.'
+      ),
+      file_too_large: i18n('file_too_large', 'File too large (max 500 MB)'),
+      fetch_failed: i18n(
+        'link_error_fetch_failed',
+        'Could not download the media file (CDN blocked or expired). Save the file and use Device instead.'
+      ),
+      empty_download: i18n(
+        'link_error_empty_download',
+        'The download was empty. The link may have expired — save the file and use Device instead.'
+      ),
+      rate_limit_minute: i18n(
+        'link_error_rate_limit_minute',
+        'Too many link imports. Please wait a minute and try again.'
+      ),
+      rate_limit_day: i18n(
+        'link_error_rate_limit_day',
+        'Daily link import limit reached. Try again tomorrow or use Device upload.'
+      ),
+      queue_not_configured: i18n(
+        'link_error_not_configured',
+        'Link download service not configured. Please contact support.'
+      ),
+      timeout: i18n('link_error_timeout', 'Import timed out. Try again in a moment.'),
+      resolve_failed: i18n('link_error_generic', 'Could not add media from that link.'),
+    };
+    if (code && map[code]) return map[code];
+    if (code && code.indexOf(' ') === -1) return code;
+    return i18n('link_error_generic', 'Could not add media from that link.');
+  }
+
+  function mergePersistedResults(items) {
+    var loading = state.results.filter(function (r) { return r.status === 'loading'; });
+    var seen = {};
+    var merged = loading.slice();
+
+    (items || []).forEach(function (item) {
+      if (!item.video_id || !item.video_url || seen[item.video_id]) return;
+      seen[item.video_id] = true;
+      merged.push({
+        id: item.video_id,
+        status: 'done',
+        video_url: String(item.video_url),
+        video_id: item.video_id,
+        saved: !!item.saved,
+      });
+    });
+
+    state.results.forEach(function (r) {
+      if (r.status !== 'done' || !r.video_id || seen[r.video_id]) return;
+      seen[r.video_id] = true;
+      merged.push(r);
+    });
+
+    state.results = merged;
+    renderCarousel();
+    if (merged.some(function (r) { return r.status === 'done'; })) openSubheader();
+  }
+
+  async function loadPersistedResults() {
+    var owner = getOwnerId();
+    if (!owner) return;
+    try {
+      var res = await fetch(
+        API_BASE +
+          '?op=video-generator-results&owner_id=' +
+          encodeURIComponent(owner) +
+          '&limit=30',
+        { credentials: 'include' }
+      );
+      var data = await res.json().catch(function () { return {}; });
+      if (!data.ok || !Array.isArray(data.items)) return;
+      mergePersistedResults(data.items);
+    } catch (e) {
+      /* keep in-session results */
+    }
+  }
+
   async function uploadMotion(file) {
     var owner = getOwnerId();
     if (!owner || !file) return null;
@@ -409,7 +528,7 @@
       }
       await sleep(intervalMs);
     }
-    return { ok: false, data: { error: 'timeout', message: i18n('link_error_generic', 'Could not add media from that link.') } };
+    return { ok: false, data: { error: 'timeout', error_code: 'timeout', message: linkIngestErrorMessage({ error: 'timeout' }) } };
   }
 
   async function ingestLinkUrl() {
@@ -464,9 +583,7 @@
           return;
         }
         if (status) {
-          status.textContent =
-            (polled.data && (polled.data.message || polled.data.error)) ||
-            i18n('link_error_generic', 'Could not add media from that link.');
+          status.textContent = linkIngestErrorMessage(polled.data || { error: 'fetch_failed' });
           status.className = 'cvs-link-status';
         }
         return;
@@ -479,8 +596,7 @@
         return;
       }
       if (status) {
-        status.textContent =
-          data.message || data.error || i18n('link_error_generic', 'Could not add media from that link.');
+        status.textContent = linkIngestErrorMessage(data);
         status.className = 'cvs-link-status';
       }
     } catch (e) {
@@ -714,6 +830,7 @@
     root.hidden = false;
     root.setAttribute('aria-hidden', 'false');
     try { document.body.classList.add('cvg-modal-open'); } catch (e) {}
+    loadPersistedResults();
     updateFab();
   }
 
