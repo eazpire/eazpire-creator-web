@@ -504,29 +504,32 @@
 
   function renderAssetViewer() {
     var viewer = $('#smm-new-post-viewer');
-    var chooseBtn = $('#smm-btn-choose-asset');
     if (!viewer) return;
     if (!compose.asset || !compose.asset.url) {
+      viewer.classList.remove('has-asset');
       viewer.innerHTML =
+        '<div class="smm-new-post__viewer-empty-wrap">' +
         '<p class="smm-new-post__viewer-empty">' +
         esc(i18n('viewer_empty', 'Pick an image or video to preview it here.')) +
-        '</p>';
-      if (chooseBtn) {
-        chooseBtn.textContent = i18n('choose_asset', 'Choose asset');
-      }
+        '</p>' +
+        '<button type="button" class="smm-btn smm-btn--primary" id="smm-btn-choose-asset">' +
+        esc(i18n('choose_asset', 'Choose asset')) +
+        '</button>' +
+        '</div>';
       return;
     }
-    if (chooseBtn) {
-      chooseBtn.textContent = i18n('change_asset', 'Change asset');
-    }
-    if (compose.asset.kind === 'video') {
-      viewer.innerHTML =
-        '<video src="' +
-        esc(compose.asset.url) +
-        '" controls playsinline preload="metadata"></video>';
-    } else {
-      viewer.innerHTML = '<img src="' + esc(compose.asset.url) + '" alt="" />';
-    }
+    viewer.classList.add('has-asset');
+    var mediaHtml =
+      compose.asset.kind === 'video'
+        ? '<video src="' +
+          esc(compose.asset.url) +
+          '" controls playsinline preload="metadata"></video>'
+        : '<img src="' + esc(compose.asset.url) + '" alt="" />';
+    viewer.innerHTML =
+      mediaHtml +
+      '<button type="button" class="smm-btn smm-btn--primary smm-new-post__change-asset" id="smm-btn-choose-asset">' +
+      esc(i18n('change_asset', 'Change asset')) +
+      '</button>';
   }
 
   function getConnectedChannelsForSettings() {
@@ -1034,8 +1037,16 @@
       setAssetsCollapsed(false);
     }
 
-    var chooseBtn = $('#smm-btn-choose-asset');
-    if (chooseBtn) chooseBtn.addEventListener('click', openAssetPickerModal);
+    var assetsPanel = $('#smm-new-post-assets-panel');
+    if (assetsPanel && !assetsPanel._smmChooseBound) {
+      assetsPanel._smmChooseBound = true;
+      assetsPanel.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('#smm-btn-choose-asset') : null;
+        if (!btn || !assetsPanel.contains(btn)) return;
+        e.preventDefault();
+        openAssetPickerModal();
+      });
+    }
 
     var postBtn = $('#smm-btn-post-now');
     if (postBtn) {

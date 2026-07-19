@@ -422,7 +422,7 @@ body.smm-modal-open {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -515,13 +515,28 @@ body.smm-modal-open {
   display: block;
   border-radius: 8px;
 }
+.smm-new-post__viewer-empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 28px 16px;
+  text-align: center;
+}
 .smm-new-post__viewer-empty {
   margin: 0;
-  padding: 24px 16px;
+  padding: 0;
   text-align: center;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.55);
   max-width: 28ch;
+}
+.smm-new-post__change-asset {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
 }
 .smm-field {
   display: flex;

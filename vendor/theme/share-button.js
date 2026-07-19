@@ -36,6 +36,35 @@
     ).then(function (r) { return r.json(); });
   }
 
+  /** Strip modal/ref noise before shortening so shared links land on a clean product page. */
+  function sanitizeShareTargetUrl(rawUrl) {
+    try {
+      var href = rawUrl || window.location.href;
+      var u = href.indexOf('http') === 0 ? new URL(href) : new URL(href, window.location.origin);
+      ['eaz_pdp_modal', 'ref', 'ref_name', 'logged_in_customer_id', 'path_prefix'].forEach(function (key) {
+        u.searchParams.delete(key);
+      });
+      return u.toString();
+    } catch (_e) {
+      return rawUrl || window.location.href;
+    }
+  }
+
+  function createShortRefLink(ownerId, targetUrl, refName) {
+    var body = { url: targetUrl };
+    if (refName) body.ref_name = String(refName);
+    return fetch(
+      API_BASE + '/apps/creator-dispatch?op=create-short-ref-link&owner_id=' + encodeURIComponent(ownerId) + '&_t=' + Date.now(),
+      {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(body)
+      }
+    ).then(function (r) { return r.json(); });
+  }
+
   function buildShareUrl(baseUrl, refCode) {
     try {
       var href = baseUrl || window.location.href;
@@ -110,38 +139,51 @@
       var code = (refRes && refRes.ok && refRes.code) ? String(refRes.code) : '';
       var slug = getActiveSlugFromSetting(settingRes);
       
-      // If we have a ref code, use join.eazpire.com as base
+      // If we have a ref code, prefer opaque short links (join.eazpire.com/s/{token})
       if (code) {
         try {
-          // Build the join.eazpire.com URL as base
-          // If slug is present, use it directly (e.g., https://join.eazpire.com/mimamu)
-          // Otherwise use the code directly (e.g., https://join.eazpire.com/BB6FAD7F)
-          // The ref code is already contained in the link path, so NO ref parameter needed!
-          // The worker will lookup the user via the slug/code in the database
           var joinBaseUrl;
           if (slug) {
-            // Use personalized slug (e.g., /mimamu, /blibablub, /ilovecats)
             joinBaseUrl = 'https://join.eazpire.com/' + encodeURIComponent(String(slug).toLowerCase());
           } else {
-            // Use code directly if no personalized slug is set
             joinBaseUrl = 'https://join.eazpire.com/' + encodeURIComponent(code);
           }
-          
-          var joinUrl = new URL(joinBaseUrl);
-          
-          // Append the current page URL as a parameter so the join link redirects to the correct product/page
-          // If no current page URL (baseUrl is empty), the link will redirect to homepage
-          var currentPageUrl = baseUrl || window.location.href;
-          joinUrl.searchParams.set('url', currentPageUrl);
-          
-          return {
-            ownerId: String(ownerId),
-            code: code,
-            slug: slug,
-            selectedUrl: joinUrl.toString()
-          };
+
+          var currentPageUrl = sanitizeShareTargetUrl(baseUrl || window.location.href);
+          var longFallback = '';
+          try {
+            var joinUrl = new URL(joinBaseUrl);
+            joinUrl.searchParams.set('url', currentPageUrl);
+            longFallback = joinUrl.toString();
+          } catch (_joinErr) {
+            longFallback = buildShareUrl(currentPageUrl, code);
+          }
+
+          return createShortRefLink(ownerId, currentPageUrl, slug || 'main')
+            .then(function (shortRes) {
+              var selectedUrl = longFallback;
+              if (shortRes && shortRes.ok && shortRes.short_url) {
+                selectedUrl = String(shortRes.short_url);
+              } else if (shortRes && shortRes.ok && shortRes.home) {
+                // Homepage share: personalized join link is already short
+                selectedUrl = joinBaseUrl;
+              }
+              return {
+                ownerId: String(ownerId),
+                code: code,
+                slug: slug,
+                selectedUrl: selectedUrl
+              };
+            })
+            .catch(function () {
+              return {
+                ownerId: String(ownerId),
+                code: code,
+                slug: slug,
+                selectedUrl: longFallback
+              };
+            });
         } catch (e) {
-          // Fallback to buildShareUrl if URL parsing fails
           return {
             ownerId: String(ownerId),
             code: code,

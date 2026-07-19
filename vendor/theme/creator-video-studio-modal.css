@@ -1269,6 +1269,9 @@
   font-size: 12px;
   min-height: 1.2em;
   color: #f87171;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .cvs-link-status.is-success { color: #34d399; }
 .cvs-link-status.is-info { color: rgba(255, 255, 255, 0.65); }

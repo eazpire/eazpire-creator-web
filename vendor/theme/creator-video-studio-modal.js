@@ -1098,8 +1098,9 @@
   }
 
   function linkIngestErrorMessage(data) {
-    if (data && data.message) return data.message;
+    if (data && data.message) return String(data.message);
     var code = (data && (data.error_code || data.error)) || '';
+    var detail = (data && (data.code || data.detail)) || '';
     var map = {
       link_service_not_configured:
         (data && data.platform ? data.platform + ': ' : '') +
@@ -1180,8 +1181,13 @@
     if (data && data.error === 'already_in_assets') {
       return i18n('link_already_in_assets', 'Already in your assets.');
     }
-    if (code && map[code]) return map[code];
-    if (code && code.indexOf(' ') === -1) return code;
+    if (code && map[code]) {
+      if (detail && code === 'cobalt_failed') {
+        return map[code] + ' (' + detail + ')';
+      }
+      return map[code];
+    }
+    if (code && code.indexOf(' ') === -1) return detail ? code + ': ' + detail : code;
     return i18n('link_error_generic', 'Could not add media from that link.');
   }
 
