@@ -200,16 +200,19 @@
             </div>
           </div>
 
-          <div class="slm-section slm-section--convert" id="slmConvertSection">
-            <div class="slm-section__header" style="pointer-events:none">
-              <span class="slm-section__title" data-t="creator.sales_modal.convert_title">Convert</span>
-            </div>
-            <div class="slm-section__body">
-              <div class="slm-eazc-convert">
-                <p class="slm-eazc-convert__hint" data-t="creator.sales_modal.convert_hint">Convert available EAZC to fiat at the lowest pack rate. Fiat appears in your profile balance above.</p>
-                <div class="slm-eazc-convert__row">
-                  <div class="slm-eazc-convert__col slm-eazc-convert__col--eazc">
-                    <label class="slm-eazc-convert__label" for="slmConvertAmount" data-t="creator.sales_modal.convert_amount_label">Amount (EAZC)</label>
+        </div>
+
+        <div class="slm-section slm-section--convert slm-section--convert-footer" id="slmConvertSection">
+          <div class="slm-section__header" style="pointer-events:none">
+            <span class="slm-section__title" data-t="creator.sales_modal.convert_title">Convert</span>
+          </div>
+          <div class="slm-section__body">
+            <div class="slm-eazc-convert">
+              <p class="slm-eazc-convert__hint" data-t="creator.sales_modal.convert_hint">Convert available EAZC to fiat at the lowest pack rate. Fiat appears in your profile balance above.</p>
+              <div class="slm-eazc-convert__row">
+                <div class="slm-eazc-convert__col slm-eazc-convert__col--eazc">
+                  <label class="slm-eazc-convert__label" for="slmConvertAmount" data-t="creator.sales_modal.convert_amount_label">Amount (EAZC)</label>
+                  <div class="slm-eazc-convert__input-wrap">
                     <input type="number" class="slm-eazc-convert__input" id="slmConvertAmount" min="100" step="1" inputmode="numeric">
                     <div class="slm-eazc-convert__avail" aria-live="polite">
                       <img class="slm-eazc-convert__avail-coin" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo" alt="" width="16" height="16" loading="lazy" data-eaz-coin="eazc">
@@ -217,14 +220,14 @@
                       <strong id="slmConvertAvail">0 EAZC</strong>
                     </div>
                   </div>
-                  <div class="slm-eazc-convert__col slm-eazc-convert__col--fiat" aria-live="polite">
-                    <span class="slm-eazc-convert__label" data-t="creator.sales_modal.convert_fiat_label">Fiat (USD)</span>
-                    <strong class="slm-eazc-convert__fiat-value" id="slmConvertFiatSync">$0.00</strong>
-                  </div>
                 </div>
-                <button type="button" class="slm-cta slm-cta--primary slm-cta--full" id="slmConvertBtn" data-t="creator.sales_modal.convert_btn">Convert</button>
-                <p class="slm-eazc-convert__msg" id="slmConvertMsg" hidden></p>
+                <article class="slm-kpi slm-eazc-convert__col--fiat" aria-live="polite">
+                  <span class="slm-kpi__label" data-t="creator.sales_modal.convert_fiat_label">Fiat (USD)</span>
+                  <strong class="slm-kpi__value slm-eazc-convert__fiat-value" id="slmConvertFiatSync">$0.00</strong>
+                </article>
               </div>
+              <button type="button" class="slm-cta slm-cta--primary slm-cta--full" id="slmConvertBtn" data-t="creator.sales_modal.convert_btn">Convert</button>
+              <p class="slm-eazc-convert__msg" id="slmConvertMsg" hidden></p>
             </div>
           </div>
         </div>

@@ -2946,6 +2946,15 @@ html.creator-creations-bulk-overlay-open {
     drop-shadow(0 0 4px rgba(255, 200, 60, 0.95))
     drop-shadow(0 0 12px rgba(249, 115, 22, 0.75));
 }
+/* Draw-in is driven by JS (stroke-dashoffset); keep fully painted when drawn */
+.cmkt-connector__path--drawn {
+  stroke-dashoffset: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cmkt-connector__path {
+    transition: none !important;
+  }
+}
 /* SVG replaces CSS trunk stem when present */
 .cmkt-level--children.has-cmkt-connector .cmkt-trunk::before,
 .creator-marketing-panel.has-cmkt-connector .cmkt-trunk::before {
