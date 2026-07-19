@@ -554,13 +554,11 @@
     if (!compose.asset || !compose.asset.url) {
       viewer.classList.remove('has-asset');
       viewer.innerHTML =
-        '<button type="button" class="smm-new-post__viewer-add" id="smm-btn-choose-asset">' +
-        '<span class="smm-new-post__viewer-add-icon" aria-hidden="true">+</span>' +
-        '<span class="smm-new-post__viewer-add-label">' +
+        '<button type="button" class="smm-new-post__upload-area" id="smm-btn-choose-asset" aria-label="' +
         esc(i18n('choose_asset', 'Choose asset')) +
-        '</span>' +
-        '<span class="smm-new-post__viewer-add-hint">' +
-        esc(i18n('viewer_empty', 'Pick an image or video to preview it here.')) +
+        '">' +
+        '<span class="smm-new-post__upload-placeholder">' +
+        '<span class="smm-new-post__upload-add" aria-hidden="true">+</span>' +
         '</span></button>';
       return;
     }
@@ -569,13 +567,18 @@
       compose.asset.kind === 'video'
         ? '<video src="' +
           esc(compose.asset.url) +
-          '" controls playsinline preload="metadata"></video>'
-        : '<img src="' + esc(compose.asset.url) + '" alt="" />';
+          '" controls playsinline preload="metadata" class="smm-new-post__preview-media"></video>'
+        : '<img src="' +
+          esc(compose.asset.url) +
+          '" alt="" class="smm-new-post__preview-media" />';
     viewer.innerHTML =
+      '<div class="smm-new-post__upload-area is-filled">' +
+      '<div class="smm-new-post__upload-preview">' +
       mediaHtml +
-      '<button type="button" class="smm-btn smm-btn--primary smm-new-post__change-asset" id="smm-btn-choose-asset">' +
+      '<button type="button" class="smm-new-post__preview-change" id="smm-btn-choose-asset" aria-label="' +
       esc(i18n('change_asset', 'Change asset')) +
-      '</button>';
+      '">×</button>' +
+      '</div></div>';
   }
 
   function buildChannelOptionsHtml(ch) {
@@ -696,31 +699,47 @@
       renderChannelOptions();
       return;
     }
-    var html = '<div class="smm-channel-carousel__track">';
+    var onlineLabel = i18n('status_online', 'Online');
+    var enabledLabel = i18n('channel_enabled', 'Enabled');
+    var disabledLabel = i18n('channel_disabled', 'Disabled');
+    var html = '<div class="smm-compose-channel-grid" role="list">';
     channels.forEach(function (ch) {
       var enabled = isChannelEnabled(ch);
       var expanded = enabled && compose.expandedChannel === ch;
+      var st = channelState[ch] || {};
+      var count = Number(st.account_count || 0) || 0;
+      var statusText = enabled
+        ? enabledLabel + (count > 0 ? ' · ' + count : '')
+        : disabledLabel;
+      if (enabled && st.online) {
+        statusText = onlineLabel + (count > 0 ? ' · ' + count : '');
+      }
       html +=
-        '<div class="smm-channel-tile' +
-        (enabled ? '' : ' is-disabled') +
+        '<div class="smm-channel-card smm-compose-channel-card' +
+        (enabled ? ' is-online' : ' is-disabled') +
         (expanded ? ' is-expanded' : '') +
-        '" data-smm-channel-tile="' +
+        '" role="listitem" data-smm-channel-tile="' +
         esc(ch) +
         '">' +
-        '<div class="smm-channel-tile__top">' +
-        '<button type="button" class="smm-channel-tile__hit" data-smm-channel-expand="' +
+        '<button type="button" class="smm-compose-channel-card__hit" data-smm-channel-expand="' +
         esc(ch) +
         '"' +
-        (enabled ? '' : ' disabled') +
-        '>' +
+        (enabled ? '' : ' disabled aria-disabled="true"') +
+        ' aria-expanded="' +
+        (expanded ? 'true' : 'false') +
+        '">' +
         '<span class="smm-channel-card__logo smm-channel-card__logo--' +
         esc(ch) +
-        '">' +
+        '" aria-hidden="true">' +
         esc(channelLogoShort(ch)) +
         '</span>' +
-        '<span class="smm-channel-tile__name">' +
+        '<span class="smm-channel-card__name">' +
         esc(channelLabel(ch)) +
+        '</span>' +
+        '<span class="smm-channel-card__status">' +
+        esc(statusText) +
         '</span></button>' +
+        '<div class="smm-channel-card__actions">' +
         '<label class="smm-switch smm-switch--compact" title="' +
         esc(i18n('channel_enable', 'Enable channel')) +
         '">' +

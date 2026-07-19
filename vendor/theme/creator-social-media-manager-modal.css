@@ -439,7 +439,7 @@ body.smm-modal-open {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
-  overflow: hidden;
+  overflow: visible;
 }
 .smm-compose-section__header {
   display: flex;
@@ -495,74 +495,93 @@ body.smm-modal-open {
   display: none !important;
 }
 .smm-new-post__viewer {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.35);
   min-height: min(42vh, 360px);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-}
-.smm-new-post__viewer img,
-.smm-new-post__viewer video {
-  max-width: 100%;
-  max-height: min(52vh, 420px);
-  width: auto;
-  height: auto;
-  display: block;
-  border-radius: 8px;
-}
-.smm-new-post__viewer-add {
-  appearance: none;
-  border: 1px dashed rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.03);
-  color: #fff;
-  border-radius: 14px;
-  width: min(220px, 70%);
-  min-height: 180px;
-  display: flex;
   flex-direction: column;
+}
+.smm-new-post__upload-area {
+  appearance: none;
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-height: min(38vh, 320px);
+  margin: 0;
+  padding: 0;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font: inherit;
+}
+.smm-new-post__upload-area:hover {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(0, 0, 0, 0.28);
+}
+.smm-new-post__upload-area.is-filled {
+  cursor: default;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.smm-new-post__upload-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 20px 16px;
-  cursor: pointer;
-  text-align: center;
 }
-.smm-new-post__viewer-add:hover {
-  border-color: rgba(249, 115, 22, 0.55);
-  background: rgba(249, 115, 22, 0.1);
-}
-.smm-new-post__viewer-add-icon {
+.smm-new-post__upload-add {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(249, 115, 22, 0.55);
+  color: #f97316;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
-  font-weight: 500;
   line-height: 1;
-  background: rgba(249, 115, 22, 0.28);
-  border: 1px solid rgba(249, 115, 22, 0.55);
+  background: transparent;
 }
-.smm-new-post__viewer-add-label {
-  font-size: 14px;
-  font-weight: 700;
+.smm-new-post__upload-area:hover .smm-new-post__upload-add {
+  border-color: rgba(249, 115, 22, 0.85);
+  color: #fb923c;
 }
-.smm-new-post__viewer-add-hint {
-  font-size: 12px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.55);
-  max-width: 22ch;
-}
-.smm-new-post__change-asset {
+.smm-new-post__upload-preview {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  inset: 0;
+  background: #000;
+}
+.smm-new-post__preview-media {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #000;
+}
+.smm-new-post__preview-change {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   z-index: 2;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.smm-new-post__preview-change:hover {
+  background: rgba(249, 115, 22, 0.45);
+  border-color: rgba(249, 115, 22, 0.7);
 }
 .smm-visually-hidden {
   position: absolute;
@@ -628,71 +647,77 @@ body.smm-modal-open {
 }
 .smm-channel-carousel {
   min-width: 0;
+  width: 100%;
 }
-.smm-channel-carousel__track {
+.smm-compose-channel-grid {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding-bottom: 4px;
-  scrollbar-width: none;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
+  min-height: 176px;
 }
-.smm-channel-carousel__track::-webkit-scrollbar {
-  display: none;
+.smm-compose-channel-grid::-webkit-scrollbar {
+  height: 6px;
 }
-.smm-channel-tile {
-  flex: 0 0 auto;
-  width: 118px;
+.smm-compose-channel-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+.smm-compose-channel-card {
+  flex: 0 0 156px;
+  width: 156px;
+  min-height: 168px;
   scroll-snap-align: start;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 10px;
-  transition: opacity 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  position: relative;
 }
-.smm-channel-tile.is-expanded {
-  border-color: rgba(249, 115, 22, 0.55);
-  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
+.smm-compose-channel-card.is-expanded {
+  border-color: rgba(249, 115, 22, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(249, 115, 22, 0.3),
+    0 0 18px rgba(249, 115, 22, 0.28);
 }
-.smm-channel-tile.is-disabled {
+.smm-compose-channel-card.is-disabled {
   opacity: 0.42;
   filter: grayscale(0.55);
+  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.12);
+  cursor: default;
 }
-.smm-channel-tile__top {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-}
-.smm-channel-tile__hit {
+.smm-compose-channel-card__hit {
   appearance: none;
   border: none;
   background: transparent;
   color: inherit;
   padding: 0;
-  cursor: pointer;
+  margin: 0;
+  width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  cursor: inherit;
   font: inherit;
+  min-height: 0;
 }
-.smm-channel-tile__hit:disabled {
+.smm-compose-channel-card__hit:disabled {
   cursor: default;
 }
-.smm-channel-tile__name {
-  font-size: 12px;
-  font-weight: 700;
-  text-align: center;
-}
-.smm-channel-tile .smm-switch {
-  align-self: center;
+.smm-compose-channel-card .smm-channel-card__actions {
+  align-items: center;
 }
 .smm-channel-options {
   margin-top: 12px;
+  width: 100%;
 }
 .smm-channel-options[hidden] {
   display: none !important;
+}
+.smm-channel-options .smm-channel-panel {
+  width: 100%;
 }
 .smm-confirm-summary__list {
   margin: 0 0 14px;
