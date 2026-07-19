@@ -9,7 +9,17 @@
   var creationsBundlePromise = null;
   var designPreviewPromise = null;
 
+  function withPortalAssetV(url) {
+    if (!url) return url;
+    var s = String(url);
+    if (s.indexOf('?v=') !== -1 || s.indexOf('&v=') !== -1) return s;
+    var v = window.__CREATOR_PORTAL_ASSET_V;
+    if (!v) return s;
+    return s + '?v=' + v;
+  }
+
   function loadScript(url) {
+    url = withPortalAssetV(url);
     if (!url) return Promise.reject(new Error('Missing script URL'));
     if (loadPromises[url]) return loadPromises[url];
     loadPromises[url] = new Promise(function (resolve, reject) {

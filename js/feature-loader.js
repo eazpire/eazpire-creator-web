@@ -14,6 +14,9 @@
     dashboard: null,
   };
   var partialsHostId = "creatorPortalModals";
+  /** Bump on portal JS/CSS changes. /vendor + Creations bundle are cached ~7d. */
+  var PORTAL_ASSET_V = "ppm-20260719c";
+  global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
     return global.CreatorPortalThemeBridge
@@ -21,12 +24,18 @@
       : "/vendor/theme/" + file;
   }
 
+  function withAssetV(url) {
+    if (!url) return url;
+    var s = String(url);
+    if (s.indexOf("?v=") !== -1 || s.indexOf("&v=") !== -1) return s;
+    return s + "?v=" + PORTAL_ASSET_V;
+  }
+
   function loadCss(href) {
     if (!href || document.querySelector('link[data-portal-css="' + href + '"]')) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    // Bump when portal CSS changes â€” /vendor is cached 7d; stale ?v= kept old QI UI + Public Designs bugs.
-    link.href = href + "?v=ppm-20260719a";
+    link.href = withAssetV(href);
     link.setAttribute("data-portal-css", href);
     document.head.appendChild(link);
   }
@@ -38,8 +47,7 @@
     }
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      // Bump when portal JS changes â€” /vendor is cached 7d.
-      s.src = src + "?v=ppm-20260719a";
+      s.src = withAssetV(src);
       s.defer = true;
       s.setAttribute("data-portal-js", src);
       s.onload = function () {
@@ -98,7 +106,7 @@
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
     // Portal serves /partials with max-age=7d â€” bump when modal markup/CSS in partials changes.
-    var url = "/partials/" + name + "?v=ppm-20260719a";
+    var url = withAssetV("/partials/" + name);
     if (host.querySelector('[data-partial="' + name + '"]')) return;
     var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;
@@ -185,21 +193,28 @@
       ]);
 
       global.__CREATOR_LAZY_MODAL_URLS = global.__CREATOR_LAZY_MODAL_URLS || {};
-      global.__CREATOR_LAZY_MODAL_URLS["creator-mobile-filter-modal.js"] = asset("creator-mobile-filter-modal.js");
-      global.__CREATOR_LAZY_MODAL_URLS["creator-design-preview-modal.js"] = asset("creator-design-preview-modal.js");
-      global.__CREATOR_LAZY_MODAL_URLS["creator-edit-studio-modal.js"] = asset("creator-edit-studio-modal.js");
-      global.__CREATOR_MOCK_COMPOSITING_JS = asset("creator-mock-compositing.js");
-      global.__CREATOR_PRODUCTS_MODAL_JS = asset("creator-design-products-modal.js");
-      global.__CREATOR_PRODUCT_DETAIL_MODAL_JS = asset("product-detail-modal.js");
-      global.__CREATOR_PRODUCT_MOCKUP_MODAL_JS = asset("product-mockup-modal.js");
-      global.__CREATOR_CLIENT_COLORIZE_JS = asset("client-colorize.js");
+      global.__CREATOR_LAZY_MODAL_URLS["creator-mobile-filter-modal.js"] = withAssetV(
+        asset("creator-mobile-filter-modal.js")
+      );
+      global.__CREATOR_LAZY_MODAL_URLS["creator-design-preview-modal.js"] = withAssetV(
+        asset("creator-design-preview-modal.js")
+      );
+      global.__CREATOR_LAZY_MODAL_URLS["creator-edit-studio-modal.js"] = withAssetV(
+        asset("creator-edit-studio-modal.js")
+      );
+      global.__CREATOR_MOCK_COMPOSITING_JS = withAssetV(asset("creator-mock-compositing.js"));
+      global.__CREATOR_PRODUCTS_MODAL_JS = withAssetV(asset("creator-design-products-modal.js"));
+      global.__CREATOR_PRODUCT_PREVIEW_MODAL_JS = withAssetV(asset("creator-product-preview-modal.js"));
+      global.__CREATOR_PRODUCT_PREVIEW_MODAL_CSS = withAssetV(asset("creator-product-preview-modal.css"));
+      global.__CREATOR_PRODUCT_DETAIL_MODAL_JS = withAssetV(asset("product-detail-modal.js"));
+      global.__CREATOR_PRODUCT_MOCKUP_MODAL_JS = withAssetV(asset("product-mockup-modal.js"));
+      global.__CREATOR_CLIENT_COLORIZE_JS = withAssetV(asset("client-colorize.js"));
       global.__CREATOR_PRODUCT_DETAIL_MODAL_CSS = [
-        asset("product-detail-modal.css"),
-        asset("product-mockup-modal.css"),
+        withAssetV(asset("product-detail-modal.css")),
+        withAssetV(asset("product-mockup-modal.css")),
       ];
-      global.__CREATOR_PRODUCT_PREVIEW_MODAL_JS = asset("creator-product-preview-modal.js");
-      global.__CREATOR_PRODUCT_PREVIEW_MODAL_CSS = asset("creator-product-preview-modal.css");
 
+      // Must include ?v= here: ensureCreationsBundle loads via CreatorLazyModals (no feature-loader bust).
       global.__CREATOR_LAZY_CREATIONS_BUNDLE = [
         asset("creator-perf-debug.js"),
         asset("creator-creations-library-actions.js"),
@@ -211,9 +226,10 @@
         asset("creator-edit-studio-modal.js"),
         asset("creator-design-preview-modal.js"),
         asset("creator-creations-screen.js"),
-      ];
-      global.__CREATOR_STUDIO_MODAL_CSS = asset("creator-design-studio-modal.css");
-      global.__CREATOR_EDIT_STUDIO_MODAL_CSS = asset("creator-edit-studio-modal.css");
+      ].map(withAssetV);
+      global.__CREATOR_STUDIO_MODAL_JS = withAssetV(asset("creator-design-studio-modal.js"));
+      global.__CREATOR_STUDIO_MODAL_CSS = withAssetV(asset("creator-design-studio-modal.css"));
+      global.__CREATOR_EDIT_STUDIO_MODAL_CSS = withAssetV(asset("creator-edit-studio-modal.css"));
       loadCss(global.__CREATOR_STUDIO_MODAL_CSS);
       loadCss(global.__CREATOR_EDIT_STUDIO_MODAL_CSS);
 

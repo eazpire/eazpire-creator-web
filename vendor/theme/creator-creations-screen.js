@@ -2459,8 +2459,8 @@
   function withPortalCacheBust(url) {
     if (!url) return url;
     if (String(url).indexOf('?') !== -1) return url;
-    // Keep in sync with creator-web/js/feature-loader.js vendor ?v=
-    return String(url) + '?v=ppm-20260719a';
+    var v = window.__CREATOR_PORTAL_ASSET_V || 'ppm-20260719c';
+    return String(url) + '?v=' + v;
   }
 
   /** Lazy-load Product Preview Modal (Creations → Products). */
