@@ -1372,6 +1372,7 @@
         published_at: p.last_published_at || null,
         review_status: p.review_status || null,
         shopify_completion_status: p.shopify_completion_status || null,
+        published_design_id: p.published_design_id || null,
         design_ids: Array.isArray(p.design_ids) ? p.design_ids : []
       });
     });
@@ -2405,33 +2406,9 @@
     }
   }
 
-  var productDetailModalLoadPromise = null;
+  var productPreviewModalLoadPromise = null;
 
-  /** Inject the Product Detail Modal CSS once (lazy). */
-  function ensureProductDetailModalCss() {
-    var cssUrls = window.__CREATOR_PRODUCT_DETAIL_MODAL_CSS || [];
-    cssUrls.forEach(function (href) {
-      if (!href) return;
-      var base = String(href).split('?')[0];
-      var already = Array.prototype.some.call(
-        document.querySelectorAll('link[rel="stylesheet"]'),
-        function (l) { return (l.getAttribute('href') || '').split('?')[0] === base; }
-      );
-      if (already) return;
-      var link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = href;
-      document.head.appendChild(link);
-    });
-  }
-
-  /**
-   * Ensure ProductDetailModal (+ mockup fallback) is available, loading its
-   * assets on demand. The Products tab script is lazy-loaded and the modal
-   * script is normally attached to the Design Modal snippet, so it may not be
-   * present when a product card is clicked.
-   */
-  function resolveProductDetailModalAssetUrl(explicitUrl, fileName) {
+  function resolveProductPreviewModalAssetUrl(explicitUrl, fileName) {
     if (explicitUrl) return explicitUrl;
     try {
       if (
@@ -2444,51 +2421,90 @@
         return '/vendor/theme/' + fileName;
       }
     } catch (_e) {}
+    try {
+      var scripts = document.getElementsByTagName('script');
+      for (var i = 0; i < scripts.length; i++) {
+        var src = scripts[i].src || '';
+        if (src.indexOf('creator-creations-screen.js') !== -1) {
+          return src.replace('creator-creations-screen.js', fileName);
+        }
+      }
+    } catch (_e2) {}
+    var bundle = window.__CREATOR_LAZY_CREATIONS_BUNDLE || [];
+    for (var b = 0; b < bundle.length; b++) {
+      var u = String(bundle[b] || '');
+      if (u.indexOf('creator-creations-screen.js') !== -1) {
+        return u.replace('creator-creations-screen.js', fileName);
+      }
+    }
     return '';
   }
 
-  function ensureProductDetailModal() {
-    if (window.ProductDetailModal && typeof window.ProductDetailModal.open === 'function') {
+  function ensureCssHref(href) {
+    if (!href) return;
+    var base = String(href).split('?')[0];
+    var already = Array.prototype.some.call(
+      document.querySelectorAll('link[rel="stylesheet"]'),
+      function (l) {
+        return (l.getAttribute('href') || '').split('?')[0] === base;
+      }
+    );
+    if (already) return;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+  }
+
+  /** Lazy-load Product Preview Modal (Creations → Products). */
+  function ensureProductPreviewModal() {
+    if (window.CreatorProductPreviewModal && typeof window.CreatorProductPreviewModal.open === 'function') {
       return Promise.resolve();
     }
-    if (productDetailModalLoadPromise) return productDetailModalLoadPromise;
+    if (productPreviewModalLoadPromise) return productPreviewModalLoadPromise;
 
     var lazy = window.__CreatorLazyModals;
-    var colorizeUrl = resolveProductDetailModalAssetUrl(
-      window.__CREATOR_CLIENT_COLORIZE_JS || '',
-      'client-colorize.js'
+    var jsUrl = resolveProductPreviewModalAssetUrl(
+      window.__CREATOR_PRODUCT_PREVIEW_MODAL_JS || '',
+      'creator-product-preview-modal.js'
     );
-    var mockupUrl = resolveProductDetailModalAssetUrl(
-      window.__CREATOR_PRODUCT_MOCKUP_MODAL_JS || '',
-      'product-mockup-modal.js'
+    var cssUrl = resolveProductPreviewModalAssetUrl(
+      window.__CREATOR_PRODUCT_PREVIEW_MODAL_CSS || '',
+      'creator-product-preview-modal.css'
     );
-    var detailUrl = resolveProductDetailModalAssetUrl(
-      window.__CREATOR_PRODUCT_DETAIL_MODAL_JS || '',
-      'product-detail-modal.js'
-    );
-    if (!window.__CREATOR_PRODUCT_DETAIL_MODAL_CSS || !window.__CREATOR_PRODUCT_DETAIL_MODAL_CSS.length) {
-      window.__CREATOR_PRODUCT_DETAIL_MODAL_CSS = [
-        resolveProductDetailModalAssetUrl('', 'product-detail-modal.css'),
-        resolveProductDetailModalAssetUrl('', 'product-mockup-modal.css'),
-      ].filter(Boolean);
-    }
-    ensureProductDetailModalCss();
-    if (!lazy || typeof lazy.loadScriptsSequential !== 'function' || !detailUrl) {
-      return Promise.reject(new Error('Product detail modal loader unavailable'));
-    }
+    ensureCssHref(cssUrl);
 
-    productDetailModalLoadPromise = lazy
-      .loadScriptsSequential([colorizeUrl, mockupUrl, detailUrl])
-      .catch(function (err) {
-        productDetailModalLoadPromise = null;
+    if (lazy && typeof lazy.loadScript === 'function' && jsUrl) {
+      productPreviewModalLoadPromise = lazy.loadScript(jsUrl).catch(function (err) {
+        productPreviewModalLoadPromise = null;
         throw err;
       });
-    return productDetailModalLoadPromise;
+      return productPreviewModalLoadPromise;
+    }
+
+    if (!jsUrl) {
+      return Promise.reject(new Error('Product preview modal loader unavailable'));
+    }
+
+    productPreviewModalLoadPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = jsUrl;
+      s.async = true;
+      s.onload = function () {
+        resolve();
+      };
+      s.onerror = function () {
+        productPreviewModalLoadPromise = null;
+        reject(new Error('product_preview_modal_load_failed'));
+      };
+      document.head.appendChild(s);
+    });
+    return productPreviewModalLoadPromise;
   }
 
   /**
-   * Open ProductDetailModal for a published Products-tab card (preview / look & feel).
-   * Lazy-loads the modal assets if they are not present. Never redirects to the shop.
+   * Open Product Preview Modal for a published Products-tab card.
+   * Lazy-loads assets if needed. Never redirects to the shop.
    */
   function openPublishedProductPreview(prod) {
     if (!prod) return;
@@ -2507,20 +2523,18 @@
       productName: productName,
       ownerId: getOwnerId() || '',
       designId: designId,
-      designUrl: null,
+      imageUrl: imageUrl,
       renderedSrc: imageUrl,
-      availableColors: [],
+      publishedDesignId: prod.published_design_id || null,
     };
 
-    ensureProductDetailModal()
+    ensureProductPreviewModal()
       .then(function () {
-        var win = window;
-        if (win.ProductDetailModal && typeof win.ProductDetailModal.open === 'function') {
-          win.ProductDetailModal.open(opts);
-          return;
-        }
-        if (win.ProductMockupModal && typeof win.ProductMockupModal.open === 'function') {
-          win.ProductMockupModal.open({ productKey: productKey, renderedDesignSrc: imageUrl });
+        if (
+          window.CreatorProductPreviewModal &&
+          typeof window.CreatorProductPreviewModal.open === 'function'
+        ) {
+          window.CreatorProductPreviewModal.open(opts);
           return;
         }
         console.warn('[CreationsScreen] Product preview modal unavailable for', productKey);

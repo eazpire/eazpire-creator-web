@@ -197,6 +197,8 @@
         asset("product-detail-modal.css"),
         asset("product-mockup-modal.css"),
       ];
+      global.__CREATOR_PRODUCT_PREVIEW_MODAL_JS = asset("creator-product-preview-modal.js");
+      global.__CREATOR_PRODUCT_PREVIEW_MODAL_CSS = asset("creator-product-preview-modal.css");
 
       global.__CREATOR_LAZY_CREATIONS_BUNDLE = [
         asset("creator-perf-debug.js"),
