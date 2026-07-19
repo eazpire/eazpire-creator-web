@@ -8,10 +8,85 @@
 
   const API_BASE = (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) || 'https://creator-engine.eazpire.workers.dev';
   const REF_LINKS_SETTING_KEY = 'community_ref_links_v1';
+  const CACHE_TTL_MS = 30 * 60 * 1000;
+  const SHORT_SS_PREFIX = 'eaz_short_ref_v1:';
+
+  /** ownerId → { code, slug, ts } or in-flight Promise */
+  var metaCache = Object.create(null);
+  var metaInflight = Object.create(null);
+  /** cacheKey → { url, ts } */
+  var shortCache = Object.create(null);
+  var shortInflight = Object.create(null);
 
   function clearPreferredReferralUrlCache(ownerId) {
-    // Kept for compatibility with callers; currently resolved live per click.
+    var id = ownerId ? String(ownerId) : '';
+    if (id) {
+      delete metaCache[id];
+      delete metaInflight[id];
+      Object.keys(shortCache).forEach(function (k) {
+        if (k.indexOf(id + '|') === 0) delete shortCache[k];
+      });
+      Object.keys(shortInflight).forEach(function (k) {
+        if (k.indexOf(id + '|') === 0) delete shortInflight[k];
+      });
+    } else {
+      metaCache = Object.create(null);
+      metaInflight = Object.create(null);
+      shortCache = Object.create(null);
+      shortInflight = Object.create(null);
+    }
     return ownerId;
+  }
+
+  function shortCacheKey(ownerId, landingUrl, refName) {
+    return String(ownerId) + '|' + String(landingUrl) + '|' + String(refName || 'main');
+  }
+
+  function readSessionShort(key) {
+    try {
+      var raw = sessionStorage.getItem(SHORT_SS_PREFIX + key);
+      if (!raw) return '';
+      var parsed = JSON.parse(raw);
+      if (!parsed || !parsed.url || !parsed.ts) return '';
+      if (Date.now() - parsed.ts > CACHE_TTL_MS) {
+        sessionStorage.removeItem(SHORT_SS_PREFIX + key);
+        return '';
+      }
+      return String(parsed.url);
+    } catch (_e) {
+      return '';
+    }
+  }
+
+  function writeSessionShort(key, url) {
+    try {
+      sessionStorage.setItem(
+        SHORT_SS_PREFIX + key,
+        JSON.stringify({ url: String(url), ts: Date.now() })
+      );
+    } catch (_e) {}
+  }
+
+  function peekCachedShortUrl(ownerId, baseUrl) {
+    if (!ownerId) return '';
+    var landing = sanitizeShareTargetUrl(baseUrl || window.location.href);
+    var meta = metaCache[String(ownerId)];
+    var refName = meta && meta.slug ? meta.slug : 'main';
+    var key = shortCacheKey(ownerId, landing, refName);
+    var mem = shortCache[key];
+    if (mem && mem.url && Date.now() - mem.ts < CACHE_TTL_MS) return mem.url;
+    // Also try with 'main' if slug meta not warm yet
+    var altKey = shortCacheKey(ownerId, landing, 'main');
+    mem = shortCache[altKey];
+    if (mem && mem.url && Date.now() - mem.ts < CACHE_TTL_MS) return mem.url;
+    return readSessionShort(key) || readSessionShort(altKey) || '';
+  }
+
+  function storeShortUrl(ownerId, landingUrl, refName, url) {
+    if (!ownerId || !url) return;
+    var key = shortCacheKey(ownerId, landingUrl, refName || 'main');
+    shortCache[key] = { url: String(url), ts: Date.now() };
+    writeSessionShort(key, url);
   }
 
   function resolveOwnerId() {
@@ -121,6 +196,81 @@
     return active && active.slug ? String(active.slug).toLowerCase() : '';
   }
 
+  function loadReferralMeta(ownerId) {
+    var id = String(ownerId);
+    var cached = metaCache[id];
+    if (cached && cached.ts && Date.now() - cached.ts < CACHE_TTL_MS) {
+      return Promise.resolve(cached);
+    }
+    if (metaInflight[id]) return metaInflight[id];
+    metaInflight[id] = Promise.all([
+      fetchReferralCode(id).catch(function () { return null; }),
+      fetchCustomerSetting(id, REF_LINKS_SETTING_KEY).catch(function () { return null; })
+    ]).then(function (results) {
+      var refRes = results[0];
+      var settingRes = results[1];
+      var entry = {
+        code: (refRes && refRes.ok && refRes.code) ? String(refRes.code) : '',
+        slug: getActiveSlugFromSetting(settingRes),
+        ts: Date.now()
+      };
+      metaCache[id] = entry;
+      delete metaInflight[id];
+      return entry;
+    }).catch(function () {
+      delete metaInflight[id];
+      return { code: '', slug: '', ts: Date.now() };
+    });
+    return metaInflight[id];
+  }
+
+  function resolveShortShareUrl(ownerId, code, slug, baseUrl) {
+    var joinBaseUrl = slug
+      ? 'https://join.eazpire.com/' + encodeURIComponent(String(slug).toLowerCase())
+      : 'https://join.eazpire.com/' + encodeURIComponent(code);
+    var currentPageUrl = sanitizeShareTargetUrl(baseUrl || window.location.href);
+    var refName = slug || 'main';
+    var key = shortCacheKey(ownerId, currentPageUrl, refName);
+
+    var mem = shortCache[key];
+    if (mem && mem.url && Date.now() - mem.ts < CACHE_TTL_MS) {
+      return Promise.resolve(mem.url);
+    }
+    var ss = readSessionShort(key);
+    if (ss) {
+      shortCache[key] = { url: ss, ts: Date.now() };
+      return Promise.resolve(ss);
+    }
+    if (shortInflight[key]) return shortInflight[key];
+
+    var longFallback = '';
+    try {
+      var joinUrl = new URL(joinBaseUrl);
+      joinUrl.searchParams.set('url', currentPageUrl);
+      longFallback = joinUrl.toString();
+    } catch (_joinErr) {
+      longFallback = buildShareUrl(currentPageUrl, code);
+    }
+
+    shortInflight[key] = createShortRefLink(ownerId, currentPageUrl, refName)
+      .then(function (shortRes) {
+        var selectedUrl = longFallback;
+        if (shortRes && shortRes.ok && shortRes.short_url) {
+          selectedUrl = String(shortRes.short_url);
+        } else if (shortRes && shortRes.ok && shortRes.home) {
+          selectedUrl = joinBaseUrl;
+        }
+        storeShortUrl(ownerId, currentPageUrl, refName, selectedUrl);
+        delete shortInflight[key];
+        return selectedUrl;
+      })
+      .catch(function () {
+        delete shortInflight[key];
+        return longFallback;
+      });
+    return shortInflight[key];
+  }
+
   function resolveReferralMeta(ownerId, baseUrl) {
     if (!ownerId) {
       return Promise.resolve({
@@ -130,76 +280,25 @@
         selectedUrl: buildShareUrl(baseUrl, null)
       });
     }
-    return Promise.all([
-      fetchReferralCode(ownerId).catch(function () { return null; }),
-      fetchCustomerSetting(ownerId, REF_LINKS_SETTING_KEY).catch(function () { return null; })
-    ]).then(function (results) {
-      var refRes = results[0];
-      var settingRes = results[1];
-      var code = (refRes && refRes.ok && refRes.code) ? String(refRes.code) : '';
-      var slug = getActiveSlugFromSetting(settingRes);
-      
-      // If we have a ref code, prefer opaque short links (join.eazpire.com/s/{token})
-      if (code) {
-        try {
-          var joinBaseUrl;
-          if (slug) {
-            joinBaseUrl = 'https://join.eazpire.com/' + encodeURIComponent(String(slug).toLowerCase());
-          } else {
-            joinBaseUrl = 'https://join.eazpire.com/' + encodeURIComponent(code);
-          }
-
-          var currentPageUrl = sanitizeShareTargetUrl(baseUrl || window.location.href);
-          var longFallback = '';
-          try {
-            var joinUrl = new URL(joinBaseUrl);
-            joinUrl.searchParams.set('url', currentPageUrl);
-            longFallback = joinUrl.toString();
-          } catch (_joinErr) {
-            longFallback = buildShareUrl(currentPageUrl, code);
-          }
-
-          return createShortRefLink(ownerId, currentPageUrl, slug || 'main')
-            .then(function (shortRes) {
-              var selectedUrl = longFallback;
-              if (shortRes && shortRes.ok && shortRes.short_url) {
-                selectedUrl = String(shortRes.short_url);
-              } else if (shortRes && shortRes.ok && shortRes.home) {
-                // Homepage share: personalized join link is already short
-                selectedUrl = joinBaseUrl;
-              }
-              return {
-                ownerId: String(ownerId),
-                code: code,
-                slug: slug,
-                selectedUrl: selectedUrl
-              };
-            })
-            .catch(function () {
-              return {
-                ownerId: String(ownerId),
-                code: code,
-                slug: slug,
-                selectedUrl: longFallback
-              };
-            });
-        } catch (e) {
-          return {
-            ownerId: String(ownerId),
-            code: code,
-            slug: slug,
-            selectedUrl: buildShareUrl(baseUrl, code)
-          };
-        }
+    return loadReferralMeta(ownerId).then(function (meta) {
+      var code = meta.code || '';
+      var slug = meta.slug || '';
+      if (!code) {
+        return {
+          ownerId: String(ownerId),
+          code: '',
+          slug: slug,
+          selectedUrl: buildShareUrl(baseUrl, null)
+        };
       }
-      
-      // No ref code, use current page URL
-      return {
-        ownerId: String(ownerId),
-        code: code,
-        slug: slug,
-        selectedUrl: buildShareUrl(baseUrl, null)
-      };
+      return resolveShortShareUrl(ownerId, code, slug, baseUrl).then(function (selectedUrl) {
+        return {
+          ownerId: String(ownerId),
+          code: code,
+          slug: slug,
+          selectedUrl: selectedUrl
+        };
+      });
     }).catch(function () {
       return {
         ownerId: String(ownerId),
@@ -208,6 +307,12 @@
         selectedUrl: buildShareUrl(baseUrl, null)
       };
     });
+  }
+
+  function prefetchShareUrl(baseUrl) {
+    var ownerId = resolveOwnerId();
+    if (!ownerId) return Promise.resolve('');
+    return resolvePreferredReferralUrl(ownerId, baseUrl || window.location.href);
   }
 
   function resolvePreferredReferralUrl(ownerId, baseUrl) {
@@ -227,8 +332,23 @@
     { id: 'email', label: 'E-Mail', url: 'mailto:?subject=&body=' }
   ];
 
+  function updateShareModalUrl(shareUrl) {
+    var modal = document.getElementById('share-button-modal');
+    if (!modal || !shareUrl) return;
+    var input = modal.querySelector('[data-share-input]');
+    if (input) input.value = shareUrl;
+    modal.querySelectorAll('[data-share-social]').forEach(function (link) {
+      // click handler reads input value live — nothing else to update
+      void link;
+    });
+  }
+
   function openShareModal(shareUrl, productTitle, productUrl) {
     var modal = document.getElementById('share-button-modal');
+    if (modal && modal.classList.contains('share-modal--open')) {
+      updateShareModalUrl(shareUrl);
+      return;
+    }
     if (!modal) {
       modal = document.createElement('div');
       modal.id = 'share-button-modal';
@@ -373,12 +493,18 @@
             showCopyFeedback(btn, copiedLabel, copyLabel);
           }
         }
+        var cached = ownerId ? peekCachedShortUrl(ownerId, baseUrl) : '';
+        if (cached) {
+          doCopy(cached);
+          return;
+        }
         if (ownerId) {
+          doCopy(buildShareUrl(baseUrl, null));
           resolvePreferredReferralUrl(ownerId, baseUrl).then(function (url) {
-            doCopy(url);
-          }).catch(function () {
-            doCopy(buildShareUrl(baseUrl, null));
-          });
+            if (url && navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(url).catch(function () {});
+            }
+          }).catch(function () {});
         } else {
           doCopy(buildShareUrl(baseUrl, null));
         }
@@ -408,12 +534,18 @@
           openShareModal(url, productTitle, url);
         }
 
+        var cached = ownerId ? peekCachedShortUrl(ownerId, baseUrl) : '';
+        if (cached) {
+          doShare(cached);
+          return;
+        }
         if (ownerId) {
+          // Open modal immediately with a temporary URL, swap in short link when ready
+          var interim = buildShareUrl(baseUrl, null);
+          doShare(interim);
           resolvePreferredReferralUrl(ownerId, baseUrl).then(function (url) {
-            doShare(url);
-          }).catch(function () {
-            doShare(buildShareUrl(baseUrl, null));
-          });
+            if (url) updateShareModalUrl(url);
+          }).catch(function () {});
         } else {
           doShare(buildShareUrl(baseUrl, null));
         }
@@ -433,6 +565,7 @@
 
   window.ShareButtonInit = initShareButtons;
   window.ShareButtonOpenModal = openShareModal;
+  window.ShareButtonUpdateModalUrl = updateShareModalUrl;
   window.ShareButtonBuildUrl = buildShareUrl;
   window.ShareButtonFetchReferralCode = fetchReferralCode;
   window.ShareButtonResolveOwnerId = resolveOwnerId;
@@ -440,9 +573,23 @@
     var ownerId = resolveOwnerId();
     return resolvePreferredReferralUrl(ownerId, baseUrl || window.location.href);
   };
+  window.ShareButtonPeekShareUrl = function (baseUrl) {
+    var ownerId = resolveOwnerId();
+    return ownerId ? peekCachedShortUrl(ownerId, baseUrl || window.location.href) : '';
+  };
+  window.ShareButtonPrefetchShareUrl = prefetchShareUrl;
   window.ShareButtonResolveReferralMeta = function (baseUrl) {
     var ownerId = resolveOwnerId();
     return resolveReferralMeta(ownerId, baseUrl || window.location.href);
   };
   window.ShareButtonClearReferralCache = clearPreferredReferralUrlCache;
+
+  // Warm caches early so first Copy/Share is instant
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(function () { prefetchShareUrl(window.location.href); }, 400);
+    });
+  } else {
+    setTimeout(function () { prefetchShareUrl(window.location.href); }, 400);
+  }
 })();
