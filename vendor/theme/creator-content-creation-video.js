@@ -1454,12 +1454,23 @@
             return;
           }
           var j = d.job;
-          if (j.done) {
+          var status = String(j.status || '').toLowerCase();
+          var failed =
+            j.failed === true ||
+            status === 'failed' ||
+            status === 'error' ||
+            status === 'canceled' ||
+            status === 'cancelled' ||
+            (j.done === true &&
+              !(j.result && (j.result.video_url || j.result.original_url || j.result.url)));
+          if (j.done || status === 'completed' || status === 'complete' || status === 'succeeded') {
             if (statusEl) {
-              statusEl.textContent = i18n('status_done', 'Done! Check Content Publish → Videos.');
-              statusEl.className = 'creator-hero-create-status success';
+              statusEl.textContent = failed
+                ? (j.message || j.error || i18n('failed', 'Generation failed'))
+                : i18n('status_done', 'Done! Check Content Publish → Videos.');
+              statusEl.className = 'creator-hero-create-status ' + (failed ? 'error' : 'success');
             }
-            dispatchVideoJobCompleted(jobId, prompt, j.result, j.status !== 'failed');
+            dispatchVideoJobCompleted(jobId, prompt, j.result, !failed);
             try {
               if (window.CreatorNotificationsModal && window.CreatorNotificationsModal.loadNotificationsFromAPI) {
                 window.CreatorNotificationsModal.loadNotificationsFromAPI();

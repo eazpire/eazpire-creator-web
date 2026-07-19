@@ -378,6 +378,37 @@
     if (url) applyCharacterUrl(url);
   }
 
+  function sleep(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  async function pollLinkIngestStatus(assetId, statusEl) {
+    var maxAttempts = 120;
+    var intervalMs = 2000;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      if (statusEl && attempt > 0 && attempt % 3 === 0) {
+        statusEl.textContent = i18n('link_processing', 'Downloading media in the background…');
+      }
+      var res = await fetch(
+        API_BASE + '?op=video-studio-link-ingest-status&asset_id=' + encodeURIComponent(assetId),
+        { credentials: 'include' }
+      );
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (data.status === 'ready' && data.asset) {
+        return { ok: true, asset: data.asset };
+      }
+      if (data.status === 'failed' || data.error) {
+        return { ok: false, data: data };
+      }
+      await sleep(intervalMs);
+    }
+    return { ok: false, data: { error: 'timeout', message: i18n('link_error_generic', 'Could not add media from that link.') } };
+  }
+
   async function ingestLinkUrl() {
     var input = document.getElementById('cvg-link-url');
     var status = document.getElementById('cvg-link-status');
@@ -415,6 +446,25 @@
         await applyPickedAsset(data.asset);
         return;
       }
+      if (data.ok && data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
+        if (status) {
+          status.textContent = i18n('link_queued', 'Import queued — preparing download…');
+          status.className = 'cvs-link-status is-info';
+        }
+        var polled = await pollLinkIngestStatus(data.asset_id, status);
+        if (polled.ok && polled.asset) {
+          closeLinkModal();
+          await applyPickedAsset(polled.asset);
+          return;
+        }
+        if (status) {
+          status.textContent =
+            (polled.data && (polled.data.message || polled.data.error)) ||
+            i18n('link_error_generic', 'Could not add media from that link.');
+          status.className = 'cvs-link-status';
+        }
+        return;
+      }
       // Fallback: use the URL directly for character images / direct media
       if (addTarget === 'character' && /^https?:\/\//i.test(raw)) {
         closeLinkModal();
@@ -435,12 +485,54 @@
     }
   }
 
+  function extractJobVideoResult(job) {
+    if (!job) return null;
+    var result = job.result || null;
+    if (!result) return null;
+    var url =
+      result.video_url ||
+      result.original_url ||
+      result.url ||
+      (typeof result.output === 'string' ? result.output : null);
+    if (!url) return null;
+    return {
+      video_url: String(url),
+      video_id: result.video_id || null,
+      saved: false,
+    };
+  }
+
+  function isJobTerminalFailure(job) {
+    if (!job) return false;
+    if (job.failed === true) return true;
+    var status = String(job.status || '').toLowerCase();
+    if (status === 'failed' || status === 'error' || status === 'canceled' || status === 'cancelled') {
+      return true;
+    }
+    if (job.done === true && !extractJobVideoResult(job)) return true;
+    return false;
+  }
+
+  function isJobTerminalSuccess(job) {
+    if (!job) return false;
+    var status = String(job.status || '').toLowerCase();
+    var done =
+      job.done === true ||
+      status === 'completed' ||
+      status === 'complete' ||
+      status === 'succeeded';
+    return done && !!extractJobVideoResult(job);
+  }
+
   function pollJob(jobId, placeholderId) {
     var maxPolls = 240;
     var pollCount = 0;
     var pollInterval = 4000;
+    var completed = false;
 
-    function finish(ok, result) {
+    function finish(ok, result, errMsg) {
+      if (completed) return;
+      completed = true;
       state.generating = false;
       updateFab();
       var idx = -1;
@@ -465,13 +557,29 @@
       }
       renderCarousel();
       openSubheader();
+      if (!ok && errMsg) {
+        setStatus('character', errMsg);
+      }
+    }
+
+    function applyCompletedJob(job) {
+      var parsed = extractJobVideoResult(job);
+      if (parsed) {
+        finish(true, parsed, null);
+        return true;
+      }
+      if (isJobTerminalFailure(job)) {
+        finish(false, null, job.message || job.error || i18n('generate_failed', 'Generation failed.'));
+        return true;
+      }
+      return false;
     }
 
     function tick() {
       pollCount++;
       var owner = getOwnerId();
       if (!owner) {
-        finish(false, null);
+        finish(false, null, i18n('network_error', 'Network error'));
         return;
       }
       fetch(
@@ -486,29 +594,34 @@
         .then(function (data) {
           if (!data || !data.ok || !data.job) {
             if (pollCount < maxPolls) setTimeout(tick, pollInterval);
-            else finish(false, null);
+            else finish(false, null, i18n('generate_failed', 'Generation failed.'));
             return;
           }
-          var job = data.job;
-          var status = String(job.status || '').toLowerCase();
-          var done = job.done === true || status === 'completed' || status === 'complete' || status === 'succeeded';
-          var failed = status === 'failed' || status === 'error' || status === 'canceled';
-          if (done && job.result) {
-            finish(true, job.result);
-            return;
-          }
-          if (failed) {
-            finish(false, null);
-            return;
-          }
+          if (applyCompletedJob(data.job)) return;
           if (pollCount < maxPolls) setTimeout(tick, pollInterval);
-          else finish(false, null);
+          else finish(false, null, i18n('generate_failed', 'Generation failed.'));
         })
         .catch(function () {
           if (pollCount < maxPolls) setTimeout(tick, pollInterval);
-          else finish(false, null);
+          else finish(false, null, i18n('network_error', 'Network error'));
         });
     }
+
+    function onJobCompleted(ev) {
+      if (completed) return;
+      var detail = ev && ev.detail;
+      if (!detail || String(detail.jobId) !== String(jobId)) return;
+      if (applyCompletedJob(detail.job)) {
+        try {
+          window.removeEventListener('creatorJobCompleted', onJobCompleted);
+        } catch (e) {}
+      }
+    }
+
+    try {
+      window.addEventListener('creatorJobCompleted', onJobCompleted);
+    } catch (e) {}
+
     tick();
   }
 
