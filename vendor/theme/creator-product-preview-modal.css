@@ -400,46 +400,115 @@
 
 /* ── Channels ────────────────────────────────────────── */
 
-.cppm__channels-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-  align-items: start;
+.cppm__scroll-hide {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.cppm__channel-card {
-  position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
+.cppm__scroll-hide::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.cppm__channels-carousel {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cppm__channels-track {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 2px 8px;
+  scroll-snap-type: x mandatory;
+}
+
+.cppm__channel-tile {
+  flex: 0 0 min(220px, 72%);
+  scroll-snap-align: start;
+  border-radius: 16px;
   padding: 16px;
-  background: rgba(15, 23, 42, 0.65);
-  min-height: 140px;
+  min-height: 148px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-.cppm__channel-card--amazon {
-  grid-column: 1 / -1;
+.cppm__channel-tile--eazpire {
+  background: linear-gradient(155deg, rgba(249, 115, 22, 0.28), rgba(15, 23, 42, 0.92) 55%);
+  border-color: rgba(249, 115, 22, 0.45);
+  box-shadow: 0 10px 28px rgba(249, 115, 22, 0.12);
 }
 
-.cppm__channel-head {
+.cppm__channel-tile--amazon {
+  background: linear-gradient(155deg, rgba(251, 191, 36, 0.26), rgba(15, 23, 42, 0.92) 55%);
+  border-color: rgba(251, 191, 36, 0.42);
+  box-shadow: 0 10px 28px rgba(251, 191, 36, 0.1);
+  cursor: pointer;
+}
+
+.cppm__channel-tile--amazon:hover,
+.cppm__channel-tile--amazon.cppm__channel-tile--expanded {
+  border-color: rgba(251, 191, 36, 0.75);
+  transform: translateY(-2px);
+}
+
+.cppm__channel-tile--etsy {
+  background: linear-gradient(155deg, rgba(244, 114, 182, 0.24), rgba(15, 23, 42, 0.92) 55%);
+  border-color: rgba(244, 114, 182, 0.4);
+  box-shadow: 0 10px 28px rgba(244, 114, 182, 0.1);
+}
+
+.cppm__channel-tile--ebay {
+  background: linear-gradient(155deg, rgba(96, 165, 250, 0.26), rgba(15, 23, 42, 0.92) 55%);
+  border-color: rgba(96, 165, 250, 0.42);
+  box-shadow: 0 10px 28px rgba(96, 165, 250, 0.1);
+}
+
+.cppm__channel-tile--soon {
+  opacity: 0.88;
+}
+
+.cppm__channel-tile-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
 .cppm__channel-name {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   color: #f8fafc;
+}
+
+.cppm__channel-tile--eazpire .cppm__channel-name {
+  text-transform: none;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.cppm__channel-tile-meta {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(253, 224, 171, 0.95);
 }
 
 .cppm__channel-status {
   font-size: 12px;
   color: #94a3b8;
+  white-space: nowrap;
 }
 
 .cppm__channel-status--published {
@@ -477,12 +546,12 @@
 }
 
 .cppm__btn--ghost {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   color: #e2e8f0;
 }
 
 .cppm__btn--ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .cppm__btn:disabled {
@@ -495,12 +564,12 @@
   align-items: center;
   padding: 4px 8px;
   border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  background: rgba(148, 163, 184, 0.18);
-  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.45);
+  color: #e2e8f0;
 }
 
 .cppm__queue {
@@ -529,38 +598,10 @@
 
 /* Amazon expand + connector line */
 
-.cppm__amazon-parent {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.cppm__amazon-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  background: transparent;
-  color: #fdba74;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  align-self: flex-start;
-}
-
-.cppm__amazon-toggle:hover {
-  color: #fb923c;
-}
-
 .cppm__amazon-expand {
   position: relative;
   padding-top: 18px;
-  margin-left: 12px;
-}
-
-.cppm__amazon-expand[hidden] {
-  display: none !important;
+  margin: 4px 0 0 18px;
 }
 
 .cppm__amazon-line {
@@ -569,7 +610,7 @@
   top: 0;
   width: 2px;
   height: 18px;
-  background: linear-gradient(180deg, transparent, #f97316);
+  background: linear-gradient(180deg, transparent, #fbbf24);
   transform-origin: top;
   animation: cppm-line-draw 0.35s ease forwards;
 }
@@ -579,9 +620,9 @@
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 18px;
+  width: 22px;
   height: 2px;
-  background: #f97316;
+  background: #fbbf24;
   animation: cppm-line-elbow 0.25s ease 0.28s both;
 }
 
@@ -603,21 +644,29 @@
   }
 }
 
+.cppm__amazon-regions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 28px;
+}
+
 .cppm__amazon-regions {
   display: flex;
   gap: 10px;
-  overflow-x: auto;
-  padding: 4px 4px 8px 28px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 2px 8px;
   scroll-snap-type: x mandatory;
 }
 
 .cppm__region-card {
-  flex: 0 0 180px;
+  flex: 0 0 168px;
   scroll-snap-align: start;
-  border: 1px solid rgba(249, 115, 22, 0.28);
+  border: 1px solid rgba(251, 191, 36, 0.35);
   border-radius: 12px;
   padding: 12px;
-  background: rgba(249, 115, 22, 0.06);
+  background: linear-gradient(160deg, rgba(251, 191, 36, 0.14), rgba(15, 23, 42, 0.75));
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -625,13 +674,16 @@
 }
 
 .cppm__region-card:nth-child(2) {
-  animation-delay: 0.05s;
+  animation-delay: 0.04s;
 }
 .cppm__region-card:nth-child(3) {
-  animation-delay: 0.1s;
+  animation-delay: 0.08s;
 }
 .cppm__region-card:nth-child(4) {
-  animation-delay: 0.15s;
+  animation-delay: 0.12s;
+}
+.cppm__region-card:nth-child(5) {
+  animation-delay: 0.16s;
 }
 
 @keyframes cppm-region-in {
@@ -647,8 +699,13 @@
 
 .cppm__region-name {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fef3c7;
+}
+
+.cppm__carousel-btn--channels {
+  align-self: center;
 }
 
 @media (max-width: 720px) {

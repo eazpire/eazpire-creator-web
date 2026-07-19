@@ -10,13 +10,29 @@
   var STAT_KEYS = ['sales', 'add_to_cart', 'impressions', 'clicks'];
   var CHANNEL_STAT_IDS = ['eazpire', 'amazon', 'etsy', 'ebay'];
 
-  /** Placeholder Amazon regions when product ships from DE/EU (refined later). */
-  var AMAZON_REGIONS_EU = [
+  /**
+   * Amazon marketplaces we sell on (aligned with src/config/amazonMarketplaces.js + MX).
+   * Later filtered by product ship-from / publish map.
+   */
+  var AMAZON_REGIONS = [
     { id: 'A1PA6795UKMFR9', code: 'DE', label: 'Amazon.de' },
     { id: 'A13V1IB3VIYZZH', code: 'FR', label: 'Amazon.fr' },
     { id: 'APJ6JRA9NG5V4', code: 'IT', label: 'Amazon.it' },
     { id: 'A1RKKUPIHCS9HS', code: 'ES', label: 'Amazon.es' },
+    { id: 'A1805IZSGTT6HS', code: 'NL', label: 'Amazon.nl' },
+    { id: 'AMEN7PMS3EDWL', code: 'BE', label: 'Amazon.com.be' },
+    { id: 'A1C3SOZ6ARJ6G9', code: 'PL', label: 'Amazon.pl' },
+    { id: 'A2NODRKZP88ZB9', code: 'SE', label: 'Amazon.se' },
     { id: 'A1F83G8C2ARO7P', code: 'UK', label: 'Amazon.co.uk' },
+    { id: 'A1EVM2S7H5RM6G', code: 'IE', label: 'Amazon.ie' },
+    { id: 'A33AVAJ2PDY3EV', code: 'TR', label: 'Amazon.com.tr' },
+    { id: 'A2VIGQ35RCS4UG', code: 'AE', label: 'Amazon.ae' },
+    { id: 'A17EUQ2OIB8DTQ', code: 'SA', label: 'Amazon.sa' },
+    { id: 'A21TJRUUN4KGV', code: 'IN', label: 'Amazon.in' },
+    { id: 'ARBP9OOSHTCHU', code: 'EG', label: 'Amazon.eg' },
+    { id: 'A1AM78C64UM0Y8', code: 'MX', label: 'Amazon.com.mx' },
+    { id: 'ATVPDKIKX0DER', code: 'US', label: 'Amazon.com' },
+    { id: 'A2EUQ1WTGCTBG2', code: 'CA', label: 'Amazon.ca' },
   ];
 
   var root = null;
@@ -207,12 +223,12 @@
 
       var carBtn = target.closest('[data-cppm-carousel]');
       if (carBtn) {
-        var track = root.querySelector(
-          '[data-cppm-track="' + carBtn.getAttribute('data-cppm-carousel') + '"]'
-        );
+        var trackId = carBtn.getAttribute('data-cppm-carousel');
+        var track = root.querySelector('[data-cppm-track="' + trackId + '"]');
         if (track) {
           var dir = carBtn.getAttribute('data-cppm-dir') === 'prev' ? -1 : 1;
-          track.scrollBy({ left: dir * 180, behavior: 'smooth' });
+          var step = trackId === 'channels' ? 232 : trackId === 'amazon-regions' ? 180 : 180;
+          track.scrollBy({ left: dir * step, behavior: 'smooth' });
         }
         return;
       }
@@ -220,6 +236,16 @@
       if (target.closest('[data-cppm-amazon-toggle]')) {
         amazonExpanded = !amazonExpanded;
         renderChannelsPanel();
+        return;
+      }
+
+      var channelTile = target.closest('[data-cppm-channel-tile]');
+      if (channelTile) {
+        var tileId = channelTile.getAttribute('data-cppm-channel-tile');
+        if (tileId === 'amazon') {
+          amazonExpanded = !amazonExpanded;
+          renderChannelsPanel();
+        }
         return;
       }
 
@@ -481,8 +507,54 @@
   }
 
   function availableAmazonRegions() {
-    // v1: EU/DE shipping placeholder — later filter by product_publish_map / ship-from
-    return AMAZON_REGIONS_EU.slice();
+    // v1: full sell list; later filter by product_publish_map / ship-from
+    return AMAZON_REGIONS.slice();
+  }
+
+  function amazonPublishedCount(regions) {
+    var n = 0;
+    for (var i = 0; i < regions.length; i++) {
+      if (getState('amazon', regions[i].code).status === 'published') n++;
+    }
+    return n;
+  }
+
+  function renderChannelTile(opts) {
+    var id = opts.id;
+    var name = opts.name;
+    var dataT = opts.dataT;
+    var soon = !!opts.soon;
+    var expanded = !!opts.expanded;
+    var st = opts.state || null;
+    var meta = opts.meta || '';
+    var actions = opts.actions || '';
+
+    return (
+      '<article class="cppm__channel-tile cppm__channel-tile--' +
+      esc(id) +
+      (expanded ? ' cppm__channel-tile--expanded' : '') +
+      (soon ? ' cppm__channel-tile--soon' : '') +
+      '"' +
+      (id === 'amazon' ? ' data-cppm-channel-tile="amazon"' : '') +
+      ' role="listitem">' +
+      '<div class="cppm__channel-tile-top">' +
+      '<h4 class="cppm__channel-name" data-t="' +
+      esc(dataT) +
+      '">' +
+      esc(name) +
+      '</h4>' +
+      (soon
+        ? '<span class="cppm__badge-soon" data-t="creator.product_preview.coming_soon">' +
+          esc(t('coming_soon', 'Coming soon')) +
+          '</span>'
+        : st
+          ? statusLabel(st)
+          : '') +
+      '</div>' +
+      (meta ? '<p class="cppm__channel-tile-meta">' + meta + '</p>' : '') +
+      (actions ? '<div class="cppm__channel-actions">' + actions + '</div>' : '') +
+      '</article>'
+    );
   }
 
   function renderChannelsPanel() {
@@ -490,45 +562,72 @@
     if (!el) return;
 
     var eaz = getState('eazpire');
+    var regions = availableAmazonRegions();
+    var amzPublished = amazonPublishedCount(regions);
+    var amzMeta =
+      (amazonExpanded ? '▾ ' : '▸ ') +
+      esc(t('amazon_regions', 'Amazon regions')) +
+      ' · ' +
+      amzPublished +
+      '/' +
+      regions.length;
+
     var html =
       '<h3 class="cppm__section-title" data-t="creator.product_preview.channels">' +
       esc(t('channels', 'Channels')) +
-      '</h3><div class="cppm__channels-grid">';
+      '</h3>' +
+      '<div class="cppm__channels-carousel" aria-label="' +
+      esc(t('channels', 'Channels')) +
+      '">' +
+      '<button type="button" class="cppm__carousel-btn cppm__carousel-btn--channels" data-cppm-carousel="channels" data-cppm-dir="prev" aria-label="Previous">‹</button>' +
+      '<div class="cppm__channels-track cppm__scroll-hide" data-cppm-track="channels" role="list">';
+
+    html += renderChannelTile({
+      id: 'eazpire',
+      name: t('channel_eazpire', 'eazpire'),
+      dataT: 'creator.product_preview.channel_eazpire',
+      state: eaz,
+      actions: actionButtons('eazpire', '', eaz),
+    });
+
+    html += renderChannelTile({
+      id: 'amazon',
+      name: t('channel_amazon', 'Amazon'),
+      dataT: 'creator.product_preview.channel_amazon',
+      expanded: amazonExpanded,
+      meta: amzMeta,
+      state:
+        amzPublished > 0
+          ? { status: 'published', queue: false }
+          : { status: 'unpublished', queue: false },
+    });
+
+    html += renderChannelTile({
+      id: 'etsy',
+      name: t('channel_etsy', 'Etsy'),
+      dataT: 'creator.product_preview.channel_etsy',
+      soon: true,
+    });
+
+    html += renderChannelTile({
+      id: 'ebay',
+      name: t('channel_ebay', 'eBay'),
+      dataT: 'creator.product_preview.channel_ebay',
+      soon: true,
+    });
 
     html +=
-      '<article class="cppm__channel-card">' +
-      '<div class="cppm__channel-head">' +
-      '<h4 class="cppm__channel-name" data-t="creator.product_preview.channel_eazpire">' +
-      esc(t('channel_eazpire', 'Eazpire')) +
-      '</h4>' +
-      statusLabel(eaz) +
       '</div>' +
-      '<div class="cppm__channel-actions">' +
-      actionButtons('eazpire', '', eaz) +
-      '</div></article>';
-
-    var regions = availableAmazonRegions();
-    html +=
-      '<article class="cppm__channel-card cppm__channel-card--amazon">' +
-      '<div class="cppm__amazon-parent">' +
-      '<div class="cppm__channel-head">' +
-      '<h4 class="cppm__channel-name" data-t="creator.product_preview.channel_amazon">' +
-      esc(t('channel_amazon', 'Amazon')) +
-      '</h4>' +
-      '<button type="button" class="cppm__amazon-toggle" data-cppm-amazon-toggle="1" data-t="creator.product_preview.toggle_amazon">' +
-      (amazonExpanded ? '▾ ' : '▸ ') +
-      esc(t('amazon_regions', 'Amazon regions')) +
-      ' (' +
-      regions.length +
-      ')' +
-      '</button>' +
+      '<button type="button" class="cppm__carousel-btn cppm__carousel-btn--channels" data-cppm-carousel="channels" data-cppm-dir="next" aria-label="Next">›</button>' +
       '</div>';
 
     if (amazonExpanded) {
       html +=
         '<div class="cppm__amazon-expand">' +
         '<div class="cppm__amazon-line" aria-hidden="true"></div>' +
-        '<div class="cppm__amazon-regions" role="list">';
+        '<div class="cppm__amazon-regions-wrap">' +
+        '<button type="button" class="cppm__carousel-btn" data-cppm-carousel="amazon-regions" data-cppm-dir="prev" aria-label="Previous">‹</button>' +
+        '<div class="cppm__amazon-regions cppm__scroll-hide" data-cppm-track="amazon-regions" role="list">';
       for (var r = 0; r < regions.length; r++) {
         var reg = regions[r];
         var st = getState('amazon', reg.code);
@@ -542,33 +641,12 @@
           actionButtons('amazon', reg.code, st) +
           '</div></div>';
       }
-      html += '</div></div>';
+      html +=
+        '</div>' +
+        '<button type="button" class="cppm__carousel-btn" data-cppm-carousel="amazon-regions" data-cppm-dir="next" aria-label="Next">›</button>' +
+        '</div></div>';
     }
 
-    html += '</div></article>';
-
-    ['etsy', 'ebay'].forEach(function (id) {
-      var label =
-        id === 'etsy' ? t('channel_etsy', 'Etsy') : t('channel_ebay', 'eBay');
-      var dataT =
-        id === 'etsy'
-          ? 'creator.product_preview.channel_etsy'
-          : 'creator.product_preview.channel_ebay';
-      html +=
-        '<article class="cppm__channel-card">' +
-        '<div class="cppm__channel-head">' +
-        '<h4 class="cppm__channel-name" data-t="' +
-        dataT +
-        '">' +
-        esc(label) +
-        '</h4>' +
-        '<span class="cppm__badge-soon" data-t="creator.product_preview.coming_soon">' +
-        esc(t('coming_soon', 'Coming soon')) +
-        '</span>' +
-        '</div></article>';
-    });
-
-    html += '</div>';
     el.innerHTML = html;
   }
 
