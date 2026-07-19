@@ -356,12 +356,39 @@
     el.innerHTML = html;
   }
 
+  var VARIANT_VIEW_ORDER = { front: 0, back: 1 };
+  var SIZE_COLOR_LABEL_RE =
+    /^(?:XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|5XL|\d+)\s*\/\s*(.+)$/i;
+
+  /** Clothing mock labels often look like "S / White" — keep color only (mocks match per size). */
+  function colorLabelFromKey(raw) {
+    var s = String(raw || '').trim();
+    if (!s) return s;
+    var m = s.match(SIZE_COLOR_LABEL_RE);
+    return m ? String(m[1] || '').trim() : s;
+  }
+
+  function dedupeItemsByColor(items) {
+    var seen = Object.create(null);
+    var out = [];
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var color = colorLabelFromKey(item.color);
+      var key = color.toLowerCase();
+      if (!color || seen[key]) continue;
+      seen[key] = true;
+      out.push({ color: color, url: item.url });
+    }
+    return out;
+  }
+
   function buildVariantGroups(defaultsResp) {
-    var groups = [];
+    var byView = Object.create(null);
     var printAreas = (defaultsResp && defaultsResp.print_areas) || [];
     for (var i = 0; i < printAreas.length; i++) {
       var pa = printAreas[i];
-      var viewKey = pa.print_area_key || 'front';
+      var viewKey = String(pa.print_area_key || 'front').toLowerCase();
+      if (VARIANT_VIEW_ORDER[viewKey] == null) continue;
       var byColor = pa.mockup_images_by_color || null;
       var items = [];
       if (byColor && typeof byColor === 'object') {
@@ -371,10 +398,31 @@
       } else if (pa.template_url) {
         items.push({ color: pa.template_color || viewLabel(viewKey), url: pa.template_url });
       }
-      if (items.length) {
-        groups.push({ viewKey: viewKey, items: items });
-      }
+      items = dedupeItemsByColor(items);
+      if (!items.length) continue;
+      if (!byView[viewKey]) byView[viewKey] = { viewKey: viewKey, items: [] };
+      // Prefer richer color set; merge unique colors.
+      var existing = byView[viewKey].items;
+      var have = Object.create(null);
+      existing.forEach(function (it) {
+        have[String(it.color).toLowerCase()] = true;
+      });
+      items.forEach(function (it) {
+        var k = String(it.color).toLowerCase();
+        if (have[k]) return;
+        have[k] = true;
+        existing.push(it);
+      });
     }
+
+    var groups = Object.keys(byView)
+      .map(function (k) {
+        return byView[k];
+      })
+      .sort(function (a, b) {
+        return (VARIANT_VIEW_ORDER[a.viewKey] || 99) - (VARIANT_VIEW_ORDER[b.viewKey] || 99);
+      });
+
     if (!groups.length && ctx && ctx.imageUrl) {
       groups.push({
         viewKey: 'front',
@@ -415,7 +463,7 @@
         '<button type="button" class="cppm__carousel-btn" data-cppm-carousel="' +
         esc(trackId) +
         '" data-cppm-dir="prev" aria-label="Previous">‹</button>' +
-        '<div class="cppm__carousel-track" data-cppm-track="' +
+        '<div class="cppm__carousel-track cppm__scroll-hide" data-cppm-track="' +
         esc(trackId) +
         '">';
       for (var i = 0; i < group.items.length; i++) {
