@@ -99,15 +99,25 @@
     );
   }
 
+  function getLockedRegionFromCurrentSelection() {
+    var sel = window.selectedCharacterProducts || {};
+    var top = sel.top;
+    var addition = sel.addition;
+    if (top && top.region) return top.region;
+    if (addition && addition.region) return addition.region;
+    return window.selectedCharacterRegion || null;
+  }
+
   function render(container) {
     if (!container) return;
+    // Same grid shell as Hero: selector (top) → uploads (left) + prompt+ratios (right)
     container.innerHTML =
       '<div class="creator-hero-upload-container">' +
-      '<div class="creator-hero-products-section">' +
-      '<div class="creator-hero-products-title">' +
+      '<div class="creator-hero-product-selector">' +
+      '<h3 class="creator-hero-product-selector-title">' +
       escapeAttr(i18n('select_products', 'Select products')) +
-      '</div>' +
-      '<div class="creator-hero-products-grid">' +
+      '</h3>' +
+      '<div class="creator-hero-product-grid">' +
       '<div class="creator-hero-product-category" data-category="top" data-ccg-category="top">' +
       '<svg class="creator-hero-product-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 12h12M6 12v6a2 2 0 002 2h8a2 2 0 002-2v-6M6 12V8a2 2 0 012-2h8a2 2 0 012 2v4"/><path d="M10 8V4a2 2 0 012-2h0a2 2 0 012 2v4"/></svg>' +
       '<span class="creator-hero-product-label">Top</span>' +
@@ -147,12 +157,12 @@
       '<input type="file" accept="image/*" class="creator-hero-upload-input" data-ccg-input="background">' +
       '<div class="creator-hero-upload-preview" data-ccg-upload-preview="background"><img data-ccg-upload-img="background" alt=""><button type="button" class="creator-hero-upload-preview-remove" data-ccg-upload-remove="background">×</button></div>' +
       '</div></div>' +
-      '<div class="creator-hero-prompt-section">' +
-      '<textarea class="creator-hero-prompt-input" data-ccg-prompt placeholder="' +
+      '<div class="creator-hero-prompt-section creator-hero-prompt-section--with-ratios">' +
+      '<textarea class="creator-hero-prompt-input creator-hero-prompt-input--compact" data-ccg-prompt placeholder="' +
       escapeAttr(i18n('prompt_placeholder', 'Describe the character scene…')) +
-      '" rows="3"></textarea></div>' +
+      '" rows="3"></textarea>' +
       renderRatioGrid() +
-      '</div>';
+      '</div></div>';
   }
 
   function setProductPreview(ctx, category, product) {
@@ -432,19 +442,21 @@
   }
 
   function openProductPicker(ctx, category) {
+    var modalCategory = category === 'addition' ? 'additional' : 'top';
+    var onPick = function (product) {
+      if (!product) return;
+      setProductPreview(ctx, category, product);
+    };
+    var opts = { lockedRegion: getLockedRegionFromCurrentSelection() };
     if (typeof window.openHeroProductSelectionModalSimple === 'function') {
-      window.openHeroProductSelectionModalSimple(category === 'addition' ? 'additional' : 'top', function (product) {
-        if (!product) return;
-        setProductPreview(ctx, category, product);
-      });
+      window.openHeroProductSelectionModalSimple(modalCategory, onPick, opts);
       return;
     }
     if (typeof window.openHeroProductSelectionModal === 'function') {
-      window.openHeroProductSelectionModal(category, function (product) {
-        if (!product) return;
-        setProductPreview(ctx, category, product);
-      });
+      window.openHeroProductSelectionModal(modalCategory, onPick, opts);
+      return;
     }
+    alert('Produktauswahl-Modal nicht verfügbar.');
   }
 
   function bind(ctx) {

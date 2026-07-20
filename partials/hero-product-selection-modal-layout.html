@@ -1,0 +1,525 @@
+<style>
+/* Hero Product Selection Modal - Erweitert creator-modal-base.css */
+
+#hero-product-selection-modal .creator-modal__dialog--large {
+  min-height: 680px;
+  max-height: 95vh;
+  padding: 0;
+}
+
+/* Grid View - Shows all user products */
+.hero-product-selection-modal__grid-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(95vh - 80px); /* Header height */
+  max-height: calc(95vh - 80px);
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Fixed Search Bar */
+.hero-product-selection-modal__search-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #1f2937;
+  padding: 14px 24px 10px;
+  border-bottom: 1px solid #374151;
+  flex-shrink: 0;
+}
+
+.hero-product-selection-modal__region-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.hero-product-selection-modal__region-tab {
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  background: rgba(249, 115, 22, 0.08);
+  color: #e5e7eb;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hero-product-selection-modal__region-tab:hover {
+  background: rgba(249, 115, 22, 0.18);
+}
+
+.hero-product-selection-modal__region-tab--active {
+  background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
+  border-color: #fb923c;
+  color: #ffffff;
+}
+
+.hero-product-selection-modal__region-tab--locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hero-product-selection-modal__region-tab--unavailable {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: rgba(148, 163, 184, 0.45);
+  background: rgba(71, 85, 105, 0.2);
+}
+
+.hero-product-selection-modal__region-lock-hint {
+  margin: 0 0 8px;
+  color: #fca5a5;
+  font-size: 12px;
+  display: none;
+}
+
+.hero-product-selection-modal__search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-product-selection-modal__search {
+  flex: 1;
+  padding: 12px 16px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #e5e7eb;
+  font-size: 14px;
+  height: 44px; /* gleiche Höhe wie Usage-Tabs */
+  box-sizing: border-box;
+}
+
+.hero-product-selection-modal__usage-tabs {
+  display: inline-flex;
+  border-radius: 8px;
+  background: #111827;
+  padding: 2px;
+  border: 1px solid #374151;
+  height: 44px; /* gleiche Höhe wie Suchfeld */
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.hero-product-selection-modal__usage-tab {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+}
+
+.hero-product-selection-modal__usage-tab--active {
+  background: #f97316; /* Orange */
+  color: #ffffff;
+}
+
+.hero-product-selection-modal__search::placeholder {
+  color: #9ca3af;
+}
+
+.hero-product-selection-modal__search:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+
+/* Scrollable Grid Container */
+.hero-product-selection-modal__grid-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  min-height: 0;
+}
+
+.hero-product-selection-modal__loading {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+.hero-product-selection-modal__empty {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* Product Grid */
+.hero-product-selection-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.hero-product-selection-modal__product-item {
+  border: 2px solid #374151;
+  border-radius: 8px;
+  background: #111827;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-product-selection-modal__product-item:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.hero-product-selection-modal__product-item--selected {
+  border-color: #3b82f6;
+  background: #1e3a8a;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.hero-product-selection-modal__product-item--selected::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #3b82f6;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  z-index: 2;
+}
+
+.hero-product-selection-modal__product-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: #374151;
+}
+
+.hero-product-selection-modal__product-image-placeholder {
+  width: 100%;
+  height: 180px;
+  background:
+    radial-gradient(120px 60px at 30% 20%, rgba(249, 115, 22, 0.22), transparent 70%),
+    linear-gradient(145deg, rgba(31, 41, 55, 0.9), rgba(17, 24, 39, 0.95));
+}
+
+/* Color variant strip (Shopify option Color / Farbe / …) */
+.hero-product-selection-modal__thumb-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 180px;
+}
+.hero-product-selection-modal__color-img-wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  touch-action: pan-y;
+}
+.hero-product-selection-modal__thumb-wrap .hero-product-selection-modal__product-image {
+  width: 100%;
+  height: 180px;
+  display: block;
+}
+.hero-product-selection-modal__color-nav {
+  flex: 0 0 36px;
+  width: 36px;
+  min-width: 36px;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 4;
+}
+.hero-product-selection-modal__color-nav:hover {
+  background: rgba(59, 130, 246, 0.45);
+}
+.hero-product-selection-modal__color-label {
+  padding: 2px 6px 8px;
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  line-height: 1.25;
+}
+
+/* Multi-image: manual swipe + overlay arrows (hero modal); no auto-rotate */
+#hero-product-selection-modal .creator-product-image-carousel--modal {
+  position: relative;
+  width: 100%;
+  height: 180px;
+}
+#hero-product-selection-modal .creator-product-image-carousel--modal .creator-product-image-carousel__viewport {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+#hero-product-selection-modal .creator-product-image-carousel--modal .creator-product-image-carousel__img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+  background: #374151;
+}
+#hero-product-selection-modal .creator-product-image-carousel__btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  /* Visibility controlled by JS (always in hero modal); default on for multi-image */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+#hero-product-selection-modal .creator-product-image-carousel__btn--prev { left: 6px; }
+#hero-product-selection-modal .creator-product-image-carousel__btn--next { right: 6px; }
+
+/* Modal Footer */
+.hero-product-selection-modal__footer {
+  padding: 20px 24px;
+  background: #1f2937;
+  border-top: 1px solid #374151;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.hero-product-selection-modal__btn {
+  padding: 10px 20px;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  background: #374151;
+  color: #d1d5db;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hero-product-selection-modal__btn:hover {
+  background: #4b5563;
+  border-color: #6b7280;
+}
+
+.hero-product-selection-modal__btn--primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.hero-product-selection-modal__btn--primary:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.hero-product-selection-modal__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-product-selection-modal__search-wrapper {
+    padding: 12px 16px 8px;
+  }
+
+  .hero-product-selection-modal__region-tabs {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .hero-product-selection-modal__region-tab {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  .hero-product-selection-modal__search-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hero-product-selection-modal__search {
+    flex: 1 1 55%;
+    min-width: 0;
+  }
+
+  .hero-product-selection-modal__usage-tabs {
+    flex: 0 0 45%;
+    min-width: 0;
+  }
+
+  .hero-product-selection-modal__category-filter {
+    justify-content: center;
+  }
+
+  .hero-product-selection-modal__color-nav {
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .hero-product-selection-modal__grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .hero-product-selection-modal__grid-container {
+    padding: 16px;
+  }
+
+  .hero-product-selection-modal__footer {
+    flex-direction: column;
+  }
+
+  .hero-product-selection-modal__btn {
+    width: 100%;
+  }
+}
+</style>
+
+<!-- Hero Product Selection Modal HTML -->
+<div
+  id="hero-product-selection-modal"
+  class="creator-modal creator-modal--strong-backdrop"
+  aria-hidden="true"
+  style="display:none"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="hero-product-selection-modal-title"
+>
+  <div class="creator-modal__dialog creator-modal__dialog--large">
+    <div class="creator-modal__header">
+      <h3 id="hero-product-selection-modal-title" class="creator-modal__title">Produkt auswählen</h3>
+      <button
+        type="button"
+        class="creator-modal__close"
+        aria-label="Schließen"
+        onclick="closeHeroProductSelectionModal()"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="creator-modal__body creator-modal__body--no-padding">
+      <div class="hero-product-selection-modal__grid-view">
+        <!-- Fixed Search Bar -->
+        <div class="hero-product-selection-modal__search-wrapper">
+          <div class="hero-product-selection-modal__region-tabs" id="hero-product-region-tabs" aria-label="Region auswählen">
+            <button type="button" class="hero-product-selection-modal__region-tab" data-hero-region-tab="EU" onclick="setHeroProductRegionFilter('EU')">Europa</button>
+            <button type="button" class="hero-product-selection-modal__region-tab" data-hero-region-tab="US" onclick="setHeroProductRegionFilter('US')">USA</button>
+            <button type="button" class="hero-product-selection-modal__region-tab" data-hero-region-tab="GB" onclick="setHeroProductRegionFilter('GB')">UK</button>
+            <button type="button" class="hero-product-selection-modal__region-tab" data-hero-region-tab="CA" onclick="setHeroProductRegionFilter('CA')">Kanada</button>
+            <button type="button" class="hero-product-selection-modal__region-tab" data-hero-region-tab="AU" onclick="setHeroProductRegionFilter('AU')">Australien</button>
+            <button type="button" class="hero-product-selection-modal__region-tab" data-hero-region-tab="CN" onclick="setHeroProductRegionFilter('CN')">China</button>
+            <button type="button" class="hero-product-selection-modal__region-tab" data-hero-region-tab="PRINTIFY_CHOICE" onclick="setHeroProductRegionFilter('PRINTIFY_CHOICE')">Printify Choice</button>
+          </div>
+          <p id="hero-product-region-lock-hint" class="hero-product-selection-modal__region-lock-hint"></p>
+
+          <div class="hero-product-selection-modal__search-row">
+            <input
+              type="search"
+              id="hero-product-selection-modal-search"
+              class="hero-product-selection-modal__search"
+              placeholder="Produkte durchsuchen..."
+              autocomplete="off"
+              aria-label="Produkte durchsuchen"
+            >
+
+            <!-- Usage filter: Used / Unused -->
+            <div class="hero-product-selection-modal__usage-tabs" aria-label="Hero-Bild Nutzung filtern">
+              <button
+                type="button"
+                id="hero-product-usage-tab-unused"
+                class="hero-product-selection-modal__usage-tab hero-product-selection-modal__usage-tab--active"
+                onclick="setHeroProductUsageFilter('unused')"
+              >
+                Unused
+              </button>
+              <button
+                type="button"
+                id="hero-product-usage-tab-used"
+                class="hero-product-selection-modal__usage-tab"
+                onclick="setHeroProductUsageFilter('used')"
+              >
+                Used
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Scrollable Grid Container -->
+        <div class="hero-product-selection-modal__grid-container" data-allow-scroll="true">
+          <div id="hero-product-selection-modal-loading" class="hero-product-selection-modal__loading" style="display: none;">
+            Lade Produkte…
+          </div>
+          <div id="hero-product-selection-modal-empty" class="hero-product-selection-modal__empty" style="display: none;">
+            Keine Produkte in dieser Kategorie gefunden.
+          </div>
+          <div id="hero-product-selection-modal-grid" class="hero-product-selection-modal__grid">
+            <!-- Products will be loaded via JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="hero-product-selection-modal__footer">
+      <button
+        type="button"
+        class="hero-product-selection-modal__btn"
+        onclick="closeHeroProductSelectionModal()"
+      >
+        Abbrechen
+      </button>
+      <button
+        type="button"
+        class="hero-product-selection-modal__btn hero-product-selection-modal__btn--primary"
+        id="hero-product-selection-modal-confirm"
+        onclick="confirmHeroProductSelection()"
+        disabled
+      >
+        Übernehmen
+      </button>
+    </div>
+  </div>
+</div>

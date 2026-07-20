@@ -945,10 +945,9 @@
         if (e.target.closest('.creator-hero-product-preview-remove')) return;
         if (e.target.closest('.creator-product-image-carousel__btn')) return;
         if (typeof window.openHeroProductSelectionModalSimple === 'function') {
-          var creatorName = window.CreatorSettings && window.CreatorSettings.creatorName ? window.CreatorSettings.creatorName : null;
           window.openHeroProductSelectionModalSimple('top', function (product) {
             setProductPreview(ctx, 'top', product);
-          }, creatorName, { lockedRegion: getLockedRegionFromCurrentSelection() });
+          }, { lockedRegion: getLockedRegionFromCurrentSelection() });
         } else {
           alert('Produktauswahl-Modal nicht verfügbar.');
         }
@@ -959,10 +958,9 @@
         if (e.target.closest('.creator-hero-product-preview-remove')) return;
         if (e.target.closest('.creator-product-image-carousel__btn')) return;
         if (typeof window.openHeroProductSelectionModalSimple === 'function') {
-          var creatorName = window.CreatorSettings && window.CreatorSettings.creatorName ? window.CreatorSettings.creatorName : null;
           window.openHeroProductSelectionModalSimple('additional', function (product) {
             setProductPreview(ctx, 'addition', product);
-          }, creatorName, { lockedRegion: getLockedRegionFromCurrentSelection() });
+          }, { lockedRegion: getLockedRegionFromCurrentSelection() });
         } else {
           alert('Produktauswahl-Modal nicht verfügbar.');
         }

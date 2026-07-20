@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS changes. /vendor + Creations bundle are cached ~7d. */
-  var PORTAL_ASSET_V = "smm-settings-sidebar-20260720b";
+  var PORTAL_ASSET_V = "hero-product-modal-20260720c";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -357,17 +357,22 @@
       await injectPartial("creator-social-media-manager-modal.html");
       loadCss(asset("creator-social-media-manager-modal.css"));
       await injectPartial("creator-image-add-media.html");
+      await injectPartial("hero-product-selection-modal-layout.html");
+      loadCss(asset("creator-modal-base.css"));
       await injectPartial("creator-character-generator-modal.html");
       loadCss(asset("creator-character-generator-modal.css"));
       await injectPartial("creator-hero-images-modal.html");
       loadCss(asset("creator-hero-images-modal.css"));
 
       // Core skill-tree + SMM open API before marketing bind (SMM click must not be optional).
+      // Product picker modal must load before Hero/Character generators.
       await loadScriptsSequential([
         asset("creator-phone-upload-modal.js"),
         asset("creator-footer-eaz-ui.js"),
         asset("hero-region-utils.js"),
         asset("creator-product-image-carousel.js"),
+        asset("creator-modal-physics.js"),
+        asset("hero-product-selection-modal-functions.js"),
         asset("hero-eazy-legacy-bridge.js"),
         asset("creator-image-add-media.js"),
         asset("creator-content-creation-hero.js"),

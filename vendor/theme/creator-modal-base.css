@@ -1,0 +1,414 @@
+/**
+ * Creator Modal Base Styles
+ * 
+ * Wiederverwendbare Basis-Stile für alle Creator-Modals
+ * Einheitliches Design-System für Modals im Creator-Bereich
+ */
+
+/* ============================================
+   FARSCHA SCHEMA
+   ============================================ */
+/**
+ * Farben:
+ * - Hintergrund Dunkel: #020617 (Header/Footer)
+ * - Hintergrund Hell: #1f2937 (Body, 2 Stufen heller)
+ * - Hintergrund Content: #111827 (Inhalts-Container)
+ * - Primär Farbe (Orange): #f97316
+ * - Primär Farbe Hover: #fb923c
+ * - Text Hell: #e5e7eb
+ * - Text Dunkel: #9ca3af
+ * - Border: #374151
+ * - Border Hell: #1f2937
+ * - Backdrop: rgba(15,23,42,0.6) oder rgba(2, 6, 23, 0.92)
+ */
+
+/* ============================================
+   MODAL CONTAINER (Backdrop)
+   ============================================ */
+.creator-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 10001; /* Höher als notification-modal (9999) */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease-out;
+}
+
+.creator-modal--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* creator-design-modal geschlossen: Keine Blockierung für Generator-Modals (aria-hidden Konflikt) */
+#creator-design-modal[aria-hidden="true"] {
+  pointer-events: none !important;
+  visibility: hidden;
+  z-index: -1;
+}
+#creator-design-modal.creator-modal--open {
+  visibility: visible;
+  z-index: 10001;
+}
+
+/* Alternative: Für stärkeren Backdrop (z.B. bei wichtigen Modals) */
+.creator-modal--strong-backdrop {
+  background: rgba(2, 6, 23, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+/* ============================================
+   MODAL DIALOG (Hauptcontainer)
+   ============================================ */
+.creator-modal__dialog {
+  width: 100%;
+  max-width: 1200px;
+  max-height: 68vh; /* 20% kleiner (von 85vh) */
+  background: #020617;
+  border-radius: 16px;
+  border: 1px solid #374151;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  position: relative;
+  margin: 20px;
+}
+
+/* Große Modals (z.B. Design Modal) */
+.creator-modal__dialog--large {
+  max-width: 1400px;
+  max-height: 64vh; /* 20% kleiner (von 80vh) */
+  border-radius: 20px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.85);
+  padding: 24px;
+}
+
+/* Mittlere Modals */
+.creator-modal__dialog--medium {
+  max-width: 800px;
+}
+
+/* Kleine Modals */
+.creator-modal__dialog--small {
+  max-width: 500px;
+}
+
+/* ============================================
+   MODAL HEADER
+   ============================================ */
+.creator-modal__header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #020617;
+  flex-shrink: 0;
+}
+
+.creator-modal__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin: 0;
+}
+
+/* ============================================
+   MODAL CLOSE BUTTON
+   ============================================ */
+.creator-modal__close {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  width: 28px;
+  height: 28px;
+}
+
+.creator-modal__close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e5e7eb;
+}
+
+/* Absolute Positionierung (z.B. bei großen Modals) */
+.creator-modal__close--absolute {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  font-size: 24px;
+  width: 32px;
+  height: 32px;
+}
+
+/* ============================================
+   MODAL BODY (Content-Bereich)
+   ============================================ */
+.creator-modal__body {
+  flex: 1;
+  padding: 12px;
+  background: #1f2937;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Body ohne Padding */
+.creator-modal__body--no-padding {
+  padding: 0;
+}
+
+/* Body mit mehr Padding */
+.creator-modal__body--large-padding {
+  padding: 20px;
+}
+
+/* ============================================
+   MODAL FOOTER
+   ============================================ */
+.creator-modal__footer {
+  padding: 14px 18px;
+  border-top: 1px solid #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #020617;
+  flex-shrink: 0;
+}
+
+/* Footer mit Links-/Rechts-Buttons */
+.creator-modal__footer--space-between {
+  justify-content: space-between;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.creator-modal__btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.creator-modal__btn:hover {
+  opacity: 0.95;
+}
+
+.creator-modal__btn:active {
+  opacity: 0.9;
+}
+
+.creator-modal__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary Button (Orange) */
+.creator-modal__btn--primary {
+  background: #f97316;
+  color: #111827;
+  border-color: #f97316;
+}
+
+.creator-modal__btn--primary:hover {
+  background: #fb923c;
+  border-color: #fb923c;
+}
+
+/* Secondary Button (Orange, alternativ) */
+.creator-modal__btn--secondary {
+  background: #f97316;
+  color: #111827;
+  border-color: #f97316;
+}
+
+/* Ghost Button (Transparent mit Border) */
+.creator-modal__btn--ghost {
+  background: transparent;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+.creator-modal__btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #6b7280;
+}
+
+/* Danger Button (Rot, für z.B. Löschen) */
+.creator-modal__btn--danger {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.creator-modal__btn--danger:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+/* ============================================
+   SCROLLBARS (Orange Theme)
+   ============================================ */
+.creator-modal__scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #f97316 #1f2937;
+}
+
+.creator-modal__scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.creator-modal__scroll::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 2px;
+}
+
+.creator-modal__scroll::-webkit-scrollbar-thumb {
+  background: #f97316;
+  border-radius: 2px;
+}
+
+.creator-modal__scroll::-webkit-scrollbar-thumb:hover {
+  background: #fb923c;
+}
+
+/* ============================================
+   CONTAINER/BOX (für Inhalte mit Border)
+   ============================================ */
+.creator-modal__box {
+  background: #111827;
+  border-radius: 8px;
+  border: 1px solid #374151;
+  padding: 8px;
+}
+
+/* ============================================
+   ÜBERSCHRIFTEN IN MODALS
+   ============================================ */
+.creator-modal__section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f97316;
+  margin: 0 0 8px 0;
+  padding: 0 4px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+/**
+ * REGELN FÜR CREATOR-MODALS (Mobile):
+ * 
+ * 1. Base-Datei (creator-modal-base.css) enthält ALLE generellen Layout-Regeln
+ *    für .creator-modal und .creator-modal__dialog(--large/--medium/--small).
+ * 
+ * 2. Spezialisierte Dateien (z.B. creator-design-modal.css) dürfen NUR Klassen
+ *    mit .creator-design-modal__* ändern, NICHT die generischen .creator-modal__*
+ *    Regeln überschreiben.
+ * 
+ * 3. Mobile-Verhalten (max-width: 768px):
+ *    - Modal-Backdrop richtet Dialoge am oberen Rand aus (align-items: flex-start)
+ *    - Große Dialoge dürfen NIE höher als Viewport sein
+ *    - Nutze 100vh als Fallback, 100dvh wenn verfügbar (@supports)
+ *    - Header/Footer: flex-shrink: 0
+ *    - Body: flex: 1 1 auto, min-height: 0, overflow: hidden
+ *    - Genau EIN Element im Body scrollt (overflow-y: auto)
+ * 
+ * 4. Keine !important für Größen/Höhen, außer explizit erlaubt.
+ */
+@media (max-width: 768px) {
+  /* Modal-Backdrop: Oben ausrichten statt zentrieren */
+  .creator-modal {
+    align-items: flex-start; /* Statt center - Header bleibt sichtbar */
+    justify-content: center; /* Horizontale Zentrierung beibehalten */
+    overflow-y: auto; /* Notfall: wenn Dialog doch zu groß → scrollbarer Backdrop */
+  }
+
+  .creator-modal__dialog {
+    max-width: calc(100% - 16px); /* Abstand zu Bildschirmrändern */
+    margin: 8px; /* Kleiner Abstand zu Rändern */
+    max-height: calc(76vh - 16px); /* 20% kleiner (von 95vh) */
+    border-radius: 12px;
+    overflow: hidden; /* Wichtig: Verhindert Overflow */
+  }
+
+  /* Große Dialoge: Fallback zuerst, dann @supports für dvh */
+  .creator-modal__dialog--large {
+    min-height: 0;
+    padding: 0; /* Padding wird von Header/Body gehandhabt */
+    margin: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+
+    /* 1) Fallback zuerst - 80vh (20% kleiner von 100vh) */
+    height: calc(80vh - 16px);
+    max-height: calc(80vh - 16px);
+  }
+
+  /* 2) Wenn Browser 100dvh unterstützt, das drüberbügeln */
+  @supports (height: 100dvh) {
+    .creator-modal__dialog--large {
+      height: calc(80dvh - 16px); /* 20% kleiner (von 100dvh) */
+      max-height: calc(80dvh - 16px); /* 20% kleiner (von 100dvh) */
+    }
+  }
+
+  /* Header sichtbar halten */
+  .creator-modal__header {
+    padding: 8px 12px;
+    flex-shrink: 0; /* Wichtig: Header nicht schrumpfen */
+    min-height: 44px; /* Mindesthöhe für Sichtbarkeit */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Body: Flexibel, scrollt nicht selbst */
+  .creator-modal__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Body selbst scrollt nicht */
+    max-height: 100%;
+  }
+
+  /* Footer sichtbar halten */
+  .creator-modal__footer {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    flex-shrink: 0; /* Wichtig: Footer nicht schrumpfen */
+    min-height: 44px; /* Mindesthöhe für Sichtbarkeit */
+  }
+
+  .creator-modal__btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
