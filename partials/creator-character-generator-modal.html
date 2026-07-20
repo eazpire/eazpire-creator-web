@@ -1,0 +1,46 @@
+<div
+  id="creatorCharacterGeneratorModal"
+  class="chim-modal-root ccg-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="ccg-modal-title"
+>
+  <div class="chim-modal__shell">
+    <header class="chim-modal__header">
+      <h2 id="ccg-modal-title" class="chim-modal__title" data-t="creator.marketing.character_generator_modal_title">
+        <span class="chim-modal__title-text">Character Generator</span>
+      </h2>
+      <button
+        type="button"
+        class="chim-modal__close"
+        id="ccg-modal-close"
+        aria-label="Close"
+        title="Close"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </header>
+    <div class="chim-modal__body">
+      <div class="creator-hero-create-context" id="creatorCharacterGeneratorModalContext">
+        <div class="creator-hero-create-scroll" id="creatorCharacterCreateScroll">
+          <div
+            class="creator-content-creation-character creator-content-creation-hero--mobile"
+            id="creatorContentCreationCharacter"
+            data-creator-character-host
+          ></div>
+          <div class="creator-eazy-speech-anchor" id="creatorEazySpeechAnchorCharacter" aria-hidden="true"></div>
+        </div>
+        <div class="creator-hero-eazy-footer creator-character-eazy-footer" data-ccg-eazy-footer>
+          <div class="creator-hero-eazy-footer__inner">
+            <button type="button" class="creator-hero-eazy-start" data-ccg-eazy-start disabled>
+              Start generation
+            </button>
+          </div>
+          <div class="creator-hero-eazy-status" data-ccg-status hidden></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

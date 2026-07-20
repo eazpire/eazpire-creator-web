@@ -1,0 +1,82 @@
+<div id="cimgAddSourceModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div
+    class="cvs-confirm-box cvs-addsrc-box"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cimg-addsrc-title"
+  >
+    <h3 class="cvs-confirm-title" id="cimg-addsrc-title">Add media</h3>
+    <div class="cvs-addsrc-grid cvs-addsrc-grid--with-paste" id="cimg-addsrc-grid">
+      <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-assets" data-cimg-opt="assets">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128193;</span>
+        <span class="cvs-addsrc-option__label">Assets</span>
+        <span class="cvs-addsrc-option__hint">Your uploaded library</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-device" data-cimg-opt="device">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128187;</span>
+        <span class="cvs-addsrc-option__label">Device</span>
+        <span class="cvs-addsrc-option__hint">Upload from this device</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-phone" data-cimg-opt="phone" data-desktop-only="1">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128241;</span>
+        <span class="cvs-addsrc-option__label">Phone</span>
+        <span class="cvs-addsrc-option__hint">Scan a QR code to upload</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-link" data-cimg-opt="link">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128279;</span>
+        <span class="cvs-addsrc-option__label">Link</span>
+        <span class="cvs-addsrc-option__hint">Paste a media URL</span>
+      </button>
+      <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-paste" data-cimg-opt="paste">
+        <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128203;</span>
+        <span class="cvs-addsrc-option__label">Paste from Clipboard</span>
+        <span class="cvs-addsrc-option__hint">Use an image already copied</span>
+      </button>
+    </div>
+    <div class="cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cimg-addsrc-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="cimgLinkModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div
+    class="cvs-confirm-box cvs-meta-box cvs-link-box"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cimg-link-title"
+  >
+    <h3 class="cvs-confirm-title" id="cimg-link-title">Add from link</h3>
+    <div class="cvs-link-body">
+      <div class="cvs-link-main">
+        <label class="cvs-meta-field">
+          <span>Media URL</span>
+          <div class="cvs-link-url-row">
+            <input type="url" id="cimg-link-url" placeholder="https://…">
+            <button type="button" class="cvs-btn cvs-btn--ghost cvs-link-extract-btn" id="cimg-link-extract">
+              Extract
+            </button>
+          </div>
+        </label>
+        <p class="cvs-link-status" id="cimg-link-status" role="status"></p>
+        <div class="cvs-link-preview" id="cimg-link-preview" hidden>
+          <img id="cimg-link-preview-image" class="cvs-link-preview__media" alt="" hidden>
+        </div>
+      </div>
+      <div class="cvs-link-phone" id="cimg-link-phone" data-desktop-only="1">
+        <p class="cvs-link-phone__title">Or scan with your phone</p>
+        <div class="cvs-link-phone__qr-wrap">
+          <img id="cimg-link-qr-img" class="cvs-link-phone__qr" alt="" width="120" height="120" loading="lazy">
+        </div>
+        <p class="cvs-link-phone__hint">Paste the link on your phone — it fills in here automatically.</p>
+        <p class="cvs-link-phone__status" id="cimg-link-phone-status" role="status"></p>
+      </div>
+    </div>
+    <div class="cvs-modal-footer cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cimg-link-cancel">Cancel</button>
+      <button type="button" class="cvs-btn cvs-btn--primary" id="cimg-link-submit" disabled>Download</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" accept="image/*" id="cimg-device-input" hidden tabindex="-1" aria-hidden="true">

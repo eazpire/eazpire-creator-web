@@ -1,0 +1,86 @@
+/* Character Generator — extends Hero modal shell (IDEA-044) */
+.ccg-ratio-section {
+  margin: 16px 0 8px;
+}
+.ccg-ratio-section__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0 0 10px;
+}
+.ccg-ratio-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.ccg-ratio-card {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  padding: 12px 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ccg-ratio-card:hover {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(249, 115, 22, 0.1);
+}
+.ccg-ratio-card.is-selected {
+  border-color: rgba(249, 115, 22, 0.85);
+  background: rgba(249, 115, 22, 0.18);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+}
+.ccg-ratio-card__platform {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.25;
+  min-height: 2.5em;
+}
+.ccg-ratio-card__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 72px;
+}
+.ccg-ratio-card__rect {
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+}
+.ccg-ratio-card__rect[data-ratio="16:9"] {
+  width: 56px;
+  height: 32px;
+}
+.ccg-ratio-card__rect[data-ratio="9:16"] {
+  width: 28px;
+  height: 50px;
+}
+.ccg-ratio-card__rect[data-ratio="1:1"] {
+  width: 42px;
+  height: 42px;
+}
+.ccg-ratio-card__rect[data-ratio="4:5"] {
+  width: 36px;
+  height: 45px;
+}
+@media (max-width: 520px) {
+  .ccg-ratio-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
