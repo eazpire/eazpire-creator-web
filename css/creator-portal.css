@@ -189,6 +189,14 @@ body.is-boot-loading #creatorPortalApp {
   animation: creatorBootUniverseBar 2.1s ease-in-out infinite;
 }
 
+/* Determinate progress driven by JS milestones (see app.js setBootProgress). */
+.creator-boot__bar-fill[data-mode="progress"] {
+  animation: none;
+  transform: none;
+  width: var(--boot-progress, 8%);
+  transition: width 0.35s ease-out;
+}
+
 .creator-boot__bar-stars {
   position: absolute;
   inset: 0;

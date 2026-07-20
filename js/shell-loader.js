@@ -1,6 +1,7 @@
 /**
  * Assembles theme creator shell (desktop + mobile) from static partials.
- * Critical path: dashboard shell only; secondary screens + Eazy/audio deferred.
+ * Critical path: dashboard shell + core runtime (mobile/desktop/data).
+ * Visual extras (particles, aquarium, switch transition) + Eazy load after first paint.
  */
 (function (global) {
   "use strict";
@@ -8,8 +9,9 @@
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for footer EAZV -> Creator Settings (EAZ tab) fix (never falls back to sales modal).
-  var RUNTIME_V = "15-eazv-footer-fix-20260719a";
+  var RUNTIME_V = "16-boot-runtime-20260720a";
   var secondaryScreensPromise = null;
+  var enhancementsPromise = null;
 
   function scheduleIdle(fn, timeoutMs) {
     var run = function () {
@@ -270,6 +272,33 @@
     });
   }
 
+  /** Particles, aquarium, shop↔creator switch — nice-to-have after first interactive paint. */
+  function loadThemeEnhancements() {
+    if (enhancementsPromise) return enhancementsPromise;
+    enhancementsPromise = (async function () {
+      await Promise.all([
+        loadScript("/vendor/theme/particle-reveal.js"),
+        loadScript("/vendor/theme/design-particle-reveal.js"),
+        loadScript("/vendor/theme/drawer-aquarium.js"),
+        loadScript("/vendor/theme/creator-switch-page-transition.js"),
+        loadScript("/js/creator-portal-switch.js"),
+      ]);
+      if (global.CreatorPortalSwitch && typeof global.CreatorPortalSwitch.syncAll === "function") {
+        try {
+          global.CreatorPortalSwitch.syncAll();
+        } catch (e) {}
+      }
+    })().catch(function (e) {
+      enhancementsPromise = null;
+      console.warn("[CreatorPortal] theme enhancements load failed", e);
+    });
+    return enhancementsPromise;
+  }
+
+  /**
+   * Core runtime required before dismissing the boot splash.
+   * Secondary screens + audio run here; particles/aquarium/switch + Eazy stay idle.
+   */
   async function loadThemeRuntime() {
     // Secondary swipe screens in parallel with core runtime scripts.
     var secondary = loadShellSecondaryScreens();
@@ -284,12 +313,7 @@
       loadScript("/vendor/theme/creator-daily-limits-subheader.js"),
     ]);
     await Promise.all([
-      loadScript("/vendor/theme/particle-reveal.js"),
-      loadScript("/vendor/theme/design-particle-reveal.js"),
-      loadScript("/vendor/theme/drawer-aquarium.js"),
       loadScript("/vendor/theme/creator-shop-portal-handoff.js"),
-      loadScript("/vendor/theme/creator-switch-page-transition.js"),
-      loadScript("/js/creator-portal-switch.js"),
       loadScript("/vendor/theme/creator-mobile.js"),
       loadScript("/vendor/theme/creator-desktop.js"),
     ]);
@@ -298,12 +322,17 @@
       await secondary;
     } catch (e) {}
 
-    // Header audio widget needs modal JS + party hooks right after shell/runtime (not idle).
+    // Header audio widget needs modal JS + party hooks before first interactive paint.
     try {
       await loadAudioModal();
     } catch (e) {
       console.warn("[CreatorPortal] audio modal load failed", e);
     }
+
+    // Visual extras — after boot dismisses (idle).
+    scheduleIdle(function () {
+      loadThemeEnhancements();
+    }, 1200);
 
     // Eazy chat + sales/journey modals — still deferred off first interactive paint.
     scheduleIdle(function () {
@@ -324,6 +353,7 @@
     loadShell: loadShell,
     loadShellSecondaryScreens: loadShellSecondaryScreens,
     loadThemeRuntime: loadThemeRuntime,
+    loadThemeEnhancements: loadThemeEnhancements,
     loadAudioModal: loadAudioModal,
     ensureShellVisible: ensureShellVisible,
   };
