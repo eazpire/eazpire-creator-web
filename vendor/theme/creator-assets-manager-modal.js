@@ -756,7 +756,7 @@
     var sideToggle = $('#cam-sidebar-toggle');
     if (sideToggle) {
       sideToggle.addEventListener('click', function () {
-        // Mobile drawer uses hamburger; rail toggles collapse on desktop.
+        // Mobile: hamburger/rail opens drawer; desktop: rail collapses/expands in place.
         if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
           var wrapMobile = $('#cam-sidebar-wrapper');
           if (wrapMobile && !wrapMobile.classList.contains('is-drawer-open')) {
@@ -772,6 +772,9 @@
         var collapsed = wrap.classList.toggle('is-collapsed');
         if (body) body.classList.toggle('is-sidebar-collapsed', collapsed);
         sideToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        // Keep rail markup intact (never replace textContent on the button).
+        var arrow = sideToggle.querySelector('.cam-filter-rail__arrow');
+        if (arrow) arrow.textContent = collapsed ? '›' : '‹';
       });
     }
 
