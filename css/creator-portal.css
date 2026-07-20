@@ -189,12 +189,29 @@ body.is-boot-loading #creatorPortalApp {
   animation: creatorBootUniverseBar 2.1s ease-in-out infinite;
 }
 
-/* Determinate progress driven by JS milestones (see app.js setBootProgress). */
+/* Determinate progress: width driven by JS hybrid ticker (milestones + creep). */
 .creator-boot__bar-fill[data-mode="progress"] {
-  animation: none;
+  animation: creatorBootProgressShimmer 1.8s ease-in-out infinite;
   transform: none;
   width: var(--boot-progress, 8%);
-  transition: width 0.35s ease-out;
+  transition: none;
+  overflow: hidden;
+}
+
+.creator-boot__bar-fill[data-mode="progress"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 65%
+  );
+  background-size: 220% 100%;
+  animation: creatorBootFillSheen 1.5s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .creator-boot__bar-stars {
@@ -232,6 +249,17 @@ body.is-boot-loading #creatorPortalApp {
   0% { transform: translateX(-105%); width: 42%; }
   50% { transform: translateX(85%); width: 52%; }
   100% { transform: translateX(260%); width: 42%; }
+}
+
+@keyframes creatorBootProgressShimmer {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.12); }
+}
+
+@keyframes creatorBootFillSheen {
+  0% { background-position: 120% 0; opacity: 0.35; }
+  50% { opacity: 0.85; }
+  100% { background-position: -120% 0; opacity: 0.35; }
 }
 
 @keyframes creatorBootStarsTwinkle {

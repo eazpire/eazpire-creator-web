@@ -12,9 +12,47 @@
   /** Hard fallback so a hung request never traps users on the splash. */
   var BOOT_HARD_TIMEOUT_MS = 28000;
 
-  function finishBoot() {
+  /**
+   * Hybrid boot bar: milestones are floors; a rAF ticker creeps toward a soft
+   * ceiling (just below the next milestone) so the bar never sits still for long.
+   * Never reaches 100% until finishBoot animates the final stretch.
+   */
+  var BOOT_MILESTONES = [6, 12, 36, 48, 60, 74, 86, 94];
+  var bootDisplayPct = 0;
+  var bootFloorPct = 0;
+  var bootTargetPct = 0;
+  var bootSoftCeiling = 8;
+  var bootRafId = 0;
+  var bootLastTs = 0;
+  var bootFinishing = false;
+
+  function nextMilestoneAfter(pct) {
+    for (var i = 0; i < BOOT_MILESTONES.length; i++) {
+      if (BOOT_MILESTONES[i] > pct) return BOOT_MILESTONES[i];
+    }
+    return 100;
+  }
+
+  function softCeilingFor(targetPct) {
+    var next = nextMilestoneAfter(targetPct);
+    if (next >= 100) return 99;
+    return Math.max(targetPct, next - 1);
+  }
+
+  function applyBootProgressVisual(pct) {
+    var fill = document.querySelector(".creator-boot__bar-fill");
+    if (!fill) return;
+    fill.setAttribute("data-mode", "progress");
+    fill.style.setProperty("--boot-progress", pct.toFixed(2) + "%");
+  }
+
+  function completeBootHide() {
     if (bootFinished) return;
     bootFinished = true;
+    if (bootRafId) {
+      cancelAnimationFrame(bootRafId);
+      bootRafId = 0;
+    }
     var boot = document.getElementById("creatorBoot");
     var app = document.getElementById("creatorPortalApp");
     document.body.classList.remove("is-boot-loading");
@@ -22,15 +60,87 @@
     if (app) app.hidden = false;
   }
 
-  function setBootProgress(pct, statusText) {
-    var fill = document.querySelector(".creator-boot__bar-fill");
-    var status = document.getElementById("creatorBootStatus");
-    var n = Math.max(0, Math.min(100, Number(pct) || 0));
-    if (fill) {
-      fill.setAttribute("data-mode", "progress");
-      fill.style.setProperty("--boot-progress", n + "%");
+  function tickBootProgress(ts) {
+    bootRafId = 0;
+    if (!bootLastTs) bootLastTs = ts;
+    var dt = Math.min(0.05, Math.max(0, (ts - bootLastTs) / 1000));
+    bootLastTs = ts;
+
+    if (bootFinishing) {
+      var remain = 100 - bootDisplayPct;
+      if (remain <= 0.2) {
+        bootDisplayPct = 100;
+        applyBootProgressVisual(100);
+        completeBootHide();
+        return;
+      }
+      // ~400–500ms snap to full from typical late-boot positions
+      bootDisplayPct += Math.max(remain * 9 * dt, 55 * dt);
+      if (bootDisplayPct > 100) bootDisplayPct = 100;
+      applyBootProgressVisual(bootDisplayPct);
+      bootRafId = requestAnimationFrame(tickBootProgress);
+      return;
     }
+
+    if (bootDisplayPct < bootTargetPct) {
+      var upGap = bootTargetPct - bootDisplayPct;
+      bootDisplayPct += Math.max(upGap * (1 - Math.exp(-8 * dt)), 28 * dt);
+      if (bootDisplayPct > bootTargetPct) bootDisplayPct = bootTargetPct;
+    } else {
+      var ceiling = bootSoftCeiling;
+      var room = ceiling - bootDisplayPct;
+      if (room > 0.08) {
+        // Asymptote toward soft ceiling + small minimum creep so it feels alive
+        bootDisplayPct += room * (1 - Math.exp(-0.55 * dt));
+        bootDisplayPct += Math.min(1.8 * dt, room * 0.35);
+        if (bootDisplayPct > ceiling) bootDisplayPct = ceiling;
+      }
+    }
+
+    if (bootDisplayPct < bootFloorPct) bootDisplayPct = bootFloorPct;
+    if (bootDisplayPct > 99) bootDisplayPct = 99;
+
+    applyBootProgressVisual(bootDisplayPct);
+    bootRafId = requestAnimationFrame(tickBootProgress);
+  }
+
+  function ensureBootTicker() {
+    if (bootFinished || bootRafId) return;
+    if (typeof requestAnimationFrame !== "function") {
+      applyBootProgressVisual(Math.max(bootDisplayPct, bootTargetPct));
+      return;
+    }
+    bootLastTs = 0;
+    bootRafId = requestAnimationFrame(tickBootProgress);
+  }
+
+  function finishBoot() {
+    if (bootFinished || bootFinishing) return;
+    bootFinishing = true;
+    bootTargetPct = 100;
+    bootSoftCeiling = 100;
+    ensureBootTicker();
+    // No rAF (very old browsers): hide immediately after painting 100%
+    if (typeof requestAnimationFrame !== "function") {
+      bootDisplayPct = 100;
+      applyBootProgressVisual(100);
+      completeBootHide();
+    }
+  }
+
+  function setBootProgress(pct, statusText) {
+    var status = document.getElementById("creatorBootStatus");
     if (status && statusText) status.textContent = statusText;
+    if (bootFinished || bootFinishing) return;
+
+    var n = Math.max(0, Math.min(100, Number(pct) || 0));
+    // Callers may pass 100 for "Ready"; finishBoot owns the true 100% fill.
+    if (n >= 100) n = 99;
+
+    if (n > bootTargetPct) bootTargetPct = n;
+    if (n > bootFloorPct) bootFloorPct = n;
+    bootSoftCeiling = softCeilingFor(bootTargetPct);
+    ensureBootTicker();
   }
 
   function applyBootstrap(data) {
