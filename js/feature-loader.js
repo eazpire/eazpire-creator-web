@@ -356,6 +356,9 @@
       loadCss(asset("creator-video-generator-modal.css"));
       await injectPartial("creator-social-media-manager-modal.html");
       loadCss(asset("creator-social-media-manager-modal.css"));
+      await injectPartial("creator-image-add-media.html");
+      await injectPartial("creator-character-generator-modal.html");
+      loadCss(asset("creator-character-generator-modal.css"));
       await injectPartial("creator-hero-images-modal.html");
       loadCss(asset("creator-hero-images-modal.css"));
 
@@ -366,7 +369,10 @@
         asset("hero-region-utils.js"),
         asset("creator-product-image-carousel.js"),
         asset("hero-eazy-legacy-bridge.js"),
+        asset("creator-image-add-media.js"),
         asset("creator-content-creation-hero.js"),
+        asset("creator-content-creation-character.js"),
+        asset("creator-content-creation-images.js"),
         asset("creator-content-creation-video.js"),
         asset("creator-hero-images-screen.js"),
         asset("creator-videos-screen.js"),
@@ -382,9 +388,10 @@
 
       applyMarketingDeepLink();
 
-      // Leaf UIs (hero modal / video studio) â€” optional so missing vendor files do not block expand.
+      // Leaf UIs (hero modal / video studio) — optional so missing vendor files do not block expand.
       await loadScriptsSequentialOptional([
         asset("creator-hero-images-modal.js"),
+        asset("creator-character-generator-modal.js"),
         asset("creator-video-studio-timeline.js"),
         asset("creator-video-studio-modal.js"),
         asset("creator-video-studio-asset-tools.js"),
