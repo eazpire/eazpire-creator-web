@@ -935,7 +935,11 @@
             source: item.source,
             kind: item.kind === 'video' ? 'video' : 'image',
             url: item.url,
-            label: item.label || item.kind
+            label: item.label || item.kind,
+            caption_hint: item.caption_hint || null,
+            link_url: item.link_url || '',
+            product_ids: item.product_ids || [],
+            product_urls: item.product_urls || []
           });
         });
         grid.appendChild(btn);
@@ -969,6 +973,24 @@
   function applyComposeAsset(asset) {
     compose.asset = asset;
     renderAssetViewer();
+    // Autofill caption + product link from asset metadata (IDEA-044)
+    var captionEl = $('#smm-caption');
+    var linkEl = $('#smm-link-url');
+    if (captionEl && asset && asset.caption_hint && !String(captionEl.value || '').trim()) {
+      var hint = String(asset.caption_hint).trim();
+      if (hint) {
+        captionEl.value = hint.length > 2200 ? hint.slice(0, 2200) : hint;
+      }
+    }
+    if (linkEl && asset) {
+      var link =
+        (asset.link_url && String(asset.link_url).trim()) ||
+        (Array.isArray(asset.product_urls) && asset.product_urls[0]) ||
+        '';
+      if (link && !String(linkEl.value || '').trim()) {
+        linkEl.value = link;
+      }
+    }
     loadPostTargets().then(function () {
       renderChannelCarousel();
     });

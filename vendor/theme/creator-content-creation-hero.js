@@ -436,6 +436,19 @@
     }
   }
 
+  function applyHeroSlotUrl(ctx, slot, url) {
+    if (!url) return;
+    if (slot === 'model') modelImageUrl = url;
+    else backgroundImageUrl = url;
+    var preview = ctx.container.querySelector('[data-creator-hero-upload-preview="' + slot + '"]');
+    var img = ctx.container.querySelector('[data-creator-hero-upload-img="' + slot + '"]');
+    var area = ctx.container.querySelector('[data-creator-hero-upload="' + slot + '"]');
+    if (img) img.src = url;
+    if (preview) preview.classList.add('show');
+    if (area) area.classList.add('has-image');
+    updateEazyHeroUi(ctx);
+  }
+
   function setupUploadArea(ctx, slot) {
     var area = ctx.container.querySelector('[data-creator-hero-upload="' + slot + '"]');
     var input = ctx.container.querySelector('[data-creator-hero-input="' + slot + '"]');
@@ -443,29 +456,61 @@
     var img = ctx.container.querySelector('[data-creator-hero-upload-img="' + slot + '"]');
     var removeBtn = preview && preview.querySelector('[data-creator-hero-upload-remove="' + slot + '"]');
 
-    if (!area || !input) return;
+    if (!area) return;
 
     area.addEventListener('click', function (e) {
-      if (!e.target.closest('.creator-hero-upload-preview-remove')) input.click();
+      if (e.target.closest('.creator-hero-upload-preview-remove')) return;
+      if (window.CreatorImageAddMedia && typeof window.CreatorImageAddMedia.open === 'function') {
+        window.CreatorImageAddMedia.open({
+          purpose: 'hero-' + slot,
+          onUrl: function (url) {
+            applyHeroSlotUrl(ctx, slot, url);
+          },
+          onFile: function (file) {
+            if (!file || !String(file.type || '').startsWith('image/')) return;
+            var localUrl = URL.createObjectURL(file);
+            if (img) {
+              img.src = localUrl;
+              img.onload = function () {
+                URL.revokeObjectURL(localUrl);
+              };
+            }
+            if (preview) preview.classList.add('show');
+            if (area) area.classList.add('has-image');
+            updateEazyHeroUi(ctx);
+            uploadImage(file, slot).then(function (uploadedUrl) {
+              applyHeroSlotUrl(ctx, slot, uploadedUrl || localUrl);
+            });
+          },
+        });
+        return;
+      }
+      if (input) input.click();
     });
 
-    input.addEventListener('change', function () {
-      var file = input.files && input.files[0];
-      input.value = '';
-      if (!file || !file.type.startsWith('image/')) return;
-      var url = URL.createObjectURL(file);
-      if (img) { img.src = url; img.onload = function () { URL.revokeObjectURL(url); }; }
-      if (preview) preview.classList.add('show');
-      if (area) area.classList.add('has-image');
-      updateEazyHeroUi(ctx);
-
-      uploadImage(file, slot).then(function (uploadedUrl) {
-        if (slot === 'model') modelImageUrl = uploadedUrl;
-        else backgroundImageUrl = uploadedUrl;
-        if (!uploadedUrl && img) img.src = url;
+    if (input) {
+      input.addEventListener('change', function () {
+        var file = input.files && input.files[0];
+        input.value = '';
+        if (!file || !file.type.startsWith('image/')) return;
+        var url = URL.createObjectURL(file);
+        if (img) {
+          img.src = url;
+          img.onload = function () {
+            URL.revokeObjectURL(url);
+          };
+        }
+        if (preview) preview.classList.add('show');
+        if (area) area.classList.add('has-image');
         updateEazyHeroUi(ctx);
+        uploadImage(file, slot).then(function (uploadedUrl) {
+          if (slot === 'model') modelImageUrl = uploadedUrl;
+          else backgroundImageUrl = uploadedUrl;
+          if (!uploadedUrl && img) img.src = url;
+          updateEazyHeroUi(ctx);
+        });
       });
-    });
+    }
 
     if (removeBtn) {
       removeBtn.addEventListener('click', function (e) {

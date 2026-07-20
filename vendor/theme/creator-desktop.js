@@ -3453,6 +3453,11 @@
         bumpEazyHeaderUi();
         return;
       }
+      if (currentSubTab === 'content-creation' && content === 'images') {
+        if (window.ContentCreationImages && typeof window.ContentCreationImages.scanHosts === 'function') {
+          window.ContentCreationImages.scanHosts();
+        }
+      }
 
       if (window.CreatorHeroImagesModal && typeof window.CreatorHeroImagesModal.close === 'function') {
         window.CreatorHeroImagesModal.close();

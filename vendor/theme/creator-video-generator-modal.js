@@ -14,11 +14,17 @@
   var state = {
     motionUrl: null,
     characterUrl: null,
+    characterProductIds: [],
+    characterId: null,
     orientation: 'video',
     keepSound: true,
     generating: false,
     results: [],
   };
+  var linkExtracted = null;
+  var linkPhonePollTimer = null;
+  var linkPhoneSessionId = null;
+  var PHONE_UPLOAD_WORKER_FALLBACK = 'https://creator-engine.eazpire.workers.dev';
 
   function isBadTranslationString(s) {
     if (typeof s !== 'string') return true;
@@ -104,8 +110,11 @@
     updateFab();
   }
 
-  function applyCharacterUrl(url) {
+  function applyCharacterUrl(url, meta) {
     state.characterUrl = url || null;
+    meta = meta || {};
+    state.characterProductIds = Array.isArray(meta.product_ids) ? meta.product_ids.slice() : [];
+    state.characterId = meta.id || null;
     var preview = $('[data-cvg-character-preview]');
     var placeholder = $('[data-cvg-character-placeholder]');
     var img = $('[data-cvg-character-preview-img]');
@@ -117,6 +126,8 @@
       if (img) img.removeAttribute('src');
       if (preview) preview.hidden = true;
       if (placeholder) placeholder.hidden = false;
+      state.characterProductIds = [];
+      state.characterId = null;
     }
     updateFab();
   }
@@ -399,12 +410,22 @@
       return;
     }
     bindAddSourceUi();
+    var isChar = addTarget === 'character';
+    var genBtn = document.getElementById('cvg-addsrc-generate-character');
+    var deviceBtn = document.getElementById('cvg-addsrc-device');
     var phoneBtn = document.getElementById('cvg-addsrc-phone');
-    if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
+    var linkBtn = document.getElementById('cvg-addsrc-link');
     var pasteBtn = document.getElementById('cvg-addsrc-paste');
-    if (pasteBtn) pasteBtn.hidden = addTarget !== 'character';
+    if (genBtn) genBtn.hidden = !isChar;
+    if (deviceBtn) deviceBtn.hidden = isChar;
+    if (linkBtn) linkBtn.hidden = isChar;
+    if (pasteBtn) pasteBtn.hidden = true;
+    if (phoneBtn) phoneBtn.hidden = isChar || !isDesktopViewport();
     var grid = document.getElementById('cvg-addsrc-grid');
-    if (grid) grid.classList.toggle('cvg-addsrc-grid--with-paste', addTarget === 'character');
+    if (grid) {
+      grid.classList.toggle('cvg-addsrc-grid--character', isChar);
+      grid.classList.remove('cvg-addsrc-grid--with-paste');
+    }
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
   }
@@ -416,26 +437,259 @@
     overlay.setAttribute('aria-hidden', 'true');
   }
 
-  function openLinkModal() {
-    var overlay = document.getElementById('cvgLinkModal');
-    var input = document.getElementById('cvg-link-url');
-    var status = document.getElementById('cvg-link-status');
-    if (!overlay) return;
-    if (input) input.value = '';
-    if (status) {
-      status.textContent = '';
-      status.className = 'cvs-link-status';
+  function phoneBridgeApiBase() {
+    var cfg = window.CREATOR_API_CONFIG || {};
+    if (cfg.PHONE_UPLOAD_BASE_URL) return String(cfg.PHONE_UPLOAD_BASE_URL).replace(/\/+$/, '');
+    if (cfg.WORKER_BASE_URL) return String(cfg.WORKER_BASE_URL).replace(/\/+$/, '');
+    var base = cfg.BASE_URL ? String(cfg.BASE_URL).replace(/\/+$/, '') : '';
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(base)) return base;
+    var fromApi = String(API_BASE || '').replace(/\/apps\/creator-dispatch$/i, '').replace(/\/+$/, '');
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(fromApi)) return fromApi;
+    return PHONE_UPLOAD_WORKER_FALLBACK;
+  }
+
+  function fetchPhoneBridgeJson(url, options) {
+    return fetch(url, options || { credentials: 'omit' }).then(function (r) {
+      return r.json().catch(function () {
+        return {};
+      }).then(function (data) {
+        return { httpOk: r.ok, data: data };
+      });
+    });
+  }
+
+  function stopLinkPhoneBridge() {
+    if (linkPhonePollTimer) {
+      clearInterval(linkPhonePollTimer);
+      linkPhonePollTimer = null;
     }
+    linkPhoneSessionId = null;
+  }
+
+  function setCvgLinkStatus(msg, kind) {
+    var status = document.getElementById('cvg-link-status');
+    if (!status) return;
+    status.textContent = msg || '';
+    status.className = 'cvs-link-status' + (kind ? ' ' + kind : '');
+  }
+
+  function setCvgDownloadEnabled(on) {
+    var btn = document.getElementById('cvg-link-submit');
+    if (btn) btn.disabled = !on;
+  }
+
+  function showCvgLinkPreview(url, kind) {
+    var wrap = document.getElementById('cvg-link-preview');
+    var video = document.getElementById('cvg-link-preview-video');
+    var img = document.getElementById('cvg-link-preview-image');
+    if (!wrap) return;
+    if (!url) {
+      wrap.hidden = true;
+      if (video) {
+        video.hidden = true;
+        video.removeAttribute('src');
+      }
+      if (img) {
+        img.hidden = true;
+        img.removeAttribute('src');
+      }
+      return;
+    }
+    wrap.hidden = false;
+    if (kind === 'image' && img) {
+      if (video) video.hidden = true;
+      img.src = url;
+      img.hidden = false;
+    } else if (video) {
+      if (img) img.hidden = true;
+      video.src = url;
+      video.hidden = false;
+    }
+  }
+
+  function openLinkModal() {
+    bindAddSourceUi();
+    linkExtracted = null;
+    setCvgDownloadEnabled(false);
+    showCvgLinkPreview(null);
+    setCvgLinkStatus('', '');
+    var input = document.getElementById('cvg-link-url');
+    if (input) input.value = '';
+    var phoneStatus = document.getElementById('cvg-link-phone-status');
+    if (phoneStatus) phoneStatus.textContent = '';
+    var overlay = document.getElementById('cvgLinkModal');
+    if (!overlay) return;
+    var phoneBox = document.getElementById('cvg-link-phone');
+    if (phoneBox) phoneBox.hidden = !isDesktopViewport();
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
+    if (isDesktopViewport()) startCvgLinkPhoneBridge();
     if (input) setTimeout(function () { input.focus(); }, 0);
   }
 
   function closeLinkModal() {
+    stopLinkPhoneBridge();
+    linkExtracted = null;
+    setCvgDownloadEnabled(false);
+    showCvgLinkPreview(null);
     var overlay = document.getElementById('cvgLinkModal');
     if (!overlay) return;
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function applyCvgPhoneLinkValue(value) {
+    var urlInput = document.getElementById('cvg-link-url');
+    var phoneStatus = document.getElementById('cvg-link-phone-status');
+    if (urlInput) {
+      urlInput.value = value;
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (phoneStatus) phoneStatus.textContent = i18n('link_phone_received', 'Link received from phone');
+    submitCvgLinkExtract();
+  }
+
+  function pollCvgLinkPhoneSession(sessionId, ownerId) {
+    var base = phoneBridgeApiBase();
+    var u =
+      base +
+      '/api/creator-phone-upload/session?id=' +
+      encodeURIComponent(sessionId) +
+      '&owner_id=' +
+      encodeURIComponent(ownerId);
+    fetchPhoneBridgeJson(u, { credentials: 'omit' })
+      .then(function (res) {
+        var data = res.data;
+        if (!data || !data.ok || linkPhoneSessionId !== sessionId) return;
+        if (data.status === 'completed' && data.value) {
+          stopLinkPhoneBridge();
+          applyCvgPhoneLinkValue(data.value);
+        } else if (data.status === 'expired') {
+          stopLinkPhoneBridge();
+        }
+      })
+      .catch(function () {});
+  }
+
+  function startCvgLinkPhoneBridge() {
+    var box = document.getElementById('cvg-link-phone');
+    var qrImg = document.getElementById('cvg-link-qr-img');
+    var phoneStatus = document.getElementById('cvg-link-phone-status');
+    if (!box || !isDesktopViewport()) return;
+    stopLinkPhoneBridge();
+    if (qrImg) {
+      qrImg.removeAttribute('src');
+      qrImg.alt = '';
+    }
+    var ownerId = getOwnerId();
+    if (!ownerId) {
+      if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+      return;
+    }
+    if (phoneStatus) phoneStatus.textContent = i18n('link_phone_starting', 'Preparing phone scan…');
+    var base = phoneBridgeApiBase();
+    fetchPhoneBridgeJson(base + '/api/creator-phone-upload/session', {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ owner_id: ownerId, purpose: 'video_link' }),
+    })
+      .then(function (res) {
+        var session = res.data;
+        if (!res.httpOk || !session || !session.ok || !session.session_id) {
+          if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+          return;
+        }
+        linkPhoneSessionId = session.session_id;
+        if (qrImg) {
+          qrImg.alt = 'Phone scan QR';
+          qrImg.src =
+            base +
+            '/api/creator-phone-upload/qr-image?session=' +
+            encodeURIComponent(session.session_id) +
+            '&t=' +
+            String(Date.now());
+        }
+        if (phoneStatus) phoneStatus.textContent = i18n('link_phone_ready', 'Scan the QR code with your phone');
+        linkPhonePollTimer = setInterval(function () {
+          pollCvgLinkPhoneSession(session.session_id, ownerId);
+        }, 2000);
+        pollCvgLinkPhoneSession(session.session_id, ownerId);
+      })
+      .catch(function () {
+        if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+      });
+  }
+
+  function submitCvgLinkExtract() {
+    var input = document.getElementById('cvg-link-url');
+    var raw = input ? String(input.value || '').trim() : '';
+    if (!raw || !/^https?:\/\//i.test(raw)) {
+      setCvgLinkStatus(i18n('link_error_invalid_url', 'Please enter a valid URL.'), '');
+      linkExtracted = null;
+      setCvgDownloadEnabled(false);
+      showCvgLinkPreview(null);
+      return;
+    }
+    var kind = addTarget === 'character' ? 'image' : 'video';
+    linkExtracted = { url: raw, kind: kind };
+    setCvgLinkStatus(i18n('link_extract_ready', 'Ready — tap Download to import.'), 'is-success');
+    setCvgDownloadEnabled(true);
+    showCvgLinkPreview(raw, kind);
+  }
+
+  async function ingestLinkUrl() {
+    if (!linkExtracted || !linkExtracted.url) {
+      submitCvgLinkExtract();
+      if (!linkExtracted) return;
+    }
+    var raw = linkExtracted.url;
+    setCvgLinkStatus(i18n('link_downloading', 'Downloading…'), 'is-info');
+    var owner = getOwnerId();
+    if (!owner) {
+      setCvgLinkStatus(i18n('network_error', 'Network error'), '');
+      return;
+    }
+    try {
+      var res = await fetch(API_BASE + '?op=video-studio-link-ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          owner_id: owner,
+          url: raw,
+          format: addTarget === 'character' ? 'image' : 'mp4',
+        }),
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (data.ok && data.asset && data.asset.url) {
+        closeLinkModal();
+        await applyPickedAsset(data.asset);
+        return;
+      }
+      if (data.ok && data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
+        setCvgLinkStatus(i18n('link_queued', 'Import queued — preparing download…'), 'is-info');
+        var polled = await pollLinkIngestStatus(data.asset_id, document.getElementById('cvg-link-status'));
+        if (polled.ok && polled.asset) {
+          closeLinkModal();
+          await applyPickedAsset(polled.asset);
+          return;
+        }
+        setCvgLinkStatus(linkIngestErrorMessage(polled.data || { error: 'fetch_failed' }), '');
+        return;
+      }
+      if (addTarget === 'character' && /^https?:\/\//i.test(raw)) {
+        closeLinkModal();
+        setStatus('character', '');
+        applyCharacterUrl(raw);
+        return;
+      }
+      setCvgLinkStatus(linkIngestErrorMessage(data), '');
+    } catch (e) {
+      setCvgLinkStatus(i18n('network_error', 'Network error'), '');
+    }
   }
 
   async function applyPickedAsset(asset) {
@@ -446,7 +700,16 @@
         return;
       }
       setStatus('character', '');
-      applyCharacterUrl(String(asset.url));
+      var pids = [];
+      try {
+        if (Array.isArray(asset.product_ids)) pids = asset.product_ids.slice();
+        else if (typeof asset.product_ids_json === 'string' && asset.product_ids_json) {
+          pids = JSON.parse(asset.product_ids_json) || [];
+        }
+      } catch (e) {
+        pids = [];
+      }
+      applyCharacterUrl(String(asset.url), { product_ids: pids, id: asset.id || null });
       return;
     }
     if (asset.kind && asset.kind !== 'video') {
@@ -457,21 +720,86 @@
     applyMotionUrl(String(asset.url));
   }
 
+  function closeCharacterAssetsModal() {
+    var overlay = document.getElementById('cvgCharacterAssetsModal');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  async function openCharacterAssetsPicker() {
+    var overlay = document.getElementById('cvgCharacterAssetsModal');
+    var grid = document.getElementById('cvg-char-assets-grid');
+    var status = document.getElementById('cvg-char-assets-status');
+    if (!overlay || !grid) {
+      setStatus('character', i18n('library_unavailable', 'Assets library is not available right now.'));
+      return;
+    }
+    grid.innerHTML = '';
+    if (status) status.textContent = i18n('loading_assets', 'Loading…');
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    try {
+      var res = await fetch(API_BASE + '?op=list-content-publish-images&kind=character&limit=100', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      var items = (data.items || []).filter(function (it) {
+        return it && it.image_url;
+      });
+      if (status) {
+        status.textContent = items.length
+          ? ''
+          : i18n('character_assets_empty', 'No character images yet. Generate one first.');
+      }
+      items.forEach(function (item) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cvg-char-assets-item';
+        btn.setAttribute('role', 'listitem');
+        btn.innerHTML = '<img src="' + String(item.thumbnail_url || item.image_url).replace(/"/g, '&quot;') + '" alt="" loading="lazy">';
+        btn.addEventListener('click', function () {
+          var pids = [];
+          try {
+            if (Array.isArray(item.product_ids)) pids = item.product_ids;
+            else if (item.product_ids_json) pids = JSON.parse(item.product_ids_json) || [];
+          } catch (e) {}
+          applyPickedAsset({
+            id: item.id,
+            kind: 'image',
+            url: item.image_url,
+            product_ids: pids,
+          });
+          closeCharacterAssetsModal();
+        });
+        grid.appendChild(btn);
+      });
+    } catch (e) {
+      if (status) status.textContent = i18n('network_error', 'Network error');
+    }
+  }
+
   function openAssetsPicker() {
-    var kind = addTarget === 'character' ? 'image' : 'video';
+    if (addTarget === 'character') {
+      openCharacterAssetsPicker();
+      return;
+    }
     if (
       window.CreatorVideoStudioModal &&
       typeof window.CreatorVideoStudioModal.openLibraryPicker === 'function'
     ) {
       window.CreatorVideoStudioModal.openLibraryPicker({
-        kind: kind,
+        kind: 'video',
         onPick: function (asset) {
           applyPickedAsset(asset);
         },
       });
       return;
     }
-    setStatus(addTarget === 'character' ? 'character' : 'motion', i18n('library_unavailable', 'Assets library is not available right now.'));
+    setStatus('motion', i18n('library_unavailable', 'Assets library is not available right now.'));
   }
 
   function getDeviceInput(target) {
@@ -533,82 +861,6 @@
       await sleep(intervalMs);
     }
     return { ok: false, data: { error: 'timeout', error_code: 'timeout', message: linkIngestErrorMessage({ error: 'timeout' }) } };
-  }
-
-  async function ingestLinkUrl() {
-    var input = document.getElementById('cvg-link-url');
-    var status = document.getElementById('cvg-link-status');
-    var raw = input ? String(input.value || '').trim() : '';
-    if (!raw) {
-      if (status) {
-        status.textContent = i18n('link_error_invalid_url', 'Please enter a valid URL.');
-        status.className = 'cvs-link-status';
-      }
-      return;
-    }
-    if (status) {
-      status.textContent = i18n('link_downloading', 'Downloading…');
-      status.className = 'cvs-link-status is-info';
-    }
-    var owner = getOwnerId();
-    if (!owner) {
-      if (status) status.textContent = i18n('network_error', 'Network error');
-      return;
-    }
-    try {
-      var res = await fetch(API_BASE + '?op=video-studio-link-ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          owner_id: owner,
-          url: raw,
-          format: addTarget === 'character' ? 'mp4' : 'mp4',
-        }),
-      });
-      var data = await res.json().catch(function () { return {}; });
-      if (data.ok && data.asset && data.asset.url) {
-        closeLinkModal();
-        await applyPickedAsset(data.asset);
-        if (status && data.cached) {
-          status.textContent = i18n('link_already_in_assets', 'Already in your assets — added to this project.');
-        }
-        return;
-      }
-      if (data.ok && data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
-        if (status) {
-          status.textContent = i18n('link_queued', 'Import queued — preparing download…');
-          status.className = 'cvs-link-status is-info';
-        }
-        var polled = await pollLinkIngestStatus(data.asset_id, status);
-        if (polled.ok && polled.asset) {
-          closeLinkModal();
-          await applyPickedAsset(polled.asset);
-          return;
-        }
-        if (status) {
-          status.textContent = linkIngestErrorMessage(polled.data || { error: 'fetch_failed' });
-          status.className = 'cvs-link-status';
-        }
-        return;
-      }
-      // Fallback: use the URL directly for character images / direct media
-      if (addTarget === 'character' && /^https?:\/\//i.test(raw)) {
-        closeLinkModal();
-        setStatus('character', '');
-        applyCharacterUrl(raw);
-        return;
-      }
-      if (status) {
-        status.textContent = linkIngestErrorMessage(data);
-        status.className = 'cvs-link-status';
-      }
-    } catch (e) {
-      if (status) {
-        status.textContent = i18n('network_error', 'Network error');
-        status.className = 'cvs-link-status';
-      }
-    }
   }
 
   function extractJobVideoResult(job) {
@@ -770,7 +1022,7 @@
 
     var body = {
       owner_id: owner,
-      product_ids: [],
+      product_ids: Array.isArray(state.characterProductIds) ? state.characterProductIds : [],
       prompt: prompt,
       source_image_url: state.characterUrl,
       product_image_urls: [],
@@ -779,6 +1031,7 @@
       character_orientation: state.orientation,
       keep_original_sound: state.keepSound,
       save_as_draft: true,
+      character_image_id: state.characterId || undefined,
       region: window.selectedVideoRegion || 'EU',
     };
 
@@ -846,6 +1099,7 @@
     closeDrawer();
     closeAddSourceModal();
     closeLinkModal();
+    closeCharacterAssetsModal();
     try { document.body.classList.remove('cvg-modal-open'); } catch (e) {}
   }
 
@@ -865,6 +1119,12 @@
       closeAddSourceModal();
       openAssetsPicker();
     });
+    on('cvg-addsrc-generate-character', 'click', function () {
+      closeAddSourceModal();
+      if (window.CreatorCharacterGeneratorModal && typeof window.CreatorCharacterGeneratorModal.open === 'function') {
+        window.CreatorCharacterGeneratorModal.open();
+      }
+    });
     on('cvg-addsrc-device', 'click', function () {
       closeAddSourceModal();
       triggerDevicePicker();
@@ -882,17 +1142,34 @@
     on('cvg-addsrc-paste', 'click', function () {
       pasteFromClipboard();
     });
+    on('cvg-char-assets-cancel', 'click', closeCharacterAssetsModal);
+    on('cvgCharacterAssetsModal', 'mousedown', function (e) {
+      if (e.target && e.target.id === 'cvgCharacterAssetsModal') closeCharacterAssetsModal();
+    });
     on('cvg-link-cancel', 'click', closeLinkModal);
     on('cvgLinkModal', 'mousedown', function (e) {
       if (e.target && e.target.id === 'cvgLinkModal') closeLinkModal();
     });
+    on('cvg-link-extract', 'click', submitCvgLinkExtract);
     on('cvg-link-submit', 'click', function () {
       ingestLinkUrl();
     });
     on('cvg-link-url', 'keydown', function (e) {
       if (e.key === 'Enter') {
         e.preventDefault();
-        ingestLinkUrl();
+        submitCvgLinkExtract();
+      }
+    });
+
+    document.addEventListener('creator-character-image-saved', function (ev) {
+      var d = ev && ev.detail;
+      if (!d || !d.image_url) return;
+      if (!document.getElementById('creatorVideoGeneratorModal') || document.getElementById('creatorVideoGeneratorModal').hidden) {
+        return;
+      }
+      applyCharacterUrl(d.image_url, { id: d.id || null, product_ids: d.product_ids || [] });
+      if (window.CreatorCharacterGeneratorModal && typeof window.CreatorCharacterGeneratorModal.close === 'function') {
+        window.CreatorCharacterGeneratorModal.close();
       }
     });
   }

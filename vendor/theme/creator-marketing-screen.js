@@ -521,14 +521,21 @@
     syncRootAttrs();
 
     if (parent === 'content-creation') {
-      if (child === 'hero-images') {
-        hideAllContentPanels();
-        openHeroModal();
-      } else if (child === 'videos' || child === 'images') {
+      if (child === 'videos' || child === 'images') {
         if (window.CreatorHeroImagesModal && typeof window.CreatorHeroImagesModal.close === 'function') {
           window.CreatorHeroImagesModal.close();
         }
+        if (window.CreatorCharacterGeneratorModal && typeof window.CreatorCharacterGeneratorModal.close === 'function') {
+          window.CreatorCharacterGeneratorModal.close();
+        }
         showCreationLeaf(child);
+        if (child === 'images' && window.ContentCreationImages && typeof window.ContentCreationImages.scanHosts === 'function') {
+          window.ContentCreationImages.scanHosts();
+        }
+      } else if (child === 'hero-images') {
+        /* Legacy deep-link: open Hero Generator modal directly */
+        hideAllContentPanels();
+        openHeroModal();
       }
     } else if (parent === 'content-publish') {
       if (window.CreatorHeroImagesModal && typeof window.CreatorHeroImagesModal.close === 'function') {
@@ -577,7 +584,7 @@
       return pubLabels[currentContentTab] || i18nMarketing('content_publish', 'Content Publish');
     }
     var labels = {
-      'hero-images': i18nMarketing('hero_images', 'Hero Images'),
+      'hero-images': i18nMarketing('hero_generator', 'Hero Generator'),
       videos: i18nMarketing('video', 'Video'),
       images: i18nMarketing('images', 'Images')
     };

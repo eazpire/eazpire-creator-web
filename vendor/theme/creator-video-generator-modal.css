@@ -538,6 +538,57 @@ body.cvg-modal-open {
   overflow: hidden;
 }
 
+/* Character assets picker (IDEA-044) */
+.cvg-char-assets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  max-height: min(50vh, 360px);
+  overflow: auto;
+  margin: 8px 0 12px;
+}
+.cvg-char-assets-item {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 1;
+}
+.cvg-char-assets-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cvg-char-assets-item:hover {
+  border-color: rgba(249, 115, 22, 0.55);
+}
+/* Ensure Add-from-link layout works when Studio CSS not yet painted */
+.cvs-link-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.cvs-link-main { flex: 1; min-width: 0; }
+.cvs-link-url-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.cvs-link-url-row input[type="url"] { flex: 1; min-width: 0; }
+.cvs-link-phone {
+  flex: 0 0 150px;
+  text-align: center;
+}
+.cvs-link-phone__qr { width: 120px; height: 120px; border-radius: 8px; background: #fff; }
+@media (max-width: 720px) {
+  .cvs-link-body { flex-direction: column; }
+  .cvs-link-phone { flex-basis: auto; width: 100%; }
+}
+
 /* Tools grid on Videos content tab */
 .creator-video-tools-grid {
   display: grid;

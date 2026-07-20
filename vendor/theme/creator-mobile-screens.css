@@ -2874,6 +2874,10 @@ html.creator-creations-bulk-overlay-open {
   position: relative;
   z-index: 1;
 }
+/* Content Creation: Images + Video (2-col) — IDEA-044 */
+.cmkt-children-grid--creation {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 /* Content Publish: Hero Images + Social Media Manager function card */
 .cmkt-children-grid--publish {
   grid-template-columns: repeat(2, minmax(0, 1fr));

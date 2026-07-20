@@ -21,18 +21,14 @@
       
       <div class="cmkt-level cmkt-level--children" data-mkt-branch="content-creation" hidden>
         <div class="cmkt-trunk" aria-hidden="true"></div>
-        <div class="cmkt-children-grid">
-          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="hero-images" data-mkt-for="content-creation" aria-expanded="false" data-eazy-guide="marketing.hero-images-create">
-            <span class="cmkt-card__icon" aria-hidden="true">🖼️</span>
-            <span class="cmkt-card__title" data-t="creator.marketing.hero_images">Hero Images</span>
+        <div class="cmkt-children-grid cmkt-children-grid--creation">
+          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="images" data-mkt-for="content-creation" aria-expanded="false" data-eazy-guide="marketing.images-create">
+            <span class="cmkt-card__icon" aria-hidden="true">📷</span>
+            <span class="cmkt-card__title" data-t="creator.marketing.images">Images</span>
           </button>
           <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="videos" data-mkt-for="content-creation" aria-expanded="false" data-eazy-guide="marketing.video-create">
             <span class="cmkt-card__icon" aria-hidden="true">🎬</span>
             <span class="cmkt-card__title" data-t="creator.marketing.video">Video</span>
-          </button>
-          <button type="button" class="cmkt-card cmkt-card--child" data-mkt-child="images" data-mkt-for="content-creation" aria-expanded="false" data-eazy-guide="marketing.images-create">
-            <span class="cmkt-card__icon" aria-hidden="true">📷</span>
-            <span class="cmkt-card__title" data-t="creator.marketing.images">Images</span>
           </button>
         </div>
       </div>
@@ -62,8 +58,12 @@
       
       <div class="creator-marketing-panel creator-marketing-panel--hidden" id="creatorMarketingPanelCreation" data-subtab="content-creation" hidden>
         <div class="cmkt-trunk cmkt-trunk--leaf" aria-hidden="true"></div>
-        <div class="creator-marketing-panel-content" data-content="hero-images">
-          
+        <div class="creator-marketing-panel-content" data-content="images">
+          <div class="creator-images-create-context">
+            <div class="creator-hero-create-scroll" id="creatorImagesCreateScroll">
+              <div class="creator-content-creation-images creator-content-creation-hero--mobile" id="creatorContentCreationImages" data-creator-images-host></div>
+            </div>
+          </div>
         </div>
         <div class="creator-marketing-panel-content" data-content="videos">
           <div class="creator-video-create-context">
@@ -71,12 +71,6 @@
               <div class="creator-content-creation-video creator-content-creation-hero--mobile" id="creatorContentCreationVideo" data-creator-video-host></div>
               <div class="creator-eazy-speech-anchor" id="creatorEazySpeechAnchorVideo" aria-hidden="true"></div>
             </div>
-          </div>
-        </div>
-        <div class="creator-marketing-panel-content" data-content="images">
-          <div class="creator-marketing-coming-soon-block">
-            <span class="creator-marketing-coming-soon-label">Coming soon</span>
-            <p data-t="creator.marketing.images">Images</p>
           </div>
         </div>
       </div>
