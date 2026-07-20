@@ -3321,6 +3321,17 @@
         }
   }
 
+  function applyDesktopOnboardingFromApi(onboarding) {
+    if (onboarding && onboarding.ok) {
+      var stats = onboarding.stats || {};
+      width('creator-desktop-journey-fill', stats.progress_percent || 0);
+      renderDesktopJourneyOnboarding(onboarding);
+      return true;
+    }
+    showDesktopJourneyLoadError();
+    return false;
+  }
+
   async function loadStats() {
     if (creatorGuestBypassDesktop()) {
       applyGuestDashboard();
@@ -3330,7 +3341,27 @@
     var owner = getOwnerId();
     if (!owner) return;
 
-    apiGet('get-dashboard-stats', { owner_id: owner })
+    // Prefer chrome bundled in portal /api/bootstrap (avoids duplicate boot fetches).
+    var bootChrome = window.__EAZ_BOOTSTRAP_CHROME__ || window.__EAZ_DASHBOARD_CHROME__;
+    if (bootChrome && bootChrome.level && bootChrome.level.ok && bootChrome.onboarding && bootChrome.onboarding.ok) {
+      try {
+        applyDesktopLevelFromApi(bootChrome.level);
+        applyDesktopOnboardingFromApi(bootChrome.onboarding);
+        if (
+          bootChrome.dashboard_stats &&
+          bootChrome.dashboard_stats.ok &&
+          window.CreatorDashboardData &&
+          typeof window.CreatorDashboardData.applyDashboardStats === 'function'
+        ) {
+          window.CreatorDashboardData.applyDashboardStats(bootChrome.dashboard_stats);
+        }
+        return;
+      } catch (e) {
+        console.warn('[CreatorDesktop] bootstrap chrome apply failed, falling back', e);
+      }
+    }
+
+    var statsP = apiGet('get-dashboard-stats', { owner_id: owner })
       .then(function (dashboardStats) {
         if (
           dashboardStats &&
@@ -3340,12 +3371,14 @@
         ) {
           window.CreatorDashboardData.applyDashboardStats(dashboardStats);
         }
+        return dashboardStats;
       })
       .catch(function (err) {
         console.warn('[CreatorDesktop] dashboard-stats error', err);
+        return null;
       });
 
-    apiGet('get-level', { owner_id: owner })
+    var levelP = apiGet('get-level', { owner_id: owner })
       .then(function (level) {
         if (level && level.ok) {
           applyDesktopLevelFromApi(level);
@@ -3353,28 +3386,33 @@
           text('creator-desktop-hero-xp-value', '—');
           text('creator-desktop-xp-value', '—');
         }
+        return level;
       })
       .catch(function (err) {
         console.warn('[CreatorDesktop] get-level error', err);
         text('creator-desktop-hero-xp-value', '—');
         text('creator-desktop-xp-value', '—');
+        return null;
       });
 
-    apiGet('get-onboarding-progress', { owner_id: owner })
+    var onboardingP = apiGet('get-onboarding-progress', { owner_id: owner })
       .then(function (onboarding) {
-        if (onboarding && onboarding.ok) {
-          var stats = onboarding.stats || {};
-          width('creator-desktop-journey-fill', stats.progress_percent || 0);
-          renderDesktopJourneyOnboarding(onboarding);
-        } else {
-          showDesktopJourneyLoadError();
-        }
+        applyDesktopOnboardingFromApi(onboarding);
+        return onboarding;
       })
       .catch(function (err) {
         console.warn('[CreatorDesktop] onboarding error', err);
         showDesktopJourneyLoadError();
+        return null;
       });
+
+    await Promise.allSettled([statsP, levelP, onboardingP]);
   }
+
+  window.CreatorDesktopApplyChrome = {
+    applyLevel: applyDesktopLevelFromApi,
+    applyOnboarding: applyDesktopOnboardingFromApi,
+  };
 
   function initDesktopContentCreationMarketing() {
     var wrap = document.getElementById('creatorDesktopContentCreation');
@@ -3509,7 +3547,7 @@
   }
 
   window.CreatorDesktopLoadDashboard = function () {
-    loadStats();
+    return loadStats();
   };
 
   window.CreatorDesktopReloadBalances = function () {

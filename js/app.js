@@ -1,6 +1,6 @@
 /**
  * Creator portal app bootstrap — theme shell + resilient boot.
- * Boot stays visible until core theme runtime AND shell UI are actually present.
+ * Boot stays visible until dashboard chrome (level, journey, balances, limits) is applied.
  */
 (function (global) {
   "use strict";
@@ -10,7 +10,7 @@
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   /** Hard fallback so a hung request never traps users on the splash. */
-  var BOOT_HARD_TIMEOUT_MS = 25000;
+  var BOOT_HARD_TIMEOUT_MS = 28000;
 
   function finishBoot() {
     if (bootFinished) return;
@@ -94,9 +94,8 @@
 
   async function afterAuth() {
     if (usesThemeShell()) {
-      // Theme shells hydrate their own dashboard data; give them a short settle window.
       await new Promise(function (resolve) {
-        setTimeout(resolve, 350);
+        setTimeout(resolve, 200);
       });
       return;
     }
@@ -135,6 +134,20 @@
     }
   }
 
+  async function loadDashboardChrome(bootstrapChrome) {
+    if (!global.CreatorPortalChrome || typeof global.CreatorPortalChrome.whenReady !== "function") {
+      return null;
+    }
+    var owner =
+      (global.CreatorPortalAuth && global.CreatorPortalAuth.state && global.CreatorPortalAuth.state.ownerId) ||
+      global.__EAZ_OWNER_ID;
+    if (!owner) return null;
+    setBootProgress(86, "Loading Journey, Level & balances…");
+    return global.CreatorPortalChrome.whenReady(12000).catch(function () {
+      return null;
+    });
+  }
+
   async function init() {
     fixBootLogo();
     setBootProgress(6, "Starting Creator…");
@@ -144,7 +157,7 @@
       setBootProgress(12, "Loading session & layout…");
       var bootstrapPromise =
         global.CreatorPortalApi && typeof global.CreatorPortalApi.bootstrap === "function"
-          ? withTimeout(global.CreatorPortalApi.bootstrap(), 5000, null).catch(function () {
+          ? withTimeout(global.CreatorPortalApi.bootstrap(), 12000, null).catch(function () {
               return null;
             })
           : Promise.resolve(null);
@@ -158,9 +171,37 @@
           : Promise.resolve(null);
 
       var parallel = await Promise.all([bootstrapPromise, shellPromise]);
-      if (parallel[0]) applyBootstrap(parallel[0]);
+      var bootData = parallel[0];
+      if (bootData) applyBootstrap(bootData);
 
-      setBootProgress(40, "Preparing interface…");
+      // Seed chrome early so runtime scripts can skip duplicate network calls.
+      if (bootData && bootData.chrome) {
+        global.__EAZ_BOOTSTRAP_CHROME__ = bootData.chrome;
+        if (bootData.chrome.level && bootData.chrome.level.ok) {
+          global.__EAZ_JOURNEY_LEVEL_DATA__ = bootData.chrome.level;
+        }
+        if (bootData.chrome.daily_limits && bootData.chrome.daily_limits.ok) {
+          global.__EAZ_DAILY_LIMITS__ = {
+            ok: true,
+            creation_limits_effective: bootData.chrome.daily_limits.creation_limits_effective || null,
+            listing_limits_effective: bootData.chrome.daily_limits.listing_limits_effective || null,
+          };
+          global.__EAZ_DAILY_LIMITS_FETCHED_AT__ = Date.now();
+        }
+        if (bootData.chrome.balance && bootData.chrome.balance.ok) {
+          try {
+            var bv =
+              bootData.chrome.balance.balance_total != null
+                ? bootData.chrome.balance.balance_total
+                : bootData.chrome.balance.balance_eaz;
+            global.__eazBalanceCache = global.__eazBalanceCache || {};
+            global.__eazBalanceCache.value = bv != null ? bv : 0;
+            global.__eazBalanceCache.timestamp = Date.now();
+          } catch (e) {}
+        }
+      }
+
+      setBootProgress(36, "Preparing interface…");
       if (global.CreatorPortalRouter && typeof global.CreatorPortalRouter.init === "function") {
         global.CreatorPortalRouter.init();
       }
@@ -168,18 +209,14 @@
         global.CreatorPortalShell.ensureShellVisible();
       }
 
-      setBootProgress(52, "Checking session…");
+      setBootProgress(48, "Checking session…");
       if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.refreshSession === "function") {
         try {
           await withTimeout(global.CreatorPortalAuth.refreshSession({ skipIfKnown: true }), 8000, null);
         } catch (e) {}
       }
 
-      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
-        global.CreatorPortalThemeBridge.notifyContextReady();
-      }
-
-      setBootProgress(68, "Loading Creator…");
+      setBootProgress(60, "Loading Creator…");
       if (global.CreatorPortalShell && typeof global.CreatorPortalShell.loadThemeRuntime === "function") {
         try {
           await global.CreatorPortalShell.loadThemeRuntime();
@@ -188,10 +225,29 @@
         }
       }
 
-      setBootProgress(82, "Building dashboard…");
+      setBootProgress(74, "Building dashboard…");
       await waitForInteractiveShell(8000);
 
-      setBootProgress(90, "Finishing up…");
+      // Soft context notify after runtime (scripts ready) — chrome load owns the critical data.
+      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+        global.CreatorPortalThemeBridge.notifyContextReady();
+      }
+
+      // Prefer chrome bundled in bootstrap (one RTT); fall back to parallel client fetches.
+      if (global.CreatorPortalChrome && typeof global.CreatorPortalChrome.load === "function") {
+        setBootProgress(86, "Loading Journey, Level & balances…");
+        await withTimeout(
+          global.CreatorPortalChrome.load({
+            bootstrapChrome: bootData && bootData.chrome ? bootData.chrome : null,
+          }),
+          14000,
+          null
+        );
+      } else {
+        await loadDashboardChrome(bootData && bootData.chrome);
+      }
+
+      setBootProgress(94, "Finishing up…");
       if (global.CreatorPortalSwitch && typeof global.CreatorPortalSwitch.syncAll === "function") {
         global.CreatorPortalSwitch.syncAll();
       }
@@ -204,14 +260,8 @@
       }
 
       await afterAuth();
-
-      if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
-        global.CreatorPortalThemeBridge.notifyContextReady();
-      }
-
       await syncRouteAfterRuntime();
 
-      // One more paint frame so chrome is not blank when the splash drops.
       await new Promise(function (resolve) {
         if (typeof requestAnimationFrame === "function") {
           requestAnimationFrame(function () {

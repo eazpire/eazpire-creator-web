@@ -9,6 +9,8 @@
   var appliedKey = "";
   var autoplayUnlockBound = false;
   var bgWatchdogTimer = null;
+  /** Per-video last known currentTime for freeze detection (browser power-saving). */
+  var bgVideoProgress = typeof WeakMap !== "undefined" ? new WeakMap() : null;
 
   function defaults() {
     return (
@@ -87,16 +89,53 @@
     return true;
   }
 
+  function hardenThemeBgVideoAttrs(video) {
+    if (!video) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    try {
+      video.volume = 0;
+    } catch (_) {}
+    video.loop = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.setAttribute("loop", "");
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.setAttribute("autoplay", "");
+    video.setAttribute("disablepictureinpicture", "");
+  }
+
+  function rewindThemeBgVideo(video) {
+    if (!video) return;
+    try {
+      if (video.currentTime > 0.05) {
+        video.currentTime = 0.001;
+      }
+    } catch (_) {
+      try {
+        video.currentTime = 0;
+      } catch (_e2) {}
+    }
+  }
+
   function playThemeBgVideo(video) {
     if (!video || !eazAnim("creator", "theme_bg_video")) return;
     if (document.hidden) return;
     if (video.__creatorBgPauseAllowed) return;
+
+    hardenThemeBgVideoAttrs(video);
 
     if (video.preload === "none") {
       video.preload = "auto";
       try {
         video.load();
       } catch (_) {}
+    }
+
+    if (video.ended) {
+      rewindThemeBgVideo(video);
     }
 
     var playAttempt = video.play();
@@ -128,24 +167,29 @@
     if (!video || video.__creatorBgLoopBound) return;
     video.__creatorBgLoopBound = true;
 
+    // Native loop is unreliable on some MP4s / Safari — always restart on ended.
     video.addEventListener("ended", function () {
-      try {
-        video.currentTime = 0.001;
-      } catch (_) {}
+      video.__creatorBgPauseAllowed = false;
+      rewindThemeBgVideo(video);
       playThemeBgVideo(video);
     });
 
-    video.addEventListener("timeupdate", function () {
-      var duration = video.duration;
-      if (!duration || !isFinite(duration)) return;
-      if (duration - video.currentTime < 0.12) {
-        try {
-          video.currentTime = 0.001;
-        } catch (_) {}
-      }
+    // If the browser pauses us (power saving, memory pressure) while the tab is
+    // visible, resume immediately. Intentional pauses set __creatorBgPauseAllowed.
+    video.addEventListener("pause", function () {
+      if (document.hidden || video.__creatorBgPauseAllowed) return;
+      if (!eazAnim("creator", "theme_bg_video")) return;
+      if (video.__creatorBgResumeScheduled) return;
+      video.__creatorBgResumeScheduled = true;
+      requestAnimationFrame(function () {
+        video.__creatorBgResumeScheduled = false;
+        if (document.hidden || video.__creatorBgPauseAllowed) return;
+        if (video.ended) rewindThemeBgVideo(video);
+        playThemeBgVideo(video);
+      });
     });
 
-    ["stalled", "waiting", "suspend"].forEach(function (evt) {
+    ["stalled", "waiting", "suspend", "emptied", "abort"].forEach(function (evt) {
       video.addEventListener(evt, function () {
         if (!document.hidden && !video.__creatorBgPauseAllowed) {
           playThemeBgVideo(video);
@@ -157,8 +201,12 @@
       if (video.__creatorBgRetryCount >= 4) return;
       video.__creatorBgRetryCount = (video.__creatorBgRetryCount || 0) + 1;
       setTimeout(function () {
-        if (!video.__creatorBgSrc) return;
+        if (!video.__creatorBgSrc || !video.isConnected) return;
+        video.__creatorBgPauseAllowed = false;
         try {
+          if (video.src !== video.__creatorBgSrc) {
+            video.src = video.__creatorBgSrc;
+          }
           video.load();
         } catch (_) {}
         playThemeBgVideo(video);
@@ -167,9 +215,26 @@
   }
 
   function ensureThemeBgVideoPlaying(video) {
-    if (!video || document.hidden || !eazAnim("creator", "theme_bg_video")) return;
+    if (!video || !video.isConnected || document.hidden) return;
+    if (!eazAnim("creator", "theme_bg_video")) return;
     if (video.__creatorBgPauseAllowed) return;
-    if (video.paused || video.ended || video.readyState < 2) {
+
+    hardenThemeBgVideoAttrs(video);
+
+    var needsPlay = video.paused || video.ended || video.readyState < 2;
+
+    // Detect frozen playback: reported as playing but currentTime not advancing.
+    if (!needsPlay && bgVideoProgress) {
+      var prev = bgVideoProgress.get(video);
+      var now = video.currentTime;
+      if (typeof prev === "number" && Math.abs(now - prev) < 0.01 && !video.ended) {
+        needsPlay = true;
+        rewindThemeBgVideo(video);
+      }
+      bgVideoProgress.set(video, now);
+    }
+
+    if (needsPlay) {
       playThemeBgVideo(video);
     }
   }
@@ -182,8 +247,11 @@
     });
   }
 
-  function startThemeBgVideo(video) {
+  function startThemeBgVideo(video, opts) {
     if (!video) return;
+    var forceReload = opts && opts.forceReload;
+    video.__creatorBgPauseAllowed = false;
+    hardenThemeBgVideoAttrs(video);
     bindThemeBgVideoLoop(video);
     bindAutoplayUnlock();
 
@@ -191,35 +259,28 @@
       playThemeBgVideo(video);
     }
 
-    if (video.readyState >= 2) {
+    if (video.readyState >= 2 && !forceReload) {
       tryPlay();
-    } else {
-      video.addEventListener("loadeddata", tryPlay, { once: true });
-      video.addEventListener("canplay", tryPlay, { once: true });
-      video.addEventListener("canplaythrough", tryPlay, { once: true });
+      return;
     }
 
-    try {
-      video.load();
-    } catch (_) {}
+    video.addEventListener("loadeddata", tryPlay, { once: true });
+    video.addEventListener("canplay", tryPlay, { once: true });
+    video.addEventListener("canplaythrough", tryPlay, { once: true });
+
+    if (forceReload || video.readyState === 0) {
+      try {
+        video.load();
+      } catch (_) {}
+    }
     tryPlay();
   }
 
   function createThemeBgVideo(url, posterUrl) {
     var video = document.createElement("video");
     video.className = "creator-theme-bg-video";
-    video.muted = true;
-    video.defaultMuted = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.autoplay = true;
     video.preload = "auto";
-    video.setAttribute("loop", "");
-    video.setAttribute("muted", "");
-    video.setAttribute("playsinline", "");
-    video.setAttribute("autoplay", "");
-    video.setAttribute("disablepictureinpicture", "");
-    video.setAttribute("webkit-playsinline", "");
+    hardenThemeBgVideoAttrs(video);
     if (posterUrl) video.poster = posterUrl;
     video.__creatorBgSrc = url;
     video.__creatorBgRetryCount = 0;
@@ -258,7 +319,8 @@
       layer.classList.add("creator-theme-bg-layer--video");
       layer.style.backgroundImage = "";
       if (posterUrl && existing.poster !== posterUrl) existing.poster = posterUrl;
-      startThemeBgVideo(existing);
+      // Same URL: resume without load() — reloading mid-session was a stop cause.
+      startThemeBgVideo(existing, { forceReload: false });
       return;
     }
 
@@ -267,7 +329,7 @@
     layer.style.backgroundImage = "";
     var video = createThemeBgVideo(url, posterUrl);
     layer.appendChild(video);
-    startThemeBgVideo(video);
+    startThemeBgVideo(video, { forceReload: true });
   }
 
   function applyMobile(bg) {
@@ -429,7 +491,7 @@
     bgWatchdogTimer = setInterval(function () {
       if (document.hidden) return;
       document.querySelectorAll(".creator-theme-bg-video").forEach(ensureThemeBgVideoPlaying);
-    }, 2500);
+    }, 1500);
   }
 
   if (typeof MOBILE_QUERY.addEventListener === "function") {
@@ -460,7 +522,9 @@
       });
       return;
     }
+    // Tab visible again: clear intentional-pause flag and restart playback.
     resumeAllThemeBgVideos();
+    document.querySelectorAll(".creator-theme-bg-video").forEach(ensureThemeBgVideoPlaying);
   });
 
   document.addEventListener("creator:shell-screen-change", function () {

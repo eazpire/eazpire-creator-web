@@ -57,8 +57,37 @@
       });
     },
     bootstrap: function () {
+      // Longer timeout budget: logged-in bootstrap may include chrome prefetch.
       return fetch("/api/bootstrap", { credentials: "include", cache: "no-store" }).then(function (r) {
         return r.json();
+      });
+    },
+    dashboardChrome: function (ownerId) {
+      var oid = ownerId;
+      return Promise.all([
+        dispatch("get-balance", { query: { owner_id: oid } }).catch(function () {
+          return null;
+        }),
+        dispatch("get-level", { query: { owner_id: oid } }).catch(function () {
+          return null;
+        }),
+        dispatch("get-onboarding-progress", { query: { owner_id: oid } }).catch(function () {
+          return null;
+        }),
+        dispatch("get-daily-limits", { query: { owner_id: oid } }).catch(function () {
+          return null;
+        }),
+        dispatch("get-dashboard-stats", { query: { owner_id: oid } }).catch(function () {
+          return null;
+        }),
+      ]).then(function (parts) {
+        return {
+          balance: parts[0],
+          level: parts[1],
+          onboarding: parts[2],
+          daily_limits: parts[3],
+          dashboard_stats: parts[4],
+        };
       });
     },
     ping: function () {

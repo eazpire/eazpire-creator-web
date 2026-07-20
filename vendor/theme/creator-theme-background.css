@@ -15,7 +15,8 @@
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  contain: strict;
+  /* paint only — size/strict containment can suspend decoded video frames in some browsers */
+  contain: paint;
 }
 
 .creator-theme-bg-layer--video {

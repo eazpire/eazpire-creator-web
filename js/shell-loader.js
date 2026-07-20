@@ -9,7 +9,7 @@
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for footer EAZV -> Creator Settings (EAZ tab) fix (never falls back to sales modal).
-  var RUNTIME_V = "17-switch-critical-20260720b";
+  var RUNTIME_V = "18-chrome-boot-20260720c";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 

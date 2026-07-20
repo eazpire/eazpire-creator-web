@@ -469,6 +469,17 @@
       refresh: refresh,
       syncChromeMetrics: syncChromeMetrics,
       mount: mount,
+      applyFromData: function (data) {
+        if (!data || !data.ok) return false;
+        storeLimitsCache(data);
+        collectRoots();
+        setGuestState(false);
+        applyPayload(data, false);
+        loading = false;
+        lastFetch = Date.now();
+        syncChromeMetrics();
+        return true;
+      },
       __mounted: true,
     };
   }
