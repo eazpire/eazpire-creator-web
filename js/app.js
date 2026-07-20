@@ -1,6 +1,6 @@
 /**
  * Creator portal app bootstrap — theme shell + resilient boot.
- * Boot stays visible until core theme runtime is ready (not just shell HTML).
+ * Boot stays visible until core theme runtime AND shell UI are actually present.
  */
 (function (global) {
   "use strict";
@@ -10,7 +10,7 @@
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   /** Hard fallback so a hung request never traps users on the splash. */
-  var BOOT_HARD_TIMEOUT_MS = 15000;
+  var BOOT_HARD_TIMEOUT_MS = 25000;
 
   function finishBoot() {
     if (bootFinished) return;
@@ -65,8 +65,41 @@
     return !!document.getElementById("creatorDesktopApp") || !!document.getElementById("creatorMobileApp");
   }
 
+  function shellLooksInteractive() {
+    var desktop = document.getElementById("creatorDesktopApp");
+    var mobile = document.getElementById("creatorMobileApp");
+    if (desktop && desktop.children && desktop.children.length > 0) return true;
+    if (mobile && mobile.querySelector(".creator-screen, .creator-swipe-track")) return true;
+    return false;
+  }
+
+  function waitForInteractiveShell(maxMs) {
+    var limit = typeof maxMs === "number" ? maxMs : 8000;
+    if (shellLooksInteractive() && global.CreatorDesktopShell) {
+      return Promise.resolve(true);
+    }
+    return new Promise(function (resolve) {
+      var started = Date.now();
+      var timer = setInterval(function () {
+        var ready =
+          shellLooksInteractive() &&
+          (global.CreatorDesktopShell || global.CreatorMobileShell || typeof global.__creatorGoTo === "function");
+        if (ready || Date.now() - started >= limit) {
+          clearInterval(timer);
+          resolve(ready);
+        }
+      }, 80);
+    });
+  }
+
   async function afterAuth() {
-    if (usesThemeShell()) return;
+    if (usesThemeShell()) {
+      // Theme shells hydrate their own dashboard data; give them a short settle window.
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 350);
+      });
+      return;
+    }
     var auth = global.CreatorPortalAuth && global.CreatorPortalAuth.state;
     if (auth && auth.loggedIn && auth.ownerId && global.CreatorPortalDashboard) {
       await global.CreatorPortalDashboard.refresh(false);
@@ -108,7 +141,6 @@
     var bootTimeout = setTimeout(finishBoot, BOOT_HARD_TIMEOUT_MS);
 
     try {
-      // Bootstrap session + shell HTML in parallel (Phase 2).
       setBootProgress(12, "Loading session & layout…");
       var bootstrapPromise =
         global.CreatorPortalApi && typeof global.CreatorPortalApi.bootstrap === "function"
@@ -136,7 +168,6 @@
         global.CreatorPortalShell.ensureShellVisible();
       }
 
-      // Keep splash until core runtime is interactive (Phase 1).
       setBootProgress(52, "Checking session…");
       if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.refreshSession === "function") {
         try {
@@ -157,7 +188,10 @@
         }
       }
 
-      setBootProgress(88, "Finishing up…");
+      setBootProgress(82, "Building dashboard…");
+      await waitForInteractiveShell(8000);
+
+      setBootProgress(90, "Finishing up…");
       if (global.CreatorPortalSwitch && typeof global.CreatorPortalSwitch.syncAll === "function") {
         global.CreatorPortalSwitch.syncAll();
       }
@@ -176,6 +210,17 @@
       }
 
       await syncRouteAfterRuntime();
+
+      // One more paint frame so chrome is not blank when the splash drops.
+      await new Promise(function (resolve) {
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(function () {
+            requestAnimationFrame(resolve);
+          });
+        } else {
+          setTimeout(resolve, 32);
+        }
+      });
 
       setBootProgress(100, "Ready");
     } catch (e) {
