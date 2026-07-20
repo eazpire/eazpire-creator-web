@@ -78,7 +78,18 @@
     issueUrl.searchParams.set("op", "community-issue-exchange-token");
     issueUrl.searchParams.set("logged_in_customer_id", cid);
 
-    return fetch(issueUrl.toString(), { credentials: "include" })
+    var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = setTimeout(function () {
+      if (controller) {
+        try {
+          controller.abort();
+        } catch (e) {}
+      }
+    }, 6000);
+    var fetchOpts = { credentials: "include" };
+    if (controller) fetchOpts.signal = controller.signal;
+
+    return fetch(issueUrl.toString(), fetchOpts)
       .then(function (issueRes) {
         return issueRes.json().catch(function () {
           return {};
@@ -94,7 +105,11 @@
         });
       })
       .catch(function () {
-        return { ok: false, error: "Network error. Please try again.", loginUrl: storefrontLoginUrl() };
+        // Timed out / network — fall back to portal home (guest session or re-login there).
+        return { ok: false, error: "Network error. Please try again.", url: portalHomeUrl() };
+      })
+      .finally(function () {
+        clearTimeout(timer);
       });
   }
 
@@ -128,6 +143,8 @@
         : prefetchExchangeToken({ customerId: cid });
     return pending.then(function (result) {
       if (result && result.ok && result.url) return result.url;
+      // Prefer portal home over loginUrl so switch always reaches Creator Hub.
+      if (result && result.url) return result.url;
       if (result && result.loginUrl) return result.loginUrl;
       return portalHomeUrl();
     });

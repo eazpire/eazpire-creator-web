@@ -9,7 +9,7 @@
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for footer EAZV -> Creator Settings (EAZ tab) fix (never falls back to sales modal).
-  var RUNTIME_V = "16-boot-runtime-20260720a";
+  var RUNTIME_V = "17-switch-critical-20260720b";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 
@@ -272,7 +272,7 @@
     });
   }
 
-  /** Particles, aquarium, shop↔creator switch — nice-to-have after first interactive paint. */
+  /** Particles / aquarium — nice-to-have after first interactive paint. */
   function loadThemeEnhancements() {
     if (enhancementsPromise) return enhancementsPromise;
     enhancementsPromise = (async function () {
@@ -280,14 +280,7 @@
         loadScript("/vendor/theme/particle-reveal.js"),
         loadScript("/vendor/theme/design-particle-reveal.js"),
         loadScript("/vendor/theme/drawer-aquarium.js"),
-        loadScript("/vendor/theme/creator-switch-page-transition.js"),
-        loadScript("/js/creator-portal-switch.js"),
       ]);
-      if (global.CreatorPortalSwitch && typeof global.CreatorPortalSwitch.syncAll === "function") {
-        try {
-          global.CreatorPortalSwitch.syncAll();
-        } catch (e) {}
-      }
     })().catch(function (e) {
       enhancementsPromise = null;
       console.warn("[CreatorPortal] theme enhancements load failed", e);
@@ -297,7 +290,8 @@
 
   /**
    * Core runtime required before dismissing the boot splash.
-   * Secondary screens + audio run here; particles/aquarium/switch + Eazy stay idle.
+   * Switch scripts stay on the critical path so Creator→Shop works immediately.
+   * Particles/aquarium + Eazy stay idle.
    */
   async function loadThemeRuntime() {
     // Secondary swipe screens in parallel with core runtime scripts.
@@ -314,6 +308,8 @@
     ]);
     await Promise.all([
       loadScript("/vendor/theme/creator-shop-portal-handoff.js"),
+      loadScript("/vendor/theme/creator-switch-page-transition.js"),
+      loadScript("/js/creator-portal-switch.js"),
       loadScript("/vendor/theme/creator-mobile.js"),
       loadScript("/vendor/theme/creator-desktop.js"),
     ]);
