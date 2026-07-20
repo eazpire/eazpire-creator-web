@@ -171,9 +171,59 @@
     el.setAttribute('aria-hidden', 'true');
   }
 
+  var SYSTEM_FOLDER_DEFS = [
+    { system_key: 'hero_images', titleKey: 'folder_hero_images', title: 'Hero Images' },
+    { system_key: 'character_images', titleKey: 'folder_character_images', title: 'Character Images' },
+    { system_key: 'motion_videos', titleKey: 'folder_motion_videos', title: 'Motion Videos' }
+  ];
+
+  function systemFolderTitle(folder) {
+    if (!folder) return '';
+    var def = SYSTEM_FOLDER_DEFS.find(function (d) {
+      return d.system_key === folder.system_key;
+    });
+    if (def) return i18n(def.titleKey, def.title);
+    return folder.title || '';
+  }
+
+  function ensureSystemFoldersInTree(tree) {
+    var list = Array.isArray(tree) ? tree.slice() : [];
+    SYSTEM_FOLDER_DEFS.forEach(function (def) {
+      var found = list.some(function (f) {
+        return f && f.system_key === def.system_key;
+      });
+      if (!found) {
+        list.push({
+          id: def.system_key,
+          system_key: def.system_key,
+          title: def.title,
+          is_system: true,
+          parent_id: null,
+          asset_count: 0,
+          children: [],
+          _local: true
+        });
+      }
+    });
+    // Keep system folders in fixed order, then any extras
+    list.sort(function (a, b) {
+      var ai = SYSTEM_FOLDER_DEFS.findIndex(function (d) {
+        return d.system_key === a.system_key;
+      });
+      var bi = SYSTEM_FOLDER_DEFS.findIndex(function (d) {
+        return d.system_key === b.system_key;
+      });
+      if (ai === -1 && bi === -1) return 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+    return list;
+  }
+
   function systemParentsForSelect() {
     return (foldersTree || []).filter(function (f) {
-      return f.is_system && f.system_key && f.system_key !== 'hidden';
+      return f.is_system && f.system_key && f.system_key !== 'hidden' && !f._local;
     });
   }
 
@@ -188,11 +238,15 @@
     if (!nav) return;
 
     var html = '';
-    (foldersTree || []).forEach(function (parent) {
+    ensureSystemFoldersInTree(foldersTree).forEach(function (parent) {
       var active = currentFolder === parent.id ? ' is-active' : '';
+      var label = systemFolderTitle(parent) || parent.title || '';
+      var canAddChild = !parent._local && parent.id;
       html +=
         '<div class="cam-folder-row" data-cam-folder-id="' +
         escapeHtml(parent.id) +
+        '" data-system-key="' +
+        escapeHtml(parent.system_key || '') +
         '">' +
         '<button type="button" class="cam-sidebar__item' +
         active +
@@ -200,19 +254,21 @@
         escapeHtml(parent.id) +
         '">' +
         '<span class="cam-sidebar__item-label">' +
-        escapeHtml(parent.title) +
+        escapeHtml(label) +
         '</span>' +
         '<span class="cam-sidebar__count">' +
         String(parent.asset_count || 0) +
         '</span>' +
         '</button>' +
-        '<button type="button" class="cam-folder-add-child" data-cam-add-child="' +
-        escapeHtml(parent.id) +
-        '" title="' +
-        escapeHtml(i18n('add_child_folder', 'Add child folder')) +
-        '" aria-label="' +
-        escapeHtml(i18n('add_child_folder', 'Add child folder')) +
-        '">+</button>' +
+        (canAddChild
+          ? '<button type="button" class="cam-folder-add-child" data-cam-add-child="' +
+            escapeHtml(parent.id) +
+            '" title="' +
+            escapeHtml(i18n('add_child_folder', 'Add child folder')) +
+            '" aria-label="' +
+            escapeHtml(i18n('add_child_folder', 'Add child folder')) +
+            '">+</button>'
+          : '') +
         '</div>';
 
       (parent.children || []).forEach(function (child) {
@@ -303,15 +359,27 @@
   }
 
   async function loadFolders() {
-    var data = await apiGet('marketing-asset-folders-list');
-    if (!data || !data.ok) {
+    try {
+      var data = await apiGet('marketing-asset-folders-list');
+      if (!data || !data.ok) {
+        setStatus(i18n('error_load_folders', 'Could not load folders.'), true);
+        foldersTree = ensureSystemFoldersInTree([]);
+        hiddenFolder = { id: 'hidden', system_key: 'hidden', asset_count: 0 };
+        allCount = 0;
+        renderFolderTree();
+        return;
+      }
+      foldersTree = ensureSystemFoldersInTree(data.folders || []);
+      hiddenFolder = data.hidden || { id: 'hidden', system_key: 'hidden', asset_count: 0 };
+      allCount = data.all_count || 0;
+      renderFolderTree();
+    } catch (err) {
       setStatus(i18n('error_load_folders', 'Could not load folders.'), true);
-      return;
+      foldersTree = ensureSystemFoldersInTree([]);
+      hiddenFolder = { id: 'hidden', system_key: 'hidden', asset_count: 0 };
+      allCount = 0;
+      renderFolderTree();
     }
-    foldersTree = data.folders || [];
-    hiddenFolder = data.hidden || null;
-    allCount = data.all_count || 0;
-    renderFolderTree();
   }
 
   async function loadAssets() {
@@ -540,16 +608,16 @@
   }
 
   function openDrawer() {
-    var sidebar = $('#cam-sidebar');
+    var wrap = $('#cam-sidebar-wrapper') || $('#cam-sidebar');
     var scrim = $('#cam-drawer-scrim');
-    if (sidebar) sidebar.classList.add('is-drawer-open');
+    if (wrap) wrap.classList.add('is-drawer-open');
     if (scrim) scrim.hidden = false;
   }
 
   function closeDrawer() {
-    var sidebar = $('#cam-sidebar');
+    var wrap = $('#cam-sidebar-wrapper') || $('#cam-sidebar');
     var scrim = $('#cam-drawer-scrim');
-    if (sidebar) sidebar.classList.remove('is-drawer-open');
+    if (wrap) wrap.classList.remove('is-drawer-open');
     if (scrim) scrim.hidden = true;
   }
 
@@ -688,13 +756,22 @@
     var sideToggle = $('#cam-sidebar-toggle');
     if (sideToggle) {
       sideToggle.addEventListener('click', function () {
-        var sidebar = $('#cam-sidebar');
+        // Mobile drawer uses hamburger; rail toggles collapse on desktop.
+        if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+          var wrapMobile = $('#cam-sidebar-wrapper');
+          if (wrapMobile && !wrapMobile.classList.contains('is-drawer-open')) {
+            openDrawer();
+            return;
+          }
+          closeDrawer();
+          return;
+        }
+        var wrap = $('#cam-sidebar-wrapper');
         var body = root.querySelector('.cam-body');
-        if (!sidebar) return;
-        var collapsed = sidebar.classList.toggle('is-collapsed');
+        if (!wrap) return;
+        var collapsed = wrap.classList.toggle('is-collapsed');
         if (body) body.classList.toggle('is-sidebar-collapsed', collapsed);
         sideToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        sideToggle.textContent = collapsed ? '›' : '‹';
       });
     }
 
@@ -826,8 +903,8 @@
         closeSubmodal('cam-confirm-asset-action');
         return;
       }
-      var sidebar = $('#cam-sidebar');
-      if (sidebar && sidebar.classList.contains('is-drawer-open')) {
+      var wrapEsc = $('#cam-sidebar-wrapper');
+      if (wrapEsc && wrapEsc.classList.contains('is-drawer-open')) {
         closeDrawer();
         return;
       }

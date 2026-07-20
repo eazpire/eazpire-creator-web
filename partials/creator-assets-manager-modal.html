@@ -50,31 +50,36 @@
     </div>
 
     <div class="cam-body">
-      <aside class="cam-sidebar" id="cam-sidebar" aria-label="Folders">
-        <div class="cam-sidebar__header">
-          <button type="button" class="cam-sidebar__item is-active" data-cam-folder="all" id="cam-folder-all">
-            <span class="cam-sidebar__item-label" data-t="creator.assets_manager.all">All</span>
-            <span class="cam-sidebar__count" data-cam-all-count>0</span>
-          </button>
-          <button type="button" class="cam-btn cam-btn--add-folder" id="cam-btn-add-folder" data-t="creator.assets_manager.add_folder">Add Folder</button>
-        </div>
-        <nav class="cam-sidebar__nav" id="cam-folder-tree" aria-label="Folder tree"></nav>
-        <div class="cam-sidebar__footer">
-          <button type="button" class="cam-sidebar__item cam-sidebar__item--hidden" data-cam-folder="hidden" id="cam-folder-hidden">
-            <span class="cam-sidebar__item-label" data-t="creator.assets_manager.hidden">Hidden</span>
-            <span class="cam-sidebar__count" data-cam-hidden-count>0</span>
-          </button>
-        </div>
+      <div class="cam-sidebar-wrapper" id="cam-sidebar-wrapper">
+        <aside class="cam-sidebar" id="cam-sidebar" aria-label="Folders">
+          <div class="cam-sidebar__header">
+            <button type="button" class="cam-sidebar__item is-active" data-cam-folder="all" id="cam-folder-all">
+              <span class="cam-sidebar__item-label" data-t="creator.assets_manager.all">All</span>
+              <span class="cam-sidebar__count" data-cam-all-count>0</span>
+            </button>
+            <button type="button" class="cam-btn cam-btn--add-folder" id="cam-btn-add-folder" data-t="creator.assets_manager.add_folder">Add Folder</button>
+          </div>
+          <nav class="cam-sidebar__nav" id="cam-folder-tree" aria-label="Folder tree"></nav>
+          <div class="cam-sidebar__footer">
+            <button type="button" class="cam-sidebar__item cam-sidebar__item--hidden" data-cam-folder="hidden" id="cam-folder-hidden">
+              <span class="cam-sidebar__item-label" data-t="creator.assets_manager.hidden">Hidden</span>
+              <span class="cam-sidebar__count" data-cam-hidden-count>0</span>
+            </button>
+          </div>
+        </aside>
         <button
           type="button"
-          class="cam-rail"
+          class="cam-filter-rail"
           id="cam-sidebar-toggle"
           aria-label="Toggle sidebar"
           aria-expanded="true"
+          title="Folders"
         >
-          ‹
+          <span class="cam-filter-rail__arrow" aria-hidden="true">‹</span>
+          <span class="cam-filter-rail__icon" aria-hidden="true">🗂️</span>
+          <span class="cam-filter-rail__label" data-t="creator.assets_manager.folders">Folders</span>
         </button>
-      </aside>
+      </div>
 
       <div class="cam-drawer-scrim" id="cam-drawer-scrim" hidden></div>
 

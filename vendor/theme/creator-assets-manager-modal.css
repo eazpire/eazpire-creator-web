@@ -153,23 +153,95 @@ body.cam-modal-open {
   align-items: stretch;
   position: relative;
 }
+.cam-sidebar-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 0 0 auto;
+  min-height: 0;
+  position: relative;
+  z-index: 3;
+}
 .cam-sidebar {
   width: 240px;
   flex: 0 0 240px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: none;
   background: rgba(0, 0, 0, 0.28);
   position: relative;
   min-height: 0;
-  transition: width 0.18s ease, flex-basis 0.18s ease, opacity 0.18s ease;
+  overflow: hidden;
+  transition: width 0.28s ease, flex-basis 0.28s ease, opacity 0.28s ease;
 }
-.cam-sidebar.is-collapsed {
+.cam-sidebar-wrapper.is-collapsed .cam-sidebar {
   width: 0;
   flex-basis: 0;
   opacity: 0;
-  overflow: hidden;
-  border-right: none;
+  pointer-events: none;
+}
+/* Vertical collapse rail — same pattern as page/QI filter rails */
+.cam-filter-rail {
+  width: 28px;
+  flex: 0 0 28px;
+  margin: 0;
+  padding: 10px 0 14px;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.cam-filter-rail:hover {
+  background: rgba(249, 115, 22, 0.12);
+  color: #fb923c;
+}
+.cam-filter-rail__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 28px;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.28s ease;
+}
+.cam-sidebar-wrapper.is-collapsed .cam-filter-rail__arrow {
+  transform: rotate(180deg);
+}
+.cam-filter-rail__icon {
+  display: flex;
+  opacity: 0;
+  font-size: 14px;
+  line-height: 1;
+  transition: opacity 0.2s ease;
+}
+.cam-sidebar-wrapper.is-collapsed .cam-filter-rail__icon {
+  opacity: 0.75;
+}
+.cam-filter-rail:hover .cam-filter-rail__icon {
+  opacity: 1;
+}
+.cam-filter-rail__label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.cam-sidebar-wrapper.is-collapsed .cam-filter-rail__label {
+  opacity: 0.75;
+}
+.cam-filter-rail:hover .cam-filter-rail__label {
+  opacity: 1;
 }
 .cam-sidebar__header,
 .cam-sidebar__footer {
@@ -255,28 +327,6 @@ body.cam-modal-open {
   font-size: 16px;
   line-height: 1;
   padding: 0;
-}
-.cam-rail {
-  position: absolute;
-  top: 50%;
-  right: -14px;
-  transform: translateY(-50%);
-  width: 28px;
-  height: 48px;
-  border-radius: 0 10px 10px 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-left: none;
-  background: rgba(20, 12, 32, 0.95);
-  color: #fff;
-  cursor: pointer;
-  z-index: 2;
-}
-.cam-body.is-sidebar-collapsed .cam-rail {
-  right: auto;
-  left: 0;
-  border-radius: 0 10px 10px 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-left: none;
 }
 .cam-drawer-scrim {
   display: none;
@@ -485,25 +535,30 @@ body.cam-modal-open {
 }
 
 @media (max-width: 900px) {
-  .cam-sidebar {
+  .cam-sidebar-wrapper {
     position: absolute;
     inset: 0 auto 0 0;
     z-index: 6;
-    width: min(280px, 86vw);
-    flex-basis: auto;
+    width: min(308px, 90vw);
     transform: translateX(-105%);
     transition: transform 0.2s ease;
   }
-  .cam-sidebar.is-drawer-open {
+  .cam-sidebar-wrapper.is-drawer-open {
     transform: translateX(0);
   }
-  .cam-sidebar.is-collapsed {
-    width: min(280px, 86vw);
-    opacity: 1;
-    overflow: visible;
+  .cam-sidebar-wrapper.is-collapsed {
+    width: min(308px, 90vw);
   }
-  .cam-rail {
-    display: none;
+  .cam-sidebar-wrapper.is-collapsed .cam-sidebar {
+    width: min(280px, calc(90vw - 28px));
+    flex-basis: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .cam-filter-rail {
+    /* On mobile the hamburger opens the drawer; keep rail inside drawer */
+    border-right: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
   }
   .cam-drawer-scrim {
     display: block;
