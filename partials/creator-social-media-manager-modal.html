@@ -97,21 +97,8 @@
             <div class="smm-new-post__composer" id="smm-new-post-composer" hidden>
               <div class="smm-new-post__scroll smm-scroll-hide" id="smm-new-post-scroll">
                 <div class="smm-new-post__fields">
-                  <section class="smm-compose-section" id="smm-section-assets" data-smm-section="assets">
-                    <div class="smm-compose-section__header">
-                      <button
-                        type="button"
-                        class="smm-compose-section__toggle"
-                        id="smm-assets-toggle"
-                        aria-expanded="true"
-                        aria-controls="smm-new-post-assets-panel"
-                        aria-label="Collapse assets section"
-                      >
-                        <span class="smm-compose-section__chevron" aria-hidden="true"></span>
-                        <span class="smm-compose-section__label" data-t="creator.social_media_manager.assets_label">Assets</span>
-                      </button>
-                    </div>
-                    <div class="smm-compose-section__body" id="smm-new-post-assets-panel">
+                  <section class="smm-compose-section smm-compose-section--viewer" id="smm-section-assets" data-smm-section="assets">
+                    <div class="smm-compose-section__body smm-compose-section__body--viewer" id="smm-new-post-assets-panel">
                       <div class="smm-new-post__viewer" id="smm-new-post-viewer">
                         <button
                           type="button"
@@ -204,10 +191,34 @@
         <h3 class="smm-submodal__title" data-t="creator.social_media_manager.asset_picker_title">Choose asset</h3>
         <button type="button" class="smm-btn smm-btn--icon" data-smm-close="asset" aria-label="Close">×</button>
       </header>
-      <p class="smm-submodal__hint" data-t="creator.social_media_manager.asset_picker_hint">Images and videos from your library. Audio is excluded.</p>
-      <div class="smm-asset-grid" id="smm-asset-grid" role="list"></div>
-      <p class="smm-submodal__empty" id="smm-asset-empty" hidden data-t="creator.social_media_manager.asset_picker_empty">No assets yet. Upload in Video Studio or generate images first.</p>
-      <p class="smm-submodal__loading" id="smm-asset-loading" hidden data-t="creator.social_media_manager.loading_assets">Loading assets…</p>
+      <div class="smm-source-options" id="smm-source-options" role="tablist">
+        <button type="button" class="smm-source-option is-active" data-smm-source="library" data-t="creator.social_media_manager.source_library">Library</button>
+        <button type="button" class="smm-source-option" data-smm-source="device" data-t="creator.social_media_manager.source_device">Device</button>
+        <button type="button" class="smm-source-option" data-smm-source="link" data-t="creator.social_media_manager.source_link">Link</button>
+      </div>
+      <div class="smm-source-pane" data-smm-source-pane="library">
+        <p class="smm-submodal__hint" data-t="creator.social_media_manager.asset_picker_hint">Images and videos from your library. Audio is excluded.</p>
+        <div class="smm-asset-grid" id="smm-asset-grid" role="list"></div>
+        <p class="smm-submodal__empty" id="smm-asset-empty" hidden data-t="creator.social_media_manager.asset_picker_empty">No assets yet. Upload in Video Studio or generate images first.</p>
+        <p class="smm-submodal__loading" id="smm-asset-loading" hidden data-t="creator.social_media_manager.loading_assets">Loading assets…</p>
+      </div>
+      <div class="smm-source-pane" data-smm-source-pane="device" hidden>
+        <p class="smm-submodal__hint" data-t="creator.social_media_manager.source_device_hint">Pick an image or video from this device.</p>
+        <label class="smm-btn smm-btn--primary smm-source-file-label">
+          <input type="file" id="smm-source-file" accept="image/*,video/*" hidden />
+          <span data-t="creator.social_media_manager.source_device_browse">Browse files</span>
+        </label>
+        <p class="smm-submodal__status" id="smm-source-device-status" hidden role="status"></p>
+      </div>
+      <div class="smm-source-pane" data-smm-source-pane="link" hidden>
+        <p class="smm-submodal__hint" data-t="creator.social_media_manager.source_link_hint">Paste a direct image or video URL.</p>
+        <label class="smm-field">
+          <span class="smm-field__label" data-t="creator.social_media_manager.link_label">Link URL (optional)</span>
+          <input type="url" id="smm-source-link-url" class="smm-field__input" placeholder="https://…" autocomplete="off" />
+        </label>
+        <button type="button" class="smm-btn smm-btn--primary" id="smm-source-link-apply" data-t="creator.social_media_manager.source_link_apply">Use link</button>
+        <p class="smm-submodal__status" id="smm-source-link-status" hidden role="status"></p>
+      </div>
     </div>
   </div>
 

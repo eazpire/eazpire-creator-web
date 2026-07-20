@@ -757,14 +757,13 @@
   }
 
   function setSectionCollapsed(sectionId, collapsed) {
+    if (sectionId === 'assets') return;
     var section = document.getElementById('smm-section-' + sectionId);
     var toggle = document.getElementById('smm-' + sectionId + '-toggle');
     var panel =
-      sectionId === 'assets'
-        ? $('#smm-new-post-assets-panel')
-        : sectionId === 'channels'
-          ? $('#smm-channels-panel')
-          : $('#smm-schedule-panel');
+      sectionId === 'channels'
+        ? $('#smm-channels-panel')
+        : $('#smm-schedule-panel');
     if (!section || !toggle) return;
     section.classList.toggle('is-collapsed', !!collapsed);
     if (panel) {
@@ -778,17 +777,9 @@
     var expandKey = sectionId + '_expand';
     var collapseKey = sectionId + '_collapse';
     var expandFallback =
-      sectionId === 'assets'
-        ? 'Expand assets section'
-        : sectionId === 'channels'
-          ? 'Expand channels section'
-          : 'Expand schedule section';
+      sectionId === 'channels' ? 'Expand channels section' : 'Expand schedule section';
     var collapseFallback =
-      sectionId === 'assets'
-        ? 'Collapse assets section'
-        : sectionId === 'channels'
-          ? 'Collapse channels section'
-          : 'Collapse schedule section';
+      sectionId === 'channels' ? 'Collapse channels section' : 'Collapse schedule section';
     toggle.setAttribute(
       'aria-label',
       collapsed ? i18n(expandKey, expandFallback) : i18n(collapseKey, collapseFallback)
@@ -837,7 +828,6 @@
     syncChannelEnabledDefaults();
     renderAssetViewer();
     renderChannelCarousel();
-    setSectionCollapsed('assets', false);
     setSectionCollapsed('channels', false);
     setScheduleEnabled(false);
     setNewPostStatus('', null);
@@ -940,18 +930,13 @@
             '<span class="smm-asset-item__badge">image</span>';
         }
         btn.addEventListener('click', function () {
-          compose.asset = {
+          applyComposeAsset({
             id: item.id,
             source: item.source,
             kind: item.kind === 'video' ? 'video' : 'image',
             url: item.url,
             label: item.label || item.kind
-          };
-          renderAssetViewer();
-          loadPostTargets().then(function () {
-            renderChannelCarousel();
           });
-          closeSubmodal('asset');
         });
         grid.appendChild(btn);
       });
@@ -964,9 +949,114 @@
     }
   }
 
+  function setAssetSourceTab(source) {
+    var options = document.querySelectorAll('#smm-source-options [data-smm-source]');
+    Array.prototype.forEach.call(options, function (btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-smm-source') === source);
+    });
+    var panes = document.querySelectorAll('[data-smm-source-pane]');
+    Array.prototype.forEach.call(panes, function (pane) {
+      pane.hidden = pane.getAttribute('data-smm-source-pane') !== source;
+    });
+    if (source === 'library') loadComposeAssets();
+  }
+
   function openAssetPickerModal() {
     openSubmodal('asset');
-    loadComposeAssets();
+    setAssetSourceTab('library');
+  }
+
+  function applyComposeAsset(asset) {
+    compose.asset = asset;
+    renderAssetViewer();
+    loadPostTargets().then(function () {
+      renderChannelCarousel();
+    });
+    closeSubmodal('asset');
+  }
+
+  function bindAssetSourceUi() {
+    var rootOpts = $('#smm-source-options');
+    if (rootOpts && !rootOpts._smmBound) {
+      rootOpts._smmBound = true;
+      rootOpts.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('[data-smm-source]') : null;
+        if (!btn || !rootOpts.contains(btn)) return;
+        e.preventDefault();
+        setAssetSourceTab(btn.getAttribute('data-smm-source'));
+      });
+    }
+    var fileInput = $('#smm-source-file');
+    if (fileInput && !fileInput._smmBound) {
+      fileInput._smmBound = true;
+      fileInput.addEventListener('change', async function () {
+        var file = fileInput.files && fileInput.files[0];
+        var status = $('#smm-source-device-status');
+        if (!file) return;
+        if (status) {
+          status.hidden = false;
+          status.textContent = i18n('loading_assets', 'Uploading…');
+        }
+        try {
+          var isVideo = String(file.type || '').indexOf('video/') === 0;
+          var fd = new FormData();
+          if (isVideo) {
+            fd.append('video', file, file.name || 'upload.mp4');
+          } else {
+            fd.append('image', file, file.name || 'upload.jpg');
+          }
+          var op = isVideo ? 'upload-video-motion-ref' : 'upload-hero-image';
+          var url = apiUrl(op) + (isVideo ? '' : '&slot=smm_compose');
+          var res = await fetch(url, { method: 'POST', credentials: 'include', body: fd });
+          var data = await res.json().catch(function () {
+            return {};
+          });
+          var assetUrl = data.url || data.image_url || data.public_url || '';
+          if (!data.ok || !assetUrl) {
+            throw new Error(data.error || i18n('error_load_assets', 'Upload failed.'));
+          }
+          applyComposeAsset({
+            id: data.id || 'upload_' + Date.now(),
+            source: 'upload',
+            kind: isVideo ? 'video' : 'image',
+            url: assetUrl,
+            label: file.name || (isVideo ? 'video' : 'image')
+          });
+        } catch (err) {
+          if (status) {
+            status.hidden = false;
+            status.textContent = String((err && err.message) || err || 'Upload failed.');
+          }
+        } finally {
+          fileInput.value = '';
+        }
+      });
+    }
+    var linkApply = $('#smm-source-link-apply');
+    if (linkApply && !linkApply._smmBound) {
+      linkApply._smmBound = true;
+      linkApply.addEventListener('click', function () {
+        var input = $('#smm-source-link-url');
+        var status = $('#smm-source-link-status');
+        var raw = input && input.value ? String(input.value).trim() : '';
+        if (!/^https?:\/\//i.test(raw)) {
+          if (status) {
+            status.hidden = false;
+            status.textContent = i18n('error_invalid_url', 'Enter a valid http(s) URL.');
+          }
+          return;
+        }
+        var lower = raw.toLowerCase();
+        var isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(lower) || lower.indexOf('video') !== -1;
+        applyComposeAsset({
+          id: 'link_' + Date.now(),
+          source: 'link',
+          kind: isVideo ? 'video' : 'image',
+          url: raw,
+          label: 'link'
+        });
+      });
+    }
   }
 
   function getSelectedTargetsFromComposer() {
@@ -1208,7 +1298,6 @@
         setSectionCollapsed(sectionId, !section.classList.contains('is-collapsed'));
       });
     }
-    bindSectionToggle('assets');
     bindSectionToggle('channels');
     bindSectionToggle('schedule');
 
@@ -1311,6 +1400,7 @@
     root = document.getElementById('creatorSocialMediaManagerModal');
     if (!root || root._smmBound) return;
     root._smmBound = true;
+    bindAssetSourceUi();
 
     var closeBtn = $('#smm-btn-close');
     if (closeBtn) closeBtn.addEventListener('click', close);

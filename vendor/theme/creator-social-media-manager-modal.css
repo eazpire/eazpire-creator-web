@@ -441,6 +441,14 @@ body.smm-modal-open {
   background: rgba(255, 255, 255, 0.03);
   overflow: visible;
 }
+.smm-compose-section--viewer {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: transparent;
+}
+.smm-compose-section__body--viewer {
+  padding: 10px;
+}
 .smm-compose-section__header {
   display: flex;
   align-items: center;
@@ -873,6 +881,41 @@ body.smm-modal-open {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 8px;
+}
+.smm-source-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.smm-source-option {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.78);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.smm-source-option:hover {
+  border-color: rgba(249, 115, 22, 0.45);
+  color: #fff;
+}
+.smm-source-option.is-active {
+  border-color: rgba(249, 115, 22, 0.75);
+  background: rgba(249, 115, 22, 0.2);
+  color: #fff;
+}
+.smm-source-pane[hidden] {
+  display: none !important;
+}
+.smm-source-file-label {
+  display: inline-flex;
+  margin-top: 8px;
+  cursor: pointer;
 }
 .smm-submodal__title {
   margin: 0;
