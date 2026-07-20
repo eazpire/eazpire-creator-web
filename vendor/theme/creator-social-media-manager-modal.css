@@ -88,7 +88,11 @@ body.smm-modal-open {
   position: relative;
 }
 .smm-sidebar.is-collapsed {
-  width: 28px;
+  /* Collapse fully so main can grow; rail floats on the seam */
+  width: 0;
+  min-width: 0;
+  border-right-color: transparent;
+  overflow: visible;
 }
 .smm-sidebar.is-collapsed .smm-sidebar__nav {
   display: none;
@@ -139,7 +143,9 @@ body.smm-modal-open {
   font-size: 14px;
 }
 .smm-sidebar.is-collapsed .smm-rail {
-  right: 2px;
+  /* Sit on the left edge of main content after sidebar width → 0 */
+  right: auto;
+  left: 6px;
 }
 .smm-drawer-scrim {
   display: none;
@@ -187,11 +193,17 @@ body.smm-modal-open {
 }
 
 .smm-main {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  width: 100%;
   overflow: auto;
   padding: 16px 18px 32px;
+  transition: padding 0.2s ease;
+}
+.smm-body.is-sidebar-collapsed .smm-main {
+  /* Room for the floating collapse rail on the left seam */
+  padding-left: 28px;
 }
 .smm-main.is-new-post-active {
   overflow: hidden;
@@ -225,7 +237,8 @@ body.smm-modal-open {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
-  max-width: 720px;
+  width: 100%;
+  max-width: none;
 }
 .smm-metric-card {
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -260,7 +273,8 @@ body.smm-modal-open {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.85);
-  max-width: 920px;
+  max-width: none;
+  width: 100%;
 }
 .smm-connect-msg[hidden] {
   display: none !important;
@@ -280,7 +294,8 @@ body.smm-modal-open {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 12px;
-  max-width: 920px;
+  width: 100%;
+  max-width: none;
 }
 .smm-channel-card {
   appearance: none;
@@ -429,11 +444,15 @@ body.smm-modal-open {
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   min-width: 0;
-  max-width: 1100px;
   width: 100%;
-}
-.smm-body.is-sidebar-collapsed .smm-new-post__fields {
   max-width: none;
+  box-sizing: border-box;
+}
+.smm-panel.is-active {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .smm-compose-section {
   border: 1px solid rgba(255, 255, 255, 0.1);
