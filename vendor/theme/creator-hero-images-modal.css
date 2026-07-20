@@ -314,6 +314,8 @@ html.chim-modal-open body {
 }
 
 .chim-modal__body .creator-hero-upload-area {
+  position: relative;
+  padding-top: 36px;
   border: 1px dashed rgba(255, 255, 255, 0.22) !important;
   border-radius: 14px !important;
   background: rgba(8, 10, 22, 0.4) !important;
@@ -324,6 +326,52 @@ html.chim-modal-open body {
 .chim-modal__body .creator-hero-upload-area:hover {
   border-color: rgba(249, 115, 22, 0.55) !important;
   background: rgba(249, 115, 22, 0.1) !important;
+}
+
+/* Active / Inactive toggle — shared with Character Generator markup (.ccg-slot-active*) */
+.chim-modal__body .ccg-slot-active {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: inline-flex;
+  gap: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  background: rgba(8, 10, 22, 0.72);
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.chim-modal__body .ccg-slot-active__btn {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.72);
+  background: transparent;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.chim-modal__body .ccg-slot-active__btn.is-selected {
+  background: rgba(249, 115, 22, 0.28);
+  color: #fff;
+}
+.chim-modal__body .creator-hero-upload-area.is-slot-inactive {
+  opacity: 0.48;
+  filter: grayscale(0.35);
+  cursor: not-allowed;
+}
+.chim-modal__body .creator-hero-upload-area.is-slot-inactive:hover {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  background: rgba(8, 10, 22, 0.4) !important;
+}
+.chim-modal__body .creator-hero-upload-area.is-slot-inactive .creator-hero-upload-preview {
+  pointer-events: none;
 }
 
 .chim-modal__body .creator-hero-prompt-section {
@@ -411,7 +459,7 @@ html.chim-modal-open body {
 
   .chim-modal__body .creator-hero-upload-area {
     aspect-ratio: 1.25;
-    padding: 12px;
+    padding: 36px 12px 12px;
   }
 
   .chim-modal__body .creator-hero-prompt-section {

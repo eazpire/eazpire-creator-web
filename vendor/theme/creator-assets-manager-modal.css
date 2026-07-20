@@ -353,6 +353,40 @@ body.cam-modal-open {
 .cam-folder-row .cam-sidebar__item {
   flex: 1 1 auto;
 }
+.cam-folder-row.is-drop-target .cam-sidebar__item {
+  outline: 1px dashed rgba(249, 115, 22, 0.55);
+  outline-offset: -2px;
+}
+.cam-folder-row.is-drop-hover .cam-sidebar__item {
+  border-color: rgba(249, 115, 22, 0.75);
+  background: rgba(249, 115, 22, 0.2);
+}
+.cam-folder-row.is-drop-invalid .cam-sidebar__item {
+  opacity: 0.45;
+}
+.cam-folder-children {
+  display: none;
+  margin: 0 0 4px;
+}
+.cam-folder-group.is-expanded > .cam-folder-children {
+  display: block;
+}
+.cam-folder-expand {
+  appearance: none;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+}
+.cam-folder-group.is-expanded > .cam-folder-row .cam-folder-expand {
+  color: #fdba74;
+}
 .cam-folder-add-child {
   appearance: none;
   flex: 0 0 28px;
@@ -400,18 +434,87 @@ body.cam-modal-open {
   background: rgba(255, 255, 255, 0.04);
   overflow: hidden;
   min-height: 150px;
-  cursor: default;
+  cursor: grab;
+  user-select: none;
+}
+.cam-card:active {
+  cursor: grabbing;
 }
 .cam-card.is-selected {
   border-color: rgba(249, 115, 22, 0.7);
   box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
 }
+.cam-card.is-dragging {
+  opacity: 0.55;
+}
+.cam-card--playable {
+  cursor: pointer;
+}
+.cam-card__media-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
 .cam-card__media {
   display: block;
   width: 100%;
-  aspect-ratio: 1;
+  height: 100%;
   object-fit: cover;
   background: rgba(0, 0, 0, 0.35);
+}
+.cam-card__media--audio {
+  width: 100%;
+  height: auto;
+  min-height: 40px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+.cam-card__audio-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.45);
+  background: linear-gradient(160deg, rgba(249, 115, 22, 0.12), rgba(0, 0, 0, 0.35));
+}
+.cam-card__play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
+.cam-card.is-playing .cam-card__play {
+  opacity: 0;
+}
+.cam-card.is-playing .cam-card__media-wrap::after {
+  content: "";
+  position: absolute;
+  inset: auto 8px 8px auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.25);
 }
 .cam-card__meta {
   padding: 8px 10px 10px;
@@ -438,7 +541,7 @@ body.cam-modal-open {
   height: 20px;
   accent-color: #f97316;
   cursor: pointer;
-  z-index: 1;
+  z-index: 2;
 }
 .cam-empty {
   padding: 40px 16px;
@@ -495,6 +598,65 @@ body.cam-modal-open {
   background: linear-gradient(160deg, #161022 0%, #0d0a14 100%);
   padding: 16px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+.cam-submodal__panel--wide {
+  width: min(560px, 100%);
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+}
+.cam-move-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  overflow: auto;
+  min-height: 120px;
+  max-height: min(46vh, 360px);
+  padding: 2px;
+}
+.cam-move-card {
+  appearance: none;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cam-move-card:hover {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(249, 115, 22, 0.1);
+}
+.cam-move-card.is-selected {
+  border-color: rgba(249, 115, 22, 0.8);
+  background: rgba(249, 115, 22, 0.18);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+}
+.cam-move-card.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.cam-move-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.cam-move-card__parent {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.cam-move-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  padding: 24px 8px;
 }
 .cam-submodal__title {
   margin: 0 0 10px;

@@ -26,6 +26,13 @@
   var pendingFolderRemoveId = null;
   var removeAssetsConfirmed = false;
   var pendingAssetAction = null; // { action, items }
+  var moveItems = null; // [{ asset_type, asset_id, folder_id? }]
+  var moveSelectedFolderId = null;
+  var playingKey = null;
+  var expandedParents = Object.create(null); // parentId -> true
+  var dragPayload = null; // [{ asset_type, asset_id }]
+  var dragExpandTimer = null;
+  var dragExpandFolderId = null;
 
   function isBadTranslationString(s) {
     if (typeof s !== 'string') return true;
@@ -234,6 +241,35 @@
     });
   }
 
+  function isUserChildFolder(folder) {
+    return !!(folder && !folder.is_system && folder.parent_id && !folder._local);
+  }
+
+  function collectUserChildFolders() {
+    var out = [];
+    ensureSystemFoldersInTree(foldersTree).forEach(function (parent) {
+      (parent.children || []).forEach(function (child) {
+        if (isUserChildFolder(child) || (!child.is_system && child.parent_id)) {
+          out.push({
+            id: child.id,
+            title: child.title || '',
+            parent_id: parent.id,
+            parent_title: systemFolderTitle(parent) || parent.title || ''
+          });
+        }
+      });
+    });
+    return out;
+  }
+
+  function ensureParentExpandedForCurrent() {
+    if (!currentFolder || currentFolder === 'all' || currentFolder === 'hidden') return;
+    var folder = findFolderById(currentFolder);
+    if (folder && folder.parent_id) {
+      expandedParents[folder.parent_id] = true;
+    }
+  }
+
   function renderFolderTree() {
     var nav = $('#cam-folder-tree');
     var allCountEl = $('[data-cam-all-count]');
@@ -244,18 +280,46 @@
     }
     if (!nav) return;
 
+    ensureParentExpandedForCurrent();
+
     var html = '';
     ensureSystemFoldersInTree(foldersTree).forEach(function (parent) {
       var active = currentFolder === parent.id ? ' is-active' : '';
       var label = systemFolderTitle(parent) || parent.title || '';
       var canAddChild =
-        !parent._local && parent.id && parent.system_key !== 'unsorted';
+        !parent._local && parent.id && parent.system_key !== 'unsorted' && parent.system_key !== 'hidden';
+      var children = parent.children || [];
+      var hasChildren = children.length > 0;
+      var isExpanded = !!(expandedParents[parent.id] || (!hasChildren && false));
+      // Expand by default when parent has children and was never toggled, OR when marked
+      if (hasChildren && expandedParents[parent.id] == null) {
+        // Default: expanded so existing folders stay discoverable; DnD can still expand collapsed ones
+        isExpanded = true;
+        expandedParents[parent.id] = true;
+      } else if (hasChildren) {
+        isExpanded = !!expandedParents[parent.id];
+      }
+
       html +=
+        '<div class="cam-folder-group' +
+        (isExpanded ? ' is-expanded' : '') +
+        '" data-cam-folder-group="' +
+        escapeHtml(parent.id) +
+        '">' +
         '<div class="cam-folder-row" data-cam-folder-id="' +
         escapeHtml(parent.id) +
         '" data-system-key="' +
         escapeHtml(parent.system_key || '') +
-        '">' +
+        '" data-cam-drop="0">' +
+        (hasChildren
+          ? '<button type="button" class="cam-folder-expand" data-cam-expand="' +
+            escapeHtml(parent.id) +
+            '" aria-expanded="' +
+            (isExpanded ? 'true' : 'false') +
+            '">' +
+            (isExpanded ? '▾' : '▸') +
+            '</button>'
+          : '') +
         '<button type="button" class="cam-sidebar__item' +
         active +
         '" data-cam-folder="' +
@@ -279,26 +343,31 @@
           : '') +
         '</div>';
 
-      (parent.children || []).forEach(function (child) {
-        var cActive = currentFolder === child.id ? ' is-active' : '';
-        html +=
-          '<div class="cam-folder-row" data-cam-folder-id="' +
-          escapeHtml(child.id) +
-          '">' +
-          '<button type="button" class="cam-sidebar__item cam-sidebar__item--child' +
-          cActive +
-          '" data-cam-folder="' +
-          escapeHtml(child.id) +
-          '">' +
-          '<span class="cam-sidebar__item-label">' +
-          escapeHtml(child.title) +
-          '</span>' +
-          '<span class="cam-sidebar__count">' +
-          String(child.asset_count || 0) +
-          '</span>' +
-          '</button>' +
-          '</div>';
-      });
+      if (hasChildren) {
+        html += '<div class="cam-folder-children">';
+        children.forEach(function (child) {
+          var cActive = currentFolder === child.id ? ' is-active' : '';
+          html +=
+            '<div class="cam-folder-row" data-cam-folder-id="' +
+            escapeHtml(child.id) +
+            '" data-cam-drop="1">' +
+            '<button type="button" class="cam-sidebar__item cam-sidebar__item--child' +
+            cActive +
+            '" data-cam-folder="' +
+            escapeHtml(child.id) +
+            '">' +
+            '<span class="cam-sidebar__item-label">' +
+            escapeHtml(child.title) +
+            '</span>' +
+            '<span class="cam-sidebar__count">' +
+            String(child.asset_count || 0) +
+            '</span>' +
+            '</button>' +
+            '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
     });
     nav.innerHTML = html;
 
@@ -306,6 +375,103 @@
     var hiddenBtn = $('#cam-folder-hidden');
     if (allBtn) allBtn.classList.toggle('is-active', currentFolder === 'all');
     if (hiddenBtn) hiddenBtn.classList.toggle('is-active', currentFolder === 'hidden');
+  }
+
+  function mediaPreviewHtml(a) {
+    var url = String(a.url || '').trim();
+    var thumb = String(a.thumbnail_url || a.url || '').trim();
+    var kind = String(a.media_kind || '').toLowerCase();
+    if (kind === 'video') {
+      return (
+        '<div class="cam-card__media-wrap">' +
+        '<video class="cam-card__media" src="' +
+        escapeHtml(url) +
+        '"' +
+        (thumb && thumb !== url ? ' poster="' + escapeHtml(thumb) + '"' : '') +
+        ' muted playsinline preload="metadata"></video>' +
+        '<span class="cam-card__play" aria-hidden="true">▶</span>' +
+        '</div>'
+      );
+    }
+    if (kind === 'audio') {
+      return (
+        '<div class="cam-card__media-wrap">' +
+        '<div class="cam-card__audio-placeholder" aria-hidden="true">♪</div>' +
+        (url
+          ? '<audio class="cam-card__media cam-card__media--audio" src="' +
+            escapeHtml(url) +
+            '" preload="metadata"></audio>'
+          : '') +
+        '<span class="cam-card__play" aria-hidden="true">▶</span>' +
+        '</div>'
+      );
+    }
+    return (
+      '<div class="cam-card__media-wrap">' +
+      (thumb
+        ? '<img class="cam-card__media" src="' +
+          escapeHtml(thumb) +
+          '" alt="" loading="lazy">'
+        : '<div class="cam-card__audio-placeholder" aria-hidden="true"></div>') +
+      '</div>'
+    );
+  }
+
+  function stopAllPlayback() {
+    if (!root) {
+      playingKey = null;
+      return;
+    }
+    root.querySelectorAll('.cam-card.is-playing').forEach(function (card) {
+      card.classList.remove('is-playing');
+      var media = card.querySelector('video, audio');
+      if (media) {
+        try {
+          media.pause();
+          media.currentTime = 0;
+        } catch (e) {}
+      }
+    });
+    playingKey = null;
+  }
+
+  function toggleCardPlayback(card) {
+    if (!card) return;
+    var key = card.getAttribute('data-cam-asset-key');
+    var kind = card.getAttribute('data-media-kind');
+    if (kind !== 'video' && kind !== 'audio') return;
+    var media = card.querySelector('video, audio');
+    if (!media || !media.getAttribute('src')) return;
+
+    if (playingKey === key && !media.paused) {
+      try {
+        media.pause();
+      } catch (e) {}
+      card.classList.remove('is-playing');
+      playingKey = null;
+      return;
+    }
+
+    stopAllPlayback();
+    try {
+      if (media.tagName === 'VIDEO') media.muted = false;
+      var p = media.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(function () {
+          // Autoplay with sound may fail; retry muted for video previews
+          if (media.tagName === 'VIDEO') {
+            media.muted = true;
+            media.play().catch(function () {});
+          }
+        });
+      }
+      card.classList.add('is-playing');
+      playingKey = key;
+      media.onended = function () {
+        card.classList.remove('is-playing');
+        if (playingKey === key) playingKey = null;
+      };
+    } catch (e) {}
   }
 
   function renderAssets() {
@@ -324,33 +490,31 @@
         var key = assetKey(a);
         var checked = selected[key] ? ' checked' : '';
         var selClass = selected[key] ? ' is-selected' : '';
-        var thumb = a.thumbnail_url || a.url || '';
-        var media =
-          a.media_kind === 'video'
-            ? '<video class="cam-card__media" src="' +
-              escapeHtml(a.url || '') +
-              '" poster="' +
-              escapeHtml(thumb) +
-              '" muted preload="metadata"></video>'
-            : '<img class="cam-card__media" src="' +
-              escapeHtml(thumb) +
-              '" alt="" loading="lazy">';
+        var playClass =
+          a.media_kind === 'video' || a.media_kind === 'audio' ? ' cam-card--playable' : '';
+        var playingClass = playingKey === key ? ' is-playing' : '';
         return (
           '<article class="cam-card' +
           selClass +
-          '" data-cam-asset-key="' +
+          playClass +
+          playingClass +
+          '" draggable="true" data-cam-asset-key="' +
           escapeHtml(key) +
           '" data-asset-type="' +
           escapeHtml(a.asset_type) +
           '" data-asset-id="' +
           escapeHtml(a.id) +
+          '" data-media-kind="' +
+          escapeHtml(a.media_kind || '') +
+          '" data-folder-id="' +
+          escapeHtml(a.folder_id || '') +
           '">' +
           '<input type="checkbox" class="cam-card__check" data-cam-select' +
           checked +
           ' aria-label="' +
           escapeHtml(i18n('select_asset', 'Select asset')) +
           '">' +
-          media +
+          mediaPreviewHtml(a) +
           '<div class="cam-card__meta">' +
           '<div class="cam-card__title">' +
           escapeHtml(a.title || a.asset_type) +
@@ -615,6 +779,223 @@
     await refreshAll();
   }
 
+  function itemsForMoveFromKeys(keys) {
+    return (keys || []).map(function (k) {
+      var asset = assets.find(function (a) {
+        return assetKey(a) === k;
+      });
+      var parts = String(k).split(':');
+      return {
+        asset_type: asset ? asset.asset_type : parts[0],
+        asset_id: asset ? asset.id : parts.slice(1).join(':'),
+        folder_id: asset && asset.folder_id != null ? String(asset.folder_id) : ''
+      };
+    });
+  }
+
+  function excludedFolderIdsForMove(items) {
+    var set = Object.create(null);
+    (items || []).forEach(function (it) {
+      if (it.folder_id) set[String(it.folder_id)] = true;
+    });
+    // If browsing a concrete folder, also exclude that view as "current"
+    if (currentFolder && currentFolder !== 'all' && currentFolder !== 'hidden') {
+      var cur = findFolderById(currentFolder);
+      if (cur && !cur.is_system) set[String(currentFolder)] = true;
+    }
+    return set;
+  }
+
+  function renderMoveGrid() {
+    var grid = $('#cam-move-grid');
+    var err = $('#cam-move-error');
+    var confirmBtn = $('#cam-move-confirm');
+    if (!grid) return;
+    if (err) {
+      err.hidden = true;
+      err.textContent = '';
+    }
+    var excluded = excludedFolderIdsForMove(moveItems || []);
+    var targets = collectUserChildFolders().filter(function (f) {
+      return !excluded[String(f.id)];
+    });
+    if (!targets.length) {
+      grid.innerHTML =
+        '<div class="cam-move-empty">' +
+        escapeHtml(
+          i18n('no_move_targets', 'No folders available to move into. Create a child folder first.')
+        ) +
+        '</div>';
+      moveSelectedFolderId = null;
+      if (confirmBtn) confirmBtn.disabled = true;
+      return;
+    }
+    grid.innerHTML = targets
+      .map(function (f) {
+        var sel = moveSelectedFolderId === f.id ? ' is-selected' : '';
+        return (
+          '<button type="button" class="cam-move-card' +
+          sel +
+          '" role="option" aria-selected="' +
+          (sel ? 'true' : 'false') +
+          '" data-cam-move-folder="' +
+          escapeHtml(f.id) +
+          '">' +
+          '<span class="cam-move-card__title">' +
+          escapeHtml(f.title) +
+          '</span>' +
+          '<span class="cam-move-card__parent">' +
+          escapeHtml(f.parent_title) +
+          '</span>' +
+          '</button>'
+        );
+      })
+      .join('');
+    if (confirmBtn) confirmBtn.disabled = !moveSelectedFolderId;
+  }
+
+  function openMoveModal(items) {
+    moveItems = items || [];
+    moveSelectedFolderId = null;
+    if (!moveItems.length) return;
+    renderMoveGrid();
+    openSubmodal('cam-move-modal');
+  }
+
+  async function confirmMove() {
+    if (!moveItems || !moveItems.length || !moveSelectedFolderId) return;
+    var payloadItems = moveItems.map(function (it) {
+      return { asset_type: it.asset_type, asset_id: it.asset_id };
+    });
+    var data = await apiPost('marketing-assets-move', {
+      items: payloadItems,
+      folder_id: moveSelectedFolderId
+    });
+    closeSubmodal('cam-move-modal');
+    moveItems = null;
+    moveSelectedFolderId = null;
+    selected = Object.create(null);
+    if (!data || !data.ok) {
+      setStatus(i18n('error_move', 'Could not move assets.'), true);
+      return;
+    }
+    await refreshAll();
+  }
+
+  async function moveItemsToFolder(items, folderId) {
+    if (!items || !items.length || !folderId) return;
+    var data = await apiPost('marketing-assets-move', {
+      items: items.map(function (it) {
+        return { asset_type: it.asset_type, asset_id: it.asset_id };
+      }),
+      folder_id: folderId
+    });
+    selected = Object.create(null);
+    if (!data || !data.ok) {
+      setStatus(i18n('error_move', 'Could not move assets.'), true);
+      return;
+    }
+    await refreshAll();
+  }
+
+  function clearDragHover() {
+    if (dragExpandTimer) {
+      clearTimeout(dragExpandTimer);
+      dragExpandTimer = null;
+    }
+    dragExpandFolderId = null;
+    if (!root) return;
+    root.querySelectorAll('.cam-folder-row.is-drop-hover, .cam-folder-row.is-drop-target').forEach(
+      function (el) {
+        el.classList.remove('is-drop-hover', 'is-drop-target');
+      }
+    );
+  }
+
+  function onCardDragStart(e) {
+    var card = e.target && e.target.closest ? e.target.closest('[data-cam-asset-key]') : null;
+    if (!card || !root.contains(card)) return;
+    if (e.target.closest && e.target.closest('[data-cam-select]')) {
+      e.preventDefault();
+      return;
+    }
+    var key = card.getAttribute('data-cam-asset-key');
+    var keys = selected[key] ? Object.keys(selected) : [key];
+    dragPayload = itemsForMoveFromKeys(keys);
+    card.classList.add('is-dragging');
+    try {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', keys.join(','));
+    } catch (err) {}
+    stopAllPlayback();
+  }
+
+  function onCardDragEnd() {
+    dragPayload = null;
+    clearDragHover();
+    if (!root) return;
+    root.querySelectorAll('.cam-card.is-dragging').forEach(function (c) {
+      c.classList.remove('is-dragging');
+    });
+  }
+
+  function onFolderDragOver(e) {
+    if (!dragPayload || !dragPayload.length) return;
+    var row = e.target && e.target.closest ? e.target.closest('[data-cam-folder-id]') : null;
+    if (!row || !root.contains(row)) return;
+    var folderId = row.getAttribute('data-cam-folder-id');
+    var dropOk = row.getAttribute('data-cam-drop') === '1';
+    var group = row.closest('[data-cam-folder-group]');
+
+    // Hover parent → expand children after short delay
+    if (group && group.getAttribute('data-cam-folder-group') === folderId) {
+      e.preventDefault();
+      row.classList.add('is-drop-target');
+      if (dragExpandFolderId !== folderId) {
+        if (dragExpandTimer) clearTimeout(dragExpandTimer);
+        dragExpandFolderId = folderId;
+        dragExpandTimer = setTimeout(function () {
+          expandedParents[folderId] = true;
+          renderFolderTree();
+        }, 400);
+      }
+      return;
+    }
+
+    if (!dropOk) return;
+    e.preventDefault();
+    try {
+      e.dataTransfer.dropEffect = 'move';
+    } catch (err) {}
+    clearDragHoverClassesOnly();
+    row.classList.add('is-drop-hover', 'is-drop-target');
+  }
+
+  function clearDragHoverClassesOnly() {
+    if (!root) return;
+    root.querySelectorAll('.cam-folder-row.is-drop-hover').forEach(function (el) {
+      el.classList.remove('is-drop-hover');
+    });
+  }
+
+  function onFolderDrop(e) {
+    var row = e.target && e.target.closest ? e.target.closest('[data-cam-folder-id]') : null;
+    if (!row || !root.contains(row)) return;
+    if (row.getAttribute('data-cam-drop') !== '1') return;
+    e.preventDefault();
+    var folderId = row.getAttribute('data-cam-folder-id');
+    var items = dragPayload;
+    clearDragHover();
+    dragPayload = null;
+    if (!items || !items.length || !folderId) return;
+    // Skip no-op moves into the same folder
+    var allSame = items.every(function (it) {
+      return String(it.folder_id || '') === String(folderId);
+    });
+    if (allSame) return;
+    moveItemsToFolder(items, folderId);
+  }
+
   function openDrawer() {
     var wrap = $('#cam-sidebar-wrapper') || $('#cam-sidebar');
     var scrim = $('#cam-drawer-scrim');
@@ -633,10 +1014,30 @@
     var t = e.target;
     if (!t || !t.closest) return;
 
+    var expandBtn = t.closest('[data-cam-expand]');
+    if (expandBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var eid = expandBtn.getAttribute('data-cam-expand');
+      if (eid) {
+        expandedParents[eid] = !expandedParents[eid];
+        renderFolderTree();
+      }
+      return;
+    }
+
+    var moveFolderBtn = t.closest('[data-cam-move-folder]');
+    if (moveFolderBtn) {
+      moveSelectedFolderId = moveFolderBtn.getAttribute('data-cam-move-folder');
+      renderMoveGrid();
+      return;
+    }
+
     var folderBtn = t.closest('[data-cam-folder]');
     if (folderBtn && !t.closest('[data-cam-add-child]') && !t.closest('[data-cam-folder-action]')) {
       currentFolder = folderBtn.getAttribute('data-cam-folder') || 'all';
       selected = Object.create(null);
+      stopAllPlayback();
       closeDrawer();
       renderFolderTree();
       loadAssets();
@@ -657,6 +1058,7 @@
         chip.classList.toggle('is-active', chip === typeChip);
       });
       selected = Object.create(null);
+      stopAllPlayback();
       loadAssets();
       return;
     }
@@ -670,6 +1072,13 @@
       else delete selected[key];
       card.classList.toggle('is-selected', !!selected[key]);
       updateFloatBar();
+      return;
+    }
+
+    var playCard = t.closest('.cam-card--playable');
+    if (playCard && root.contains(playCard) && !t.closest('[data-cam-select]')) {
+      e.preventDefault();
+      toggleCardPlayback(playCard);
       return;
     }
 
@@ -698,6 +1107,14 @@
       var item = assetMenuTarget;
       closeMenus();
       if (!item) return;
+      if (aa === 'move') {
+        var moveKeys = Object.keys(selected);
+        if (!moveKeys.length) {
+          moveKeys = [String(item.asset_type) + ':' + String(item.asset_id)];
+        }
+        openMoveModal(itemsForMoveFromKeys(moveKeys));
+        return;
+      }
       openAssetActionConfirm(aa, [item]);
       return;
     }
@@ -741,8 +1158,16 @@
       closeMenus();
       assetMenuTarget = {
         asset_type: card.getAttribute('data-asset-type'),
-        asset_id: card.getAttribute('data-asset-id')
+        asset_id: card.getAttribute('data-asset-id'),
+        folder_id: card.getAttribute('data-folder-id') || ''
       };
+      // Prefer multi-select when right-clicking an already-selected card
+      var key = card.getAttribute('data-cam-asset-key');
+      if (key && !selected[key]) {
+        selected = Object.create(null);
+        selected[key] = true;
+        renderAssets();
+      }
       showMenu(document.getElementById('cam-asset-menu'), e.clientX, e.clientY);
     }
   }
@@ -863,6 +1288,14 @@
       });
     }
 
+    var moveBtn = $('#cam-btn-move');
+    if (moveBtn) {
+      moveBtn.addEventListener('click', function () {
+        var keys = Object.keys(selected);
+        if (!keys.length) return;
+        openMoveModal(itemsForMoveFromKeys(keys));
+      });
+    }
     var hideBtn = $('#cam-btn-hide');
     if (hideBtn) {
       hideBtn.addEventListener('click', function () {
@@ -880,8 +1313,29 @@
       });
     }
 
+    var moveCancel = $('#cam-move-cancel');
+    if (moveCancel) {
+      moveCancel.addEventListener('click', function () {
+        closeSubmodal('cam-move-modal');
+        moveItems = null;
+        moveSelectedFolderId = null;
+      });
+    }
+    var moveConfirm = $('#cam-move-confirm');
+    if (moveConfirm) moveConfirm.addEventListener('click', confirmMove);
+
     root.addEventListener('click', onRootClick);
     root.addEventListener('contextmenu', onRootContextMenu);
+    root.addEventListener('dragstart', onCardDragStart);
+    root.addEventListener('dragend', onCardDragEnd);
+    root.addEventListener('dragover', onFolderDragOver);
+    root.addEventListener('drop', onFolderDrop);
+    root.addEventListener('dragleave', function (ev) {
+      var row = ev.target && ev.target.closest ? ev.target.closest('.cam-folder-row') : null;
+      if (row && !row.contains(ev.relatedTarget)) {
+        row.classList.remove('is-drop-hover');
+      }
+    });
 
     document.addEventListener('click', function (ev) {
       if (!root || root.hidden) return;
@@ -898,8 +1352,15 @@
       var folderRemove = document.getElementById('cam-confirm-folder-remove');
       var permanent = document.getElementById('cam-confirm-assets-permanent');
       var assetConfirm = document.getElementById('cam-confirm-asset-action');
+      var moveModal = document.getElementById('cam-move-modal');
       if (settings && !settings.hidden) {
         closeSubmodal('cam-folder-settings');
+        return;
+      }
+      if (moveModal && !moveModal.hidden) {
+        closeSubmodal('cam-move-modal');
+        moveItems = null;
+        moveSelectedFolderId = null;
         return;
       }
       if (permanent && !permanent.hidden) {
@@ -941,6 +1402,10 @@
     currentType = '';
     searchQuery = '';
     selected = Object.create(null);
+    moveItems = null;
+    moveSelectedFolderId = null;
+    playingKey = null;
+    dragPayload = null;
     var searchInput = $('#cam-search-input');
     if (searchInput) searchInput.value = '';
     root.querySelectorAll('.cam-chip').forEach(function (chip, idx) {
@@ -959,14 +1424,19 @@
   function close() {
     root = document.getElementById('creatorAssetsManagerModal');
     if (!root) return;
+    stopAllPlayback();
     root.hidden = true;
     root.setAttribute('aria-hidden', 'true');
     closeDrawer();
     closeMenus();
+    clearDragHover();
     closeSubmodal('cam-folder-settings');
     closeSubmodal('cam-confirm-folder-remove');
     closeSubmodal('cam-confirm-assets-permanent');
     closeSubmodal('cam-confirm-asset-action');
+    closeSubmodal('cam-move-modal');
+    moveItems = null;
+    moveSelectedFolderId = null;
     try {
       document.body.classList.remove('cam-modal-open');
     } catch (e) {}

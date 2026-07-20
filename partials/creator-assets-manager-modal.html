@@ -102,6 +102,7 @@
     <div class="cam-float-bar" id="cam-float-bar" hidden>
       <span class="cam-float-bar__count" id="cam-float-count">0</span>
       <button type="button" class="cam-btn" id="cam-btn-select-toggle" data-t="creator.assets_manager.select_all">Select all</button>
+      <button type="button" class="cam-btn" id="cam-btn-move" data-t="creator.assets_manager.move">Move</button>
       <button type="button" class="cam-btn" id="cam-btn-hide" data-t="creator.assets_manager.hide">Hide</button>
       <button type="button" class="cam-btn cam-btn--danger" id="cam-btn-remove" data-t="creator.assets_manager.remove">Remove</button>
     </div>
@@ -143,8 +144,23 @@
 
   
   <div id="cam-asset-menu" class="cam-context-menu" hidden role="menu">
+    <button type="button" class="cam-context-menu__item" data-cam-asset-action="move" role="menuitem" data-t="creator.assets_manager.move">Move</button>
     <button type="button" class="cam-context-menu__item" data-cam-asset-action="hide" role="menuitem" data-t="creator.assets_manager.hide">Hide</button>
     <button type="button" class="cam-context-menu__item" data-cam-asset-action="remove" role="menuitem" data-t="creator.assets_manager.remove">Remove</button>
+  </div>
+
+  
+  <div id="cam-move-modal" class="cam-submodal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cam-move-title">
+    <div class="cam-submodal__panel cam-submodal__panel--wide">
+      <h3 id="cam-move-title" class="cam-submodal__title" data-t="creator.assets_manager.move_title">Move to folder</h3>
+      <p class="cam-submodal__body" data-t="creator.assets_manager.move_hint">Choose a folder. System folders and the current folder are not available.</p>
+      <div class="cam-move-grid" id="cam-move-grid" role="listbox" aria-label="Move to folder"></div>
+      <p class="cam-submodal__error" id="cam-move-error" hidden></p>
+      <div class="cam-submodal__footer">
+        <button type="button" class="cam-btn" id="cam-move-cancel" data-t="creator.assets_manager.cancel">Cancel</button>
+        <button type="button" class="cam-btn cam-btn--primary" id="cam-move-confirm" data-t="creator.assets_manager.confirm_move" disabled>Confirm</button>
+      </div>
+    </div>
   </div>
 
   

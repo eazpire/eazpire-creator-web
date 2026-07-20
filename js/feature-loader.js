@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS changes. /vendor + Creations bundle are cached ~7d. */
-  var PORTAL_ASSET_V = "hero-modal-page-20260720f";
+  var PORTAL_ASSET_V = "hero-modal-page-20260720g";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {

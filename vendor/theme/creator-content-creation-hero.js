@@ -16,6 +16,8 @@
   );
   var modelImageUrl = null;
   var backgroundImageUrl = null;
+  /** Per-slot Active/Inactive — Inactive excludes image from generate payload (same as Character). */
+  var slotActive = { model: true, background: true };
   /** Registered bind contexts for refresh after DOM moves (e.g. desktop marketing mount). */
   var heroEazyContexts = [];
 
@@ -120,6 +122,53 @@
     }
   }
 
+  function renderSlotActiveToggle(slot) {
+    var active = slotActive[slot] !== false;
+    return (
+      '<div class="ccg-slot-active" data-ccg-slot-active="' +
+      escapeAttr(slot) +
+      '" role="group" aria-label="' +
+      escapeAttr(i18n('slot_active', 'Active')) +
+      '">' +
+      '<button type="button" class="ccg-slot-active__btn' +
+      (active ? ' is-selected' : '') +
+      '" data-ccg-slot-active-btn="' +
+      escapeAttr(slot) +
+      '" data-ccg-slot-active-value="1" aria-pressed="' +
+      (active ? 'true' : 'false') +
+      '">' +
+      escapeAttr(i18n('slot_active', 'Active')) +
+      '</button>' +
+      '<button type="button" class="ccg-slot-active__btn' +
+      (!active ? ' is-selected' : '') +
+      '" data-ccg-slot-active-btn="' +
+      escapeAttr(slot) +
+      '" data-ccg-slot-active-value="0" aria-pressed="' +
+      (!active ? 'true' : 'false') +
+      '">' +
+      escapeAttr(i18n('slot_inactive', 'Inactive')) +
+      '</button></div>'
+    );
+  }
+
+  function syncSlotActiveUi(ctx) {
+    if (!ctx || !ctx.container) return;
+    ['model', 'background'].forEach(function (slot) {
+      var active = slotActive[slot] !== false;
+      var area = ctx.container.querySelector('[data-creator-hero-upload="' + slot + '"]');
+      if (area) {
+        area.classList.toggle('is-slot-inactive', !active);
+        area.setAttribute('aria-disabled', active ? 'false' : 'true');
+      }
+      ctx.container.querySelectorAll('[data-ccg-slot-active-btn="' + slot + '"]').forEach(function (btn) {
+        var on = btn.getAttribute('data-ccg-slot-active-value') === '1';
+        var selected = on === active;
+        btn.classList.toggle('is-selected', selected);
+        btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      });
+    });
+  }
+
   function render(container) {
     if (!container) return;
     container.innerHTML =
@@ -150,6 +199,7 @@
       '</div></div>' +
       '<div class="creator-hero-upload-grid">' +
       '<div class="creator-hero-upload-area" data-hero-slot="model" data-creator-hero-upload="model">' +
+      renderSlotActiveToggle('model') +
       '<div class="creator-hero-upload-icon">👤</div>' +
       '<div class="creator-hero-upload-title">Model</div>' +
       '<div class="creator-hero-upload-text">Upload your mock model image</div>' +
@@ -157,6 +207,7 @@
       '<div class="creator-hero-upload-preview" data-creator-hero-upload-preview="model"><img data-creator-hero-upload-img="model" alt=""><button type="button" class="creator-hero-upload-preview-remove" data-creator-hero-upload-remove="model">×</button></div>' +
       '</div>' +
       '<div class="creator-hero-upload-area" data-hero-slot="background" data-creator-hero-upload="background">' +
+      renderSlotActiveToggle('background') +
       '<div class="creator-hero-upload-icon">🌅</div>' +
       '<div class="creator-hero-upload-title">Background</div>' +
       '<div class="creator-hero-upload-text">Upload your mock background image</div>' +
@@ -168,6 +219,7 @@
       '<textarea class="creator-hero-prompt-input" data-creator-hero-prompt placeholder="Add any additional information for your hero image..." rows="3"></textarea>' +
       '</div>' +
       '</div>';
+    syncSlotActiveUi({ container: container });
   }
 
   /**
@@ -460,6 +512,8 @@
 
     area.addEventListener('click', function (e) {
       if (e.target.closest('.creator-hero-upload-preview-remove')) return;
+      if (e.target.closest('[data-ccg-slot-active]')) return;
+      if (slotActive[slot] === false) return;
       if (window.CreatorImageAddMedia && typeof window.CreatorImageAddMedia.open === 'function') {
         window.CreatorImageAddMedia.open({
           purpose: 'hero-' + slot,
@@ -490,6 +544,10 @@
 
     if (input) {
       input.addEventListener('change', function () {
+        if (slotActive[slot] === false) {
+          input.value = '';
+          return;
+        }
         var file = input.files && input.files[0];
         input.value = '';
         if (!file || !file.type.startsWith('image/')) return;
@@ -525,6 +583,23 @@
     }
   }
 
+  function setupSlotActiveToggles(ctx) {
+    if (!ctx || !ctx.container) return;
+    ctx.container.querySelectorAll('[data-ccg-slot-active-btn]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var slot = btn.getAttribute('data-ccg-slot-active-btn');
+        var on = btn.getAttribute('data-ccg-slot-active-value') === '1';
+        if (!slot) return;
+        slotActive[slot] = on;
+        syncSlotActiveUi(ctx);
+        updateEazyHeroUi(ctx);
+      });
+    });
+    syncSlotActiveUi(ctx);
+  }
+
   function buildSummaryLines(ctx, arr, promptText) {
     var lines = [];
     lines.push('• ' + i18n('summary_products', 'Products') + ': ' + arr.length);
@@ -537,8 +612,18 @@
     } else {
       lines.push('• ' + i18n('summary_prompt', 'Prompt') + ': ' + i18n('default_prompt_note', '(default scene)'));
     }
-    lines.push('• ' + i18n('summary_model', 'Model image') + ': ' + (modelImageUrl ? i18n('yes', 'Yes') : i18n('no', 'No')));
-    lines.push('• ' + i18n('summary_background', 'Background image') + ': ' + (backgroundImageUrl ? i18n('yes', 'Yes') : i18n('no', 'No')));
+    lines.push(
+      '• ' +
+        i18n('summary_model', 'Model image') +
+        ': ' +
+        (slotActive.model !== false && modelImageUrl ? i18n('yes', 'Yes') : i18n('no', 'No'))
+    );
+    lines.push(
+      '• ' +
+        i18n('summary_background', 'Background image') +
+        ': ' +
+        (slotActive.background !== false && backgroundImageUrl ? i18n('yes', 'Yes') : i18n('no', 'No'))
+    );
     var reg = window.selectedHeroRegion || (window.CreatorHeroRegions && window.CreatorHeroRegions.resolveFromShopContext ? window.CreatorHeroRegions.resolveFromShopContext() : 'EU');
     lines.push('• ' + i18n('summary_region', 'Region') + ': ' + reg);
     return lines;
@@ -835,8 +920,8 @@
             : 'EU'
         )
       };
-      if (modelImageUrl) body.model_image_url = modelImageUrl;
-      if (backgroundImageUrl) body.background_image_url = backgroundImageUrl;
+      if (slotActive.model !== false && modelImageUrl) body.model_image_url = modelImageUrl;
+      if (slotActive.background !== false && backgroundImageUrl) body.background_image_url = backgroundImageUrl;
 
       var res = await fetch(API_BASE + '?op=hero-generate', {
         method: 'POST',
@@ -983,6 +1068,7 @@
 
     setupUploadArea(ctx, 'model');
     setupUploadArea(ctx, 'background');
+    setupSlotActiveToggles(ctx);
 
     var already = heroEazyContexts.some(function (c) { return c.container === ctx.container; });
     if (!already) heroEazyContexts.push(ctx);
