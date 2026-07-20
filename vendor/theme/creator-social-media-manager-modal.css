@@ -1,11 +1,19 @@
 /* Social Media Manager modal (IDEA-040 Phase A) */
 .smm-modal-root {
-  position: fixed;
-  inset: 0;
-  z-index: 10050;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: 10050 !important;
   display: flex;
+  flex-direction: column;
+  margin: 0 !important;
+  padding: 0 !important;
   background: rgba(2, 2, 8, 0.96);
   color: #fff;
+  box-sizing: border-box;
 }
 .smm-modal-root[hidden] {
   display: none !important;
@@ -16,8 +24,10 @@ body.smm-modal-open {
 .smm-modal__shell {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   width: 100%;
   height: 100%;
+  min-width: 0;
   min-height: 0;
   background: linear-gradient(160deg, #0a0614 0%, #120a1e 45%, #080510 100%);
 }
@@ -73,23 +83,29 @@ body.smm-modal-open {
 }
 
 .smm-body {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
+  width: 100%;
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
   position: relative;
 }
 .smm-sidebar {
   width: 220px;
-  flex-shrink: 0;
+  flex: 0 0 220px;
   display: flex;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.28);
-  transition: width 0.2s ease, margin 0.2s ease;
+  transition: flex-basis 0.2s ease, width 0.2s ease, border-color 0.2s ease;
   position: relative;
+  z-index: 3;
 }
 .smm-sidebar.is-collapsed {
-  /* Collapse fully so main can grow; rail floats on the seam */
+  /* Collapse fully so .smm-main grows into freed space */
   width: 0;
+  flex-basis: 0;
   min-width: 0;
   border-right-color: transparent;
   overflow: visible;
@@ -196,10 +212,11 @@ body.smm-modal-open {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  width: 100%;
+  width: auto;
   overflow: auto;
   padding: 16px 18px 32px;
   transition: padding 0.2s ease;
+  box-sizing: border-box;
 }
 .smm-body.is-sidebar-collapsed .smm-main {
   /* Room for the floating collapse rail on the left seam */
@@ -212,8 +229,10 @@ body.smm-modal-open {
   padding-bottom: 16px;
 }
 .smm-panel[data-smm-panel="new_post"].is-active {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -422,7 +441,8 @@ body.smm-modal-open {
 .smm-new-post {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   max-width: none;
   width: 100%;
@@ -430,14 +450,19 @@ body.smm-modal-open {
 .smm-new-post__composer {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
+  width: 100%;
 }
 .smm-new-post__scroll {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-top: 4px;
+  width: 100%;
 }
 .smm-new-post__fields {
   display: grid;
@@ -447,7 +472,41 @@ body.smm-modal-open {
   width: 100%;
   max-width: none;
   box-sizing: border-box;
+  align-content: start;
 }
+
+/* Desktop: viewer left, form right — uses full main width */
+@media (min-width: 960px) {
+  .smm-new-post__fields {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-areas:
+      "viewer caption"
+      "viewer link"
+      "viewer channels"
+      "viewer schedule";
+    column-gap: 18px;
+    row-gap: 12px;
+    align-items: start;
+  }
+  .smm-new-post__fields > .smm-compose-section--viewer {
+    grid-area: viewer;
+    position: sticky;
+    top: 0;
+    align-self: stretch;
+    min-height: min(62vh, 560px);
+    height: 100%;
+  }
+  .smm-new-post__fields > .smm-field--caption { grid-area: caption; }
+  .smm-new-post__fields > .smm-field--link { grid-area: link; }
+  .smm-new-post__fields > #smm-section-channels { grid-area: channels; }
+  .smm-new-post__fields > #smm-section-schedule { grid-area: schedule; }
+  .smm-compose-section--viewer .smm-new-post__viewer,
+  .smm-compose-section--viewer .smm-new-post__upload-area {
+    min-height: min(56vh, 500px);
+    height: 100%;
+  }
+}
+
 .smm-panel.is-active {
   width: 100%;
   max-width: none;
@@ -455,42 +514,58 @@ body.smm-modal-open {
   box-sizing: border-box;
 }
 .smm-compose-section {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  overflow: visible;
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .smm-compose-section--viewer {
   border-style: dashed;
-  border-color: rgba(255, 255, 255, 0.14);
-  background: transparent;
+  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(0, 0, 0, 0.22);
+  overflow: hidden;
 }
 .smm-compose-section__body--viewer {
   padding: 10px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .smm-compose-section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  flex-shrink: 0;
 }
 .smm-compose-section.is-collapsed .smm-compose-section__header {
   border-bottom-color: transparent;
 }
 .smm-compose-section__toggle {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.85);
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.9);
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 4px 2px;
+  margin: 0;
   cursor: pointer;
   font: inherit;
   min-width: 0;
+  border-radius: 0;
 }
 .smm-compose-section__toggle:hover {
   color: #fff;
@@ -522,14 +597,17 @@ body.smm-modal-open {
   display: none !important;
 }
 .smm-new-post__viewer {
+  flex: 1 1 auto;
   min-height: min(42vh, 360px);
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 .smm-new-post__upload-area {
-  appearance: none;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   position: relative;
-  flex: 1;
+  flex: 1 1 auto;
   width: 100%;
   min-height: min(38vh, 320px);
   margin: 0;
@@ -538,13 +616,14 @@ body.smm-modal-open {
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.28);
   color: inherit;
   font: inherit;
+  box-shadow: none;
 }
 .smm-new-post__upload-area:hover {
-  border-color: rgba(249, 115, 22, 0.45);
-  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(249, 115, 22, 0.55);
+  background: rgba(0, 0, 0, 0.36);
 }
 .smm-new-post__upload-area.is-filled {
   cursor: default;
@@ -555,25 +634,29 @@ body.smm-modal-open {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
+  pointer-events: none;
 }
 .smm-new-post__upload-add {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  border: 1px solid rgba(249, 115, 22, 0.55);
+  border: 2px solid rgba(249, 115, 22, 0.65);
   color: #f97316;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 32px;
   line-height: 1;
-  background: transparent;
+  background: rgba(249, 115, 22, 0.08);
 }
 .smm-new-post__upload-area:hover .smm-new-post__upload-add {
-  border-color: rgba(249, 115, 22, 0.85);
+  border-color: rgba(249, 115, 22, 0.95);
   color: #fb923c;
+  background: rgba(249, 115, 22, 0.14);
 }
 .smm-new-post__upload-preview {
   position: absolute;
@@ -676,14 +759,16 @@ body.smm-modal-open {
   min-width: 0;
   width: 100%;
 }
+/* Real responsive card grid (not a button row) */
 .smm-compose-channel-grid {
-  display: flex;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 12px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 2px 2px 8px;
-  scrollbar-width: thin;
-  min-height: 176px;
+  overflow: visible;
+  padding: 2px;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .smm-compose-channel-grid::-webkit-scrollbar {
   height: 6px;
@@ -693,12 +778,17 @@ body.smm-modal-open {
   border-radius: 999px;
 }
 .smm-compose-channel-card {
-  flex: 0 0 156px;
-  width: 156px;
+  flex: none;
+  width: 100%;
+  min-width: 0;
   min-height: 168px;
-  scroll-snap-align: start;
+  scroll-snap-align: unset;
   cursor: pointer;
+  box-sizing: border-box;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .smm-compose-channel-card.is-expanded {
   border-color: rgba(249, 115, 22, 0.7);
@@ -776,6 +866,9 @@ body.smm-modal-open {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .smm-field__label {
   font-size: 12px;
@@ -792,6 +885,7 @@ body.smm-modal-open {
   color: #fff;
   font: inherit;
   padding: 10px 12px;
+  box-sizing: border-box;
 }
 .smm-field__textarea {
   resize: vertical;
@@ -836,6 +930,8 @@ body.smm-modal-open {
   flex-shrink: 0;
   margin-top: 0;
   padding: 12px 0 0;
+  width: 100%;
+  box-sizing: border-box;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: linear-gradient(160deg, #0a0614 0%, #120a1e 45%, #080510 100%);
 }
@@ -843,6 +939,8 @@ body.smm-modal-open {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
 }
 .smm-new-post__status {
   margin: 0 0 8px;
@@ -902,22 +1000,27 @@ body.smm-modal-open {
   margin-bottom: 8px;
 }
 .smm-source-options {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 0 0 12px;
+  width: 100%;
 }
 .smm-source-option {
-  appearance: none;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.04);
   color: rgba(255, 255, 255, 0.78);
-  border-radius: 999px;
-  padding: 8px 14px;
+  border-radius: 12px;
+  padding: 12px 10px;
   font: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 .smm-source-option:hover {
   border-color: rgba(249, 115, 22, 0.45);

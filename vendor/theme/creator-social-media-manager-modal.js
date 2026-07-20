@@ -1371,6 +1371,12 @@
       } catch (e) {}
       return false;
     }
+    /* Escape portal shells that create a containing block for position:fixed */
+    try {
+      if (root.parentElement !== document.body) {
+        document.body.appendChild(root);
+      }
+    } catch (eMove) {}
     bindUi();
     bindNewPostUi();
     renderConnectGrid();
