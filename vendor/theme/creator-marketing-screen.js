@@ -609,7 +609,7 @@
       });
     });
 
-    // Social Media Manager open is owned by creator-social-media-manager-modal.js
+    // Social Media Manager / Assets Manager open owned by their modal scripts (delegation)
     // (delegation + MutationObserver). Keep a late fallback if that script loads after bind().
     document.querySelectorAll('[data-smm-open]').forEach(function (btn) {
       if (btn._smmOpenBound) return;
@@ -623,6 +623,22 @@
         }
         try {
           console.warn('[MarketingScreen] CreatorSocialMediaManager not loaded yet');
+        } catch (err) {}
+      });
+    });
+
+    document.querySelectorAll('[data-assets-manager-open]').forEach(function (btn) {
+      if (btn._camOpenBound) return;
+      btn._camOpenBound = true;
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.CreatorAssetsManager && typeof window.CreatorAssetsManager.open === 'function') {
+          window.CreatorAssetsManager.open();
+          return;
+        }
+        try {
+          console.warn('[MarketingScreen] CreatorAssetsManager not loaded yet');
         } catch (err) {}
       });
     });

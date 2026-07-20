@@ -2874,17 +2874,19 @@ html.creator-creations-bulk-overlay-open {
   position: relative;
   z-index: 1;
 }
-/* Content Creation: Images + Video (2-col) — IDEA-044 */
+/* Content Creation: Assets Manager (narrow function) + Images + Video — IDEA-045 */
 .cmkt-children-grid--creation {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
 }
 /* Content Publish: Hero Images + Social Media Manager function card */
 .cmkt-children-grid--publish {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
 }
-/* Tool-card base (also in video-generator CSS; kept here so Publish row styles without that modal) */
-.cmkt-children-grid--publish .creator-video-tool-card {
+/* Tool-card base (also in video-generator CSS; kept here so Publish/Creation rows style without that modal) */
+.cmkt-children-grid--publish .creator-video-tool-card,
+.cmkt-children-grid--creation .creator-video-tool-card {
   appearance: none;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
@@ -2900,20 +2902,24 @@ html.creator-creations-bulk-overlay-open {
   justify-content: center;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
-.cmkt-children-grid--publish .creator-video-tool-card:hover {
+.cmkt-children-grid--publish .creator-video-tool-card:hover,
+.cmkt-children-grid--creation .creator-video-tool-card:hover {
   border-color: rgba(249, 115, 22, 0.55);
   background: rgba(249, 115, 22, 0.12);
   transform: translateY(-1px);
 }
-.cmkt-children-grid--publish .creator-video-tool-card__icon {
+.cmkt-children-grid--publish .creator-video-tool-card__icon,
+.cmkt-children-grid--creation .creator-video-tool-card__icon {
   font-size: 22px;
   line-height: 1;
 }
-.cmkt-children-grid--publish .creator-video-tool-card__title {
+.cmkt-children-grid--publish .creator-video-tool-card__title,
+.cmkt-children-grid--creation .creator-video-tool-card__title {
   font-size: 12px;
   font-weight: 800;
 }
-.cmkt-children-grid--publish .creator-video-tool-card__desc {
+.cmkt-children-grid--publish .creator-video-tool-card__desc,
+.cmkt-children-grid--creation .creator-video-tool-card__desc {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.65);
   line-height: 1.35;

@@ -356,6 +356,8 @@
       loadCss(asset("creator-video-generator-modal.css"));
       await injectPartial("creator-social-media-manager-modal.html");
       loadCss(asset("creator-social-media-manager-modal.css"));
+      await injectPartial("creator-assets-manager-modal.html");
+      loadCss(asset("creator-assets-manager-modal.css"));
       await injectPartial("creator-image-add-media.html");
       await injectPartial("hero-product-selection-modal-layout.html");
       loadCss(asset("creator-modal-base.css"));
@@ -392,6 +394,7 @@
         asset("creator-content-publish-images-screen.js"),
         asset("eaz-creator-promotions.js"),
         asset("creator-social-media-manager-modal.js"),
+        asset("creator-assets-manager-modal.js"),
         asset("creator-marketing-screen.js"),
       ]);
 

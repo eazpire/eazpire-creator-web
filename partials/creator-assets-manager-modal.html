@@ -1,0 +1,169 @@
+<div
+  id="creatorAssetsManagerModal"
+  class="cam-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cam-modal-title"
+>
+  <div class="cam-modal__shell">
+    <header class="cam-modal__header">
+      <div class="cam-modal__header-left">
+        <button
+          type="button"
+          class="cam-btn cam-btn--icon cam-btn--menu"
+          id="cam-btn-menu"
+          aria-label="Open menu"
+        >
+          <span aria-hidden="true">☰</span>
+        </button>
+        <h2 id="cam-modal-title" class="cam-modal__title" data-t="creator.assets_manager.title">Assets Manager</h2>
+      </div>
+      <button
+        type="button"
+        class="cam-btn cam-btn--icon"
+        id="cam-btn-close"
+        aria-label="Close"
+      >
+        ×
+      </button>
+    </header>
+
+    <div class="cam-subheader">
+      <label class="cam-search">
+        <span class="visually-hidden">Search</span>
+        <input
+          type="search"
+          id="cam-search-input"
+          class="cam-search__input"
+          placeholder="Search assets…"
+          autocomplete="off"
+        >
+      </label>
+      <div class="cam-type-filters" role="group" aria-label="Asset types">
+        <button type="button" class="cam-chip is-active" data-cam-type="">All</button>
+        <button type="button" class="cam-chip" data-cam-type="videos">Videos</button>
+        <button type="button" class="cam-chip" data-cam-type="images">Images</button>
+        <button type="button" class="cam-chip" data-cam-type="audio">Audio</button>
+      </div>
+    </div>
+
+    <div class="cam-body">
+      <aside class="cam-sidebar" id="cam-sidebar" aria-label="Folders">
+        <div class="cam-sidebar__header">
+          <button type="button" class="cam-sidebar__item is-active" data-cam-folder="all" id="cam-folder-all">
+            <span class="cam-sidebar__item-label" data-t="creator.assets_manager.all">All</span>
+            <span class="cam-sidebar__count" data-cam-all-count>0</span>
+          </button>
+          <button type="button" class="cam-btn cam-btn--add-folder" id="cam-btn-add-folder">Add Folder</button>
+        </div>
+        <nav class="cam-sidebar__nav" id="cam-folder-tree" aria-label="Folder tree"></nav>
+        <div class="cam-sidebar__footer">
+          <button type="button" class="cam-sidebar__item cam-sidebar__item--hidden" data-cam-folder="hidden" id="cam-folder-hidden">
+            <span class="cam-sidebar__item-label" data-t="creator.assets_manager.hidden">Hidden</span>
+            <span class="cam-sidebar__count" data-cam-hidden-count>0</span>
+          </button>
+        </div>
+        <button
+          type="button"
+          class="cam-rail"
+          id="cam-sidebar-toggle"
+          aria-label="Toggle sidebar"
+          aria-expanded="true"
+        >
+          ‹
+        </button>
+      </aside>
+
+      <div class="cam-drawer-scrim" id="cam-drawer-scrim" hidden></div>
+
+      <main class="cam-main" id="cam-main">
+        <div class="cam-status" id="cam-status" hidden role="status" aria-live="polite"></div>
+        <div class="cam-grid" id="cam-asset-grid"></div>
+        <div class="cam-empty" id="cam-empty" hidden>No assets in this folder.</div>
+      </main>
+    </div>
+
+    <div class="cam-float-bar" id="cam-float-bar" hidden>
+      <span class="cam-float-bar__count" id="cam-float-count">0</span>
+      <button type="button" class="cam-btn" id="cam-btn-select-toggle">Select all</button>
+      <button type="button" class="cam-btn" id="cam-btn-hide">Hide</button>
+      <button type="button" class="cam-btn cam-btn--danger" id="cam-btn-remove">Remove</button>
+    </div>
+  </div>
+
+  <div id="cam-folder-settings" class="cam-submodal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cam-folder-settings-title">
+    <div class="cam-submodal__panel">
+      <h3 id="cam-folder-settings-title" class="cam-submodal__title">Folder Settings</h3>
+      <label class="cam-field">
+        <span>Title</span>
+        <input type="text" id="cam-folder-title" required maxlength="120" autocomplete="off">
+      </label>
+      <label class="cam-field">
+        <span>Description</span>
+        <textarea id="cam-folder-description" rows="3" maxlength="500"></textarea>
+      </label>
+      <label class="cam-field">
+        <span>Tags</span>
+        <input type="text" id="cam-folder-tags" maxlength="240" placeholder="tag1, tag2" autocomplete="off">
+      </label>
+      <label class="cam-field" id="cam-folder-parent-wrap">
+        <span>Parent folder</span>
+        <select id="cam-folder-parent"></select>
+      </label>
+      <p class="cam-submodal__error" id="cam-folder-settings-error" hidden></p>
+      <div class="cam-submodal__footer">
+        <button type="button" class="cam-btn" id="cam-folder-settings-cancel">Cancel</button>
+        <button type="button" class="cam-btn cam-btn--primary" id="cam-folder-settings-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cam-folder-menu" class="cam-context-menu" hidden role="menu">
+    <button type="button" class="cam-context-menu__item" data-cam-folder-action="edit" role="menuitem">Edit</button>
+    <button type="button" class="cam-context-menu__item" data-cam-folder-action="remove" role="menuitem">Remove</button>
+  </div>
+
+  <div id="cam-asset-menu" class="cam-context-menu" hidden role="menu">
+    <button type="button" class="cam-context-menu__item" data-cam-asset-action="hide" role="menuitem">Hide</button>
+    <button type="button" class="cam-context-menu__item" data-cam-asset-action="remove" role="menuitem">Remove</button>
+  </div>
+
+  <div id="cam-confirm-folder-remove" class="cam-submodal" hidden aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="cam-submodal__panel">
+      <h3 class="cam-submodal__title">Remove folder?</h3>
+      <p class="cam-submodal__body">Assets will move to Hidden unless you choose to delete them.</p>
+      <label class="cam-check">
+        <input type="checkbox" id="cam-remove-assets-check">
+        <span>Remove Assets</span>
+      </label>
+      <div class="cam-submodal__footer">
+        <button type="button" class="cam-btn" data-cam-confirm-cancel="folder-remove">Cancel</button>
+        <button type="button" class="cam-btn cam-btn--danger" id="cam-confirm-folder-remove-ok">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cam-confirm-assets-permanent" class="cam-submodal" hidden aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="cam-submodal__panel">
+      <h3 class="cam-submodal__title">Delete assets permanently?</h3>
+      <p class="cam-submodal__body">Assets inside this folder will be permanently deleted. This cannot be undone.</p>
+      <div class="cam-submodal__footer">
+        <button type="button" class="cam-btn" data-cam-confirm-cancel="assets-permanent">Cancel</button>
+        <button type="button" class="cam-btn cam-btn--danger" id="cam-confirm-assets-permanent-ok">Delete permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cam-confirm-asset-action" class="cam-submodal" hidden aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="cam-submodal__panel">
+      <h3 class="cam-submodal__title" id="cam-confirm-asset-title"></h3>
+      <p class="cam-submodal__body" id="cam-confirm-asset-body"></p>
+      <div class="cam-submodal__footer">
+        <button type="button" class="cam-btn" data-cam-confirm-cancel="asset-action">Cancel</button>
+        <button type="button" class="cam-btn cam-btn--danger" id="cam-confirm-asset-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
