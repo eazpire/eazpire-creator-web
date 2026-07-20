@@ -73,10 +73,19 @@
           id="cam-sidebar-toggle"
           aria-label="Toggle sidebar"
           aria-expanded="true"
+          aria-controls="cam-sidebar"
           title="Folders"
         >
-          <span class="cam-filter-rail__arrow" aria-hidden="true">‹</span>
-          <span class="cam-filter-rail__icon" aria-hidden="true">🗂️</span>
+          <span class="cam-filter-rail__arrow-zone" aria-hidden="true">
+            <svg class="cam-filter-rail__arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </span>
+          <span class="cam-filter-rail__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+            </svg>
+          </span>
           <span class="cam-filter-rail__label" data-t="creator.assets_manager.folders">Folders</span>
         </button>
       </div>

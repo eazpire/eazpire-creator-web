@@ -148,10 +148,12 @@ body.cam-modal-open {
   min-width: 0;
   min-height: 0;
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: row;
   align-items: stretch;
   position: relative;
+  overflow: hidden;
 }
 .cam-sidebar-wrapper {
   display: flex;
@@ -159,7 +161,8 @@ body.cam-modal-open {
   align-items: stretch;
   align-self: stretch;
   flex: 0 0 auto;
-  min-width: 28px;
+  height: 100%;
+  min-width: 26px;
   min-height: 0;
   position: relative;
   z-index: 12;
@@ -167,6 +170,8 @@ body.cam-modal-open {
 .cam-sidebar {
   width: 240px;
   flex: 0 0 240px;
+  height: 100%;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   border-right: none;
@@ -187,50 +192,59 @@ body.cam-modal-open {
   border-right: none;
   pointer-events: none;
 }
-/* Vertical collapse/expand rail — always visible; becomes the pull-tab when collapsed */
+/*
+ * Full-height orange collapse rail (shop collection filter-rail pattern):
+ * docked to the RIGHT of the sidebar, stretches top→bottom with the modal body.
+ */
 .cam-filter-rail {
-  width: 28px;
-  min-width: 28px;
-  flex: 0 0 28px;
+  width: 26px;
+  min-width: 26px;
+  flex: 0 0 26px;
   flex-shrink: 0;
   align-self: stretch;
+  height: 100%;
   margin: 0;
-  padding: 10px 0 14px;
+  padding: 0;
   border: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.34);
-  color: rgba(255, 255, 255, 0.65);
+  border-right: 1px solid rgba(234, 88, 12, 0.85);
+  background: #f97316;
+  color: #fff;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  position: relative;
   z-index: 2;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, filter 0.2s ease;
 }
 .cam-filter-rail:hover {
-  background: rgba(249, 115, 22, 0.14);
-  color: #fb923c;
+  background: #ea580c;
+  color: #fff;
 }
-/* Collapsed: rail is the only left chrome — make the expand tab obvious */
 .cam-sidebar-wrapper.is-collapsed .cam-filter-rail {
-  background: rgba(18, 12, 28, 0.98);
-  border-right: 1px solid rgba(249, 115, 22, 0.45);
-  color: #fdba74;
-  box-shadow: 4px 0 18px rgba(0, 0, 0, 0.45);
+  background: #f97316;
+  color: #fff;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.35);
 }
 .cam-sidebar-wrapper.is-collapsed .cam-filter-rail:hover {
-  background: rgba(249, 115, 22, 0.18);
-  color: #fb923c;
+  background: #ea580c;
 }
-.cam-filter-rail__arrow {
+.cam-filter-rail__arrow-zone {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 28px;
-  font-size: 16px;
-  line-height: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.cam-filter-rail__arrow {
+  width: 12px;
+  height: 12px;
+  display: block;
+  color: #fff;
   transition: transform 0.28s ease;
 }
 .cam-sidebar-wrapper.is-collapsed .cam-filter-rail__arrow {
@@ -238,9 +252,14 @@ body.cam-modal-open {
 }
 .cam-filter-rail__icon {
   display: flex;
-  opacity: 0;
-  font-size: 14px;
-  line-height: 1;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  width: 16px;
+  height: 16px;
+  color: #fff;
+  opacity: 0.85;
+  flex-shrink: 0;
   transition: opacity 0.2s ease;
 }
 .cam-sidebar-wrapper.is-collapsed .cam-filter-rail__icon,
@@ -254,7 +273,9 @@ body.cam-modal-open {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  opacity: 0;
+  color: #fff;
+  margin-top: 8px;
+  opacity: 0.9;
   transition: opacity 0.2s ease;
 }
 .cam-sidebar-wrapper.is-collapsed .cam-filter-rail__label,
@@ -351,8 +372,10 @@ body.cam-modal-open {
 }
 .cam-main {
   flex: 1 1 auto;
+  align-self: stretch;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: auto;
   padding: 14px;
   padding-bottom: 88px;
@@ -557,7 +580,8 @@ body.cam-modal-open {
     position: absolute;
     inset: 0 auto 0 0;
     z-index: 6;
-    width: min(308px, 90vw);
+    width: min(306px, 90vw);
+    height: 100%;
     transform: translateX(-105%);
     transition: transform 0.2s ease;
   }
@@ -565,18 +589,19 @@ body.cam-modal-open {
     transform: translateX(0);
   }
   .cam-sidebar-wrapper.is-collapsed {
-    width: min(308px, 90vw);
+    width: min(306px, 90vw);
   }
   .cam-sidebar-wrapper.is-collapsed .cam-sidebar {
-    width: min(280px, calc(90vw - 28px));
-    flex-basis: auto;
+    width: min(280px, calc(90vw - 26px)) !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
     opacity: 1;
     pointer-events: auto;
   }
   .cam-filter-rail {
-    /* On mobile the hamburger opens the drawer; keep rail inside drawer */
+    /* On mobile the hamburger opens the drawer; keep orange rail inside drawer */
     border-right: none;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 1px solid rgba(255, 255, 255, 0.22);
   }
   .cam-drawer-scrim {
     display: block;

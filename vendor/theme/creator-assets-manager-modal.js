@@ -172,6 +172,7 @@
   }
 
   var SYSTEM_FOLDER_DEFS = [
+    { system_key: 'unsorted', titleKey: 'folder_unsorted', title: 'Unsorted' },
     { system_key: 'hero_images', titleKey: 'folder_hero_images', title: 'Hero Images' },
     { system_key: 'character_images', titleKey: 'folder_character_images', title: 'Character Images' },
     { system_key: 'motion_videos', titleKey: 'folder_motion_videos', title: 'Motion Videos' }
@@ -223,7 +224,13 @@
 
   function systemParentsForSelect() {
     return (foldersTree || []).filter(function (f) {
-      return f.is_system && f.system_key && f.system_key !== 'hidden' && !f._local;
+      return (
+        f.is_system &&
+        f.system_key &&
+        f.system_key !== 'hidden' &&
+        f.system_key !== 'unsorted' &&
+        !f._local
+      );
     });
   }
 
@@ -241,7 +248,8 @@
     ensureSystemFoldersInTree(foldersTree).forEach(function (parent) {
       var active = currentFolder === parent.id ? ' is-active' : '';
       var label = systemFolderTitle(parent) || parent.title || '';
-      var canAddChild = !parent._local && parent.id;
+      var canAddChild =
+        !parent._local && parent.id && parent.system_key !== 'unsorted';
       html +=
         '<div class="cam-folder-row" data-cam-folder-id="' +
         escapeHtml(parent.id) +
@@ -772,9 +780,7 @@
         var collapsed = wrap.classList.toggle('is-collapsed');
         if (body) body.classList.toggle('is-sidebar-collapsed', collapsed);
         sideToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        // Keep rail markup intact (never replace textContent on the button).
-        var arrow = sideToggle.querySelector('.cam-filter-rail__arrow');
-        if (arrow) arrow.textContent = collapsed ? '›' : '‹';
+        // Keep rail markup intact (CSS rotates the SVG arrow; never set textContent on the button).
       });
     }
 
@@ -784,7 +790,9 @@
         var parentId = null;
         if (currentFolder && currentFolder !== 'all' && currentFolder !== 'hidden') {
           var f = findFolderById(currentFolder);
-          if (f && f.is_system && f.system_key !== 'hidden') parentId = f.id;
+          if (f && f.is_system && f.system_key !== 'hidden' && f.system_key !== 'unsorted') {
+            parentId = f.id;
+          }
           else if (f && f.parent_id) parentId = f.parent_id;
         }
         openFolderSettings('create', { parentId: parentId });
