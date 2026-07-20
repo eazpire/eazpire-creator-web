@@ -59,9 +59,9 @@ const HERO_GRID_CHUNK = 48;
 /** Backend page size for get-shopify-products (limit/offset). */
 const HERO_API_PAGE_SIZE = 48;
 /** How many filtered cards we try to show before stopping auto-prefetch. */
-const HERO_MIN_FILTERED_TARGET = 24;
-/** Max auto pages to fill category/usage filter after first response. */
-const HERO_MAX_AUTO_PAGES = 8;
+const HERO_MIN_FILTERED_TARGET = 36;
+/** Max auto pages to fill category/usage filter after first response (~48/page). */
+const HERO_MAX_AUTO_PAGES = 20;
 /** In-memory + sessionStorage product list cache (per owner/region). */
 const HERO_PRODUCT_CACHE_TTL_MS = 5 * 60 * 1000;
 const heroProductsMemoryCache = new Map();
@@ -1549,12 +1549,20 @@ async function loadMoreHeroProductsPage(opts) {
     var returned = Array.isArray(apiData.products) ? apiData.products.length : 0;
     var pageLimit = typeof apiData.limit === 'number' ? apiData.limit : HERO_API_PAGE_SIZE;
     var pageOffset = typeof apiData.offset === 'number' ? apiData.offset : heroProductsNextOffset;
+    // Advance by D1 page size (page_returned), not response length (drafts inflate length).
+    var pageReturned =
+      typeof apiData.page_returned === 'number'
+        ? apiData.page_returned
+        : typeof apiData.next_offset === 'number'
+          ? Math.max(0, apiData.next_offset - pageOffset)
+          : Math.min(returned, pageLimit);
     if (typeof apiData.has_more === 'boolean') {
       heroProductsHasMore = apiData.has_more;
     } else {
-      heroProductsHasMore = returned >= pageLimit;
+      heroProductsHasMore = pageReturned >= pageLimit;
     }
-    heroProductsNextOffset = pageOffset + returned;
+    heroProductsNextOffset =
+      typeof apiData.next_offset === 'number' ? apiData.next_offset : pageOffset + pageReturned;
     if (heroProductsFetchCtx.cacheKey) persistHeroProductsCache(heroProductsFetchCtx.cacheKey);
     if (!opts.skipFilter) filterHeroProducts();
     return heroProducts.length > before || returned > 0;
@@ -1604,9 +1612,28 @@ async function loadHeroProducts(creatorName, retryCount, options) {
   if (!silent && !forceRefresh) {
     var cached = readHeroProductCache(cacheKey);
     if (cached && applyHeroProductCacheEntry(cached)) {
-      console.log('[HeroModal] Cache hit — showing', heroProducts.length, 'products');
       hideHeroProductSkeletons();
       filterHeroProducts();
+      var cachedFiltered = getCurrentFilteredProducts().length;
+      // Reject tiny caches left by the missing product_key / region-filter bug
+      if (cachedFiltered < 3 && (cached.hasMore || heroProducts.length < 40)) {
+        console.warn(
+          '[HeroModal] Cache looks incomplete (filtered=' +
+            cachedFiltered +
+            ', total=' +
+            heroProducts.length +
+            ') — force refresh'
+        );
+        try {
+          sessionStorage.removeItem('eazHeroProdCache:' + cacheKey);
+        } catch (_e) {}
+        heroProductsMemoryCache.delete(cacheKey);
+        return loadHeroProducts(creatorName, retryCount, { forceRefresh: true });
+      }
+      console.log('[HeroModal] Cache hit — showing', heroProducts.length, 'products');
+      if (heroProductsHasMore && cachedFiltered < HERO_MIN_FILTERED_TARGET) {
+        autoFillHeroFilteredPages(heroProductsLoadGen, HERO_MIN_FILTERED_TARGET).catch(function () {});
+      }
       loadHeroProducts(creatorName, 0, { silent: true, forceRefresh: true }).catch(function (err) {
         console.warn('[HeroModal] Background refresh failed:', err && err.message);
       });
@@ -1681,9 +1708,15 @@ async function loadHeroProducts(creatorName, retryCount, options) {
       var pageProducts = applyHeroRegionKeyFilter(mapShopifyProductsForHeroModal(apiData.products));
       var returned = Array.isArray(apiData.products) ? apiData.products.length : 0;
       var pageLimit = typeof apiData.limit === 'number' ? apiData.limit : HERO_API_PAGE_SIZE;
-      var nextOffset = (typeof apiData.offset === 'number' ? apiData.offset : 0) + returned;
+      var pageOffset = typeof apiData.offset === 'number' ? apiData.offset : 0;
+      var pageReturned =
+        typeof apiData.page_returned === 'number'
+          ? apiData.page_returned
+          : Math.min(returned, pageLimit);
+      var nextOffset =
+        typeof apiData.next_offset === 'number' ? apiData.next_offset : pageOffset + pageReturned;
       var hasMore =
-        typeof apiData.has_more === 'boolean' ? apiData.has_more : returned >= pageLimit;
+        typeof apiData.has_more === 'boolean' ? apiData.has_more : pageReturned >= pageLimit;
 
       // Fallback: published catalogue if first page empty
       if (pageProducts.length === 0 && !hasMore && ownerId) {
@@ -1918,10 +1951,15 @@ function openHeroProductSelectionModalSimple(category, callback, creatorName, op
   // Add callback to modal for when product is selected
   modal._callback = callback;
 
-  // Load products ASAP (cache may paint synchronously)
+  // Load products ASAP (cache may paint synchronously), then fill current category
   Promise.resolve()
     .then(function () {
       return loadHeroProducts(resolvedCreatorName);
+    })
+    .then(function () {
+      if (heroProductsHasMore && getCurrentFilteredProducts().length < HERO_MIN_FILTERED_TARGET) {
+        return autoFillHeroFilteredPages(heroProductsLoadGen, HERO_MIN_FILTERED_TARGET);
+      }
     })
     .catch(function (error) {
       console.error('❌ Failed to load products on modal open:', error);
@@ -2011,6 +2049,15 @@ async function loadHeroUsedProducts(ownerId) {
   }
 }
 
+function heroModalCategoryMatches(product, category) {
+  if (!category || category === 'all') return true;
+  var cat = categorizeHeroProduct(product);
+  if (cat === category) return true;
+  // Modal "Addition" includes non-top garments (same as marketing pair bucket).
+  if (category === 'additional' && cat === 'clothing-other') return true;
+  return false;
+}
+
 function getCurrentFilteredProducts() {
   // Apply region + category filter first (unless "all"), then search filter
   let filteredProducts = heroProducts.filter(product => {
@@ -2021,7 +2068,7 @@ function getCurrentFilteredProducts() {
       normalizeHeroRegionCode(product.region) !== currentHeroRegion
     ) return false;
     if (currentHeroProductCategory === 'all') return true;
-    return categorizeHeroProduct(product) === currentHeroProductCategory;
+    return heroModalCategoryMatches(product, currentHeroProductCategory);
   });
 
   // Apply usage filter: used / unused
