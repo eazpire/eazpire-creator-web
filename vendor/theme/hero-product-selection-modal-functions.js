@@ -56,9 +56,20 @@ let heroGridRenderGen = 0;
 const HERO_GRID_FIRST_CHUNK = 36;
 /** Subsequent append size per animation frame. */
 const HERO_GRID_CHUNK = 48;
+/** Backend page size for get-shopify-products (limit/offset). */
+const HERO_API_PAGE_SIZE = 48;
+/** How many filtered cards we try to show before stopping auto-prefetch. */
+const HERO_MIN_FILTERED_TARGET = 24;
+/** Max auto pages to fill category/usage filter after first response. */
+const HERO_MAX_AUTO_PAGES = 8;
 /** In-memory + sessionStorage product list cache (per owner/region). */
 const HERO_PRODUCT_CACHE_TTL_MS = 5 * 60 * 1000;
 const heroProductsMemoryCache = new Map();
+let heroProductsHasMore = false;
+let heroProductsNextOffset = 0;
+let heroProductsPageLoading = false;
+let heroProductsScrollBound = false;
+let heroProductsFetchCtx = { creatorName: null, ownerId: null, cacheKey: null };
 
 function isHeroProductModalOpen() {
   var modal = document.getElementById('hero-product-selection-modal');
@@ -140,7 +151,120 @@ function applyHeroProductCacheEntry(entry) {
     }
     return p;
   });
+  heroProductsHasMore = !!entry.hasMore;
+  heroProductsNextOffset =
+    typeof entry.nextOffset === 'number' ? entry.nextOffset : heroProducts.length;
   return true;
+}
+
+function showHeroProductSkeletons(count) {
+  var loadingElement = document.getElementById('hero-product-selection-modal-loading');
+  var skel = document.getElementById('hero-product-selection-modal-skeletons');
+  var emptyElement = document.getElementById('hero-product-selection-modal-empty');
+  if (emptyElement) emptyElement.style.display = 'none';
+  if (loadingElement) loadingElement.style.display = 'block';
+  if (!skel) return;
+  var n = Math.max(6, Math.min(count || 12, 24));
+  var html = '';
+  for (var i = 0; i < n; i += 1) {
+    html += '<div class="hero-product-selection-modal__skeleton-card"></div>';
+  }
+  skel.innerHTML = html;
+}
+
+function hideHeroProductSkeletons() {
+  var loadingElement = document.getElementById('hero-product-selection-modal-loading');
+  if (loadingElement) loadingElement.style.display = 'none';
+}
+
+function setHeroLoadMoreStatus(text) {
+  var el = document.getElementById('hero-product-selection-modal-load-more');
+  if (!el) return;
+  if (!text) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.style.display = 'block';
+  el.textContent = text;
+}
+
+function mapShopifyProductsForHeroModal(products) {
+  return (products || [])
+    .map(function (product) {
+      const id = product.id;
+      return {
+        id: id,
+        shopify_product_id: extractNumericProductId(product.id),
+        product_key: product.product_key || null,
+        title: product.title,
+        product_type: product.product_type || 'Produkt',
+        images: product.image ? [{ src: product.image }] : [],
+        tags: product.tags || [],
+        handle: product.handle,
+        price: product.price,
+        currency: product.currency,
+        created_at: product.created_at || null,
+        variantId: product.variantId != null ? String(product.variantId) : null,
+        variants: Array.isArray(product.variants) ? product.variants : [],
+        region: currentHeroRegion,
+        printify_choice: !!product.printify_choice,
+        used: false,
+      };
+    })
+    .map(function (product) {
+      product.used = isHeroProductUsed(product);
+      return product;
+    });
+}
+
+function applyHeroRegionKeyFilter(list) {
+  var products = Array.isArray(list) ? list.slice() : [];
+  if (currentHeroRegion === 'PRINTIFY_CHOICE') {
+    return products.filter(function (product) {
+      return !!(product && product.printify_choice === true);
+    });
+  }
+  if (heroRegionFilteredKeys && heroRegionFilteredKeys.size) {
+    return products.filter(function (product) {
+      return product && product.product_key && heroRegionFilteredKeys.has(String(product.product_key));
+    });
+  }
+  return products;
+}
+
+function mergeHeroProductsUnique(existing, incoming) {
+  var out = Array.isArray(existing) ? existing.slice() : [];
+  var seen = new Set(
+    out.map(function (p) {
+      return normHeroPid(p && (p.id || p.shopify_product_id || p.product_id));
+    }).filter(Boolean)
+  );
+  (incoming || []).forEach(function (p) {
+    var id = normHeroPid(p && (p.id || p.shopify_product_id || p.product_id));
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    out.push(p);
+  });
+  return out;
+}
+
+function bindHeroProductInfiniteScrollOnce() {
+  if (heroProductsScrollBound) return;
+  var scroller = document.getElementById('hero-product-selection-modal-scroll');
+  if (!scroller) return;
+  heroProductsScrollBound = true;
+  scroller.addEventListener(
+    'scroll',
+    function () {
+      if (!heroProductsHasMore || heroProductsPageLoading) return;
+      if (scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 280) return;
+      loadMoreHeroProductsPage().catch(function (err) {
+        console.warn('[HeroModal] load more failed:', err && err.message);
+      });
+    },
+    { passive: true }
+  );
 }
 
 function isHeroProductLoadTimeoutError(error) {
@@ -1332,6 +1456,117 @@ function confirmHeroProductSelection() {
   closeHeroProductSelectionModal();
 }
 
+async function fetchHeroShopifyProductsPage(ownerId, creatorName, offset, limit) {
+  const params = {
+    limit: String(limit),
+    offset: String(offset),
+  };
+  if (ownerId) params.owner_id = ownerId;
+  if (creatorName) params.creator_name = creatorName;
+  return window.creatorApiFetch('get-shopify-products', params);
+}
+
+async function ensureHeroModalSideData(ownerId) {
+  const usedP = ownerId
+    ? loadHeroUsedProducts(ownerId)
+    : Promise.resolve().then(function () {
+        heroUsedProductIds = new Set();
+      });
+  const catalogP = (async function () {
+    heroRegionFilteredKeys = null;
+    try {
+      const catalog = await window.creatorApiFetch('get-catalog-products', { region: currentHeroRegion });
+      if (catalog && catalog.ok) {
+        const allCatalogItems = []
+          .concat(Array.isArray(catalog.products) ? catalog.products : [])
+          .concat(Array.isArray(catalog.preview_products) ? catalog.preview_products : []);
+        const keys = allCatalogItems
+          .map(function (item) {
+            return String((item && item.product_key) || '').trim();
+          })
+          .filter(Boolean);
+        if (keys.length) heroRegionFilteredKeys = new Set(keys);
+      }
+    } catch (catalogErr) {
+      console.warn(
+        '[HeroModal] Could not load region catalog, fallback to unfiltered set:',
+        catalogErr && catalogErr.message ? catalogErr.message : catalogErr
+      );
+    }
+  })();
+  await Promise.all([usedP, catalogP]);
+}
+
+function persistHeroProductsCache(cacheKey) {
+  writeHeroProductCache(cacheKey, {
+    ts: Date.now(),
+    products: heroProducts,
+    usedIds: Array.from(heroUsedProductIds),
+    regionKeys: heroRegionFilteredKeys ? Array.from(heroRegionFilteredKeys) : null,
+    hasMore: heroProductsHasMore,
+    nextOffset: heroProductsNextOffset,
+  });
+}
+
+async function autoFillHeroFilteredPages(loadGen, minFiltered) {
+  var pages = 0;
+  while (
+    loadGen === heroProductsLoadGen &&
+    heroProductsHasMore &&
+    pages < HERO_MAX_AUTO_PAGES &&
+    getCurrentFilteredProducts().length < minFiltered
+  ) {
+    pages += 1;
+    var got = await loadMoreHeroProductsPage({ quiet: true, skipFilter: true });
+    if (!got) break;
+  }
+  if (loadGen === heroProductsLoadGen) filterHeroProducts();
+}
+
+async function loadMoreHeroProductsPage(opts) {
+  opts = opts || {};
+  if (heroProductsPageLoading || !heroProductsHasMore) return false;
+  if (!isHeroProductModalOpen() && !opts.quiet) return false;
+  heroProductsPageLoading = true;
+  if (!opts.quiet) setHeroLoadMoreStatus('Loading more…');
+  var loadGen = heroProductsLoadGen;
+  try {
+    var ownerId = heroProductsFetchCtx.ownerId;
+    var creatorName = heroProductsFetchCtx.creatorName;
+    var apiData = await fetchHeroShopifyProductsPage(
+      ownerId,
+      creatorName,
+      heroProductsNextOffset,
+      HERO_API_PAGE_SIZE
+    );
+    if (loadGen !== heroProductsLoadGen) return false;
+    if (!apiData || !apiData.ok) throw new Error((apiData && apiData.error) || 'API-Fehler');
+    var mapped = applyHeroRegionKeyFilter(mapShopifyProductsForHeroModal(apiData.products));
+    var before = heroProducts.length;
+    heroProducts = sortHeroProductsNewestFirst(mergeHeroProductsUnique(heroProducts, mapped));
+    var returned = Array.isArray(apiData.products) ? apiData.products.length : 0;
+    var pageLimit = typeof apiData.limit === 'number' ? apiData.limit : HERO_API_PAGE_SIZE;
+    var pageOffset = typeof apiData.offset === 'number' ? apiData.offset : heroProductsNextOffset;
+    if (typeof apiData.has_more === 'boolean') {
+      heroProductsHasMore = apiData.has_more;
+    } else {
+      heroProductsHasMore = returned >= pageLimit;
+    }
+    heroProductsNextOffset = pageOffset + returned;
+    if (heroProductsFetchCtx.cacheKey) persistHeroProductsCache(heroProductsFetchCtx.cacheKey);
+    if (!opts.skipFilter) filterHeroProducts();
+    return heroProducts.length > before || returned > 0;
+  } catch (err) {
+    console.warn('[HeroModal] loadMoreHeroProductsPage:', err && err.message);
+    return false;
+  } finally {
+    heroProductsPageLoading = false;
+    if (!opts.quiet) {
+      setHeroLoadMoreStatus(heroProductsHasMore ? '' : '');
+    }
+  }
+}
+
 async function loadHeroProducts(creatorName, retryCount, options) {
   retryCount = retryCount || 0;
   options = options || {};
@@ -1345,9 +1580,10 @@ async function loadHeroProducts(creatorName, retryCount, options) {
   );
   currentHeroUsageContext = usageCtx;
   const cacheKey = heroProductCacheKey(ownerId, currentHeroRegion, creatorName, usageCtx);
+  heroProductsFetchCtx = { creatorName: creatorName || null, ownerId: ownerId, cacheKey: cacheKey };
 
   console.log(
-    '📦 Loading hero products from Shopify API...',
+    '📦 Loading hero products (paged)…',
     creatorName ? 'for creator: ' + creatorName : 'no creator filter',
     'region:',
     currentHeroRegion,
@@ -1361,11 +1597,14 @@ async function loadHeroProducts(creatorName, retryCount, options) {
   const gridElement = document.getElementById('hero-product-selection-modal-grid');
   const emptyElement = document.getElementById('hero-product-selection-modal-empty');
 
-  // Warm cache: paint immediately, refresh in background
+  bindHeroProductInfiniteScrollOnce();
+
+  // Warm cache: paint immediately, refresh first page in background
   if (!silent && !forceRefresh) {
     var cached = readHeroProductCache(cacheKey);
     if (cached && applyHeroProductCacheEntry(cached)) {
       console.log('[HeroModal] Cache hit — showing', heroProducts.length, 'products');
+      hideHeroProductSkeletons();
       filterHeroProducts();
       loadHeroProducts(creatorName, 0, { silent: true, forceRefresh: true }).catch(function (err) {
         console.warn('[HeroModal] Background refresh failed:', err && err.message);
@@ -1375,16 +1614,18 @@ async function loadHeroProducts(creatorName, retryCount, options) {
   }
 
   if (!silent) {
-    loadingElement.style.display = 'block';
-    gridElement.innerHTML = '';
-    emptyElement.style.display = 'none';
+    showHeroProductSkeletons(12);
+    if (gridElement) gridElement.innerHTML = '';
+    if (emptyElement) emptyElement.style.display = 'none';
     teardownHeroStorefrontLazyEnrich();
     heroColorIndexByProductKey = new Map();
     storefrontProductJsonCache = new Map();
+    heroProducts = [];
+    heroProductsHasMore = true;
+    heroProductsNextOffset = 0;
   }
 
   try {
-    // Region tab availability is non-critical — do not block first paint
     if (!silent) {
       Promise.resolve()
         .then(function () {
@@ -1393,151 +1634,83 @@ async function loadHeroProducts(creatorName, retryCount, options) {
         .catch(function () {});
     }
 
-    console.log('🔍 Loading products for owner ID:', ownerId, 'creator name:', creatorName, 'usage:', usageCtx);
+    console.log('🔍 Loading products page 0 for owner ID:', ownerId, 'usage:', usageCtx);
 
-    const params = {};
-    if (ownerId) params.owner_id = ownerId;
-    if (creatorName) params.creator_name = creatorName;
+    await ensureHeroModalSideData(ownerId);
+    if (loadGen !== heroProductsLoadGen) return;
 
-    // Parallel: used-IDs (context-scoped) + region catalog + Shopify products
-    const usedP = ownerId
-      ? loadHeroUsedProducts(ownerId)
-      : Promise.resolve().then(function () {
-          heroUsedProductIds = new Set();
-        });
-
-    const catalogP = (async function () {
-      heroRegionFilteredKeys = null;
-      try {
-        const catalog = await window.creatorApiFetch('get-catalog-products', { region: currentHeroRegion });
-        if (catalog && catalog.ok) {
-          const allCatalogItems = []
-            .concat(Array.isArray(catalog.products) ? catalog.products : [])
-            .concat(Array.isArray(catalog.preview_products) ? catalog.preview_products : []);
-          const keys = allCatalogItems
-            .map(function (item) {
-              return String((item && item.product_key) || '').trim();
-            })
-            .filter(Boolean);
-          if (keys.length) {
-            heroRegionFilteredKeys = new Set(keys);
-          }
-        }
-      } catch (catalogErr) {
-        console.warn(
-          '[HeroModal] Could not load region catalog, fallback to unfiltered set:',
-          catalogErr && catalogErr.message ? catalogErr.message : catalogErr
-        );
-      }
-    })();
-
-    const productsP = window.creatorApiFetch('get-shopify-products', params);
-    const settled = await Promise.all([usedP, catalogP, productsP]);
-    const apiData = settled[2];
-
+    const apiData = await fetchHeroShopifyProductsPage(ownerId, creatorName, 0, HERO_API_PAGE_SIZE);
+    if (loadGen !== heroProductsLoadGen) return;
     if (!apiData.ok) {
       throw new Error(apiData.error || 'API-Fehler beim Laden der Produkte');
     }
 
-    function mapShopifyProducts(products) {
-      return (products || []).map(function(product) {
-        const id = product.id;
-        return {
-          id,
-          shopify_product_id: extractNumericProductId(product.id),
-          product_key: product.product_key || null,
-          title: product.title,
-          product_type: product.product_type || 'Produkt',
-          images: product.image ? [{ src: product.image }] : [],
-          tags: product.tags || [],
-          handle: product.handle,
-          price: product.price,
-          currency: product.currency,
-          created_at: product.created_at || null,
-          variantId: product.variantId != null ? String(product.variantId) : null,
-          variants: Array.isArray(product.variants) ? product.variants : [],
-          region: currentHeroRegion,
-          used: false
-        };
-      }).map(function(product) {
-        product.used = isHeroProductUsed(product);
-        return product;
-      });
-    }
+    var pageProducts = applyHeroRegionKeyFilter(mapShopifyProductsForHeroModal(apiData.products));
+    var returned = Array.isArray(apiData.products) ? apiData.products.length : 0;
+    var pageLimit = typeof apiData.limit === 'number' ? apiData.limit : HERO_API_PAGE_SIZE;
+    heroProductsNextOffset = (typeof apiData.offset === 'number' ? apiData.offset : 0) + returned;
+    heroProductsHasMore =
+      typeof apiData.has_more === 'boolean' ? apiData.has_more : returned >= pageLimit;
 
-    /** Published rows from D1/API have no variant list until storefront JSON enrichment. */
-    function mapPublishedProducts(products) {
-      return (products || []).map(function(product) {
-        const id = product.shopify_product_id || product.product_key || product.id;
-        var image = product.featured_image || null;
-        return {
-          id: String(id || ''),
-          shopify_product_id: extractNumericProductId(product.shopify_product_id || id),
-          product_key: product.product_key || null,
-          title: product.product_name || product.title || product.product_key || 'Produkt',
-          product_type: product.product_type || 'Produkt',
-          images: image ? [{ src: image }] : [],
-          tags: [],
-          handle: product.shopify_handle || product.handle || null,
-          storefront_url: product.storefront_url || null,
-          price: product.price || null,
-          currency: product.currency || null,
-          last_published_at: product.last_published_at != null ? product.last_published_at : null,
-          variants: [],
-          region: currentHeroRegion,
-          used: false
-        };
-      }).map(function(product) {
-        product.used = isHeroProductUsed(product);
-        return product;
-      });
-    }
-
-    heroProducts = sortHeroProductsNewestFirst(mapShopifyProducts(apiData.products));
-
-    if (currentHeroRegion === 'PRINTIFY_CHOICE') {
-      heroProducts = heroProducts.filter(function (product) {
-        return !!(product && product.printify_choice === true);
-      });
-    } else if (heroRegionFilteredKeys && heroRegionFilteredKeys.size) {
-      heroProducts = heroProducts.filter(function (product) {
-        return product && product.product_key && heroRegionFilteredKeys.has(String(product.product_key));
-      });
-    }
-
-    // If Shopify admin/storefront source is unavailable or empty,
-    // use published products so the user still sees all own products.
-    if (heroProducts.length === 0 && ownerId) {
+    // Fallback: published catalogue if first page empty
+    if (pageProducts.length === 0 && !heroProductsHasMore && ownerId) {
       const published = await window.creatorApiFetch('get-published-products', { owner_id: ownerId });
       if (published && published.ok && Array.isArray(published.products)) {
-        heroProducts = sortHeroProductsNewestFirst(mapPublishedProducts(published.products));
-        await enrichPublishedHeroProductsFromStorefront(heroProducts);
-        if (currentHeroRegion === 'PRINTIFY_CHOICE') {
-          heroProducts = heroProducts.filter(function (product) {
-            return !!(product && product.printify_choice === true);
-          });
-        } else if (heroRegionFilteredKeys && heroRegionFilteredKeys.size) {
-          heroProducts = heroProducts.filter(function (product) {
-            return product && product.product_key && heroRegionFilteredKeys.has(String(product.product_key));
-          });
-        }
-        console.log('↩️ Hero modal fallback: using published products:', heroProducts.length);
+        pageProducts = applyHeroRegionKeyFilter(
+          sortHeroProductsNewestFirst(
+            (published.products || []).map(function (product) {
+              const id = product.shopify_product_id || product.product_key || product.id;
+              var image = product.featured_image || null;
+              return {
+                id: String(id || ''),
+                shopify_product_id: extractNumericProductId(product.shopify_product_id || id),
+                product_key: product.product_key || null,
+                title: product.product_name || product.title || product.product_key || 'Produkt',
+                product_type: product.product_type || 'Produkt',
+                images: image ? [{ src: image }] : [],
+                tags: [],
+                handle: product.shopify_handle || product.handle || null,
+                storefront_url: product.storefront_url || null,
+                price: product.price || null,
+                currency: product.currency || null,
+                variants: [],
+                region: currentHeroRegion,
+                used: isHeroProductUsed({
+                  id: id,
+                  shopify_product_id: product.shopify_product_id || id,
+                }),
+              };
+            })
+          )
+        );
+        heroProductsHasMore = false;
+        heroProductsNextOffset = pageProducts.length;
+        console.log('↩️ Hero modal fallback: using published products:', pageProducts.length);
       }
     }
 
-    heroProducts = sortHeroProductsNewestFirst(heroProducts);
+    if (silent && forceRefresh) {
+      heroProducts = sortHeroProductsNewestFirst(pageProducts);
+    } else {
+      heroProducts = sortHeroProductsNewestFirst(mergeHeroProductsUnique([], pageProducts));
+    }
 
     if (loadGen !== heroProductsLoadGen) return;
 
-    console.log('✅ Loaded real products:', heroProducts.length);
-    writeHeroProductCache(cacheKey, {
-      ts: Date.now(),
-      products: heroProducts,
-      usedIds: Array.from(heroUsedProductIds),
-      regionKeys: heroRegionFilteredKeys ? Array.from(heroRegionFilteredKeys) : null,
-    });
+    console.log(
+      '✅ Loaded products page:',
+      pageProducts.length,
+      'total cached:',
+      heroProducts.length,
+      'has_more:',
+      heroProductsHasMore
+    );
+    persistHeroProductsCache(cacheKey);
+    hideHeroProductSkeletons();
     filterHeroProducts();
 
+    // Keep fetching pages until category/usage filter has enough visible cards
+    await autoFillHeroFilteredPages(loadGen, HERO_MIN_FILTERED_TARGET);
   } catch (error) {
     if (loadGen !== heroProductsLoadGen) return;
 
@@ -1547,11 +1720,6 @@ async function loadHeroProducts(creatorName, retryCount, options) {
     }
 
     console.error('❌ Error loading products:', error);
-    console.error('❌ Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
 
     if (silent || !isHeroProductModalOpen()) {
       console.warn('[HeroModal] Product load failed without open modal — no user alert');
@@ -1562,18 +1730,17 @@ async function loadHeroProducts(creatorName, retryCount, options) {
       ? 'Die Anfrage hat zu lange gedauert. Bitte erneut versuchen.'
       : error.message;
 
-    // Show error in UI
-    loadingElement.style.display = 'none';
+    hideHeroProductSkeletons();
+    if (loadingElement) loadingElement.style.display = 'none';
     emptyElement.style.display = 'block';
-    emptyElement.innerHTML = `
-      <div style="text-align: center;">
-        <p style="margin-bottom: 12px;">Fehler beim Laden der Produkte</p>
-        <p style="font-size: 14px; color: #9ca3af; margin-bottom: 16px;">${escapeHtmlText(displayMessage)}</p>
-        <button onclick="retryLoadHeroProducts()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
-          Erneut versuchen
-        </button>
-      </div>
-    `;
+    emptyElement.innerHTML =
+      '<div style="text-align: center;">' +
+      '<p style="margin-bottom: 12px;">Fehler beim Laden der Produkte</p>' +
+      '<p style="font-size: 14px; color: #9ca3af; margin-bottom: 16px;">' +
+      escapeHtmlText(displayMessage) +
+      '</p>' +
+      '<button onclick="retryLoadHeroProducts()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">' +
+      'Erneut versuchen</button></div>';
 
     showHeroProductError('Fehler beim Laden der Produkte: ' + displayMessage);
   }
@@ -2215,6 +2382,9 @@ function setHeroProductUsageFilter(mode) {
   }
 
   filterHeroProducts();
+  if (heroProductsHasMore && getCurrentFilteredProducts().length < HERO_MIN_FILTERED_TARGET) {
+    autoFillHeroFilteredPages(heroProductsLoadGen, HERO_MIN_FILTERED_TARGET).catch(function () {});
+  }
 }
 
 function setHeroProductRegionFilter(regionCode) {
@@ -2579,11 +2749,19 @@ window.scheduleHeroMarketingAutoPick = function scheduleHeroMarketingAutoPick(op
 document.addEventListener('DOMContentLoaded', function () {
   const searchInput = document.getElementById('hero-product-selection-modal-search');
   if (searchInput) {
+    var searchTimer = null;
     searchInput.addEventListener('input', function () {
       filterHeroProducts();
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        if (heroProductsHasMore && getCurrentFilteredProducts().length < HERO_MIN_FILTERED_TARGET) {
+          autoFillHeroFilteredPages(heroProductsLoadGen, HERO_MIN_FILTERED_TARGET).catch(function () {});
+        }
+      }, 220);
     });
   }
   bindHeroProductGridDelegationOnce();
+  bindHeroProductInfiniteScrollOnce();
 });
 
 document.addEventListener('keydown', function (e) {

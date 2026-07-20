@@ -17,8 +17,10 @@
       ? window.CreatorHeroRegions.resolveFromShopContext()
       : 'EU');
 
-  var characterImageUrl = null;
+  var modelImageUrl = null;
   var backgroundImageUrl = null;
+  /** Per-slot Active/Inactive — Inactive excludes image from generate payload. */
+  var slotActive = { model: true, background: true };
   var selectedRatio = '9:16';
   var charContexts = [];
 
@@ -108,6 +110,53 @@
     return window.selectedCharacterRegion || null;
   }
 
+  function renderSlotActiveToggle(slot) {
+    var active = slotActive[slot] !== false;
+    return (
+      '<div class="ccg-slot-active" data-ccg-slot-active="' +
+      escapeAttr(slot) +
+      '" role="group" aria-label="' +
+      escapeAttr(i18n('slot_active', 'Active')) +
+      '">' +
+      '<button type="button" class="ccg-slot-active__btn' +
+      (active ? ' is-selected' : '') +
+      '" data-ccg-slot-active-btn="' +
+      escapeAttr(slot) +
+      '" data-ccg-slot-active-value="1" aria-pressed="' +
+      (active ? 'true' : 'false') +
+      '">' +
+      escapeAttr(i18n('slot_active', 'Active')) +
+      '</button>' +
+      '<button type="button" class="ccg-slot-active__btn' +
+      (!active ? ' is-selected' : '') +
+      '" data-ccg-slot-active-btn="' +
+      escapeAttr(slot) +
+      '" data-ccg-slot-active-value="0" aria-pressed="' +
+      (!active ? 'true' : 'false') +
+      '">' +
+      escapeAttr(i18n('slot_inactive', 'Inactive')) +
+      '</button></div>'
+    );
+  }
+
+  function syncSlotActiveUi(ctx) {
+    if (!ctx || !ctx.container) return;
+    ['model', 'background'].forEach(function (slot) {
+      var active = slotActive[slot] !== false;
+      var area = ctx.container.querySelector('[data-ccg-upload="' + slot + '"]');
+      if (area) {
+        area.classList.toggle('is-slot-inactive', !active);
+        area.setAttribute('aria-disabled', active ? 'false' : 'true');
+      }
+      ctx.container.querySelectorAll('[data-ccg-slot-active-btn="' + slot + '"]').forEach(function (btn) {
+        var on = btn.getAttribute('data-ccg-slot-active-value') === '1';
+        var selected = on === active;
+        btn.classList.toggle('is-selected', selected);
+        btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      });
+    });
+  }
+
   function render(container) {
     if (!container) return;
     // Same grid shell as Hero: selector (top) → uploads (left) + prompt+ratios (right)
@@ -135,18 +184,20 @@
       '<div class="creator-hero-product-preview" data-ccg-preview="addition"><div class="creator-hero-preview-media" data-ccg-preview-media="addition"></div><span class="creator-hero-product-preview-info" data-ccg-preview-info="addition"></span><button type="button" class="creator-hero-product-preview-remove" data-ccg-remove="addition" aria-label="Remove">×</button></div>' +
       '</div></div></div>' +
       '<div class="creator-hero-upload-grid">' +
-      '<div class="creator-hero-upload-area" data-ccg-upload="character">' +
+      '<div class="creator-hero-upload-area" data-ccg-upload="model">' +
+      renderSlotActiveToggle('model') +
       '<div class="creator-hero-upload-icon">👤</div>' +
       '<div class="creator-hero-upload-title">' +
-      escapeAttr(i18n('character_label', 'Character')) +
+      escapeAttr(i18n('model_label', 'Model')) +
       '</div>' +
       '<div class="creator-hero-upload-text">' +
-      escapeAttr(i18n('character_upload_hint', 'Upload your character reference image')) +
+      escapeAttr(i18n('model_upload_hint', 'Upload your mock model image')) +
       '</div>' +
-      '<input type="file" accept="image/*" class="creator-hero-upload-input" data-ccg-input="character">' +
-      '<div class="creator-hero-upload-preview" data-ccg-upload-preview="character"><img data-ccg-upload-img="character" alt=""><button type="button" class="creator-hero-upload-preview-remove" data-ccg-upload-remove="character">×</button></div>' +
+      '<input type="file" accept="image/*" class="creator-hero-upload-input" data-ccg-input="model">' +
+      '<div class="creator-hero-upload-preview" data-ccg-upload-preview="model"><img data-ccg-upload-img="model" alt=""><button type="button" class="creator-hero-upload-preview-remove" data-ccg-upload-remove="model">×</button></div>' +
       '</div>' +
       '<div class="creator-hero-upload-area" data-ccg-upload="background">' +
+      renderSlotActiveToggle('background') +
       '<div class="creator-hero-upload-icon">🌅</div>' +
       '<div class="creator-hero-upload-title">' +
       escapeAttr(i18n('background_label', 'Background')) +
@@ -159,10 +210,11 @@
       '</div></div>' +
       '<div class="creator-hero-prompt-section creator-hero-prompt-section--with-ratios">' +
       '<textarea class="creator-hero-prompt-input creator-hero-prompt-input--compact" data-ccg-prompt placeholder="' +
-      escapeAttr(i18n('prompt_placeholder', 'Describe the character scene…')) +
+      escapeAttr(i18n('prompt_placeholder', 'Describe the character scene… (optional)')) +
       '" rows="3"></textarea>' +
       renderRatioGrid() +
       '</div></div>';
+    syncSlotActiveUi({ container: container });
   }
 
   function setProductPreview(ctx, category, product) {
@@ -258,7 +310,7 @@
         return {};
       });
       if (data.ok && data.url) {
-        if (slot === 'character') characterImageUrl = data.url;
+        if (slot === 'model') modelImageUrl = data.url;
         else backgroundImageUrl = data.url;
         var preview = ctx.container.querySelector('[data-ccg-upload-preview="' + slot + '"]');
         var img = ctx.container.querySelector('[data-ccg-upload-img="' + slot + '"]');
@@ -276,7 +328,7 @@
   }
 
   function clearUpload(ctx, slot) {
-    if (slot === 'character') characterImageUrl = null;
+    if (slot === 'model') modelImageUrl = null;
     else backgroundImageUrl = null;
     var preview = ctx.container.querySelector('[data-ccg-upload-preview="' + slot + '"]');
     var img = ctx.container.querySelector('[data-ccg-upload-img="' + slot + '"]');
@@ -409,8 +461,10 @@
           product_ids: products.ids,
           product_image_urls: products.urls,
           prompt: prompt,
-          model_image_url: characterImageUrl || undefined,
-          background_image_url: backgroundImageUrl || undefined,
+          model_image_url:
+            slotActive.model !== false && modelImageUrl ? modelImageUrl : undefined,
+          background_image_url:
+            slotActive.background !== false && backgroundImageUrl ? backgroundImageUrl : undefined,
           aspect_ratio: selectedRatio,
           region: window.selectedCharacterRegion || 'EU',
           asset_kind: 'character',
@@ -481,11 +535,11 @@
       var sel = window.selectedCharacterProducts || {};
       if (sel.top) setProductPreview(ctx, 'top', sel.top);
       if (sel.addition) setProductPreview(ctx, 'addition', sel.addition);
-      if (characterImageUrl) {
-        var cPrev = ctx.container.querySelector('[data-ccg-upload-preview="character"]');
-        var cImg = ctx.container.querySelector('[data-ccg-upload-img="character"]');
-        var cArea = ctx.container.querySelector('[data-ccg-upload="character"]');
-        if (cImg) cImg.src = characterImageUrl;
+      if (modelImageUrl) {
+        var cPrev = ctx.container.querySelector('[data-ccg-upload-preview="model"]');
+        var cImg = ctx.container.querySelector('[data-ccg-upload-img="model"]');
+        var cArea = ctx.container.querySelector('[data-ccg-upload="model"]');
+        if (cImg) cImg.src = modelImageUrl;
         if (cPrev) cPrev.classList.add('show');
         if (cArea) cArea.classList.add('has-image');
       }
@@ -497,6 +551,7 @@
         if (bPrev) bPrev.classList.add('show');
         if (bArea) bArea.classList.add('has-image');
       }
+      syncSlotActiveUi(ctx);
       syncRatioUi(ctx);
       updateReady(ctx);
     } catch (e) {
@@ -546,18 +601,32 @@
         });
       });
 
-      ['character', 'background'].forEach(function (slot) {
+      ctx.container.querySelectorAll('[data-ccg-slot-active-btn]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var slot = btn.getAttribute('data-ccg-slot-active-btn');
+          var on = btn.getAttribute('data-ccg-slot-active-value') === '1';
+          if (!slot) return;
+          slotActive[slot] = on;
+          syncSlotActiveUi(ctx);
+        });
+      });
+
+      ['model', 'background'].forEach(function (slot) {
         var area = ctx.container.querySelector('[data-ccg-upload="' + slot + '"]');
         var input = ctx.container.querySelector('[data-ccg-input="' + slot + '"]');
         var remove = ctx.container.querySelector('[data-ccg-upload-remove="' + slot + '"]');
         if (area) {
           area.addEventListener('click', function (e) {
             if (e.target && e.target.closest && e.target.closest('[data-ccg-upload-remove]')) return;
+            if (e.target && e.target.closest && e.target.closest('[data-ccg-slot-active]')) return;
+            if (slotActive[slot] === false) return;
             if (window.CreatorImageAddMedia && typeof window.CreatorImageAddMedia.open === 'function') {
               window.CreatorImageAddMedia.open({
                 purpose: 'character-' + slot,
                 onUrl: function (url) {
-                  if (slot === 'character') characterImageUrl = url;
+                  if (slot === 'model') modelImageUrl = url;
                   else backgroundImageUrl = url;
                   var preview = ctx.container.querySelector('[data-ccg-upload-preview="' + slot + '"]');
                   var img = ctx.container.querySelector('[data-ccg-upload-img="' + slot + '"]');

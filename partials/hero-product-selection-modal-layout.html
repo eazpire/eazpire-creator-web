@@ -1,20 +1,75 @@
 <style>
 /* Hero Product Selection Modal - Erweitert creator-modal-base.css */
 
+/* Fullscreen — never clipped off-screen */
+#hero-product-selection-modal.creator-modal,
+#hero-product-selection-modal.creator-modal--open {
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  padding: 0 !important;
+}
+#hero-product-selection-modal .creator-modal__dialog,
 #hero-product-selection-modal .creator-modal__dialog--large {
-  min-height: 680px;
-  max-height: 95vh;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+#hero-product-selection-modal .creator-modal__header {
+  flex-shrink: 0;
+}
+#hero-product-selection-modal .creator-modal__body,
+#hero-product-selection-modal .creator-modal__body--no-padding {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#hero-product-selection-modal .creator-modal__footer,
+#hero-product-selection-modal .hero-product-selection-modal__footer {
+  flex-shrink: 0;
 }
 
 /* Grid View - Shows all user products */
 .hero-product-selection-modal__grid-view {
   display: flex;
   flex-direction: column;
-  height: calc(95vh - 80px); /* Header height */
-  max-height: calc(95vh - 80px);
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none;
   overflow: hidden;
   min-height: 0;
+}
+
+.hero-product-selection-modal__skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  padding: 4px 0 16px;
+}
+.hero-product-selection-modal__skeleton-card {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid #374151;
+  background: linear-gradient(110deg, #1f2937 8%, #374151 18%, #1f2937 33%);
+  background-size: 200% 100%;
+  animation: heroProdSkeletonShine 1.1s linear infinite;
+}
+@keyframes heroProdSkeletonShine {
+  to { background-position-x: -200%; }
+}
+.hero-product-selection-modal__loading-status {
+  text-align: center;
+  padding: 8px 12px 14px;
+  color: #9ca3af;
+  font-size: 13px;
 }
 
 /* Fixed Search Bar */
@@ -507,9 +562,10 @@
         </div>
 
         <!-- Scrollable Grid Container -->
-        <div class="hero-product-selection-modal__grid-container" data-allow-scroll="true">
+        <div class="hero-product-selection-modal__grid-container" data-allow-scroll="true" id="hero-product-selection-modal-scroll">
           <div id="hero-product-selection-modal-loading" class="hero-product-selection-modal__loading" style="display: none;">
-            Lade Produkte…
+            <div class="hero-product-selection-modal__loading-status">Lade Produkte…</div>
+            <div class="hero-product-selection-modal__skeleton-grid" id="hero-product-selection-modal-skeletons" aria-hidden="true"></div>
           </div>
           <div id="hero-product-selection-modal-empty" class="hero-product-selection-modal__empty" style="display: none;">
             Keine Produkte in dieser Kategorie gefunden.
@@ -517,6 +573,7 @@
           <div id="hero-product-selection-modal-grid" class="hero-product-selection-modal__grid">
             <!-- Products will be loaded via JavaScript -->
           </div>
+          <div id="hero-product-selection-modal-load-more" class="hero-product-selection-modal__loading-status" style="display:none" aria-live="polite"></div>
         </div>
       </div>
     </div>
