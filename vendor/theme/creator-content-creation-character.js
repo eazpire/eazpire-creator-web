@@ -448,7 +448,13 @@
       setProductPreview(ctx, category, product);
     };
     var opts = { lockedRegion: getLockedRegionFromCurrentSelection() };
+    var modalEl = document.getElementById('hero-product-selection-modal');
     if (typeof window.openHeroProductSelectionModalSimple === 'function') {
+      if (!modalEl) {
+        console.error('[ContentCreationCharacter] Product modal markup missing (#hero-product-selection-modal)');
+        alert('Produktauswahl-Modal nicht verfügbar.');
+        return;
+      }
       window.openHeroProductSelectionModalSimple(modalCategory, onPick, opts);
       return;
     }
@@ -456,119 +462,182 @@
       window.openHeroProductSelectionModal(modalCategory, onPick, opts);
       return;
     }
+    console.error('[ContentCreationCharacter] openHeroProductSelectionModalSimple missing');
     alert('Produktauswahl-Modal nicht verfügbar.');
   }
 
-  function bind(ctx) {
-    if (!ctx || !ctx.container || ctx.container.getAttribute('data-ccg-form-bound') === '1') return;
-    ctx.container.setAttribute('data-ccg-form-bound', '1');
-
-    ctx.container.querySelectorAll('[data-ccg-category]').forEach(function (card) {
-      card.addEventListener('click', function (e) {
-        if (e.target && e.target.closest && e.target.closest('[data-ccg-remove]')) return;
-        var cat = card.getAttribute('data-ccg-category');
-        openProductPicker(ctx, cat);
-      });
-    });
-    ctx.container.querySelectorAll('[data-ccg-remove]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        clearProduct(ctx, btn.getAttribute('data-ccg-remove'));
-      });
-    });
-
-    ['character', 'background'].forEach(function (slot) {
-      var area = ctx.container.querySelector('[data-ccg-upload="' + slot + '"]');
-      var input = ctx.container.querySelector('[data-ccg-input="' + slot + '"]');
-      var remove = ctx.container.querySelector('[data-ccg-upload-remove="' + slot + '"]');
-      if (area) {
-        area.addEventListener('click', function (e) {
-          if (e.target && e.target.closest && e.target.closest('[data-ccg-upload-remove]')) return;
-          if (window.CreatorImageAddMedia && typeof window.CreatorImageAddMedia.open === 'function') {
-            window.CreatorImageAddMedia.open({
-              purpose: 'character-' + slot,
-              onUrl: function (url) {
-                if (slot === 'character') characterImageUrl = url;
-                else backgroundImageUrl = url;
-                var preview = ctx.container.querySelector('[data-ccg-upload-preview="' + slot + '"]');
-                var img = ctx.container.querySelector('[data-ccg-upload-img="' + slot + '"]');
-                if (img) img.src = url;
-                if (preview) preview.classList.add('show');
-                area.classList.add('has-image');
-              },
-              onFile: function (file) {
-                uploadSlot(ctx, slot, file);
-              },
-            });
-            return;
-          }
-          if (input) input.click();
-        });
+  function refreshBoundHost(ctx) {
+    if (!ctx || !ctx.container) return;
+    try {
+      var sel = window.selectedCharacterProducts || {};
+      if (sel.top) setProductPreview(ctx, 'top', sel.top);
+      if (sel.addition) setProductPreview(ctx, 'addition', sel.addition);
+      if (characterImageUrl) {
+        var cPrev = ctx.container.querySelector('[data-ccg-upload-preview="character"]');
+        var cImg = ctx.container.querySelector('[data-ccg-upload-img="character"]');
+        var cArea = ctx.container.querySelector('[data-ccg-upload="character"]');
+        if (cImg) cImg.src = characterImageUrl;
+        if (cPrev) cPrev.classList.add('show');
+        if (cArea) cArea.classList.add('has-image');
       }
-      if (input) {
-        input.addEventListener('change', function () {
-          var file = input.files && input.files[0];
-          if (file) uploadSlot(ctx, slot, file);
-        });
+      if (backgroundImageUrl) {
+        var bPrev = ctx.container.querySelector('[data-ccg-upload-preview="background"]');
+        var bImg = ctx.container.querySelector('[data-ccg-upload-img="background"]');
+        var bArea = ctx.container.querySelector('[data-ccg-upload="background"]');
+        if (bImg) bImg.src = backgroundImageUrl;
+        if (bPrev) bPrev.classList.add('show');
+        if (bArea) bArea.classList.add('has-image');
       }
-      if (remove) {
-        remove.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          clearUpload(ctx, slot);
-        });
-      }
-    });
-
-    ctx.container.querySelectorAll('[data-ccg-ratio]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        selectedRatio = btn.getAttribute('data-ccg-ratio') || '9:16';
-        syncRatioUi(ctx);
-      });
-    });
-
-    var promptEl = ctx.container.querySelector('[data-ccg-prompt]');
-    if (promptEl) {
-      promptEl.addEventListener('input', function () {
-        updateReady(ctx);
-      });
+      syncRatioUi(ctx);
+      updateReady(ctx);
+    } catch (e) {
+      console.warn('[ContentCreationCharacter] refreshBoundHost failed', e);
     }
-
-    if (ctx.startBtn) {
-      ctx.startBtn.addEventListener('click', function () {
-        generate(ctx);
-      });
-    }
-
-    syncRatioUi(ctx);
-    updateReady(ctx);
   }
 
-  function setupHost(el) {
-    if (!el) return;
-    var contextEl = el.closest('.creator-hero-create-context') || document.getElementById('creatorCharacterGeneratorModalContext');
-    render(el);
-    var ctx = {
-      container: el,
-      contextEl: contextEl,
-      startBtn: contextEl ? contextEl.querySelector('[data-ccg-eazy-start]') : null,
-      statusEl: contextEl ? contextEl.querySelector('[data-ccg-status]') : null,
-      generating: false,
-    };
-    charContexts = charContexts.filter(function (c) {
-      return c.container && document.body.contains(c.container);
-    });
-    charContexts.push(ctx);
-    bind(ctx);
+  /**
+   * Match Hero: render once, bind once. Re-scan on modal open must NOT wipe listeners.
+   */
+  function bind(ctx) {
+    if (!ctx || !ctx.container) return;
+
+    if (ctx.container.getAttribute('data-ccg-form-bound') === '1') {
+      var existingIx = charContexts.findIndex(function (c) {
+        return c.container === ctx.container;
+      });
+      if (existingIx >= 0) {
+        charContexts[existingIx].contextEl = ctx.contextEl || charContexts[existingIx].contextEl;
+        charContexts[existingIx].startBtn = ctx.startBtn || charContexts[existingIx].startBtn;
+        charContexts[existingIx].statusEl = ctx.statusEl || charContexts[existingIx].statusEl;
+        refreshBoundHost(charContexts[existingIx]);
+      } else {
+        charContexts.push(ctx);
+        refreshBoundHost(ctx);
+      }
+      return;
+    }
+
+    try {
+      ctx.container.setAttribute('data-ccg-form-bound', '1');
+      render(ctx.container);
+
+      ctx.container.querySelectorAll('[data-ccg-category]').forEach(function (card) {
+        card.addEventListener('click', function (e) {
+          if (e.target && e.target.closest && e.target.closest('[data-ccg-remove]')) return;
+          if (e.target && e.target.closest && e.target.closest('.creator-product-image-carousel__btn')) return;
+          var cat = card.getAttribute('data-ccg-category');
+          openProductPicker(ctx, cat);
+        });
+      });
+      ctx.container.querySelectorAll('[data-ccg-remove]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          clearProduct(ctx, btn.getAttribute('data-ccg-remove'));
+        });
+      });
+
+      ['character', 'background'].forEach(function (slot) {
+        var area = ctx.container.querySelector('[data-ccg-upload="' + slot + '"]');
+        var input = ctx.container.querySelector('[data-ccg-input="' + slot + '"]');
+        var remove = ctx.container.querySelector('[data-ccg-upload-remove="' + slot + '"]');
+        if (area) {
+          area.addEventListener('click', function (e) {
+            if (e.target && e.target.closest && e.target.closest('[data-ccg-upload-remove]')) return;
+            if (window.CreatorImageAddMedia && typeof window.CreatorImageAddMedia.open === 'function') {
+              window.CreatorImageAddMedia.open({
+                purpose: 'character-' + slot,
+                onUrl: function (url) {
+                  if (slot === 'character') characterImageUrl = url;
+                  else backgroundImageUrl = url;
+                  var preview = ctx.container.querySelector('[data-ccg-upload-preview="' + slot + '"]');
+                  var img = ctx.container.querySelector('[data-ccg-upload-img="' + slot + '"]');
+                  if (img) img.src = url;
+                  if (preview) preview.classList.add('show');
+                  area.classList.add('has-image');
+                },
+                onFile: function (file) {
+                  uploadSlot(ctx, slot, file);
+                },
+              });
+              return;
+            }
+            if (input) input.click();
+          });
+        }
+        if (input) {
+          input.addEventListener('change', function () {
+            var file = input.files && input.files[0];
+            if (file) uploadSlot(ctx, slot, file);
+          });
+        }
+        if (remove) {
+          remove.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearUpload(ctx, slot);
+          });
+        }
+      });
+
+      ctx.container.querySelectorAll('[data-ccg-ratio]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          selectedRatio = btn.getAttribute('data-ccg-ratio') || '9:16';
+          syncRatioUi(ctx);
+        });
+      });
+
+      var promptEl = ctx.container.querySelector('[data-ccg-prompt]');
+      if (promptEl) {
+        promptEl.addEventListener('input', function () {
+          updateReady(ctx);
+        });
+      }
+
+      if (ctx.startBtn) {
+        ctx.startBtn.addEventListener('click', function () {
+          if (ctx.startBtn.disabled) return;
+          generate(ctx);
+        });
+      }
+
+      charContexts = charContexts.filter(function (c) {
+        return c.container && document.body.contains(c.container);
+      });
+      charContexts.push(ctx);
+      syncRatioUi(ctx);
+      updateReady(ctx);
+    } catch (err) {
+      console.error('[ContentCreationCharacter] bind failed', err);
+      try {
+        ctx.container.removeAttribute('data-ccg-form-bound');
+      } catch (_e) {}
+    }
   }
 
   function scanHosts() {
-    document.querySelectorAll('[data-creator-character-host]').forEach(setupHost);
+    document.querySelectorAll('[data-creator-character-host]').forEach(function (host) {
+      var contextEl =
+        host.closest('.creator-hero-create-context') ||
+        document.getElementById('creatorCharacterGeneratorModalContext');
+      bind({
+        container: host,
+        contextEl: contextEl,
+        startBtn: contextEl ? contextEl.querySelector('[data-ccg-eazy-start]') : null,
+        statusEl: contextEl ? contextEl.querySelector('[data-ccg-status]') : null,
+        generating: false,
+      });
+    });
   }
 
   function init() {
-    scanHosts();
+    try {
+      scanHosts();
+    } catch (err) {
+      console.error('[ContentCreationCharacter] init failed', err);
+    }
   }
 
   if (document.readyState === 'loading') {

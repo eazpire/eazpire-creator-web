@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS changes. /vendor + Creations bundle are cached ~7d. */
-  var PORTAL_ASSET_V = "hero-product-modal-20260720c";
+  var PORTAL_ASSET_V = "ccg-bind-fix-20260720d";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -359,13 +359,19 @@
       await injectPartial("creator-image-add-media.html");
       await injectPartial("hero-product-selection-modal-layout.html");
       loadCss(asset("creator-modal-base.css"));
+      try {
+        var heroProdModal = document.getElementById("hero-product-selection-modal");
+        if (heroProdModal && heroProdModal.parentElement !== document.body) {
+          document.body.appendChild(heroProdModal);
+        }
+      } catch (eMoveHeroModal) {}
       await injectPartial("creator-character-generator-modal.html");
       loadCss(asset("creator-character-generator-modal.css"));
       await injectPartial("creator-hero-images-modal.html");
       loadCss(asset("creator-hero-images-modal.css"));
 
       // Core skill-tree + SMM open API before marketing bind (SMM click must not be optional).
-      // Product picker modal must load before Hero/Character generators.
+      // Product picker + generator shells must load before Hero/Character UI binds.
       await loadScriptsSequential([
         asset("creator-phone-upload-modal.js"),
         asset("creator-footer-eaz-ui.js"),
@@ -375,6 +381,8 @@
         asset("hero-product-selection-modal-functions.js"),
         asset("hero-eazy-legacy-bridge.js"),
         asset("creator-image-add-media.js"),
+        asset("creator-hero-images-modal.js"),
+        asset("creator-character-generator-modal.js"),
         asset("creator-content-creation-hero.js"),
         asset("creator-content-creation-character.js"),
         asset("creator-content-creation-images.js"),
@@ -393,10 +401,8 @@
 
       applyMarketingDeepLink();
 
-      // Leaf UIs (hero modal / video studio) — optional so missing vendor files do not block expand.
+      // Leaf UIs (video studio) — optional so missing vendor files do not block expand.
       await loadScriptsSequentialOptional([
-        asset("creator-hero-images-modal.js"),
-        asset("creator-character-generator-modal.js"),
         asset("creator-video-studio-timeline.js"),
         asset("creator-video-studio-modal.js"),
         asset("creator-video-studio-asset-tools.js"),

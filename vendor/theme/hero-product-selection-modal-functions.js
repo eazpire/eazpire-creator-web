@@ -1425,8 +1425,21 @@ async function loadHeroProducts(creatorName, retryCount, options) {
 }
 
 // Neue Funktion: Sofort modal öffnen mit echten Daten (ersetzt Simple-Version)
+// Signature: (category, callback, creatorName?, options?) — 3rd arg may be options object.
 function openHeroProductSelectionModalSimple(category, callback, creatorName, options) {
   console.log('🎯 Opening product selection modal (live data) for category:', category);
+
+  var resolvedCreatorName = creatorName;
+  var resolvedOptions = options;
+  if (
+    resolvedOptions == null &&
+    creatorName &&
+    typeof creatorName === 'object' &&
+    !Array.isArray(creatorName)
+  ) {
+    resolvedOptions = creatorName;
+    resolvedCreatorName = null;
+  }
 
   const modal = document.getElementById('hero-product-selection-modal');
   if (!modal) {
@@ -1443,7 +1456,7 @@ function openHeroProductSelectionModalSimple(category, callback, creatorName, op
   currentHeroProductCategory = normalizeHeroModalCategory(category);
   selectedHeroProduct = null;
   updateHeroProductSelectionButtons();
-  setHeroRegionFromContext(options);
+  setHeroRegionFromContext(resolvedOptions);
 
   // Update modal title with active category
   const titleElement = document.getElementById('hero-product-selection-modal-title');
@@ -1509,11 +1522,13 @@ function openHeroProductSelectionModalSimple(category, callback, creatorName, op
 
   // Load real products (nicht mock data) with creator name - always all products
   setTimeout(() => {
-    loadHeroProducts(creatorName).catch(error => {
+    loadHeroProducts(resolvedCreatorName).catch(error => {
       console.error('❌ Failed to load products on modal open:', error);
     });
   }, 100);
 }
+
+window.openHeroProductSelectionModalSimple = openHeroProductSelectionModalSimple;
 
 // Fallback-Funktion: Mock data laden (nur für Entwicklung/Testing)
 function loadHeroProductsMock() {
