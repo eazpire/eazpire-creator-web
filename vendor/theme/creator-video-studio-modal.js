@@ -1416,7 +1416,10 @@
         }
         statusEl.className = 'cvs-link-status is-success';
       }
-      setTimeout(closeLinkModal, 900);
+      setTimeout(function () {
+        closeLinkModal();
+        closeAddSourceModal();
+      }, 900);
     } catch (e) {
       console.warn('[VideoStudio] link download failed', e);
       if (statusEl) {
@@ -1582,6 +1585,7 @@
   // ── Phone upload (desktop QR flow) → adds the received image as an asset ──
   window.__eazVideoStudioPhoneApply = function (imageUrl) {
     if (!isOpen || !imageUrl) return false;
+    closeAddSourceModal();
     fetch(imageUrl, { mode: 'cors', credentials: 'omit' })
       .then(function (r) {
         if (!r.ok) throw new Error('fetch_failed');
@@ -2597,27 +2601,25 @@
       if (e.target && e.target.id === 'cvsAddSourceModal') closeAddSourceModal();
     });
     on('cvs-addsrc-assets', 'click', function () {
-      closeAddSourceModal();
+      // Keep Add media open underneath Assets / Link / Phone children
       openAssetsLibraryModal();
     });
     on('cvs-addsrc-device', 'click', function () {
-      closeAddSourceModal();
       var input = document.getElementById('cvs-file-input');
       if (input) input.click();
     });
     on('cvs-addsrc-phone', 'click', function () {
-      closeAddSourceModal();
       if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
         window.CreatorPhoneUploadModal.open({ purpose: 'video-studio' });
       }
     });
     on('cvs-addsrc-link', 'click', function () {
-      closeAddSourceModal();
       openLinkModal();
     });
     on('cvs-file-input', 'change', function (e) {
       var files = Array.prototype.slice.call(e.target.files || []);
       e.target.value = '';
+      if (files.length) closeAddSourceModal();
       files.forEach(function (f) {
         uploadFile(f);
       });

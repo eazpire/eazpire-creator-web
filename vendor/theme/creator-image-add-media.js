@@ -266,15 +266,18 @@
         });
         if (data.ok && data.asset && data.asset.url) {
           closeLinkModal();
+          closeAddSource();
           deliverUrl(data.asset.url);
           return;
         }
       }
       // Direct URL fallback for images
       closeLinkModal();
+      closeAddSource();
       deliverUrl(url);
     } catch (e) {
       closeLinkModal();
+      closeAddSource();
       deliverUrl(url);
     }
   }
@@ -286,6 +289,7 @@
   }
 
   function deliverFile(file) {
+    closeAddSource();
     if (activeCb && typeof activeCb.onFile === 'function') {
       activeCb.onFile(file);
     } else if (file && activeCb && typeof activeCb.onUrl === 'function') {
@@ -324,7 +328,10 @@
       window.CreatorVideoStudioModal.openLibraryPicker({
         kind: 'image',
         onPick: function (asset) {
-          if (asset && asset.url) deliverUrl(asset.url);
+          if (asset && asset.url) {
+            closeAddSource();
+            deliverUrl(asset.url);
+          }
         },
       });
       return;
@@ -365,26 +372,26 @@
       if (e.target && e.target.id === 'cimgAddSourceModal') closeAddSource();
     });
     on('cimg-addsrc-assets', 'click', function () {
-      closeAddSource();
+      // Keep Add media open underneath Assets / Link / Phone children
       openAssetsPicker();
     });
     on('cimg-addsrc-device', 'click', function () {
-      closeAddSource();
       triggerDevice();
     });
     on('cimg-addsrc-phone', 'click', function () {
-      closeAddSource();
       if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
         window.CreatorPhoneUploadModal.open({
           purpose: 'hero-image',
           onComplete: function (url) {
-            if (url) deliverUrl(url);
+            if (url) {
+              closeAddSource();
+              deliverUrl(url);
+            }
           },
         });
       }
     });
     on('cimg-addsrc-link', 'click', function () {
-      closeAddSource();
       openLinkModal();
     });
     on('cimg-addsrc-paste', 'click', function () {
@@ -420,6 +427,7 @@
     // Phone upload bridge for hero/character when phone modal completes with image URL
     window.__eazImageAddMediaPhoneApply = function (imageUrl) {
       if (!imageUrl || !activeCb) return false;
+      closeAddSource();
       deliverUrl(imageUrl);
       return true;
     };

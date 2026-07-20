@@ -16,10 +16,17 @@
   var disconnectConfirmPending = null;
 
   var SUBMODAL_IDS = {
+    addMedia: 'smm-add-media',
     asset: 'smm-asset-picker',
+    link: 'smm-link-modal',
     target: 'smm-target-confirm',
     disconnect: 'smm-disconnect-confirm'
   };
+
+  var PHONE_UPLOAD_WORKER_FALLBACK = 'https://creator-engine.eazpire.workers.dev';
+  var linkExtracted = null;
+  var linkPhonePollTimer = null;
+  var linkPhoneSessionId = null;
 
   /** New Post composer state */
   var compose = {
@@ -65,8 +72,22 @@
       if (flat != null && !isBadTranslationString(String(flat))) return String(flat);
       var mobile = window.CreatorMobileI18n && window.CreatorMobileI18n['social_media_manager_' + key];
       if (mobile != null && !isBadTranslationString(String(mobile))) return String(mobile);
+      var vs = window.CreatorI18n && window.CreatorI18n.video_studio;
+      if (vs && vs[key] != null && !isBadTranslationString(String(vs[key]))) {
+        return String(vs[key]);
+      }
+      var vsFlat = window.CreatorI18n && window.CreatorI18n['creator.video_studio.' + key];
+      if (vsFlat != null && !isBadTranslationString(String(vsFlat))) return String(vsFlat);
     } catch (e) {}
     return fallback;
+  }
+
+  function isDesktopViewport() {
+    try {
+      return window.matchMedia && window.matchMedia('(min-width: 768px)').matches;
+    } catch (e) {
+      return window.innerWidth >= 768;
+    }
   }
 
   function getOwnerId() {
@@ -953,21 +974,19 @@
     }
   }
 
-  function setAssetSourceTab(source) {
-    var options = document.querySelectorAll('#smm-source-options [data-smm-source]');
-    Array.prototype.forEach.call(options, function (btn) {
-      btn.classList.toggle('is-active', btn.getAttribute('data-smm-source') === source);
-    });
-    var panes = document.querySelectorAll('[data-smm-source-pane]');
-    Array.prototype.forEach.call(panes, function (pane) {
-      pane.hidden = pane.getAttribute('data-smm-source-pane') !== source;
-    });
-    if (source === 'library') loadComposeAssets();
+  function openAddMediaModal() {
+    var phoneBtn = document.getElementById('smm-addsrc-phone');
+    if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
+    openSubmodal('addMedia');
   }
 
-  function openAssetPickerModal() {
+  function closeAddMediaModal() {
+    closeSubmodal('addMedia');
+  }
+
+  function openAssetsLibraryModal() {
     openSubmodal('asset');
-    setAssetSourceTab('library');
+    loadComposeAssets();
   }
 
   function applyComposeAsset(asset) {
@@ -995,30 +1014,312 @@
       renderChannelCarousel();
     });
     closeSubmodal('asset');
+    closeLinkModal();
+    closeAddMediaModal();
+  }
+
+  function phoneBridgeApiBase() {
+    var cfg = window.CREATOR_API_CONFIG || {};
+    if (cfg.PHONE_UPLOAD_BASE_URL) return String(cfg.PHONE_UPLOAD_BASE_URL).replace(/\/+$/, '');
+    if (cfg.WORKER_BASE_URL) return String(cfg.WORKER_BASE_URL).replace(/\/+$/, '');
+    var base = cfg.BASE_URL ? String(cfg.BASE_URL).replace(/\/+$/, '') : '';
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(base)) return base;
+    var fromApi = String(API_BASE || '').replace(/\/apps\/creator-dispatch$/i, '').replace(/\/+$/, '');
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(fromApi)) return fromApi;
+    return PHONE_UPLOAD_WORKER_FALLBACK;
+  }
+
+  function fetchPhoneBridgeJson(url, options) {
+    return fetch(url, options || { credentials: 'omit' }).then(function (r) {
+      return r
+        .json()
+        .catch(function () {
+          return {};
+        })
+        .then(function (data) {
+          return { httpOk: r.ok, data: data };
+        });
+    });
+  }
+
+  function stopLinkPhoneBridge() {
+    if (linkPhonePollTimer) {
+      clearInterval(linkPhonePollTimer);
+      linkPhonePollTimer = null;
+    }
+    linkPhoneSessionId = null;
+  }
+
+  function setSmmLinkStatus(msg, kind) {
+    var status = document.getElementById('smm-link-status');
+    if (!status) return;
+    status.textContent = msg || '';
+    status.className = 'smm-link-status' + (kind ? ' ' + kind : '');
+  }
+
+  function setSmmDownloadEnabled(on) {
+    var btn = document.getElementById('smm-link-submit');
+    if (btn) btn.disabled = !on;
+  }
+
+  function showSmmLinkPreview(url, kind) {
+    var wrap = document.getElementById('smm-link-preview');
+    var video = document.getElementById('smm-link-preview-video');
+    var img = document.getElementById('smm-link-preview-image');
+    if (!wrap) return;
+    if (!url) {
+      wrap.hidden = true;
+      if (video) {
+        video.hidden = true;
+        video.removeAttribute('src');
+      }
+      if (img) {
+        img.hidden = true;
+        img.removeAttribute('src');
+      }
+      return;
+    }
+    wrap.hidden = false;
+    if (kind === 'image' && img) {
+      if (video) video.hidden = true;
+      img.src = url;
+      img.hidden = false;
+    } else if (video) {
+      if (img) img.hidden = true;
+      video.src = url;
+      video.hidden = false;
+    }
+  }
+
+  function closeLinkModal() {
+    stopLinkPhoneBridge();
+    linkExtracted = null;
+    setSmmDownloadEnabled(false);
+    showSmmLinkPreview(null);
+    closeSubmodal('link');
+  }
+
+  function openLinkModal() {
+    linkExtracted = null;
+    setSmmDownloadEnabled(false);
+    showSmmLinkPreview(null);
+    setSmmLinkStatus('', '');
+    var input = document.getElementById('smm-media-link-url');
+    if (input) input.value = '';
+    var phoneStatus = document.getElementById('smm-link-phone-status');
+    if (phoneStatus) phoneStatus.textContent = '';
+    var phoneBox = document.getElementById('smm-link-phone');
+    if (phoneBox) phoneBox.hidden = !isDesktopViewport();
+    openSubmodal('link');
+    if (isDesktopViewport()) startSmmLinkPhoneBridge();
+    if (input) setTimeout(function () { input.focus(); }, 0);
+  }
+
+  function applySmmPhoneLinkValue(value) {
+    var urlInput = document.getElementById('smm-media-link-url');
+    var phoneStatus = document.getElementById('smm-link-phone-status');
+    if (urlInput) {
+      urlInput.value = value;
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (phoneStatus) phoneStatus.textContent = i18n('link_phone_received', 'Link received from phone');
+    submitSmmLinkExtract();
+  }
+
+  function pollSmmLinkPhoneSession(sessionId, ownerId) {
+    var base = phoneBridgeApiBase();
+    var u =
+      base +
+      '/api/creator-phone-upload/session?id=' +
+      encodeURIComponent(sessionId) +
+      '&owner_id=' +
+      encodeURIComponent(ownerId);
+    fetchPhoneBridgeJson(u, { credentials: 'omit' })
+      .then(function (res) {
+        var data = res.data;
+        if (!data || !data.ok || linkPhoneSessionId !== sessionId) return;
+        if (data.status === 'completed' && data.value) {
+          stopLinkPhoneBridge();
+          applySmmPhoneLinkValue(data.value);
+        } else if (data.status === 'expired') {
+          stopLinkPhoneBridge();
+        }
+      })
+      .catch(function () {});
+  }
+
+  function startSmmLinkPhoneBridge() {
+    var box = document.getElementById('smm-link-phone');
+    var qrImg = document.getElementById('smm-link-qr-img');
+    var phoneStatus = document.getElementById('smm-link-phone-status');
+    if (!box || !isDesktopViewport()) return;
+    stopLinkPhoneBridge();
+    if (qrImg) {
+      qrImg.removeAttribute('src');
+      qrImg.alt = '';
+    }
+    var ownerId = getOwnerId();
+    if (!ownerId) {
+      if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+      return;
+    }
+    if (phoneStatus) phoneStatus.textContent = i18n('link_phone_starting', 'Preparing phone scan…');
+    var base = phoneBridgeApiBase();
+    fetchPhoneBridgeJson(base + '/api/creator-phone-upload/session', {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ owner_id: ownerId, purpose: 'video_link' })
+    })
+      .then(function (res) {
+        var session = res.data;
+        if (!res.httpOk || !session || !session.ok || !session.session_id) {
+          if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+          return;
+        }
+        linkPhoneSessionId = session.session_id;
+        if (qrImg) {
+          qrImg.alt = 'Phone scan QR';
+          qrImg.src =
+            base +
+            '/api/creator-phone-upload/qr-image?session=' +
+            encodeURIComponent(session.session_id) +
+            '&t=' +
+            String(Date.now());
+        }
+        if (phoneStatus) phoneStatus.textContent = i18n('link_phone_ready', 'Scan the QR code with your phone');
+        linkPhonePollTimer = setInterval(function () {
+          pollSmmLinkPhoneSession(session.session_id, ownerId);
+        }, 2000);
+        pollSmmLinkPhoneSession(session.session_id, ownerId);
+      })
+      .catch(function () {
+        if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+      });
+  }
+
+  function detectMediaKind(url) {
+    var lower = String(url || '').toLowerCase();
+    if (/\.(mp4|webm|mov|m4v)(\?|$)/i.test(lower) || lower.indexOf('video') !== -1) return 'video';
+    return 'image';
+  }
+
+  function submitSmmLinkExtract() {
+    var input = document.getElementById('smm-media-link-url');
+    var raw = input ? String(input.value || '').trim() : '';
+    if (!raw || !/^https?:\/\//i.test(raw)) {
+      setSmmLinkStatus(i18n('link_error_invalid_url', 'Please enter a valid URL.'), '');
+      linkExtracted = null;
+      setSmmDownloadEnabled(false);
+      showSmmLinkPreview(null);
+      return;
+    }
+    var kind = detectMediaKind(raw);
+    linkExtracted = { url: raw, kind: kind };
+    setSmmLinkStatus(i18n('link_extract_ready', 'Ready — tap Download to import.'), 'is-success');
+    setSmmDownloadEnabled(true);
+    showSmmLinkPreview(raw, kind);
+  }
+
+  async function submitSmmLinkDownload() {
+    if (!linkExtracted || !linkExtracted.url) {
+      submitSmmLinkExtract();
+      if (!linkExtracted) return;
+    }
+    var raw = linkExtracted.url;
+    var kind = linkExtracted.kind || detectMediaKind(raw);
+    setSmmLinkStatus(i18n('link_downloading', 'Downloading…'), 'is-info');
+    setSmmDownloadEnabled(false);
+    var owner = getOwnerId();
+    try {
+      if (owner) {
+        var res = await fetch(apiUrl('video-studio-link-ingest'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            owner_id: owner,
+            url: raw,
+            format: kind === 'video' ? 'mp4' : 'image'
+          })
+        });
+        var data = await res.json().catch(function () {
+          return {};
+        });
+        if (data.ok && data.asset && data.asset.url) {
+          applyComposeAsset({
+            id: data.asset.id || 'link_' + Date.now(),
+            source: 'link',
+            kind: data.asset.kind === 'video' || kind === 'video' ? 'video' : 'image',
+            url: data.asset.url,
+            label: data.asset.label || 'link',
+            caption_hint: data.asset.caption_hint || null,
+            link_url: data.asset.link_url || '',
+            product_ids: data.asset.product_ids || [],
+            product_urls: data.asset.product_urls || []
+          });
+          return;
+        }
+      }
+      applyComposeAsset({
+        id: 'link_' + Date.now(),
+        source: 'link',
+        kind: kind,
+        url: raw,
+        label: 'link'
+      });
+    } catch (e) {
+      applyComposeAsset({
+        id: 'link_' + Date.now(),
+        source: 'link',
+        kind: kind,
+        url: raw,
+        label: 'link'
+      });
+    }
   }
 
   function bindAssetSourceUi() {
-    var rootOpts = $('#smm-source-options');
-    if (rootOpts && !rootOpts._smmBound) {
-      rootOpts._smmBound = true;
-      rootOpts.addEventListener('click', function (e) {
-        var btn = e.target && e.target.closest ? e.target.closest('[data-smm-source]') : null;
-        if (!btn || !rootOpts.contains(btn)) return;
-        e.preventDefault();
-        setAssetSourceTab(btn.getAttribute('data-smm-source'));
-      });
+    function on(id, evt, fn) {
+      var el = document.getElementById(id);
+      if (el && !el._smmBound) {
+        el._smmBound = true;
+        el.addEventListener(evt, fn);
+      }
     }
-    var fileInput = $('#smm-source-file');
+
+    on('smm-addsrc-assets', 'click', function () {
+      openAssetsLibraryModal();
+    });
+    on('smm-addsrc-device', 'click', function () {
+      var input = document.getElementById('smm-source-file');
+      if (input) input.click();
+    });
+    on('smm-addsrc-phone', 'click', function () {
+      if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
+        window.CreatorPhoneUploadModal.open({ purpose: 'social-media-manager' });
+      }
+    });
+    on('smm-addsrc-link', 'click', function () {
+      openLinkModal();
+    });
+    on('smm-link-extract', 'click', submitSmmLinkExtract);
+    on('smm-link-submit', 'click', function () {
+      submitSmmLinkDownload();
+    });
+    on('smm-media-link-url', 'keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitSmmLinkExtract();
+      }
+    });
+
+    var fileInput = document.getElementById('smm-source-file');
     if (fileInput && !fileInput._smmBound) {
       fileInput._smmBound = true;
       fileInput.addEventListener('change', async function () {
         var file = fileInput.files && fileInput.files[0];
-        var status = $('#smm-source-device-status');
         if (!file) return;
-        if (status) {
-          status.hidden = false;
-          status.textContent = i18n('loading_assets', 'Uploading…');
-        }
         try {
           var isVideo = String(file.type || '').indexOf('video/') === 0;
           var fd = new FormData();
@@ -1045,40 +1346,27 @@
             label: file.name || (isVideo ? 'video' : 'image')
           });
         } catch (err) {
-          if (status) {
-            status.hidden = false;
-            status.textContent = String((err && err.message) || err || 'Upload failed.');
-          }
+          try {
+            console.warn('[SocialMediaManager] device upload failed', err);
+          } catch (eLog) {}
         } finally {
           fileInput.value = '';
         }
       });
     }
-    var linkApply = $('#smm-source-link-apply');
-    if (linkApply && !linkApply._smmBound) {
-      linkApply._smmBound = true;
-      linkApply.addEventListener('click', function () {
-        var input = $('#smm-source-link-url');
-        var status = $('#smm-source-link-status');
-        var raw = input && input.value ? String(input.value).trim() : '';
-        if (!/^https?:\/\//i.test(raw)) {
-          if (status) {
-            status.hidden = false;
-            status.textContent = i18n('error_invalid_url', 'Enter a valid http(s) URL.');
-          }
-          return;
-        }
-        var lower = raw.toLowerCase();
-        var isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(lower) || lower.indexOf('video') !== -1;
-        applyComposeAsset({
-          id: 'link_' + Date.now(),
-          source: 'link',
-          kind: isVideo ? 'video' : 'image',
-          url: raw,
-          label: 'link'
-        });
+
+    window.__eazSmmPhoneApply = function (imageUrl) {
+      var smmRoot = document.getElementById('creatorSocialMediaManagerModal');
+      if (!smmRoot || smmRoot.hidden || !imageUrl) return false;
+      applyComposeAsset({
+        id: 'phone_' + Date.now(),
+        source: 'phone',
+        kind: 'image',
+        url: String(imageUrl),
+        label: 'phone'
       });
-    }
+      return true;
+    };
   }
 
   function getSelectedTargetsFromComposer() {
@@ -1299,9 +1587,16 @@
     var closeAttr = e.target && e.target.closest ? e.target.closest('[data-smm-close]') : null;
     if (!closeAttr || !root || !root.contains(closeAttr)) return;
     var which = closeAttr.getAttribute('data-smm-close');
-    if (which === 'asset' || which === 'target' || which === 'disconnect') {
+    if (
+      which === 'addMedia' ||
+      which === 'asset' ||
+      which === 'link' ||
+      which === 'target' ||
+      which === 'disconnect'
+    ) {
       e.preventDefault();
       if (which === 'disconnect') resolveDisconnectConfirm(false);
+      else if (which === 'link') closeLinkModal();
       else closeSubmodal(which);
     }
   }
@@ -1343,7 +1638,7 @@
         var chooseBtn = e.target && e.target.closest ? e.target.closest('#smm-btn-choose-asset') : null;
         if (chooseBtn && composer.contains(chooseBtn)) {
           e.preventDefault();
-          openAssetPickerModal();
+          openAddMediaModal();
         }
       });
     }
@@ -1437,6 +1732,10 @@
     root.hidden = true;
     root.setAttribute('aria-hidden', 'true');
     closeDrawer();
+    closeLinkModal();
+    closeSubmodal('asset');
+    closeSubmodal('addMedia');
+    closeSubmodal('target');
     stopOAuthWatch();
     try {
       document.body.classList.remove('smm-modal-open');
@@ -1491,9 +1790,15 @@
     document.addEventListener('keydown', function (ev) {
       if (ev.key !== 'Escape') return;
       if (!root || root.hidden) return;
+      var linkModal = document.getElementById('smm-link-modal');
       var assetModal = document.getElementById('smm-asset-picker');
+      var addMediaModal = document.getElementById('smm-add-media');
       var disconnectModal = document.getElementById('smm-disconnect-confirm');
       var targetModal = document.getElementById('smm-target-confirm');
+      if (linkModal && !linkModal.hidden) {
+        closeLinkModal();
+        return;
+      }
       if (assetModal && !assetModal.hidden) {
         closeSubmodal('asset');
         return;
@@ -1504,6 +1809,10 @@
       }
       if (targetModal && !targetModal.hidden) {
         closeSubmodal('target');
+        return;
+      }
+      if (addMediaModal && !addMediaModal.hidden) {
+        closeAddMediaModal();
         return;
       }
       var sidebar = $('#smm-sidebar');

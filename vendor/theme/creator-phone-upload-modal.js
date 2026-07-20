@@ -151,6 +151,20 @@
     }
 
     if (
+      typeof window.__eazSmmPhoneApply === 'function' &&
+      window.__eazSmmPhoneApply(imageUrl)
+    ) {
+      return;
+    }
+
+    if (
+      typeof window.__eazImageAddMediaPhoneApply === 'function' &&
+      window.__eazImageAddMediaPhoneApply(imageUrl)
+    ) {
+      return;
+    }
+
+    if (
       typeof window.__eazVideoGeneratorPhoneApply === 'function' &&
       window.__eazVideoGeneratorPhoneApply(imageUrl)
     ) {

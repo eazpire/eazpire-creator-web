@@ -912,6 +912,13 @@
   font-family: system-ui, -apple-system, Segoe UI, sans-serif;
 }
 .cvs-confirm-overlay[hidden] { display: none !important; }
+/* Stacked children (Link / Character assets) sit above Add media */
+#cvgLinkModal,
+#cvsLinkModal,
+#cimgLinkModal,
+#cvgCharacterAssetsModal {
+  z-index: 10090;
+}
 .cvs-confirm-box {
   width: 100%;
   max-width: 380px;
@@ -1000,6 +1007,8 @@
 
 /* ── Projects modal (grid of saved projects) ── */
 .cvs-projects-modal { z-index: 10065; }
+/* Assets library above Add media when both are open */
+.cvs-library-modal { z-index: 10090; }
 .cvs-projects-shell { max-width: 960px; max-height: 720px; margin: auto; border-radius: 16px; overflow: hidden; }
 .cvs-library-toolbar {
   display: flex;

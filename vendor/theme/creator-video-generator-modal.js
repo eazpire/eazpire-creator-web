@@ -666,6 +666,7 @@
       });
       if (data.ok && data.asset && data.asset.url) {
         closeLinkModal();
+        closeAddSourceModal();
         await applyPickedAsset(data.asset);
         return;
       }
@@ -674,6 +675,7 @@
         var polled = await pollLinkIngestStatus(data.asset_id, document.getElementById('cvg-link-status'));
         if (polled.ok && polled.asset) {
           closeLinkModal();
+          closeAddSourceModal();
           await applyPickedAsset(polled.asset);
           return;
         }
@@ -682,6 +684,7 @@
       }
       if (addTarget === 'character' && /^https?:\/\//i.test(raw)) {
         closeLinkModal();
+        closeAddSourceModal();
         setStatus('character', '');
         applyCharacterUrl(raw);
         return;
@@ -774,6 +777,7 @@
             product_ids: pids,
           });
           closeCharacterAssetsModal();
+          closeAddSourceModal();
         });
         grid.appendChild(btn);
       });
@@ -795,6 +799,7 @@
         kind: 'video',
         onPick: function (asset) {
           applyPickedAsset(asset);
+          closeAddSourceModal();
         },
       });
       return;
@@ -1116,27 +1121,23 @@
       if (e.target && e.target.id === 'cvgAddSourceModal') closeAddSourceModal();
     });
     on('cvg-addsrc-assets', 'click', function () {
-      closeAddSourceModal();
+      // Keep Add media open underneath Assets / Link / Phone children
       openAssetsPicker();
     });
     on('cvg-addsrc-generate-character', 'click', function () {
-      closeAddSourceModal();
       if (window.CreatorCharacterGeneratorModal && typeof window.CreatorCharacterGeneratorModal.open === 'function') {
         window.CreatorCharacterGeneratorModal.open();
       }
     });
     on('cvg-addsrc-device', 'click', function () {
-      closeAddSourceModal();
       triggerDevicePicker();
     });
     on('cvg-addsrc-phone', 'click', function () {
-      closeAddSourceModal();
       if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
         window.CreatorPhoneUploadModal.open({ purpose: 'video-generator' });
       }
     });
     on('cvg-addsrc-link', 'click', function () {
-      closeAddSourceModal();
       openLinkModal();
     });
     on('cvg-addsrc-paste', 'click', function () {
@@ -1168,6 +1169,7 @@
         return;
       }
       applyCharacterUrl(d.image_url, { id: d.id || null, product_ids: d.product_ids || [] });
+      closeAddSourceModal();
       if (window.CreatorCharacterGeneratorModal && typeof window.CreatorCharacterGeneratorModal.close === 'function') {
         window.CreatorCharacterGeneratorModal.close();
       }
@@ -1263,12 +1265,18 @@
 
     bindUploadArea('[data-cvg-upload="motion-video"]', '[data-cvg-motion-remove]', 'motion', function (file) {
       uploadMotion(file).then(function (url) {
-        if (url) applyMotionUrl(url);
+        if (url) {
+          closeAddSourceModal();
+          applyMotionUrl(url);
+        }
       });
     });
     bindUploadArea('[data-cvg-upload="character"]', '[data-cvg-character-remove]', 'character', function (file) {
       uploadCharacter(file).then(function (url) {
-        if (url) applyCharacterUrl(url);
+        if (url) {
+          closeAddSourceModal();
+          applyCharacterUrl(url);
+        }
       });
     });
 
@@ -1277,14 +1285,19 @@
 
     document.addEventListener('keydown', function (ev) {
       if (ev.key !== 'Escape') return;
-      var addOverlay = document.getElementById('cvgAddSourceModal');
-      if (addOverlay && !addOverlay.hidden) {
-        closeAddSourceModal();
+      var charAssetsOverlay = document.getElementById('cvgCharacterAssetsModal');
+      if (charAssetsOverlay && !charAssetsOverlay.hidden) {
+        closeCharacterAssetsModal();
         return;
       }
       var linkOverlay = document.getElementById('cvgLinkModal');
       if (linkOverlay && !linkOverlay.hidden) {
         closeLinkModal();
+        return;
+      }
+      var addOverlay = document.getElementById('cvgAddSourceModal');
+      if (addOverlay && !addOverlay.hidden) {
+        closeAddSourceModal();
         return;
       }
       if (!root || root.hidden) return;
@@ -1317,7 +1330,10 @@
         return uploadCharacter(file);
       })
       .then(function (url) {
-        if (url) applyCharacterUrl(url);
+        if (url) {
+          closeAddSourceModal();
+          applyCharacterUrl(url);
+        }
       })
       .catch(function () {
         setStatus('character', i18n('upload_failed', 'Upload failed'));

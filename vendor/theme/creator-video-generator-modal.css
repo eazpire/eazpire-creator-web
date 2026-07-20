@@ -383,10 +383,13 @@
 .cvg-upload-input[hidden] {
   display: none !important;
 }
-/* Add-media / link overlays must sit above the fullscreen generator shell */
-#cvgAddSourceModal.cvs-confirm-overlay,
-#cvgLinkModal.cvs-confirm-overlay {
+/* Add-media above generator shell; Link / Character assets stack above Add media */
+#cvgAddSourceModal.cvs-confirm-overlay {
   z-index: 10080;
+}
+#cvgLinkModal.cvs-confirm-overlay,
+#cvgCharacterAssetsModal.cvs-confirm-overlay {
+  z-index: 10095;
 }
 .cvg-upload-placeholder {
   position: absolute;
