@@ -1037,10 +1037,18 @@
             var creatorName = window.CreatorSettings && window.CreatorSettings.creatorName ? window.CreatorSettings.creatorName : null;
             var slot = cat === 'addition' ? 'additional' : 'top';
             try { window.__heroModalUsedProductsContext = 'video'; } catch (err) {}
-            window.openHeroProductSelectionModalSimple(slot, function (product) {
-              try { window.__heroModalUsedProductsContext = 'hero'; } catch (err2) {}
-              setMotionCharacterProductPreview(ctx, cat, adaptModalProductToVideo(product));
-            }, creatorName, { lockedRegion: getLockedRegionFromMotionCharacterSelection() || getLockedRegionFromVideoSelection() });
+            window.openHeroProductSelectionModalSimple(
+              slot,
+              function (product) {
+                try { window.__heroModalUsedProductsContext = 'hero'; } catch (err2) {}
+                setMotionCharacterProductPreview(ctx, cat, adaptModalProductToVideo(product));
+              },
+              creatorName,
+              {
+                lockedRegion: getLockedRegionFromMotionCharacterSelection() || getLockedRegionFromVideoSelection(),
+                usageContext: 'video',
+              }
+            );
           });
         }
         if (rem) {

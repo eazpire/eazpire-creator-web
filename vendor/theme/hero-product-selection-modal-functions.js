@@ -20,6 +20,8 @@ let currentHeroProductCategory = 'top';
   let heroModalInitialized = false; // Track if modal has been moved to body
   let heroUsedProductIds = new Set();
   let currentHeroUsageFilter = 'unused'; // 'unused' | 'used'
+  /** Used/Unused source: 'hero' | 'character' | 'video' */
+  let currentHeroUsageContext = 'hero';
 /** Eager `.js` fetches before lazy IO kicks in (see initHeroStorefrontLazyEnrichFromGrid). */
 const HERO_MAX_STOREFRONT_ENRICH_EAGER = 14;
 
@@ -48,10 +50,97 @@ let heroColorSwipeSuppressCardUntil = 0;
 let heroColorSwipeTouch = { x: 0, y: 0, wrap: null };
 /** Bumps on each loadHeroProducts call so stale async results cannot show errors. */
 let heroProductsLoadGen = 0;
+/** Cancels in-flight chunked grid paints when filter/load changes. */
+let heroGridRenderGen = 0;
+/** First paint size — hide "Lade Produkte..." after this many cards. */
+const HERO_GRID_FIRST_CHUNK = 36;
+/** Subsequent append size per animation frame. */
+const HERO_GRID_CHUNK = 48;
+/** In-memory + sessionStorage product list cache (per owner/region). */
+const HERO_PRODUCT_CACHE_TTL_MS = 5 * 60 * 1000;
+const heroProductsMemoryCache = new Map();
 
 function isHeroProductModalOpen() {
   var modal = document.getElementById('hero-product-selection-modal');
   return !!(modal && modal.getAttribute('aria-hidden') === 'false');
+}
+
+function normalizeHeroUsageContext(ctx) {
+  var c = String(ctx || '').toLowerCase().trim();
+  if (c === 'character' || c === 'video' || c === 'hero') return c;
+  return 'hero';
+}
+
+function heroProductCacheKey(ownerId, region, creatorName, usageCtx) {
+  return [
+    ownerId != null ? String(ownerId) : 'anon',
+    normalizeHeroRegionCode(region || currentHeroRegion),
+    creatorName ? String(creatorName) : '',
+    normalizeHeroUsageContext(usageCtx || currentHeroUsageContext),
+  ].join('|');
+}
+
+function setHeroModalUsageContext(ctx) {
+  currentHeroUsageContext = normalizeHeroUsageContext(ctx);
+  try {
+    window.__heroModalUsedProductsContext = currentHeroUsageContext;
+  } catch (_e) {}
+}
+
+function readHeroProductCache(key) {
+  var mem = heroProductsMemoryCache.get(key);
+  if (mem && mem.ts && Date.now() - mem.ts < HERO_PRODUCT_CACHE_TTL_MS && Array.isArray(mem.products)) {
+    return mem;
+  }
+  try {
+    var raw = sessionStorage.getItem('eazHeroProdCache:' + key);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (
+      !parsed ||
+      !parsed.ts ||
+      Date.now() - parsed.ts >= HERO_PRODUCT_CACHE_TTL_MS ||
+      !Array.isArray(parsed.products)
+    ) {
+      return null;
+    }
+    heroProductsMemoryCache.set(key, parsed);
+    return parsed;
+  } catch (_e) {
+    // Edge Tracking Prevention / private mode — memory cache only
+    return null;
+  }
+}
+
+function writeHeroProductCache(key, payload) {
+  if (!key || !payload || !Array.isArray(payload.products)) return;
+  var entry = {
+    ts: payload.ts || Date.now(),
+    products: payload.products,
+    usedIds: Array.isArray(payload.usedIds) ? payload.usedIds : [],
+    regionKeys: Array.isArray(payload.regionKeys) ? payload.regionKeys : null,
+  };
+  heroProductsMemoryCache.set(key, entry);
+  try {
+    sessionStorage.setItem('eazHeroProdCache:' + key, JSON.stringify(entry));
+  } catch (_e) {
+    // Quota / Tracking Prevention — keep memory cache
+  }
+}
+
+function applyHeroProductCacheEntry(entry) {
+  if (!entry || !Array.isArray(entry.products)) return false;
+  heroUsedProductIds = new Set((entry.usedIds || []).map(String));
+  heroRegionFilteredKeys =
+    entry.regionKeys && entry.regionKeys.length ? new Set(entry.regionKeys.map(String)) : null;
+  heroProducts = entry.products.map(function (p) {
+    if (p) {
+      p.used = isHeroProductUsed(p);
+      delete p._heroCategory;
+    }
+    return p;
+  });
+  return true;
 }
 
 function isHeroProductLoadTimeoutError(error) {
@@ -206,13 +295,9 @@ async function heroLazyEnrichProductRow(itemEl) {
   }
 }
 
-function initHeroStorefrontLazyEnrichFromGrid() {
-  if (!('IntersectionObserver' in window)) return;
-  teardownHeroStorefrontLazyEnrich();
-  const modal = document.getElementById('hero-product-selection-modal');
-  const grid = document.getElementById('hero-product-selection-modal-grid');
-  if (!modal || !grid) return;
-  if (modal.getAttribute('aria-hidden') === 'true') return;
+function ensureHeroStorefrontLazyObserver() {
+  if (window.__heroSfObserver) return window.__heroSfObserver;
+  if (!('IntersectionObserver' in window)) return null;
   const io = new IntersectionObserver(
     function (entries) {
       for (let i = 0; i < entries.length; i += 1) {
@@ -225,9 +310,24 @@ function initHeroStorefrontLazyEnrichFromGrid() {
     },
     { root: null, rootMargin: '140px', threshold: 0.02 }
   );
-  const items = grid.querySelectorAll('.hero-product-selection-modal__product-item');
-  for (let j = 0; j < items.length; j += 1) io.observe(items[j]);
   window.__heroSfObserver = io;
+  return io;
+}
+
+/** Observe product cards for storefront enrich (full grid reset or new chunk). */
+function initHeroStorefrontLazyEnrichFromGrid(rootEl) {
+  const modal = document.getElementById('hero-product-selection-modal');
+  const grid = document.getElementById('hero-product-selection-modal-grid');
+  if (!modal || !grid) return;
+  if (modal.getAttribute('aria-hidden') === 'true') return;
+  if (!rootEl) teardownHeroStorefrontLazyEnrich();
+  const io = ensureHeroStorefrontLazyObserver();
+  if (!io) return;
+  const scope = rootEl || grid;
+  const items = scope.querySelectorAll
+    ? scope.querySelectorAll('.hero-product-selection-modal__product-item')
+    : [];
+  for (let j = 0; j < items.length; j += 1) io.observe(items[j]);
 }
 
 function extractNumericProductId(value) {
@@ -1003,6 +1103,11 @@ function openHeroProductSelectionModal(category, callback, options) {
   selectedHeroProduct = null;
   updateHeroProductSelectionButtons();
   setHeroRegionFromContext(options);
+  setHeroModalUsageContext(
+    (options && (options.usageContext || options.usage_context)) ||
+      window.__heroModalUsedProductsContext ||
+      'hero'
+  );
 
   // Update modal title
   const titleElement = document.getElementById('hero-product-selection-modal-title');
@@ -1150,8 +1255,10 @@ function closeHeroProductSelectionModal() {
   console.log('❌ Closing product selection modal');
 
   heroProductsLoadGen += 1;
+  heroGridRenderGen += 1;
 
   try {
+    currentHeroUsageContext = 'hero';
     if (typeof window !== 'undefined') window.__heroModalUsedProductsContext = 'hero';
   } catch (_) {}
 
@@ -1229,62 +1336,104 @@ async function loadHeroProducts(creatorName, retryCount, options) {
   retryCount = retryCount || 0;
   options = options || {};
   var silent = !!options.silent;
+  var forceRefresh = !!options.forceRefresh;
   var loadGen = ++heroProductsLoadGen;
   currentHeroRegion = normalizeHeroRegionCode(currentHeroRegion);
-  console.log('📦 Loading hero products from Shopify API...', creatorName ? `for creator: ${creatorName}` : 'no creator filter', 'region:', currentHeroRegion, silent ? '(silent)' : '');
+  const ownerId = window.__EAZ_OWNER_ID || (window.customer && window.customer.id) || null;
+  const usageCtx = normalizeHeroUsageContext(
+    window.__heroModalUsedProductsContext || currentHeroUsageContext
+  );
+  currentHeroUsageContext = usageCtx;
+  const cacheKey = heroProductCacheKey(ownerId, currentHeroRegion, creatorName, usageCtx);
+
+  console.log(
+    '📦 Loading hero products from Shopify API...',
+    creatorName ? 'for creator: ' + creatorName : 'no creator filter',
+    'region:',
+    currentHeroRegion,
+    'usage:',
+    usageCtx,
+    silent ? '(silent)' : '',
+    forceRefresh ? '(force)' : ''
+  );
 
   const loadingElement = document.getElementById('hero-product-selection-modal-loading');
   const gridElement = document.getElementById('hero-product-selection-modal-grid');
   const emptyElement = document.getElementById('hero-product-selection-modal-empty');
 
-  loadingElement.style.display = 'block';
-  gridElement.innerHTML = '';
-  emptyElement.style.display = 'none';
-  teardownHeroStorefrontLazyEnrich();
-  heroColorIndexByProductKey = new Map();
-  storefrontProductJsonCache = new Map();
+  // Warm cache: paint immediately, refresh in background
+  if (!silent && !forceRefresh) {
+    var cached = readHeroProductCache(cacheKey);
+    if (cached && applyHeroProductCacheEntry(cached)) {
+      console.log('[HeroModal] Cache hit — showing', heroProducts.length, 'products');
+      filterHeroProducts();
+      loadHeroProducts(creatorName, 0, { silent: true, forceRefresh: true }).catch(function (err) {
+        console.warn('[HeroModal] Background refresh failed:', err && err.message);
+      });
+      return;
+    }
+  }
+
+  if (!silent) {
+    loadingElement.style.display = 'block';
+    gridElement.innerHTML = '';
+    emptyElement.style.display = 'none';
+    teardownHeroStorefrontLazyEnrich();
+    heroColorIndexByProductKey = new Map();
+    storefrontProductJsonCache = new Map();
+  }
 
   try {
+    // Region tab availability is non-critical — do not block first paint
     if (!silent) {
-      await refreshHeroRegionAvailability();
-    }
-    // Get owner ID from customer or global variable
-    const ownerId = window.__EAZ_OWNER_ID || (window.customer && window.customer.id) || null;
-
-    console.log('🔍 Loading products for owner ID:', ownerId, 'creator name:', creatorName);
-
-    // Load hero-used product IDs (which products already have hero images)
-    if (ownerId) {
-      await loadHeroUsedProducts(ownerId);
-    } else {
-      heroUsedProductIds = new Set();
+      Promise.resolve()
+        .then(function () {
+          return refreshHeroRegionAvailability();
+        })
+        .catch(function () {});
     }
 
-    // Region product catalog (single source for market availability)
-    heroRegionFilteredKeys = null;
-    try {
-      const catalog = await window.creatorApiFetch('get-catalog-products', { region: currentHeroRegion });
-      if (catalog && catalog.ok) {
-        const allCatalogItems = []
-          .concat(Array.isArray(catalog.products) ? catalog.products : [])
-          .concat(Array.isArray(catalog.preview_products) ? catalog.preview_products : []);
-        const keys = allCatalogItems
-          .map(function (item) { return String(item && item.product_key || '').trim(); })
-          .filter(Boolean);
-        if (keys.length) {
-          heroRegionFilteredKeys = new Set(keys);
-        }
-      }
-    } catch (catalogErr) {
-      console.warn('[HeroModal] Could not load region catalog, fallback to unfiltered set:', catalogErr?.message || catalogErr);
-    }
+    console.log('🔍 Loading products for owner ID:', ownerId, 'creator name:', creatorName, 'usage:', usageCtx);
 
-    // Use creatorApiFetch to load real products
     const params = {};
     if (ownerId) params.owner_id = ownerId;
     if (creatorName) params.creator_name = creatorName;
 
-    const apiData = await window.creatorApiFetch('get-shopify-products', params);
+    // Parallel: used-IDs (context-scoped) + region catalog + Shopify products
+    const usedP = ownerId
+      ? loadHeroUsedProducts(ownerId)
+      : Promise.resolve().then(function () {
+          heroUsedProductIds = new Set();
+        });
+
+    const catalogP = (async function () {
+      heroRegionFilteredKeys = null;
+      try {
+        const catalog = await window.creatorApiFetch('get-catalog-products', { region: currentHeroRegion });
+        if (catalog && catalog.ok) {
+          const allCatalogItems = []
+            .concat(Array.isArray(catalog.products) ? catalog.products : [])
+            .concat(Array.isArray(catalog.preview_products) ? catalog.preview_products : []);
+          const keys = allCatalogItems
+            .map(function (item) {
+              return String((item && item.product_key) || '').trim();
+            })
+            .filter(Boolean);
+          if (keys.length) {
+            heroRegionFilteredKeys = new Set(keys);
+          }
+        }
+      } catch (catalogErr) {
+        console.warn(
+          '[HeroModal] Could not load region catalog, fallback to unfiltered set:',
+          catalogErr && catalogErr.message ? catalogErr.message : catalogErr
+        );
+      }
+    })();
+
+    const productsP = window.creatorApiFetch('get-shopify-products', params);
+    const settled = await Promise.all([usedP, catalogP, productsP]);
+    const apiData = settled[2];
 
     if (!apiData.ok) {
       throw new Error(apiData.error || 'API-Fehler beim Laden der Produkte');
@@ -1381,6 +1530,12 @@ async function loadHeroProducts(creatorName, retryCount, options) {
     if (loadGen !== heroProductsLoadGen) return;
 
     console.log('✅ Loaded real products:', heroProducts.length);
+    writeHeroProductCache(cacheKey, {
+      ts: Date.now(),
+      products: heroProducts,
+      usedIds: Array.from(heroUsedProductIds),
+      regionKeys: heroRegionFilteredKeys ? Array.from(heroRegionFilteredKeys) : null,
+    });
     filterHeroProducts();
 
   } catch (error) {
@@ -1457,6 +1612,11 @@ function openHeroProductSelectionModalSimple(category, callback, creatorName, op
   selectedHeroProduct = null;
   updateHeroProductSelectionButtons();
   setHeroRegionFromContext(resolvedOptions);
+  setHeroModalUsageContext(
+    (resolvedOptions && (resolvedOptions.usageContext || resolvedOptions.usage_context)) ||
+      window.__heroModalUsedProductsContext ||
+      'hero'
+  );
 
   // Update modal title with active category
   const titleElement = document.getElementById('hero-product-selection-modal-title');
@@ -1520,12 +1680,14 @@ function openHeroProductSelectionModalSimple(category, callback, creatorName, op
   // Add callback to modal for when product is selected
   modal._callback = callback;
 
-  // Load real products (nicht mock data) with creator name - always all products
-  setTimeout(() => {
-    loadHeroProducts(resolvedCreatorName).catch(error => {
+  // Load products ASAP (cache may paint synchronously)
+  Promise.resolve()
+    .then(function () {
+      return loadHeroProducts(resolvedCreatorName);
+    })
+    .catch(function (error) {
       console.error('❌ Failed to load products on modal open:', error);
     });
-  }, 100);
 }
 
 window.openHeroProductSelectionModalSimple = openHeroProductSelectionModalSimple;
@@ -1578,28 +1740,35 @@ function loadHeroProductsMock() {
     filterHeroProducts();
 }
 
+function resolveHeroModalUsageOp() {
+  var ctx = normalizeHeroUsageContext(
+    (typeof window !== 'undefined' && window.__heroModalUsedProductsContext) || currentHeroUsageContext
+  );
+  if (ctx === 'video') return 'video-used-products';
+  if (ctx === 'character') return 'character-used-products';
+  return 'hero-used-products';
+}
+
 async function loadHeroUsedProducts(ownerId) {
   try {
-    const usageOp = (typeof window !== 'undefined' && window.__heroModalUsedProductsContext === 'video')
-      ? 'video-used-products'
-      : 'hero-used-products';
+    const usageOp = resolveHeroModalUsageOp();
     const res = await fetch(`/apps/creator-dispatch?op=${usageOp}&owner_id=${encodeURIComponent(ownerId)}`, {
       credentials: 'include'
     });
     if (!res.ok) {
-      console.warn('[HeroModal] hero-used-products request failed:', res.status);
+      console.warn('[HeroModal]', usageOp, 'request failed:', res.status);
       heroUsedProductIds = new Set();
       return;
     }
     const data = await res.json().catch(() => null);
     if (data && data.ok && Array.isArray(data.used_product_ids)) {
       heroUsedProductIds = new Set(data.used_product_ids.map(String));
-      console.log('[HeroModal] Loaded used hero product IDs:', heroUsedProductIds.size);
+      console.log('[HeroModal] Loaded used product IDs (' + usageOp + '):', heroUsedProductIds.size);
     } else {
       heroUsedProductIds = new Set();
     }
   } catch (e) {
-    console.warn('[HeroModal] hero-used-products error:', e);
+    console.warn('[HeroModal] used-products error:', e);
     heroUsedProductIds = new Set();
   }
 }
@@ -1658,6 +1827,14 @@ function filterHeroProducts() {
 }
 
 function categorizeHeroProduct(product) {
+  if (!product) return 'additional';
+  if (product._heroCategory) return product._heroCategory;
+  var cat = categorizeHeroProductCompute(product);
+  product._heroCategory = cat;
+  return cat;
+}
+
+function categorizeHeroProductCompute(product) {
   const title = (product.title || '').toLowerCase();
   const type = (product.product_type || '').toLowerCase();
   const tags = (product.tags || []).join(' ').toLowerCase();
@@ -1880,48 +2057,106 @@ function idsMatchHeroSelected(productIdAttr) {
   );
 }
 
+function buildHeroProductCardHtml(product) {
+  const productIdAttr = normHeroPid(product.id || product.product_id || product.shopify_id);
+  const isSelected = idsMatchHeroSelected(productIdAttr);
+  const imageHtml = buildHeroProductItemImageBlockHtml(product);
+  return (
+    '<div class="hero-product-selection-modal__product-item' +
+    (isSelected ? ' hero-product-selection-modal__product-item--selected' : '') +
+    '" data-product-id="' +
+    escapeHtmlAttr(productIdAttr) +
+    '" data-hero-select-product role="button" tabindex="0">' +
+    imageHtml +
+    '</div>'
+  );
+}
+
+/** Chunked grid paint — first page ASAP, rest in rAF so "Lade Produkte..." clears quickly. */
 function renderHeroProducts(products) {
   const loadingElement = document.getElementById('hero-product-selection-modal-loading');
   const gridElement = document.getElementById('hero-product-selection-modal-grid');
   const emptyElement = document.getElementById('hero-product-selection-modal-empty');
+  const renderGen = ++heroGridRenderGen;
 
-  // Hide loading indicator
-  loadingElement.style.display = 'none';
+  teardownHeroStorefrontLazyEnrich();
+  gridElement.innerHTML = '';
 
-  if (products.length === 0) {
-    gridElement.innerHTML = '';
+  if (!products || products.length === 0) {
+    if (loadingElement) loadingElement.style.display = 'none';
     emptyElement.style.display = 'block';
     emptyElement.textContent = 'Keine Produkte gefunden.';
     return;
   }
 
   emptyElement.style.display = 'none';
-
-  const productsHtml = products
-    .map(function (product) {
-      const productIdAttr = normHeroPid(product.id || product.product_id || product.shopify_id);
-      const isSelected = idsMatchHeroSelected(productIdAttr);
-      const imageHtml = buildHeroProductItemImageBlockHtml(product);
-      return (
-        '<div class="hero-product-selection-modal__product-item' +
-        (isSelected ? ' hero-product-selection-modal__product-item--selected' : '') +
-        '" data-product-id="' +
-        escapeHtmlAttr(productIdAttr) +
-        '" data-hero-select-product role="button" tabindex="0">' +
-        imageHtml +
-        '</div>'
-      );
-    })
-    .join('');
-
-  gridElement.innerHTML = productsHtml;
   bindHeroProductGridDelegationOnce();
-  if (window.CreatorProductImageCarousel && typeof window.CreatorProductImageCarousel.bindCarouselRoot === 'function') {
-    gridElement.querySelectorAll('[data-creator-carousel-root]').forEach(function (root) {
-      window.CreatorProductImageCarousel.bindCarouselRoot(root);
+
+  var list = products;
+  var offset = 0;
+
+  function appendChunk(size) {
+    if (renderGen !== heroGridRenderGen) return;
+    var end = Math.min(offset + size, list.length);
+    if (offset >= end) return;
+    var startIndex = offset;
+    var html = '';
+    for (var i = offset; i < end; i += 1) {
+      html += buildHeroProductCardHtml(list[i]);
+    }
+    var wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    var frag = document.createDocumentFragment();
+    var added = [];
+    while (wrap.firstChild) {
+      added.push(wrap.firstChild);
+      frag.appendChild(wrap.firstChild);
+    }
+    gridElement.appendChild(frag);
+    offset = end;
+
+    if (window.CreatorProductImageCarousel && typeof window.CreatorProductImageCarousel.bindCarouselRoot === 'function') {
+      for (var b = 0; b < added.length; b += 1) {
+        added[b].querySelectorAll('[data-creator-carousel-root]').forEach(function (root) {
+          window.CreatorProductImageCarousel.bindCarouselRoot(root);
+        });
+      }
+    }
+    initHeroStorefrontLazyEnrichFromGrid({
+      querySelectorAll: function (sel) {
+        if (sel !== '.hero-product-selection-modal__product-item') return [];
+        return added;
+      },
     });
+    void startIndex;
   }
-  initHeroStorefrontLazyEnrichFromGrid();
+
+  // First chunk: hide loading immediately after
+  appendChunk(HERO_GRID_FIRST_CHUNK);
+  if (loadingElement) loadingElement.style.display = 'none';
+  updateProductSelectionUI();
+  updateHeroProductSelectionButtons();
+
+  function paintMore() {
+    if (renderGen !== heroGridRenderGen) return;
+    if (offset >= list.length) return;
+    appendChunk(HERO_GRID_CHUNK);
+    if (offset < list.length) {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(paintMore);
+      } else {
+        setTimeout(paintMore, 0);
+      }
+    }
+  }
+
+  if (offset < list.length) {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(paintMore);
+    } else {
+      setTimeout(paintMore, 0);
+    }
+  }
 }
 
 function selectHeroProduct(productId, ev) {

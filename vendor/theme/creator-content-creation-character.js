@@ -447,7 +447,10 @@
       if (!product) return;
       setProductPreview(ctx, category, product);
     };
-    var opts = { lockedRegion: getLockedRegionFromCurrentSelection() };
+    var opts = {
+      lockedRegion: getLockedRegionFromCurrentSelection(),
+      usageContext: 'character',
+    };
     var modalEl = document.getElementById('hero-product-selection-modal');
     if (typeof window.openHeroProductSelectionModalSimple === 'function') {
       if (!modalEl) {
@@ -455,10 +458,16 @@
         alert('Produktauswahl-Modal nicht verfügbar.');
         return;
       }
+      try {
+        window.__heroModalUsedProductsContext = 'character';
+      } catch (_e) {}
       window.openHeroProductSelectionModalSimple(modalCategory, onPick, opts);
       return;
     }
     if (typeof window.openHeroProductSelectionModal === 'function') {
+      try {
+        window.__heroModalUsedProductsContext = 'character';
+      } catch (_e2) {}
       window.openHeroProductSelectionModal(modalCategory, onPick, opts);
       return;
     }

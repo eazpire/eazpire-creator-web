@@ -503,9 +503,13 @@
       var st = channelState[id];
       if (st && st.online && Number(st.account_count || 0) > 0) onlineCount += 1;
     });
-    return onlineCount > 0 || (compose.targets && compose.targets.some(function (t) {
-      return t.source === 'admin';
-    }));
+    return (
+      onlineCount > 0 ||
+      (compose.targets &&
+        compose.targets.some(function (t) {
+          return isTargetAvailableForCompose(t);
+        }))
+    );
   }
 
   async function loadPostTargets() {
@@ -533,20 +537,31 @@
     return ch ? ch.short : String(channelId || '?').slice(0, 2);
   }
 
+  function isTargetAvailableForCompose(t) {
+    if (!t || !t.channel) return false;
+    if (t.source === 'creator') return !!t.online;
+    if (t.source === 'admin') return !!t.admin_auto;
+    return false;
+  }
+
   function getConnectedChannelsForSettings() {
     var seen = {};
     var out = [];
     (compose.targets || []).forEach(function (t) {
-      if (!t || !t.channel || seen[t.channel]) return;
-      if (t.source === 'admin' || (t.online && t.source === 'creator')) {
-        seen[t.channel] = true;
-        out.push(t.channel);
-      }
+      if (!isTargetAvailableForCompose(t) || seen[t.channel]) return;
+      seen[t.channel] = true;
+      out.push(t.channel);
     });
     Object.keys(channelState || {}).forEach(function (id) {
       var st = channelState[id];
       if (!st || !st.online || Number(st.account_count || 0) < 1) return;
       if (seen[id]) return;
+      // Only surface Connect-online channels that also have a compose target row
+      // (or are live creator channels). Avoid phantom cards with no publish target.
+      var hasTarget = (compose.targets || []).some(function (t) {
+        return t && t.channel === id && isTargetAvailableForCompose(t);
+      });
+      if (!hasTarget) return;
       seen[id] = true;
       out.push(id);
     });
@@ -556,8 +571,27 @@
   function syncChannelEnabledDefaults() {
     var channels = getConnectedChannelsForSettings();
     var next = {};
+    var defaults = compose.defaultSelected || [];
     channels.forEach(function (ch) {
-      next[ch] = compose.channelEnabled[ch] !== false;
+      if (Object.prototype.hasOwnProperty.call(compose.channelEnabled, ch)) {
+        next[ch] = !!compose.channelEnabled[ch];
+        return;
+      }
+      var channelTargets = (compose.targets || []).filter(function (t) {
+        return t && t.channel === ch && isTargetAvailableForCompose(t);
+      });
+      if (!channelTargets.length) {
+        next[ch] = false;
+        return;
+      }
+      // First paint: Online ∩ Auto Post (+ brand admin_auto). If none flagged, enable all connected.
+      if (defaults.length) {
+        next[ch] = channelTargets.some(function (t) {
+          return defaults.indexOf(t.id) >= 0;
+        });
+      } else {
+        next[ch] = true;
+      }
     });
     compose.channelEnabled = next;
     if (compose.expandedChannel && !next[compose.expandedChannel]) {
@@ -1371,7 +1405,11 @@
 
   function getSelectedTargetsFromComposer() {
     return (compose.targets || []).filter(function (t) {
-      return t && t.publish_ready && isChannelEnabled(t.channel);
+      return (
+        isTargetAvailableForCompose(t) &&
+        !!t.publish_ready &&
+        isChannelEnabled(t.channel)
+      );
     });
   }
 
@@ -1390,6 +1428,31 @@
     return '';
   }
 
+  function getEnabledChannelsForConfirm() {
+    var seen = {};
+    var out = [];
+    getSelectedTargetsFromComposer().forEach(function (t) {
+      if (!t.channel || seen[t.channel]) return;
+      seen[t.channel] = true;
+      out.push(t.channel);
+    });
+    return out;
+  }
+
+  function formatPublishFailureMessage(data) {
+    if (!data) return i18n('error_submit', 'Could not submit post.');
+    if (data.message) return String(data.message);
+    if (data.error) return String(data.error);
+    var refs = data.external_refs || {};
+    var parts = [];
+    Object.keys(refs).forEach(function (key) {
+      var ref = refs[key];
+      if (!ref || ref.ok) return;
+      parts.push(String(ref.message || ref.detail || ref.error || key));
+    });
+    return parts.length ? parts.join(' · ') : i18n('error_submit', 'Could not submit post.');
+  }
+
   function renderConfirmSummary() {
     var wrap = $('#smm-confirm-summary');
     if (!wrap) return;
@@ -1401,7 +1464,7 @@
       ? (compose.asset.label || compose.asset.kind || 'asset') +
         (compose.asset.kind ? ' (' + compose.asset.kind + ')' : '')
       : i18n('confirm_summary_none', '—');
-    var enabledChannels = getConnectedChannelsForSettings().filter(isChannelEnabled);
+    var enabledChannels = getEnabledChannelsForConfirm();
     var channelLines = enabledChannels
       .map(function (ch) {
         var settings = formatChannelSettingsSummary(ch);
@@ -1569,9 +1632,9 @@
       } else {
         if (modalStatus) {
           modalStatus.className = 'smm-submodal__status is-error';
-          modalStatus.textContent =
-            data.message || data.error || i18n('error_submit', 'Could not submit post.');
+          modalStatus.textContent = formatPublishFailureMessage(data);
         }
+        setNewPostStatus(formatPublishFailureMessage(data), 'error');
       }
     } catch (e) {
       if (modalStatus) {

@@ -145,6 +145,25 @@
   overflow-x: hidden;
   padding: 24px;
   min-height: 0;
+  /* Narrow brand scrollbar (orange thumb / dark track) — Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #f97316 #1f2937;
+}
+
+/* WebKit / Chromium / Safari */
+.hero-product-selection-modal__grid-container::-webkit-scrollbar {
+  width: 6px;
+}
+.hero-product-selection-modal__grid-container::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 999px;
+}
+.hero-product-selection-modal__grid-container::-webkit-scrollbar-thumb {
+  background: #f97316;
+  border-radius: 999px;
+}
+.hero-product-selection-modal__grid-container::-webkit-scrollbar-thumb:hover {
+  background: #fb923c;
 }
 
 .hero-product-selection-modal__loading {
