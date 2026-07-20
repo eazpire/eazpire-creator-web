@@ -70,6 +70,8 @@ let heroProductsNextOffset = 0;
 let heroProductsPageLoading = false;
 let heroProductsScrollBound = false;
 let heroProductsFetchCtx = { creatorName: null, ownerId: null, cacheKey: null };
+/** Coalesce concurrent loadHeroProducts for the same cache key. */
+let heroProductsInflight = null;
 
 function isHeroProductModalOpen() {
   var modal = document.getElementById('hero-product-selection-modal');
@@ -1572,7 +1574,6 @@ async function loadHeroProducts(creatorName, retryCount, options) {
   options = options || {};
   var silent = !!options.silent;
   var forceRefresh = !!options.forceRefresh;
-  var loadGen = ++heroProductsLoadGen;
   currentHeroRegion = normalizeHeroRegionCode(currentHeroRegion);
   const ownerId = window.__EAZ_OWNER_ID || (window.customer && window.customer.id) || null;
   const usageCtx = normalizeHeroUsageContext(
@@ -1613,6 +1614,38 @@ async function loadHeroProducts(creatorName, retryCount, options) {
     }
   }
 
+  // Reuse in-flight fetch for the same key (marketing silent + modal open race).
+  if (
+    heroProductsInflight &&
+    heroProductsInflight.key === cacheKey &&
+    typeof heroProductsInflight.promise?.then === 'function' &&
+    !forceRefresh
+  ) {
+    if (!silent) {
+      if (!heroProducts.length) showHeroProductSkeletons(12);
+      try {
+        await heroProductsInflight.promise;
+      } catch (_joinErr) {
+        /* fall through to a fresh load below if still empty */
+      }
+      if (heroProducts.length) {
+        hideHeroProductSkeletons();
+        filterHeroProducts();
+        if (heroProductsHasMore && getCurrentFilteredProducts().length < HERO_MIN_FILTERED_TARGET) {
+          await autoFillHeroFilteredPages(heroProductsLoadGen, HERO_MIN_FILTERED_TARGET);
+        }
+        return;
+      }
+    } else {
+      try {
+        await heroProductsInflight.promise;
+      } catch (_e) {}
+      return;
+    }
+  }
+
+  var loadGen = ++heroProductsLoadGen;
+
   if (!silent) {
     showHeroProductSkeletons(12);
     if (gridElement) gridElement.innerHTML = '';
@@ -1625,124 +1658,162 @@ async function loadHeroProducts(creatorName, retryCount, options) {
     heroProductsNextOffset = 0;
   }
 
-  try {
-    if (!silent) {
-      Promise.resolve()
-        .then(function () {
-          return refreshHeroRegionAvailability();
-        })
-        .catch(function () {});
-    }
-
-    console.log('🔍 Loading products page 0 for owner ID:', ownerId, 'usage:', usageCtx);
-
-    await ensureHeroModalSideData(ownerId);
-    if (loadGen !== heroProductsLoadGen) return;
-
-    const apiData = await fetchHeroShopifyProductsPage(ownerId, creatorName, 0, HERO_API_PAGE_SIZE);
-    if (loadGen !== heroProductsLoadGen) return;
-    if (!apiData.ok) {
-      throw new Error(apiData.error || 'API-Fehler beim Laden der Produkte');
-    }
-
-    var pageProducts = applyHeroRegionKeyFilter(mapShopifyProductsForHeroModal(apiData.products));
-    var returned = Array.isArray(apiData.products) ? apiData.products.length : 0;
-    var pageLimit = typeof apiData.limit === 'number' ? apiData.limit : HERO_API_PAGE_SIZE;
-    heroProductsNextOffset = (typeof apiData.offset === 'number' ? apiData.offset : 0) + returned;
-    heroProductsHasMore =
-      typeof apiData.has_more === 'boolean' ? apiData.has_more : returned >= pageLimit;
-
-    // Fallback: published catalogue if first page empty
-    if (pageProducts.length === 0 && !heroProductsHasMore && ownerId) {
-      const published = await window.creatorApiFetch('get-published-products', { owner_id: ownerId });
-      if (published && published.ok && Array.isArray(published.products)) {
-        pageProducts = applyHeroRegionKeyFilter(
-          sortHeroProductsNewestFirst(
-            (published.products || []).map(function (product) {
-              const id = product.shopify_product_id || product.product_key || product.id;
-              var image = product.featured_image || null;
-              return {
-                id: String(id || ''),
-                shopify_product_id: extractNumericProductId(product.shopify_product_id || id),
-                product_key: product.product_key || null,
-                title: product.product_name || product.title || product.product_key || 'Produkt',
-                product_type: product.product_type || 'Produkt',
-                images: image ? [{ src: image }] : [],
-                tags: [],
-                handle: product.shopify_handle || product.handle || null,
-                storefront_url: product.storefront_url || null,
-                price: product.price || null,
-                currency: product.currency || null,
-                variants: [],
-                region: currentHeroRegion,
-                used: isHeroProductUsed({
-                  id: id,
-                  shopify_product_id: product.shopify_product_id || id,
-                }),
-              };
-            })
-          )
-        );
-        heroProductsHasMore = false;
-        heroProductsNextOffset = pageProducts.length;
-        console.log('↩️ Hero modal fallback: using published products:', pageProducts.length);
+  var runLoad = (async function () {
+    try {
+      if (!silent) {
+        Promise.resolve()
+          .then(function () {
+            return refreshHeroRegionAvailability();
+          })
+          .catch(function () {});
       }
+
+      console.log('🔍 Loading products page 0 for owner ID:', ownerId, 'usage:', usageCtx);
+
+      await ensureHeroModalSideData(ownerId);
+
+      const apiData = await fetchHeroShopifyProductsPage(ownerId, creatorName, 0, HERO_API_PAGE_SIZE);
+      var superseded = loadGen !== heroProductsLoadGen;
+      if (!apiData || !apiData.ok) {
+        throw new Error((apiData && apiData.error) || 'API-Fehler beim Laden der Produkte');
+      }
+
+      var pageProducts = applyHeroRegionKeyFilter(mapShopifyProductsForHeroModal(apiData.products));
+      var returned = Array.isArray(apiData.products) ? apiData.products.length : 0;
+      var pageLimit = typeof apiData.limit === 'number' ? apiData.limit : HERO_API_PAGE_SIZE;
+      var nextOffset = (typeof apiData.offset === 'number' ? apiData.offset : 0) + returned;
+      var hasMore =
+        typeof apiData.has_more === 'boolean' ? apiData.has_more : returned >= pageLimit;
+
+      // Fallback: published catalogue if first page empty
+      if (pageProducts.length === 0 && !hasMore && ownerId) {
+        const published = await window.creatorApiFetch('get-published-products', { owner_id: ownerId });
+        if (published && published.ok && Array.isArray(published.products)) {
+          pageProducts = applyHeroRegionKeyFilter(
+            sortHeroProductsNewestFirst(
+              (published.products || []).map(function (product) {
+                const id = product.shopify_product_id || product.product_key || product.id;
+                var image = product.featured_image || null;
+                return {
+                  id: String(id || ''),
+                  shopify_product_id: extractNumericProductId(product.shopify_product_id || id),
+                  product_key: product.product_key || null,
+                  title: product.product_name || product.title || product.product_key || 'Produkt',
+                  product_type: product.product_type || 'Produkt',
+                  images: image ? [{ src: image }] : [],
+                  tags: [],
+                  handle: product.shopify_handle || product.handle || null,
+                  storefront_url: product.storefront_url || null,
+                  price: product.price || null,
+                  currency: product.currency || null,
+                  variants: [],
+                  region: currentHeroRegion,
+                  used: isHeroProductUsed({
+                    id: id,
+                    shopify_product_id: product.shopify_product_id || id,
+                  }),
+                };
+              })
+            )
+          );
+          hasMore = false;
+          nextOffset = pageProducts.length;
+          console.log('↩️ Hero modal fallback: using published products:', pageProducts.length);
+        }
+      }
+
+      var sortedPage = sortHeroProductsNewestFirst(
+        silent && forceRefresh
+          ? pageProducts
+          : mergeHeroProductsUnique([], pageProducts)
+      );
+
+      writeHeroProductCache(cacheKey, {
+        ts: Date.now(),
+        products: sortedPage,
+        usedIds: Array.from(heroUsedProductIds),
+        regionKeys: heroRegionFilteredKeys ? Array.from(heroRegionFilteredKeys) : null,
+        hasMore: hasMore,
+        nextOffset: nextOffset,
+      });
+
+      // Adopt results if we are still current, OR modal is open with empty grid (stale race).
+      var modalNeedsPaint =
+        isHeroProductModalOpen() &&
+        (!heroProducts || !heroProducts.length) &&
+        (!gridElement || !gridElement.children.length);
+      if (superseded && !modalNeedsPaint) {
+        console.log('[HeroModal] Stale page 0 discarded (newer load in flight)');
+        return sortedPage;
+      }
+
+      heroProductsNextOffset = nextOffset;
+      heroProductsHasMore = hasMore;
+      heroProducts = sortedPage;
+
+      console.log(
+        '✅ Loaded products page:',
+        pageProducts.length,
+        'total cached:',
+        heroProducts.length,
+        'has_more:',
+        heroProductsHasMore,
+        superseded ? '(adopted stale)' : ''
+      );
+      hideHeroProductSkeletons();
+      filterHeroProducts();
+
+      if (!superseded || modalNeedsPaint) {
+        await autoFillHeroFilteredPages(
+          superseded ? heroProductsLoadGen : loadGen,
+          HERO_MIN_FILTERED_TARGET
+        );
+      }
+      return heroProducts;
+    } catch (error) {
+      if (loadGen !== heroProductsLoadGen && !isHeroProductModalOpen()) return;
+
+      if (isHeroProductLoadTimeoutError(error) && retryCount < 1) {
+        console.warn('[HeroModal] Product load timed out, retrying once…', error.message);
+        return loadHeroProducts(creatorName, retryCount + 1, options);
+      }
+
+      console.error('❌ Error loading products:', error);
+
+      if (silent || !isHeroProductModalOpen()) {
+        console.warn('[HeroModal] Product load failed without open modal — no user alert');
+        return;
+      }
+
+      var displayMessage = isHeroProductLoadTimeoutError(error)
+        ? 'Die Anfrage hat zu lange gedauert. Bitte erneut versuchen.'
+        : error.message;
+
+      hideHeroProductSkeletons();
+      if (loadingElement) loadingElement.style.display = 'none';
+      if (emptyElement) {
+        emptyElement.style.display = 'block';
+        emptyElement.innerHTML =
+          '<div style="text-align: center;">' +
+          '<p style="margin-bottom: 12px;">Fehler beim Laden der Produkte</p>' +
+          '<p style="font-size: 14px; color: #9ca3af; margin-bottom: 16px;">' +
+          escapeHtmlText(displayMessage) +
+          '</p>' +
+          '<button onclick="retryLoadHeroProducts()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">' +
+          'Erneut versuchen</button></div>';
+      }
+
+      showHeroProductError('Fehler beim Laden der Produkte: ' + displayMessage);
     }
+  })();
 
-    if (silent && forceRefresh) {
-      heroProducts = sortHeroProductsNewestFirst(pageProducts);
-    } else {
-      heroProducts = sortHeroProductsNewestFirst(mergeHeroProductsUnique([], pageProducts));
+  heroProductsInflight = { key: cacheKey, promise: runLoad, gen: loadGen };
+  try {
+    return await runLoad;
+  } finally {
+    if (heroProductsInflight && heroProductsInflight.gen === loadGen) {
+      heroProductsInflight = null;
     }
-
-    if (loadGen !== heroProductsLoadGen) return;
-
-    console.log(
-      '✅ Loaded products page:',
-      pageProducts.length,
-      'total cached:',
-      heroProducts.length,
-      'has_more:',
-      heroProductsHasMore
-    );
-    persistHeroProductsCache(cacheKey);
-    hideHeroProductSkeletons();
-    filterHeroProducts();
-
-    // Keep fetching pages until category/usage filter has enough visible cards
-    await autoFillHeroFilteredPages(loadGen, HERO_MIN_FILTERED_TARGET);
-  } catch (error) {
-    if (loadGen !== heroProductsLoadGen) return;
-
-    if (isHeroProductLoadTimeoutError(error) && retryCount < 1) {
-      console.warn('[HeroModal] Product load timed out, retrying once…', error.message);
-      return loadHeroProducts(creatorName, retryCount + 1, options);
-    }
-
-    console.error('❌ Error loading products:', error);
-
-    if (silent || !isHeroProductModalOpen()) {
-      console.warn('[HeroModal] Product load failed without open modal — no user alert');
-      return;
-    }
-
-    var displayMessage = isHeroProductLoadTimeoutError(error)
-      ? 'Die Anfrage hat zu lange gedauert. Bitte erneut versuchen.'
-      : error.message;
-
-    hideHeroProductSkeletons();
-    if (loadingElement) loadingElement.style.display = 'none';
-    emptyElement.style.display = 'block';
-    emptyElement.innerHTML =
-      '<div style="text-align: center;">' +
-      '<p style="margin-bottom: 12px;">Fehler beim Laden der Produkte</p>' +
-      '<p style="font-size: 14px; color: #9ca3af; margin-bottom: 16px;">' +
-      escapeHtmlText(displayMessage) +
-      '</p>' +
-      '<button onclick="retryLoadHeroProducts()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">' +
-      'Erneut versuchen</button></div>';
-
-    showHeroProductError('Fehler beim Laden der Produkte: ' + displayMessage);
   }
 }
 
