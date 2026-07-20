@@ -1301,16 +1301,35 @@
     bindSectionToggle('channels');
     bindSectionToggle('schedule');
 
+    var settingsToggle = $('#smm-settings-toggle');
+    if (settingsToggle) {
+      settingsToggle.addEventListener('click', function () {
+        var settings = $('#smm-new-post-settings');
+        var stage = $('#smm-new-post-stage');
+        if (!settings) return;
+        var collapsed = settings.classList.toggle('is-collapsed');
+        if (stage) stage.classList.toggle('is-settings-collapsed', collapsed);
+        settingsToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        settingsToggle.textContent = collapsed ? '‹' : '›';
+      });
+    }
+
+    var composer = $('#smm-new-post-composer');
+    if (composer && !composer._smmViewerBound) {
+      composer._smmViewerBound = true;
+      composer.addEventListener('click', function (e) {
+        var chooseBtn = e.target && e.target.closest ? e.target.closest('#smm-btn-choose-asset') : null;
+        if (chooseBtn && composer.contains(chooseBtn)) {
+          e.preventDefault();
+          openAssetPickerModal();
+        }
+      });
+    }
+
     var scroll = $('#smm-new-post-scroll');
     if (scroll && !scroll._smmComposeBound) {
       scroll._smmComposeBound = true;
       scroll.addEventListener('click', function (e) {
-        var chooseBtn = e.target && e.target.closest ? e.target.closest('#smm-btn-choose-asset') : null;
-        if (chooseBtn && scroll.contains(chooseBtn)) {
-          e.preventDefault();
-          openAssetPickerModal();
-          return;
-        }
         var expandBtn =
           e.target && e.target.closest ? e.target.closest('[data-smm-channel-expand]') : null;
         if (expandBtn && scroll.contains(expandBtn) && !expandBtn.disabled) {

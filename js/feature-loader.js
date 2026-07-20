@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS changes. /vendor + Creations bundle are cached ~7d. */
-  var PORTAL_ASSET_V = "smm-layout-20260720a";
+  var PORTAL_ASSET_V = "smm-settings-sidebar-20260720b";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
