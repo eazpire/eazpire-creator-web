@@ -122,6 +122,15 @@
   function applyImageToCreator(sectionId, imageUrl) {
     if (!imageUrl) return;
 
+    if (
+      sectionId === 'eaz-ref-search' &&
+      window.EazReferenceSearch &&
+      typeof window.EazReferenceSearch.startFromUrl === 'function'
+    ) {
+      window.EazReferenceSearch.startFromUrl(imageUrl);
+      return;
+    }
+
     // Quick Inspirations upload flow — consume phone image before generator/shop handlers
     if (typeof window.__qiPhoneUploadApply === 'function') {
       try {
