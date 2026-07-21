@@ -84,8 +84,12 @@ function normalizeHeroUsageContext(ctx) {
   return 'hero';
 }
 
+/** Bump when cache shape / paging semantics change so stale tiny lists cannot stick. */
+const HERO_PRODUCT_CACHE_VER = 'v3';
+
 function heroProductCacheKey(ownerId, region, creatorName, usageCtx) {
   return [
+    HERO_PRODUCT_CACHE_VER,
     ownerId != null ? String(ownerId) : 'anon',
     normalizeHeroRegionCode(region || currentHeroRegion),
     creatorName ? String(creatorName) : '',
@@ -106,6 +110,14 @@ function readHeroProductCache(key) {
     return mem;
   }
   try {
+    // Drop legacy unversioned / pre-v3 caches (stuck offset=0 tiny lists).
+    if (key.indexOf('v3|') === 0) {
+      try {
+        var legacySuffix = key.slice(3); // strip "v3|"
+        sessionStorage.removeItem('eazHeroProdCache:' + legacySuffix);
+        sessionStorage.removeItem('eazHeroProdCache:v2|' + legacySuffix);
+      } catch (_leg) {}
+    }
     var raw = sessionStorage.getItem('eazHeroProdCache:' + key);
     if (!raw) return null;
     var parsed = JSON.parse(raw);
@@ -1561,8 +1573,20 @@ async function loadMoreHeroProductsPage(opts) {
     } else {
       heroProductsHasMore = pageReturned >= pageLimit;
     }
+    var prevOffset = heroProductsNextOffset;
     heroProductsNextOffset =
       typeof apiData.next_offset === 'number' ? apiData.next_offset : pageOffset + pageReturned;
+    // Guard: server must advance offset when has_more; otherwise stop to avoid infinite loops.
+    if (heroProductsHasMore && heroProductsNextOffset <= prevOffset) {
+      console.warn(
+        '[HeroModal] next_offset did not advance (' +
+          prevOffset +
+          '→' +
+          heroProductsNextOffset +
+          ') — stopping has_more'
+      );
+      heroProductsHasMore = false;
+    }
     if (heroProductsFetchCtx.cacheKey) persistHeroProductsCache(heroProductsFetchCtx.cacheKey);
     if (!opts.skipFilter) filterHeroProducts();
     return heroProducts.length > before || returned > 0;
