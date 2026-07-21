@@ -327,8 +327,8 @@
   border: 1px solid rgba(249, 115, 22, 0.35);
   margin: 10px;
   border-radius: 12px;
-  /* Workspace around the design — dark anthracite, distinct from modal navy/purple */
-  background: #2a2e33;
+  /* Workspace around the design — mid anthracite gray, clearly apart from modal #0b0b12 / #1a1a2e */
+  background: #3f454d;
   touch-action: none;
 }
 
