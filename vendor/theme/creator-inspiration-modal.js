@@ -913,6 +913,11 @@
 
       if (!previewContainer || !previewImg) return;
 
+      // Shop Design Generator owns refs via eazShopDgAddRef — skip preview MutationObserver
+      if (sectionId === 'eaz-shop-dg' && typeof window.eazShopDgAddRef === 'function') {
+        previewImg.dataset.eazDgSkipObs = '1';
+      }
+
       previewImg.src = imageUrl;
       previewContainer.style.display = 'flex';
       if (uploadZone) uploadZone.style.display = 'none';
@@ -970,6 +975,21 @@
         if (influenceResult && influenceResult.include_elements) addOpts.include_elements = influenceResult.include_elements;
         if (influenceResult && influenceResult.exclude_elements) addOpts.exclude_elements = influenceResult.exclude_elements;
         window.eazShopStudioRefsAdd(sectionId, imageUrl, stPct, Object.keys(addOpts).length ? addOpts : undefined);
+      }
+      if (sectionId === 'eaz-shop-dg' && typeof window.eazShopDgAddRef === 'function') {
+        window.eazShopDgAddRef(
+          imageUrl,
+          typeof strength === 'number' ? strength : 0.6,
+          influenceResult
+            ? {
+                inspiration_mode: influenceResult.inspiration_mode || null,
+                elements: influenceResult.elements || null,
+                include_elements: influenceResult.include_elements || null,
+                exclude_elements: influenceResult.exclude_elements || null,
+              }
+            : null
+        );
+        previewImg.removeAttribute('src');
       }
       console.log('[Inspiration Modal] Design loaded into upload zone:', design.id);
     }

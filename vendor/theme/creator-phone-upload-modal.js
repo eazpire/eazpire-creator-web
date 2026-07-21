@@ -225,6 +225,18 @@
       return;
     }
 
+    // Shop Design Generator (Printify Design Studio)
+    if (sectionId === 'eaz-shop-dg') {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('gen-design-selected', {
+            detail: { imageUrl: imageUrl, sectionId: sectionId, source: 'phone_qr' },
+          })
+        );
+      } catch (eDg) {}
+      return;
+    }
+
     var shop = document.body.classList.contains('eaz-shop-studio-open');
 
     if (shop && sectionId && typeof window.eazShopStudioRefsAdd === 'function') {
