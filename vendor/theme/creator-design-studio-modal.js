@@ -472,6 +472,8 @@
   /** Primary artwork URL for a print position — Front only unless explicitly set on that bucket. */
   function primaryDesignUrlForPosition(pos, bucket) {
     var key = normPos(pos);
+    // Explicitly cleared (e.g. Move primary Front → Back) — do not fall back to product design.
+    if (bucket && bucket.primary_cleared) return '';
     if (bucket && bucket.primary_url) return bucket.primary_url;
     // Never mirror the product design onto Back/other views on open/reset.
     if (key === 'front') {
@@ -482,6 +484,59 @@
       );
     }
     return '';
+  }
+
+  function creatorDesignCanonicalUrl() {
+    return String(
+      (ctxData && ctxData.design_preview_url) ||
+        (ctxDesign && ctxDesign.preview_url) ||
+        ''
+    ).trim();
+  }
+
+  function stripUrlNoise(url) {
+    return String(url || '')
+      .trim()
+      .replace(/[?#].*$/, '')
+      .toLowerCase();
+  }
+
+  function urlsLooselyEqual(a, b) {
+    var aa = stripUrlNoise(a);
+    var bb = stripUrlNoise(b);
+    return !!(aa && bb && aa === bb);
+  }
+
+  /** True when this asset is a placement of the product/creator design (must remain ≥1×). */
+  function assetIsCreatorDesign(asset) {
+    if (!asset || !asset.preview_url) return false;
+    if (asset.kind === 'primary') return true;
+    var id = ctxDesign && ctxDesign.id;
+    if (id != null && asset.slot && asset.slot.design_id != null) {
+      if (Number(asset.slot.design_id) === Number(id)) return true;
+    }
+    var canon = creatorDesignCanonicalUrl();
+    if (canon && urlsLooselyEqual(asset.preview_url, canon)) return true;
+    if (canon && urlsLooselyEqual(asset.original_url, canon)) return true;
+    return false;
+  }
+
+  function countCreatorDesignPlacements() {
+    var n = 0;
+    var positions = enabledPositions();
+    for (var i = 0; i < positions.length; i++) {
+      var assets = listAssetsForPosition(positions[i]);
+      for (var j = 0; j < assets.length; j++) {
+        if (assetIsCreatorDesign(assets[j])) n++;
+      }
+    }
+    return n;
+  }
+
+  function canRemoveAsset(asset, pos) {
+    if (!asset) return false;
+    if (!assetIsCreatorDesign(asset)) return true;
+    return countCreatorDesignPlacements() > 1;
   }
 
   /** Keep primary design visible in the viewer (open / reset / Front↔Back). */
@@ -858,6 +913,7 @@
         primary: adminDefaultTransform(key),
         primary_url: null,
         primary_original_url: null,
+        primary_cleared: false,
         additional: [],
         public_additional: null,
         alignment: { h: 'center', v: 'center' },
@@ -869,6 +925,7 @@
     bucket.additional = Array.isArray(bucket.additional) ? bucket.additional : [];
     bucket.pattern = bucket.pattern || defaultPattern();
     bucket.alignment = bucket.alignment || { h: 'center', v: 'center' };
+    if (bucket.primary_cleared == null) bucket.primary_cleared = false;
     return bucket;
   }
 
@@ -1125,6 +1182,7 @@
         primary: cloneTransform(bucket.primary),
         primary_url: bucket.primary_url || null,
         primary_original_url: bucket.primary_original_url || null,
+        primary_cleared: !!bucket.primary_cleared,
         additional: JSON.parse(JSON.stringify(bucket.additional || [])),
         public_additional: bucket.public_additional
           ? JSON.parse(JSON.stringify(bucket.public_additional))
@@ -1252,6 +1310,7 @@
 
   function primaryUrlFromSnapshotBucket(snap, pos, bucket) {
     var key = normPos(pos);
+    if (bucket && bucket.primary_cleared) return '';
     if (bucket && bucket.primary_url) return bucket.primary_url;
     if (key === 'front' && snap && snap.designCtx) {
       return snap.designCtx.preview_url || snap.designCtx.original_url || '';
@@ -1269,7 +1328,7 @@
       {};
     var assets = [];
     var primaryUrl = primaryUrlFromSnapshotBucket(snap, key, bucket);
-    if (primaryUrl || key === 'front') {
+    if (primaryUrl) {
       assets.push({
         preview_url: primaryUrl,
         transform: cloneTransform(bucket.primary),
@@ -1504,8 +1563,8 @@
     var assets = [];
     var key = normPos(pos);
     var primaryUrl = primaryDesignUrlForPosition(key, bucket);
-    // Front always has the product primary slot; other views only if a design was placed there.
-    if (primaryUrl || key === 'front') {
+    // Only list primary when this view actually has artwork (Front fallback or explicit URL).
+    if (primaryUrl) {
       assets.push({
         key: 'primary',
         kind: 'primary',
@@ -1550,15 +1609,15 @@
     return null;
   }
 
-  function activeTransform() {
+  function liveTransformForKey(key) {
     var bucket = currentBucket();
-    if (!activeAssetKey || activeAssetKey === 'primary') return bucket.primary;
-    if (activeAssetKey === 'public' && bucket.public_additional) {
+    if (!key || key === 'primary') return bucket.primary;
+    if (key === 'public' && bucket.public_additional) {
       bucket.public_additional.transform =
         bucket.public_additional.transform || cloneTransform({ scale: 0.4 });
       return bucket.public_additional.transform;
     }
-    var m = String(activeAssetKey || '').match(/^own-(\d+)$/);
+    var m = String(key || '').match(/^own-(\d+)$/);
     if (m) {
       var idx = Number(m[1]);
       var slot = bucket.additional[idx];
@@ -1568,6 +1627,10 @@
       }
     }
     return bucket.primary;
+  }
+
+  function activeTransform() {
+    return liveTransformForKey(activeAssetKey || 'primary');
   }
 
   function designUrlForAsset(key) {
@@ -2009,9 +2072,57 @@
     designChromeEl.classList.add('is-visible');
   }
 
+  function applyTransformToWrap(wrapEl, imgEl, trIn) {
+    if (!wrapEl || !imgEl || !printZoneEl) return;
+    var tr = trIn || DEFAULT_TRANSFORM;
+    var x = Number(tr.x);
+    var y = Number(tr.y);
+    var scale = Number(tr.scale);
+    var rot = Number(tr.rotate);
+    if (!Number.isFinite(x)) x = 0.5;
+    if (!Number.isFinite(y)) y = 0.5;
+    if (!Number.isFinite(scale) || scale <= 0) scale = 0.95;
+    if (!Number.isFinite(rot)) rot = 0;
+    rot = snapRotate5(rot);
+    var visualScale = visualScaleForTransform({
+      x: x,
+      y: y,
+      scale: scale,
+      rotate: rot,
+      flipX: !!tr.flipX,
+      flipY: !!tr.flipY,
+    });
+    var flipSx = tr.flipX ? -1 : 1;
+    var flipSy = tr.flipY ? -1 : 1;
+    var zoneW = printZoneEl.offsetWidth || 1;
+    var zoneH = printZoneEl.offsetHeight || 1;
+    imgEl.style.width = Math.max(24, zoneW * visualScale) + 'px';
+    imgEl.style.height = 'auto';
+    imgEl.style.maxWidth = 'none';
+    imgEl.style.maxHeight = 'none';
+    var dx = (x - 0.5) * zoneW;
+    var dy = (y - 0.5) * zoneH;
+    wrapEl.style.left = '50%';
+    wrapEl.style.top = '50%';
+    wrapEl.style.transform =
+      'translate(-50%, -50%) translate(' +
+      dx +
+      'px,' +
+      dy +
+      'px) rotate(' +
+      rot +
+      'deg) scale(' +
+      flipSx +
+      ',' +
+      flipSy +
+      ')';
+  }
+
   function applyTransformToDesignImg() {
     if (!designImgEl || !designWrapEl || !printZoneEl) return;
-    var tr = activeTransform();
+    var paintKey =
+      designWrapEl.getAttribute('data-cds-active-asset') || activeAssetKey || 'primary';
+    var tr = liveTransformForKey(paintKey);
     var x = Number(tr.x);
     var y = Number(tr.y);
     var scale = Number(tr.scale);
@@ -2028,38 +2139,124 @@
     tr.rotate = rot;
     tr.flipX = !!tr.flipX;
     tr.flipY = !!tr.flipY;
-    var visualScale = visualScaleForTransform(tr);
-    var flipSx = tr.flipX ? -1 : 1;
-    var flipSy = tr.flipY ? -1 : 1;
-
-    var zoneW = printZoneEl.offsetWidth || 1;
-    var zoneH = printZoneEl.offsetHeight || 1;
-    designImgEl.style.width = Math.max(24, zoneW * visualScale) + 'px';
-    designImgEl.style.height = 'auto';
-    designImgEl.style.maxWidth = 'none';
-    designImgEl.style.maxHeight = 'none';
-
-    var dx = (x - 0.5) * zoneW;
-    var dy = (y - 0.5) * zoneH;
-    designWrapEl.style.left = '50%';
-    designWrapEl.style.top = '50%';
-    // Shop parity: flip via CSS scale after rotate (persisted as flipX/flipY on transform).
-    designWrapEl.style.transform =
-      'translate(-50%, -50%) translate(' +
-      dx +
-      'px,' +
-      dy +
-      'px) rotate(' +
-      rot +
-      'deg) scale(' +
-      flipSx +
-      ',' +
-      flipSy +
-      ')';
-
+    applyTransformToWrap(designWrapEl, designImgEl, tr);
+    layoutPassiveDesignLayers();
     syncSelectionChrome();
     redrawZonePatternOverlay();
     if (cropping) syncCropUiFromFrac();
+  }
+
+  function clearPassiveDesignLayers() {
+    if (!printZoneClipEl) return;
+    printZoneClipEl.querySelectorAll('[data-cds-passive-layer]').forEach(function (el) {
+      el.remove();
+    });
+  }
+
+  function layoutPassiveDesignLayers() {
+    if (!printZoneClipEl || !printZoneEl) return;
+    printZoneClipEl.querySelectorAll('[data-cds-passive-layer]').forEach(function (wrap) {
+      var key = wrap.getAttribute('data-cds-passive-layer');
+      var asset = findAsset(key, currentPosition());
+      var img = wrap.querySelector('img');
+      if (!asset || !img) return;
+      applyTransformToWrap(wrap, img, asset.transform || DEFAULT_TRANSFORM);
+    });
+  }
+
+  /**
+   * Paint every asset on the current view.
+   * Active/selected asset uses the interactive #cds-design-wrap; others are passive layers
+   * so duplicates and Back placements stay visible even when not selected.
+   */
+  function paintViewerDesignLayers() {
+    if (!designWrapEl || !designImgEl || !printZoneClipEl) return;
+    clearPassiveDesignLayers();
+    var assets = listAssetsForPosition(currentPosition()).filter(function (a) {
+      return !!(a && a.preview_url);
+    });
+    if (!assets.length) {
+      designWrapEl.hidden = true;
+      if (designChromeEl) designChromeEl.hidden = true;
+      teardownZonePatternOverlay();
+      return;
+    }
+
+    var interactiveKey = null;
+    if (
+      assetSelected &&
+      activeAssetKey &&
+      assets.some(function (a) {
+        return a.key === activeAssetKey;
+      })
+    ) {
+      interactiveKey = activeAssetKey;
+    } else {
+      interactiveKey = assets.some(function (a) {
+        return a.key === 'primary';
+      })
+        ? 'primary'
+        : assets[0].key;
+    }
+
+    var pendingLoads = 0;
+    var settled = false;
+    function onLayerImgReady() {
+      if (settled) return;
+      pendingLoads = Math.max(0, pendingLoads - 1);
+      if (pendingLoads <= 0) {
+        settled = true;
+        scheduleLayoutPrintZone();
+      }
+    }
+
+    for (var i = 0; i < assets.length; i++) {
+      (function (asset) {
+        if (asset.key === interactiveKey) {
+          designWrapEl.hidden = false;
+          designImgEl.hidden = false;
+          designWrapEl.setAttribute('data-cds-active-asset', asset.key);
+          if (designImgEl.src !== asset.preview_url) {
+            pendingLoads++;
+            designImgEl.onload = onLayerImgReady;
+            designImgEl.src = asset.preview_url;
+            if (designImgEl.complete && designImgEl.naturalWidth) onLayerImgReady();
+          }
+          return;
+        }
+        var wrap = document.createElement('div');
+        wrap.className = 'cds-viewer__design-wrap cds-viewer__design-wrap--passive';
+        wrap.setAttribute('data-cds-passive-layer', asset.key);
+        wrap.setAttribute('role', 'button');
+        wrap.setAttribute('tabindex', '0');
+        wrap.title = t('designStudioSelectDesign', 'Select design');
+        var img = document.createElement('img');
+        img.className = 'cds-viewer__design';
+        img.alt = '';
+        img.decoding = 'async';
+        img.draggable = false;
+        pendingLoads++;
+        img.onload = onLayerImgReady;
+        img.src = asset.preview_url;
+        if (img.complete && img.naturalWidth) onLayerImgReady();
+        wrap.appendChild(img);
+        wrap.addEventListener('pointerdown', function (e) {
+          if (isVariantPreviewMode()) return;
+          e.stopPropagation();
+          activeAssetKey = asset.key;
+          setAssetSelected(true);
+          renderStudioUi();
+          markDirtyUi();
+        });
+        // Insert before the interactive wrap so active stays on top for hit-testing.
+        printZoneClipEl.insertBefore(wrap, designWrapEl);
+      })(assets[i]);
+    }
+
+    if (pendingLoads <= 0) {
+      settled = true;
+      scheduleLayoutPrintZone();
+    }
   }
 
   function teardownZonePatternOverlay() {
@@ -2233,6 +2430,7 @@
         designChromeEl.hidden = true;
         designChromeEl.classList.remove('is-visible');
       }
+      clearPassiveDesignLayers();
       teardownZonePatternOverlay();
       if (viewerEmptyEl) viewerEmptyEl.hidden = true;
       renderColorGrid();
@@ -2274,26 +2472,8 @@
       teardownZonePatternOverlay();
     }
 
-    // Paint selected asset, or primary when nothing is selected — never blank the print zone.
-    var paintKey = activeAssetKey || 'primary';
-    var url = designUrlForAsset(paintKey);
-    if (designWrapEl && designImgEl && url) {
-      designWrapEl.hidden = false;
-      designImgEl.hidden = false;
-      if (designImgEl.src !== url) {
-        designImgEl.onload = function () {
-          scheduleLayoutPrintZone();
-        };
-        designImgEl.src = url;
-      } else {
-        scheduleLayoutPrintZone();
-      }
-    } else if (designWrapEl) {
-      designWrapEl.hidden = true;
-      if (designChromeEl) designChromeEl.hidden = true;
-      teardownZonePatternOverlay();
-      scheduleLayoutPrintZone();
-    }
+    // Paint all assets on this view (active + passive layers).
+    paintViewerDesignLayers();
 
     if (isVariantPreviewMode()) {
       setAssetSelected(false);
@@ -3962,9 +4142,7 @@
       else if (action === 'reset') {
         btn.disabled = !(asset && asset.original_url && asset.preview_url !== asset.original_url);
       } else if (action === 'remove') {
-        // Front product primary cannot be removed; other-view primary can.
-        btn.disabled =
-          !!(asset && asset.kind === 'primary' && normPos(pendingAssetSourcePos) === 'front');
+        btn.disabled = !canRemoveAsset(asset, pendingAssetSourcePos);
       } else btn.disabled = false;
     });
     assetActionsEl.hidden = false;
@@ -4043,14 +4221,13 @@
 
   /**
    * Place a cloned slot onto a target view.
-   * Empty non-front views get it as primary (primary_url); otherwise as additional.
-   * Front primary is never overwritten (product primary is locked to Front).
+   * Empty views (including cleared Front) get it as primary; otherwise as additional.
    */
   function placeClonedOnTarget(targetPos, targetBucket, cloned) {
     var key = normPos(targetPos);
-    var canBecomePrimary =
-      key !== 'front' && !targetBucket.primary_url && !targetBucket.primary_original_url;
-    if (canBecomePrimary) {
+    var hasPrimaryPaint = !!primaryDesignUrlForPosition(key, targetBucket);
+    if (!hasPrimaryPaint) {
+      targetBucket.primary_cleared = false;
       targetBucket.primary_url = cloned.preview_url || null;
       targetBucket.primary_original_url = cloned.original_url || cloned.preview_url || null;
       targetBucket.primary = cloneTransform(cloned.transform || adminDefaultTransform(key));
@@ -4063,7 +4240,7 @@
     return { ok: true, key: 'own-' + (targetBucket.additional.length - 1) };
   }
 
-  /** Remove source asset after a successful Move (Front product primary stays). */
+  /** Remove source asset after a successful Move. Front primary can leave if another placement exists. */
   function removeAssetAfterMove(sourcePos, sourceBucket, asset) {
     if (!asset) return false;
     if (asset.kind === 'own') {
@@ -4074,13 +4251,13 @@
       sourceBucket.public_additional = null;
       return true;
     }
-    if (asset.kind === 'primary' && normPos(sourcePos) !== 'front') {
+    if (asset.kind === 'primary') {
+      sourceBucket.primary_cleared = true;
       sourceBucket.primary_url = null;
       sourceBucket.primary_original_url = null;
       sourceBucket.primary = adminDefaultTransform(sourcePos);
       return true;
     }
-    // Front primary cannot be removed — Move acts as Copy for that slot.
     return false;
   }
 
@@ -4150,28 +4327,32 @@
         } else {
           var movedAway = false;
           if (action === 'move') {
-            movedAway = removeAssetAfterMove(sourcePos, sourceBucket, asset);
+            if (!canRemoveAsset(asset, sourcePos)) {
+              // Last creator-design placement — treat as copy so the product keeps ≥1 design.
+              movedAway = false;
+            } else {
+              movedAway = removeAssetAfterMove(sourcePos, sourceBucket, asset);
+            }
           }
           switchToPositionAsset(targetPos, placed.key);
           didChange = true;
-          if (action === 'move' && !movedAway && asset.kind === 'primary') {
-            // Front primary stays; still show as placed on the other view.
-            statusMsg = t(
-              'designStudioAssetToastCopied',
-              'Design copied to {{placement}}.'
-            ).replace('{{placement}}', formatPlacementLabel(targetPos));
-          } else {
-            statusMsg = t(
-              action === 'copy' ? 'designStudioAssetToastCopied' : 'designStudioAssetToastMoved',
-              action === 'copy'
-                ? 'Design copied to {{placement}}.'
-                : 'Design moved to {{placement}}.'
-            ).replace('{{placement}}', formatPlacementLabel(targetPos));
-          }
+          statusMsg = t(
+            action === 'move' && movedAway
+              ? 'designStudioAssetToastMoved'
+              : 'designStudioAssetToastCopied',
+            action === 'move' && movedAway
+              ? 'Design moved to {{placement}}.'
+              : 'Design copied to {{placement}}.'
+          ).replace('{{placement}}', formatPlacementLabel(targetPos));
         }
       }
     } else if (action === 'remove') {
-      if (asset.kind === 'own') {
+      if (!canRemoveAsset(asset, sourcePos)) {
+        statusMsg = t(
+          'designStudioAssetKeepOne',
+          'The creator design must stay on at least one view.'
+        );
+      } else if (asset.kind === 'own') {
         sourceBucket.additional.splice(asset.index, 1);
         activeAssetKey = null;
         setAssetSelected(false);
@@ -4183,7 +4364,8 @@
         setAssetSelected(false);
         didChange = true;
         statusMsg = t('designStudioAssetToastRemoved', 'Asset removed.');
-      } else if (asset.kind === 'primary' && normPos(sourcePos) !== 'front') {
+      } else if (asset.kind === 'primary') {
+        sourceBucket.primary_cleared = true;
         sourceBucket.primary_url = null;
         sourceBucket.primary_original_url = null;
         sourceBucket.primary = adminDefaultTransform(sourcePos);

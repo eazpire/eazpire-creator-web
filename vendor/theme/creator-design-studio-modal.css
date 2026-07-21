@@ -941,6 +941,16 @@
   z-index: 3;
 }
 
+.cds-viewer__design-wrap--passive {
+  z-index: 2;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.cds-viewer__design-wrap--passive .cds-viewer__design {
+  pointer-events: none;
+}
+
 .cds-viewer__design {
   display: block;
   width: auto;
