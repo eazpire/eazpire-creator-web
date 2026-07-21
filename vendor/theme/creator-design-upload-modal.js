@@ -480,14 +480,56 @@
     });
   }
 
+  /** Visible image box inside preview — prefer real layout over theoretical contain math. */
+  function getDisplayedImageRect(previewEl, img) {
+    if (!previewEl || !img) return getContainedImageRect(previewEl, img);
+    try {
+      const pr = previewEl.getBoundingClientRect();
+      const ir = img.getBoundingClientRect();
+      if (pr.width > 0 && pr.height > 0 && ir.width > 0 && ir.height > 0) {
+        return {
+          left: Math.round(ir.left - pr.left),
+          top: Math.round(ir.top - pr.top),
+          width: Math.round(ir.width),
+          height: Math.round(ir.height),
+        };
+      }
+    } catch (_) {}
+    return getContainedImageRect(previewEl, img);
+  }
+
+  function isFrameFullImage(frame, displayed) {
+    if (!frame || !displayed) return true;
+    const fl = parseFloat(frame.style.left) || 0;
+    const ft = parseFloat(frame.style.top) || 0;
+    const fw = parseFloat(frame.style.width) || 0;
+    const fh = parseFloat(frame.style.height) || 0;
+    if (fw <= 0 || fh <= 0) return true;
+    // Stale frame after layout/resize (outside preview image) → treat as full = auto-crop.
+    const outside =
+      fl + fw < displayed.left - 4 ||
+      ft + fh < displayed.top - 4 ||
+      fl > displayed.left + displayed.width + 4 ||
+      ft > displayed.top + displayed.height + 4;
+    if (outside) return true;
+    return (
+      Math.abs(fw - displayed.width) < 3 &&
+      Math.abs(fh - displayed.height) < 3 &&
+      Math.abs(fl - displayed.left) < 3 &&
+      Math.abs(ft - displayed.top) < 3
+    );
+  }
+
   async function exportManualCropFromFrame(modal, file) {
     const placeholder = modal.querySelector('.design-upload-placeholder');
     const preview = placeholder && placeholder.querySelector('.design-upload-preview');
     const frame = preview && preview.querySelector('.design-upload-frame');
     const img = preview && preview.querySelector('.design-upload-preview__full-image');
     if (!preview || !frame || !img || !file) return null;
-    const displayed = getContainedImageRect(preview, img);
-    if (!displayed) return null;
+    const displayed = getDisplayedImageRect(preview, img);
+    if (!displayed || displayed.width <= 0 || displayed.height <= 0) return null;
+    if (isFrameFullImage(frame, displayed)) return null;
+
     const fl = parseFloat(frame.style.left) || 0;
     const ft = parseFloat(frame.style.top) || 0;
     const fw = parseFloat(frame.style.width) || 0;
@@ -495,12 +537,7 @@
     const nw = img.naturalWidth || 0;
     const nh = img.naturalHeight || 0;
     if (nw <= 0 || nh <= 0 || fw <= 0 || fh <= 0) return null;
-    const fullOverlap =
-      Math.abs(fw - displayed.width) < 2 &&
-      Math.abs(fh - displayed.height) < 2 &&
-      Math.abs(fl - displayed.left) < 2 &&
-      Math.abs(ft - displayed.top) < 2;
-    if (fullOverlap) return null;
+
     const ix = Math.round(((fl - displayed.left) / displayed.width) * nw);
     const iy = Math.round(((ft - displayed.top) / displayed.height) * nh);
     const iw = Math.round((fw / displayed.width) * nw);
@@ -511,20 +548,24 @@
     const sh = Math.max(1, Math.min(nh - sy, ih));
     const url = URL.createObjectURL(file);
     const i2 = new Image();
-    await new Promise((resolve, reject) => {
-      i2.onload = resolve;
-      i2.onerror = reject;
-      i2.src = url;
-    });
-    const c = document.createElement('canvas');
-    c.width = sw;
-    c.height = sh;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(i2, sx, sy, sw, sh, 0, 0, sw, sh);
-    URL.revokeObjectURL(url);
-    const blob = await new Promise((resolve) => c.toBlob(resolve, 'image/png', 0.95));
-    if (!blob) return null;
-    return new File([blob], normalizePngCropName(file.name), { type: 'image/png' });
+    try {
+      await new Promise((resolve, reject) => {
+        i2.onload = resolve;
+        i2.onerror = function () { reject(new Error('image_load_failed')); };
+        i2.src = url;
+      });
+      const c = document.createElement('canvas');
+      c.width = sw;
+      c.height = sh;
+      const ctx = c.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(i2, sx, sy, sw, sh, 0, 0, sw, sh);
+      const blob = await new Promise((resolve) => c.toBlob(resolve, 'image/png'));
+      if (!blob) return null;
+      return new File([blob], normalizePngCropName(file.name), { type: 'image/png' });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
 
   function startFrameMove(e) {
@@ -631,7 +672,7 @@
     const existing = previewEl.querySelector('.design-upload-frame');
     if (existing) existing.remove();
 
-    const rect = getContainedImageRect(previewEl, img);
+    const rect = getDisplayedImageRect(previewEl, img) || getContainedImageRect(previewEl, img);
     if (!rect || rect.width <= 0 || rect.height <= 0) return false;
     const frame = document.createElement('div');
     frame.className = 'design-upload-frame';
@@ -967,7 +1008,10 @@
               updateActionButtons();
               return;
             }
-            const apiBaseUrl = apiBase || window.api_base_url || window.API_BASE_URL || window.creator_api_base_url;
+            if (!window.EazpireCropImage || typeof window.EazpireCropImage.cropImageFlow !== 'function') {
+              throw new Error('Crop module not loaded. Please reload the page.');
+            }
+            const apiBaseUrl = resolveApiBase() || window.api_base_url || window.API_BASE_URL || window.creator_api_base_url;
             const processed = await window.EazpireCropImage.cropImageFlow({
               modal,
               previewPlaceholderEl: previewPlaceholder,
@@ -980,9 +1024,12 @@
             updateActionButtons();
           } catch (err) {
             console.error('[crop] failed', err);
+            const msg = err && err.message ? String(err.message) : '';
             showErrorMessage(
               modal,
-              err.message && err.message.includes('PNG') ? err.message : 'Zuschneiden fehlgeschlagen. Bitte versuchen Sie es erneut.',
+              msg && msg !== 'crop_encode_failed' && msg !== 'image_load_failed'
+                ? msg
+                : 'Zuschneiden fehlgeschlagen. Bitte versuchen Sie es erneut.',
               'error'
             );
           } finally {

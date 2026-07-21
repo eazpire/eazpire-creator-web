@@ -2856,35 +2856,79 @@
     });
   }
 
-  function colorDotStyle(itemOrName) {
-    if (itemOrName && typeof itemOrName === 'object' && itemOrName.color_hex) {
-      return 'background:' + itemOrName.color_hex;
+  function colorDotStyle(itemOrName, fallbackName) {
+    var hex = '';
+    var n = '';
+    if (itemOrName && typeof itemOrName === 'object') {
+      hex = String(itemOrName.color_hex || '').trim();
+      n = String(itemOrName.color || fallbackName || '').trim().toLowerCase();
+    } else {
+      n = String(itemOrName || fallbackName || '').trim().toLowerCase();
     }
-    var n = String((itemOrName && itemOrName.color) || itemOrName || '').toLowerCase();
-    var map = {
-      black: '#111111',
-      white: '#f5f5f5',
-      red: '#dc2626',
-      blue: '#2563eb',
-      navy: '#1e3a5f',
-      green: '#16a34a',
-      grey: '#6b7280',
-      gray: '#6b7280',
-      pink: '#ec4899',
-      orange: '#f97316',
-      yellow: '#eab308',
-      purple: '#7c3aed',
-      brown: '#92400e',
-      beige: '#d6c6a8',
-      cream: '#fffdd0',
-      charcoal: '#36454f',
-      heather: '#9ca3af',
-      forest: '#166534',
-      maroon: '#7f1d1d',
-      teal: '#0d9488',
-    };
-    for (var k in map) {
-      if (n.indexOf(k) !== -1) return 'background:' + map[k];
+    if (!hex && fallbackName && (!n || n === '[object object]')) {
+      n = String(fallbackName || '').trim().toLowerCase();
+    }
+    if (hex && /^#?[0-9a-f]{3,8}$/i.test(hex.replace(/\s/g, ''))) {
+      if (hex.charAt(0) !== '#') hex = '#' + hex;
+      return 'background:' + hex;
+    }
+    // Phrase-aware first (longer names beat short tokens like "grey" / "heather")
+    var phrasePairs = [
+      ['athletic heather', '#9ca3af'],
+      ['graphite heather', '#4b5563'],
+      ['dark heather', '#4b5563'],
+      ['heather grey', '#9ca3af'],
+      ['heather gray', '#9ca3af'],
+      ['sport grey', '#9ca3af'],
+      ['sport gray', '#9ca3af'],
+      ['royal blue', '#2563eb'],
+      ['navy blue', '#1e3a8a'],
+      ['forest green', '#166534'],
+      ['off white', '#f6f6f6'],
+      ['irish green', '#14532d'],
+    ];
+    var pi;
+    for (pi = 0; pi < phrasePairs.length; pi++) {
+      if (n.indexOf(phrasePairs[pi][0]) !== -1) return 'background:' + phrasePairs[pi][1];
+    }
+    var tokenPairs = [
+      ['charcoal', '#374151'],
+      ['burgundy', '#7f1d41'],
+      ['oatmeal', '#e8ddd4'],
+      ['heather', '#9ca3af'],
+      ['asphalt', '#43484d'],
+      ['ivory', '#fffff0'],
+      ['cream', '#fffdd0'],
+      ['sand', '#d4cbb0'],
+      ['natural', '#e8dfd2'],
+      ['aqua', '#22d3ee'],
+      ['magenta', '#c026d3'],
+      ['teal', '#0f766e'],
+      ['brown', '#78350f'],
+      ['pink', '#ec4899'],
+      ['lime', '#65a30d'],
+      ['gold', '#d4af37'],
+      ['orange', '#ea580c'],
+      ['yellow', '#eab308'],
+      ['purple', '#7c3aed'],
+      ['navy', '#1e293b'],
+      ['maroon', '#7f1d1d'],
+      ['tan', '#c19a6b'],
+      ['khaki', '#c3b091'],
+      ['beige', '#d6cbb8'],
+      ['silver', '#9ca3af'],
+      ['gray', '#6b7280'],
+      ['grey', '#6b7280'],
+      ['black', '#1a1a1a'],
+      ['white', '#f5f5f5'],
+      ['blue', '#2563eb'],
+      ['red', '#dc2626'],
+      ['green', '#16a34a'],
+      ['forest', '#166534'],
+    ];
+    var ti;
+    for (ti = 0; ti < tokenPairs.length; ti++) {
+      if (n.indexOf(tokenPairs[ti][0]) !== -1) return 'background:' + tokenPairs[ti][1];
     }
     return 'background:#888';
   }
@@ -3014,7 +3058,7 @@
         '>';
       html +=
         '<button type="button" class="cds-color-dot" style="' +
-        colorDotStyle(sample) +
+        colorDotStyle(sample, color) +
         '" data-cds-color-preview="' +
         encodeURIComponent(color) +
         '" title="' +
@@ -3259,7 +3303,7 @@
       var openByDefault = openColors[color] || g === 0;
       html += '<div class="cds-color-group' + (openByDefault ? ' is-open' : '') + '" data-color-group="' + encodeURIComponent(color) + '">';
       html += '<div class="cds-color-head cds-color-head--readonly">';
-      html += '<button type="button" class="cds-color-dot" style="' + colorDotStyle(sample) + '" tabindex="-1" aria-hidden="true"></button>';
+      html += '<button type="button" class="cds-color-dot" style="' + colorDotStyle(sample, color) + '" tabindex="-1" aria-hidden="true"></button>';
       html += '<button type="button" class="cds-color-name" data-cds-color-toggle>' + color + '</button>';
       html += '<button type="button" class="cds-color-toggle" data-cds-color-toggle aria-label="Toggle sizes">▾</button>';
       html += '</div><div class="cds-color-body"><div class="cds-size-list">';
@@ -4628,7 +4672,10 @@
       var c = previewColors[i];
       var on = c.color_key === previewActiveColor;
       var enabled = c.enabled !== false;
-      var hex = c.hex || '#888888';
+      var hexStyle = colorDotStyle(
+        { color_hex: c.hex, color: c.label || c.color_key },
+        c.label || c.color_key
+      );
       html +=
         '<div class="cds-preview-color' +
         (on ? ' is-active' : '') +
@@ -4661,8 +4708,8 @@
             String(c.front_preview_url).replace(/"/g, '&quot;') +
             '" alt="" decoding="async">'
           : '<span class="cds-preview-color__img" aria-hidden="true"></span>') +
-        '<span class="cds-preview-color__swatch" style="background:' +
-        String(hex).replace(/"/g, '') +
+        '<span class="cds-preview-color__swatch" style="' +
+        hexStyle +
         '"></span>' +
         '<span class="cds-preview-color__label">' +
         String(c.label || c.color_key) +
