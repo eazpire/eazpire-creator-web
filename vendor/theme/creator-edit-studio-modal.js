@@ -56,6 +56,8 @@
   var viewerBg = BG_DEFAULT;
   var brushEl = null;
   var brushVisible = false;
+  var designBackdrop = null;
+  var canvasResizeObserver = null;
   var activePointers = {};
   var pinchGesture = null; // two-finger pan + pinch-zoom
   var toolBeforeModal = 'pipette';
@@ -1212,6 +1214,37 @@
     if (!stage) return;
     stage.style.transform =
       'translate(' + zoom.x + 'px,' + zoom.y + 'px) scale(' + zoom.scale + ')';
+    syncDesignBackdropSize();
+  }
+
+  function syncDesignBackdropSize() {
+    var backdrop = designBackdrop || $('ces-design-backdrop');
+    var target = canvas || $('ces-canvas');
+    if (!backdrop || !target) return;
+    // Layout size (pre-zoom) so backdrop matches the canvas box inside the scaled stage.
+    var w = target.offsetWidth || 0;
+    var h = target.offsetHeight || 0;
+    if (w <= 0 || h <= 0) {
+      var rect = target.getBoundingClientRect();
+      var scale = zoom.scale || 1;
+      w = scale > 0.001 ? rect.width / scale : rect.width;
+      h = scale > 0.001 ? rect.height / scale : rect.height;
+    }
+    backdrop.style.width = Math.max(0, Math.round(w)) + 'px';
+    backdrop.style.height = Math.max(0, Math.round(h)) + 'px';
+  }
+
+  function ensureCanvasResizeObserver() {
+    if (typeof ResizeObserver === 'undefined') return;
+    if (!canvasResizeObserver) {
+      canvasResizeObserver = new ResizeObserver(function () {
+        syncDesignBackdropSize();
+      });
+    }
+    if (canvas) {
+      try { canvasResizeObserver.disconnect(); } catch (_) {}
+      canvasResizeObserver.observe(canvas);
+    }
   }
 
   function setZoom(scale, anchorClientX, anchorClientY) {
@@ -1295,19 +1328,20 @@
   }
 
   function applyViewerBg() {
-    // Design preview bg on the canvas element (shows through transparent pixels).
-    // Viewer pasteboard stays fixed anthracite so design bounds stay visible.
-    var target = canvas || $('ces-canvas');
-    if (!target) return;
+    // Design preview bg on dedicated backdrop behind the canvas (exact design bounds).
+    // Viewer pasteboard stays fixed dark anthracite.
+    var backdrop = designBackdrop || $('ces-design-backdrop');
+    if (!backdrop) return;
     var isChecker = viewerBg === 'checker';
-    target.classList.toggle('is-checker-bg', isChecker);
+    backdrop.classList.toggle('is-checker-bg', isChecker);
     if (isChecker) {
-      target.style.backgroundColor = '';
-      target.style.backgroundImage = '';
+      backdrop.style.backgroundColor = '';
+      backdrop.style.backgroundImage = '';
     } else {
-      target.style.backgroundColor = viewerBg;
-      target.style.backgroundImage = 'none';
+      backdrop.style.backgroundColor = viewerBg;
+      backdrop.style.backgroundImage = 'none';
     }
+    syncDesignBackdropSize();
     var sw = $('ces-bg-swatch');
     if (sw) {
       sw.classList.toggle('is-checker', isChecker);
@@ -1424,6 +1458,10 @@
     dirty = false;
     syncMaskCanvasSize();
     showMaskOverlay(activeTool === 'genfill');
+    syncDesignBackdropSize();
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function () { syncDesignBackdropSize(); });
+    }
   }
 
   function setBusy(on, message) {
@@ -2784,6 +2822,7 @@
     root = $('creatorEditStudioModal');
     canvas = $('ces-canvas');
     maskCanvas = $('ces-mask-canvas');
+    designBackdrop = $('ces-design-backdrop');
     viewer = $('ces-viewer');
     stage = $('ces-zoom-stage');
     busyEl = $('ces-busy');
@@ -2794,6 +2833,7 @@
     if (maskCanvas && !maskCtx) {
       maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
     }
+    ensureCanvasResizeObserver();
     bindOnce();
   }
 
