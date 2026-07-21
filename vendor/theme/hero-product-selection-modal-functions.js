@@ -69,6 +69,7 @@ let heroProductsHasMore = false;
 let heroProductsNextOffset = 0;
 let heroProductsPageLoading = false;
 let heroProductsScrollBound = false;
+let heroProductsSearchBound = false;
 let heroProductsFetchCtx = { creatorName: null, ownerId: null, cacheKey: null };
 /** Coalesce concurrent loadHeroProducts for the same cache key. */
 let heroProductsInflight = null;
@@ -279,6 +280,67 @@ function bindHeroProductInfiniteScrollOnce() {
     },
     { passive: true }
   );
+}
+
+/**
+ * Live search must work on Creator Hub too: modal HTML/JS are injected after DOMContentLoaded,
+ * so a one-shot DOMContentLoaded binder never attaches. Use document-level delegation.
+ */
+function bindHeroProductSearchOnce() {
+  if (heroProductsSearchBound) return;
+  heroProductsSearchBound = true;
+  var searchTimer = null;
+  function onLiveSearch() {
+    filterHeroProducts();
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () {
+      if (
+        isHeroProductModalOpen() &&
+        heroProductsHasMore &&
+        getCurrentFilteredProducts().length < HERO_MIN_FILTERED_TARGET
+      ) {
+        autoFillHeroFilteredPages(heroProductsLoadGen, HERO_MIN_FILTERED_TARGET).catch(function () {});
+      }
+    }, 180);
+  }
+  document.addEventListener('input', function (e) {
+    var t = e && e.target;
+    if (!t || t.id !== 'hero-product-selection-modal-search') return;
+    onLiveSearch();
+  });
+  document.addEventListener('search', function (e) {
+    var t = e && e.target;
+    if (!t || t.id !== 'hero-product-selection-modal-search') return;
+    onLiveSearch();
+  });
+}
+
+function getHeroModalSearchQuery() {
+  var el = document.getElementById('hero-product-selection-modal-search');
+  if (!el || el.value == null) return '';
+  return String(el.value).trim().toLowerCase();
+}
+
+/** Case-insensitive substring; multi-word = AND across title/handle/type/tags/product_key. */
+function productMatchesHeroSearch(product, query) {
+  if (!query) return true;
+  if (!product) return false;
+  var hay = [
+    product.title,
+    product.handle,
+    product.product_type,
+    product.product_key,
+    Array.isArray(product.tags) ? product.tags.join(' ') : '',
+  ]
+    .join(' ')
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  var tokens = query.split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  for (var i = 0; i < tokens.length; i += 1) {
+    if (hay.indexOf(tokens[i]) === -1) return false;
+  }
+  return true;
 }
 
 function isHeroProductLoadTimeoutError(error) {
@@ -1631,6 +1693,7 @@ async function loadHeroProducts(creatorName, retryCount, options) {
   const emptyElement = document.getElementById('hero-product-selection-modal-empty');
 
   bindHeroProductInfiniteScrollOnce();
+  bindHeroProductSearchOnce();
 
   // Warm cache: paint immediately, refresh first page in background
   if (!silent && !forceRefresh) {
@@ -1925,6 +1988,7 @@ function openHeroProductSelectionModalSimple(category, callback, creatorName, op
   // Reset search
   const searchInput = document.getElementById('hero-product-selection-modal-search');
   if (searchInput) searchInput.value = '';
+  bindHeroProductSearchOnce();
 
   // Sicherstellen, dass die Basis-Klasse vorhanden ist
   if (!modal.classList.contains('creator-modal')) {
@@ -2102,17 +2166,11 @@ function getCurrentFilteredProducts() {
     filteredProducts = filteredProducts.filter(product => !product.used);
   }
 
-  // Apply search filter
-  const searchTerm = document.getElementById('hero-product-selection-modal-search').value.toLowerCase();
-  if (searchTerm.trim()) {
-    filteredProducts = filteredProducts.filter(product => {
-      const title = (product.title || '').toLowerCase();
-      const type = (product.product_type || '').toLowerCase();
-      const tags = (product.tags || []).join(' ').toLowerCase();
-
-      return title.includes(searchTerm) ||
-             type.includes(searchTerm) ||
-             tags.includes(searchTerm);
+  // Apply search filter (live — must hide non-matches from currently loaded list)
+  var searchTerm = getHeroModalSearchQuery();
+  if (searchTerm) {
+    filteredProducts = filteredProducts.filter(function (product) {
+      return productMatchesHeroSearch(product, searchTerm);
     });
   }
 
@@ -2393,8 +2451,13 @@ function renderHeroProducts(products) {
 
   if (!products || products.length === 0) {
     if (loadingElement) loadingElement.style.display = 'none';
-    emptyElement.style.display = 'block';
-    emptyElement.textContent = 'Keine Produkte gefunden.';
+    if (emptyElement) {
+      emptyElement.style.display = 'block';
+      var q = getHeroModalSearchQuery();
+      emptyElement.textContent = q
+        ? 'No products match your search.'
+        : 'Keine Produkte gefunden.';
+    }
     return;
   }
 
@@ -2888,20 +2951,12 @@ window.scheduleHeroMarketingAutoPick = function scheduleHeroMarketingAutoPick(op
   }
 };
 
+// Bind immediately — portal injects this script after DOMContentLoaded.
+bindHeroProductSearchOnce();
+bindHeroProductGridDelegationOnce();
+bindHeroProductInfiniteScrollOnce();
 document.addEventListener('DOMContentLoaded', function () {
-  const searchInput = document.getElementById('hero-product-selection-modal-search');
-  if (searchInput) {
-    var searchTimer = null;
-    searchInput.addEventListener('input', function () {
-      filterHeroProducts();
-      if (searchTimer) clearTimeout(searchTimer);
-      searchTimer = setTimeout(function () {
-        if (heroProductsHasMore && getCurrentFilteredProducts().length < HERO_MIN_FILTERED_TARGET) {
-          autoFillHeroFilteredPages(heroProductsLoadGen, HERO_MIN_FILTERED_TARGET).catch(function () {});
-        }
-      }, 220);
-    });
-  }
+  bindHeroProductSearchOnce();
   bindHeroProductGridDelegationOnce();
   bindHeroProductInfiniteScrollOnce();
 });
