@@ -1295,10 +1295,18 @@
   }
 
   function applyViewerBg() {
-    if (!viewer) return;
+    // Design preview bg goes on the canvas frame only; viewer keeps a fixed anthracite workspace.
+    var frame = $('ces-canvas-frame');
+    if (!frame) return;
     var isChecker = viewerBg === 'checker';
-    viewer.classList.toggle('is-checker-bg', isChecker);
-    viewer.style.backgroundColor = isChecker ? '' : viewerBg;
+    frame.classList.toggle('is-checker-bg', isChecker);
+    if (isChecker) {
+      frame.style.backgroundColor = '';
+      frame.style.backgroundImage = '';
+    } else {
+      frame.style.backgroundColor = viewerBg;
+      frame.style.backgroundImage = 'none';
+    }
     var sw = $('ces-bg-swatch');
     if (sw) {
       sw.classList.toggle('is-checker', isChecker);

@@ -52,6 +52,22 @@
   var processPollTimer = null;
   var PROCESS_POLL_MS = 2500;
 
+  /** Crop/segment editor state */
+  var editorModal = null;
+  var segmentConfigModal = null;
+  var editorQueue = [];
+  var editorQueueIndex = 0;
+  var editorMode = 'crop';
+  /** @type {{x:number,y:number,w:number,h:number}[]} normalized 0–1 */
+  var editorFrames = [];
+  var editorActiveFrame = 0;
+  var editorObjectUrl = null;
+  var editorNaturalW = 0;
+  var editorNaturalH = 0;
+  var editorDrag = null;
+  var editorSaving = false;
+  var editorPointerBound = false;
+
   function t(key, fallback) {
     try {
       var i18n = window.CreatorI18n || {};
@@ -152,6 +168,8 @@
     uploadModal = document.getElementById('qi-upload-modal');
     sourceModal = document.getElementById('qi-upload-source-modal');
     deleteConfirmModal = document.getElementById('qi-delete-confirm-modal');
+    editorModal = document.getElementById('qi-editor-modal');
+    segmentConfigModal = document.getElementById('qi-segment-config-modal');
     return !!modal;
   }
 
@@ -1181,6 +1199,566 @@
     renderPendingPreviews();
   }
 
+  function showEditorStatus(msg, kind) {
+    var el = document.getElementById('qi-editor-status');
+    if (!el) return;
+    if (!msg) {
+      el.style.display = 'none';
+      el.textContent = '';
+      el.className = 'qi-upload__status';
+      return;
+    }
+    el.style.display = '';
+    el.textContent = msg;
+    el.className = 'qi-upload__status' + (kind === 'error' ? ' is-error' : kind === 'warn' ? ' is-warn' : '');
+  }
+
+  function showSegmentConfigStatus(msg, kind) {
+    var el = document.getElementById('qi-segment-config-status');
+    if (!el) return;
+    if (!msg) {
+      el.style.display = 'none';
+      el.textContent = '';
+      el.className = 'qi-upload__status';
+      return;
+    }
+    el.style.display = '';
+    el.textContent = msg;
+    el.className = 'qi-upload__status' + (kind === 'error' ? ' is-error' : kind === 'warn' ? ' is-warn' : '');
+  }
+
+  function clampFrame(f) {
+    var min = 0.02;
+    var x = Math.max(0, Math.min(1, Number(f.x) || 0));
+    var y = Math.max(0, Math.min(1, Number(f.y) || 0));
+    var w = Math.max(min, Math.min(1, Number(f.w) || min));
+    var h = Math.max(min, Math.min(1, Number(f.h) || min));
+    if (x + w > 1) w = Math.max(min, 1 - x);
+    if (y + h > 1) h = Math.max(min, 1 - y);
+    return { x: x, y: y, w: w, h: h };
+  }
+
+  function buildEvenGridSegments(count) {
+    var n = Math.max(2, Math.min(12, Math.round(Number(count) || 4)));
+    var cols = Math.ceil(Math.sqrt(n));
+    var rows = Math.ceil(n / cols);
+    var cellW = 1 / cols;
+    var cellH = 1 / rows;
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var col = i % cols;
+      var row = Math.floor(i / cols);
+      out.push(clampFrame({ x: col * cellW, y: row * cellH, w: cellW, h: cellH }));
+    }
+    return out;
+  }
+
+  function newBatchId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return 'qib_' + window.crypto.randomUUID();
+      }
+    } catch (_e) {}
+    return 'qib_' + Date.now().toString(36) + '_' + Math.random().toString(16).slice(2, 10);
+  }
+
+  function revokeEditorObjectUrl() {
+    if (editorObjectUrl) {
+      try {
+        URL.revokeObjectURL(editorObjectUrl);
+      } catch (_e) {}
+      editorObjectUrl = null;
+    }
+  }
+
+  function getEditorImageRect() {
+    var img = document.getElementById('qi-editor-img');
+    if (!img) return { w: 0, h: 0 };
+    return { w: img.clientWidth || 0, h: img.clientHeight || 0 };
+  }
+
+  function paintEditorDim() {
+    var canvas = document.getElementById('qi-editor-dim');
+    var img = document.getElementById('qi-editor-img');
+    if (!canvas || !img) return;
+    var w = img.clientWidth;
+    var h = img.clientHeight;
+    if (!w || !h) return;
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.62)';
+    ctx.fillRect(0, 0, w, h);
+    for (var i = 0; i < editorFrames.length; i++) {
+      var f = editorFrames[i];
+      ctx.clearRect(f.x * w, f.y * h, f.w * w, f.h * h);
+    }
+  }
+
+  function renderEditorFrames() {
+    var host = document.getElementById('qi-editor-frames');
+    if (!host) return;
+    host.innerHTML = '';
+    editorFrames.forEach(function (f, idx) {
+      var el = document.createElement('div');
+      el.className = 'qi-editor__frame' + (idx === editorActiveFrame ? ' is-active' : '');
+      el.style.left = f.x * 100 + '%';
+      el.style.top = f.y * 100 + '%';
+      el.style.width = f.w * 100 + '%';
+      el.style.height = f.h * 100 + '%';
+      el.setAttribute('data-frame-index', String(idx));
+      var label = document.createElement('span');
+      label.className = 'qi-editor__frame-label';
+      label.textContent = String(idx + 1);
+      el.appendChild(label);
+      ['nw', 'ne', 'sw', 'se'].forEach(function (corner) {
+        var h = document.createElement('span');
+        h.className = 'qi-editor__handle qi-editor__handle--' + corner;
+        h.setAttribute('data-handle', corner);
+        el.appendChild(h);
+      });
+      host.appendChild(el);
+    });
+    paintEditorDim();
+  }
+
+  function setEditorMode(mode, opts) {
+    var openSegmentModal = !(opts && opts.skipSegmentModal);
+    editorMode = mode === 'segment' ? 'segment' : 'crop';
+    var cropTab = document.getElementById('qi-editor-tab-crop');
+    var segTab = document.getElementById('qi-editor-tab-segment');
+    if (cropTab) {
+      cropTab.classList.toggle('is-active', editorMode === 'crop');
+      cropTab.setAttribute('aria-selected', editorMode === 'crop' ? 'true' : 'false');
+    }
+    if (segTab) {
+      segTab.classList.toggle('is-active', editorMode === 'segment');
+      segTab.setAttribute('aria-selected', editorMode === 'segment' ? 'true' : 'false');
+    }
+    var hint = document.getElementById('qi-editor-hint');
+    if (hint) {
+      hint.setAttribute(
+        'data-t',
+        editorMode === 'segment'
+          ? 'creator.quick_inspirations.editor_hint_segment'
+          : 'creator.quick_inspirations.editor_hint_crop'
+      );
+      hint.textContent =
+        editorMode === 'segment'
+          ? t('creator.quick_inspirations.editor_hint_segment', 'Adjust each frame. Areas outside frames are dimmed.')
+          : t('creator.quick_inspirations.editor_hint_crop', 'Drag and resize the frame to crop the image.');
+    }
+    if (editorMode === 'crop') {
+      editorFrames = [clampFrame({ x: 0, y: 0, w: 1, h: 1 })];
+      editorActiveFrame = 0;
+      renderEditorFrames();
+    } else if (openSegmentModal) {
+      openSegmentConfigModal();
+    }
+  }
+
+  function updateEditorProgress() {
+    var el = document.getElementById('qi-editor-progress');
+    if (!el) return;
+    if (editorQueue.length <= 1) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    el.hidden = false;
+    var tpl = t('creator.quick_inspirations.editor_file_of', 'File {{current}} of {{total}}');
+    el.textContent = tpl
+      .replace('{{current}}', String(editorQueueIndex + 1))
+      .replace('{{total}}', String(editorQueue.length));
+  }
+
+  function closeSegmentConfigModal() {
+    hideDialog(segmentConfigModal || document.getElementById('qi-segment-config-modal'));
+    showSegmentConfigStatus('', '');
+  }
+
+  function openSegmentConfigModal() {
+    if (!segmentConfigModal) segmentConfigModal = document.getElementById('qi-segment-config-modal');
+    if (!segmentConfigModal) return;
+    var countEl = document.getElementById('qi-segment-count');
+    var analyzeEl = document.getElementById('qi-segment-analyze');
+    if (countEl && !countEl.value) countEl.value = '4';
+    if (analyzeEl) analyzeEl.checked = false;
+    showSegmentConfigStatus('', '');
+    showDialog(segmentConfigModal);
+  }
+
+  function applyEditorFrames(frames) {
+    editorFrames = (frames || []).map(clampFrame);
+    if (!editorFrames.length) editorFrames = [clampFrame({ x: 0, y: 0, w: 1, h: 1 })];
+    editorActiveFrame = 0;
+    renderEditorFrames();
+  }
+
+  async function confirmSegmentConfig() {
+    var countEl = document.getElementById('qi-segment-count');
+    var analyzeEl = document.getElementById('qi-segment-analyze');
+    var count = Math.max(2, Math.min(12, Math.round(Number(countEl && countEl.value) || 4)));
+    if (countEl) countEl.value = String(count);
+    var useAi = !!(analyzeEl && analyzeEl.checked);
+    var confirmBtn = document.getElementById('qi-segment-config-confirm');
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    if (!useAi) {
+      applyEditorFrames(buildEvenGridSegments(count));
+      closeSegmentConfigModal();
+      if (confirmBtn) confirmBtn.disabled = false;
+      return;
+    }
+
+    var file = editorQueue[editorQueueIndex];
+    if (!file) {
+      applyEditorFrames(buildEvenGridSegments(count));
+      closeSegmentConfigModal();
+      if (confirmBtn) confirmBtn.disabled = false;
+      return;
+    }
+
+    showSegmentConfigStatus(
+      t('creator.quick_inspirations.segment_analyzing', 'Analyzing segments…'),
+      'warn'
+    );
+    try {
+      var form = new FormData();
+      form.append('image', file, file.name || 'inspiration.jpg');
+      form.append('count', String(count));
+      var res = await fetch(apiUrl('analyze-qi-segments').toString(), {
+        method: 'POST',
+        body: form,
+        credentials: 'omit'
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (data && Array.isArray(data.segments) && data.segments.length) {
+        applyEditorFrames(data.segments);
+        if (data.source === 'grid_fallback') {
+          showEditorStatus(
+            t(
+              'creator.quick_inspirations.segment_analyze_failed',
+              'Could not analyze segments. Using an even grid instead.'
+            ),
+            'warn'
+          );
+        } else {
+          showEditorStatus('', '');
+        }
+      } else {
+        applyEditorFrames(buildEvenGridSegments(count));
+        showEditorStatus(
+          t(
+            'creator.quick_inspirations.segment_analyze_failed',
+            'Could not analyze segments. Using an even grid instead.'
+          ),
+          'warn'
+        );
+      }
+      closeSegmentConfigModal();
+    } catch (_e) {
+      applyEditorFrames(buildEvenGridSegments(count));
+      closeSegmentConfigModal();
+      showEditorStatus(
+        t(
+          'creator.quick_inspirations.segment_analyze_failed',
+          'Could not analyze segments. Using an even grid instead.'
+        ),
+        'warn'
+      );
+    } finally {
+      if (confirmBtn) confirmBtn.disabled = false;
+    }
+  }
+
+  function onEditorPointerDown(e) {
+    if (editorSaving) return;
+    var target = e.target;
+    if (!target || !target.closest) return;
+    var frameEl = target.closest('.qi-editor__frame');
+    if (!frameEl) return;
+    var idx = Number(frameEl.getAttribute('data-frame-index'));
+    if (!Number.isFinite(idx) || !editorFrames[idx]) return;
+    editorActiveFrame = idx;
+    renderEditorFrames();
+    var rect = getEditorImageRect();
+    if (!rect.w || !rect.h) return;
+    var handle = target.getAttribute('data-handle') || (target.closest('[data-handle]') && target.closest('[data-handle]').getAttribute('data-handle'));
+    var f = editorFrames[idx];
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    editorDrag = {
+      index: idx,
+      mode: handle || 'move',
+      startX: clientX,
+      startY: clientY,
+      origin: { x: f.x, y: f.y, w: f.w, h: f.h },
+      stageW: rect.w,
+      stageH: rect.h
+    };
+    e.preventDefault();
+  }
+
+  function onEditorPointerMove(e) {
+    if (!editorDrag) return;
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    var dx = (clientX - editorDrag.startX) / editorDrag.stageW;
+    var dy = (clientY - editorDrag.startY) / editorDrag.stageH;
+    var o = editorDrag.origin;
+    var next = { x: o.x, y: o.y, w: o.w, h: o.h };
+    var mode = editorDrag.mode;
+    if (mode === 'move') {
+      next.x = o.x + dx;
+      next.y = o.y + dy;
+      next.x = Math.max(0, Math.min(1 - next.w, next.x));
+      next.y = Math.max(0, Math.min(1 - next.h, next.y));
+    } else {
+      if (mode.indexOf('e') !== -1) next.w = o.w + dx;
+      if (mode.indexOf('s') !== -1) next.h = o.h + dy;
+      if (mode.indexOf('w') !== -1) {
+        next.x = o.x + dx;
+        next.w = o.w - dx;
+      }
+      if (mode.indexOf('n') !== -1) {
+        next.y = o.y + dy;
+        next.h = o.h - dy;
+      }
+    }
+    editorFrames[editorDrag.index] = clampFrame(next);
+    renderEditorFrames();
+    e.preventDefault();
+  }
+
+  function onEditorPointerUp() {
+    editorDrag = null;
+  }
+
+  function bindEditorPointers() {
+    if (editorPointerBound) return;
+    editorPointerBound = true;
+    document.addEventListener('mousemove', onEditorPointerMove);
+    document.addEventListener('mouseup', onEditorPointerUp);
+    document.addEventListener('touchmove', onEditorPointerMove, { passive: false });
+    document.addEventListener('touchend', onEditorPointerUp);
+    document.addEventListener('touchcancel', onEditorPointerUp);
+    var stage = document.getElementById('qi-editor-stage');
+    if (stage) {
+      stage.addEventListener('mousedown', onEditorPointerDown);
+      stage.addEventListener('touchstart', onEditorPointerDown, { passive: false });
+    }
+  }
+
+  function closeEditor(clearQueue) {
+    hideDialog(editorModal || document.getElementById('qi-editor-modal'));
+    closeSegmentConfigModal();
+    revokeEditorObjectUrl();
+    editorDrag = null;
+    editorSaving = false;
+    showEditorStatus('', '');
+    var saveBtn = document.getElementById('qi-editor-save');
+    if (saveBtn) saveBtn.disabled = false;
+    if (clearQueue !== false) {
+      editorQueue = [];
+      editorQueueIndex = 0;
+      pendingFiles = [];
+    }
+  }
+
+  function loadEditorFile(file) {
+    revokeEditorObjectUrl();
+    showEditorStatus('', '');
+    var img = document.getElementById('qi-editor-img');
+    if (!img || !file) return;
+    editorObjectUrl = URL.createObjectURL(file);
+    img.onload = function () {
+      editorNaturalW = img.naturalWidth || 0;
+      editorNaturalH = img.naturalHeight || 0;
+      setEditorMode('crop', { skipSegmentModal: true });
+      editorFrames = [clampFrame({ x: 0, y: 0, w: 1, h: 1 })];
+      editorActiveFrame = 0;
+      renderEditorFrames();
+      requestAnimationFrame(function () {
+        paintEditorDim();
+        setTimeout(paintEditorDim, 50);
+      });
+    };
+    img.onerror = function () {
+      showEditorStatus(t('creator.quick_inspirations.upload_failed', 'Upload failed.'), 'error');
+    };
+    img.src = editorObjectUrl;
+    updateEditorProgress();
+  }
+
+  function openEditorQueue() {
+    if (!editorModal) editorModal = document.getElementById('qi-editor-modal');
+    if (!editorModal) {
+      openConfirmUpload();
+      return;
+    }
+    bindEditorPointers();
+    showDialog(editorModal);
+    loadEditorFile(editorQueue[editorQueueIndex]);
+  }
+
+  function cropFrameToFile(file, frame, index) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function () {
+        try {
+          var nw = img.naturalWidth;
+          var nh = img.naturalHeight;
+          var sx = Math.round(frame.x * nw);
+          var sy = Math.round(frame.y * nh);
+          var sw = Math.max(1, Math.round(frame.w * nw));
+          var sh = Math.max(1, Math.round(frame.h * nh));
+          if (sx + sw > nw) sw = nw - sx;
+          if (sy + sh > nh) sh = nh - sy;
+          var canvas = document.createElement('canvas');
+          canvas.width = sw;
+          canvas.height = sh;
+          var ctx = canvas.getContext('2d');
+          if (!ctx) {
+            URL.revokeObjectURL(url);
+            reject(new Error('canvas'));
+            return;
+          }
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+          canvas.toBlob(
+            function (blob) {
+              URL.revokeObjectURL(url);
+              if (!blob) {
+                reject(new Error('blob'));
+                return;
+              }
+              var base = (file.name || 'inspiration').replace(/\.[^.]+$/, '');
+              var outName = base + (editorFrames.length > 1 ? '-seg' + (index + 1) : '-crop') + '.png';
+              resolve(new File([blob], outName, { type: 'image/png' }));
+            },
+            'image/png',
+            0.92
+          );
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          reject(err);
+        }
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error('image_load'));
+      };
+      img.src = url;
+    });
+  }
+
+  async function uploadCroppedFiles(files, batchId) {
+    var form = new FormData();
+    files.forEach(function (f) {
+      form.append('images', f, f.name || 'inspiration.png');
+    });
+    if (batchId) form.append('upload_batch_id', batchId);
+    var res = await fetch(apiUrl('upload-quick-inspiration').toString(), {
+      method: 'POST',
+      body: form,
+      credentials: 'omit'
+    });
+    var data = await res.json().catch(function () {
+      return {};
+    });
+    return data;
+  }
+
+  function reopenEditorWithError(message) {
+    editorSaving = false;
+    var saveBtn = document.getElementById('qi-editor-save');
+    if (saveBtn) saveBtn.disabled = false;
+    if (!editorModal || !editorModal.open) {
+      showDialog(editorModal || document.getElementById('qi-editor-modal'));
+    }
+    showEditorStatus(message, 'error');
+  }
+
+  async function saveEditorCurrent() {
+    if (editorSaving) return;
+    var oid = getOwnerId();
+    if (!oid) {
+      showEditorStatus(t('creator.quick_inspirations.login_required', 'Please sign in to upload.'), 'error');
+      return;
+    }
+    var file = editorQueue[editorQueueIndex];
+    if (!file || !editorFrames.length) return;
+
+    editorSaving = true;
+    var saveBtn = document.getElementById('qi-editor-save');
+    if (saveBtn) saveBtn.disabled = true;
+    showEditorStatus(t('creator.quick_inspirations.editor_saving', 'Saving and uploading…'), 'warn');
+
+    try {
+      var crops = [];
+      for (var i = 0; i < editorFrames.length; i++) {
+        crops.push(await cropFrameToFile(file, editorFrames[i], i));
+      }
+      var batchId = crops.length > 1 ? newBatchId() : null;
+      // Single crop still counts as 1 upload (no batch id needed).
+      var data = await uploadCroppedFiles(crops, batchId);
+
+      if (data.error === 'missing_owner_id') {
+        reopenEditorWithError(t('creator.quick_inspirations.login_required', 'Please sign in to upload.'));
+        return;
+      }
+      if (data.error === 'upload_banned' || (data.rejected && data.rejected[0] && data.rejected[0].error === 'upload_banned')) {
+        reopenEditorWithError(
+          strikeMessage(data.strike) ||
+            t('creator.quick_inspirations.ban_temp', 'Quick Inspiration uploads are temporarily blocked.')
+        );
+        return;
+      }
+      if (data.error === 'daily_upload_limit') {
+        reopenEditorWithError(
+          t('creator.quick_inspirations.daily_limit', 'Daily upload limit reached (10 Quick Inspirations per day).')
+        );
+        return;
+      }
+      if (!(data.count_ok > 0)) {
+        var first = (data.rejected && data.rejected[0]) || {};
+        var detail =
+          strikeMessage(data.strike || first.strike) ||
+          (first.error && first.error !== 'upload_failed' ? String(first.error) : '') ||
+          (data.error && data.error !== 'upload_failed' ? String(data.error) : '') ||
+          t('creator.quick_inspirations.upload_failed', 'Upload failed.');
+        reopenEditorWithError(detail);
+        return;
+      }
+
+      editorQueueIndex += 1;
+      if (editorQueueIndex < editorQueue.length) {
+        editorSaving = false;
+        if (saveBtn) saveBtn.disabled = false;
+        showEditorStatus('', '');
+        loadEditorFile(editorQueue[editorQueueIndex]);
+        return;
+      }
+
+      // Done with queue
+      closeEditor(true);
+      closeSourcePicker();
+      hideDialog(uploadModal || document.getElementById('qi-upload-modal'));
+      closePreview();
+      setActiveTab('yours');
+      await loadItems();
+      loadFilterTags();
+      scheduleProcessPoll();
+    } catch (_e) {
+      reopenEditorWithError(t('creator.quick_inspirations.upload_failed', 'Upload failed.'));
+    }
+  }
+
   async function openUploadFlow() {
     ensureEls();
     var oid = getOwnerId();
@@ -1206,8 +1784,11 @@
     var list = Array.prototype.slice.call(files || [], 0).filter(Boolean).slice(0, 12);
     if (!list.length) return;
     pendingFiles = list;
+    editorQueue = list.slice();
+    editorQueueIndex = 0;
     closeSourcePicker();
-    openConfirmUpload();
+    hideDialog(uploadModal || document.getElementById('qi-upload-modal'));
+    openEditorQueue();
   }
 
   function pickDeviceFiles(multiple, useCamera) {
@@ -1657,6 +2238,53 @@
 
     var submit = document.getElementById('qi-upload-submit');
     if (submit) submit.addEventListener('click', submitUpload);
+
+    var editorClose = document.getElementById('qi-editor-close');
+    var editorCancel = document.getElementById('qi-editor-cancel');
+    if (editorClose) editorClose.addEventListener('click', function () { closeEditor(true); });
+    if (editorCancel) editorCancel.addEventListener('click', function () { closeEditor(true); });
+    if (editorModal) {
+      editorModal.addEventListener('click', function (e) {
+        if (e.target === editorModal) closeEditor(true);
+      });
+      editorModal.addEventListener('cancel', function (e) {
+        e.preventDefault();
+        closeEditor(true);
+      });
+    }
+    var editorSave = document.getElementById('qi-editor-save');
+    if (editorSave) editorSave.addEventListener('click', saveEditorCurrent);
+    var cropTab = document.getElementById('qi-editor-tab-crop');
+    var segTab = document.getElementById('qi-editor-tab-segment');
+    if (cropTab) {
+      cropTab.addEventListener('click', function () {
+        setEditorMode('crop');
+      });
+    }
+    if (segTab) {
+      segTab.addEventListener('click', function () {
+        setEditorMode('segment');
+      });
+    }
+    window.addEventListener('resize', function () {
+      if (editorModal && editorModal.open) paintEditorDim();
+    });
+
+    var segClose = document.getElementById('qi-segment-config-close');
+    var segCancel = document.getElementById('qi-segment-config-cancel');
+    if (segClose) segClose.addEventListener('click', closeSegmentConfigModal);
+    if (segCancel) segCancel.addEventListener('click', closeSegmentConfigModal);
+    if (segmentConfigModal) {
+      segmentConfigModal.addEventListener('click', function (e) {
+        if (e.target === segmentConfigModal) closeSegmentConfigModal();
+      });
+      segmentConfigModal.addEventListener('cancel', function (e) {
+        e.preventDefault();
+        closeSegmentConfigModal();
+      });
+    }
+    var segConfirm = document.getElementById('qi-segment-config-confirm');
+    if (segConfirm) segConfirm.addEventListener('click', confirmSegmentConfig);
   }
 
   function tryBind() {

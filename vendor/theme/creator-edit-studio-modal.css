@@ -327,19 +327,9 @@
   border: 1px solid rgba(249, 115, 22, 0.35);
   margin: 10px;
   border-radius: 12px;
-  background: #37375a;
+  /* Workspace around the design — dark anthracite, distinct from modal navy/purple */
+  background: #2a2e33;
   touch-action: none;
-}
-
-.ces-viewer.is-checker-bg {
-  background-color: #2a2a3a;
-  background-image:
-    linear-gradient(45deg, #3a3a4a 25%, transparent 25%),
-    linear-gradient(-45deg, #3a3a4a 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #3a3a4a 75%),
-    linear-gradient(-45deg, transparent 75%, #3a3a4a 75%);
-  background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
 
 .ces-viewer.is-pan-mode {
@@ -420,6 +410,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Design preview background (user-changeable); shows exact design bounds */
+  background: #37375a;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.ces-canvas-frame.is-checker-bg {
+  background-color: #2a2a3a;
+  background-image:
+    linear-gradient(45deg, #3a3a4a 25%, transparent 25%),
+    linear-gradient(-45deg, #3a3a4a 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #3a3a4a 75%),
+    linear-gradient(-45deg, transparent 75%, #3a3a4a 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
 
 .ces-canvas {

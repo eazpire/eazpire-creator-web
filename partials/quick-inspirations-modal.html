@@ -343,3 +343,63 @@
     </div>
   </div>
 </dialog>
+
+<dialog class="qi-nested-dialog qi-editor-dialog" id="qi-editor-modal" aria-labelledby="qi-editor-title">
+  <div class="qi-nested-dialog__header qi-editor__header">
+    <h3 id="qi-editor-title" class="qi-nested-dialog__title" data-t="creator.quick_inspirations.editor_title">Prepare image</h3>
+    <span id="qi-editor-progress" class="qi-editor__progress" hidden></span>
+    <button type="button" class="qi-nested-dialog__close" id="qi-editor-close" aria-label="Close dialog">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="qi-editor__subheader" role="tablist" aria-label="Prepare image">
+    <button type="button" class="qi-editor__tab is-active" id="qi-editor-tab-crop" data-qi-editor-mode="crop" role="tab" aria-selected="true" data-t="creator.quick_inspirations.editor_crop">Crop</button>
+    <button type="button" class="qi-editor__tab" id="qi-editor-tab-segment" data-qi-editor-mode="segment" role="tab" aria-selected="false" data-t="creator.quick_inspirations.editor_segment">Segment</button>
+  </div>
+  <div class="qi-nested-dialog__body qi-editor__body">
+    <div id="qi-editor-status" class="qi-upload__status" style="display:none;" role="status"></div>
+    <p id="qi-editor-hint" class="qi-editor__hint" data-t="creator.quick_inspirations.editor_hint_crop">Drag and resize the frame to crop the image.</p>
+    <div class="qi-editor__stage-wrap">
+      <div class="qi-editor__stage" id="qi-editor-stage">
+        <img id="qi-editor-img" class="qi-editor__img" alt="" draggable="false">
+        <canvas id="qi-editor-dim" class="qi-editor__dim" aria-hidden="true"></canvas>
+        <div id="qi-editor-frames" class="qi-editor__frames"></div>
+      </div>
+    </div>
+    <div class="qi-upload__actions qi-editor__actions">
+      <button type="button" class="qi-upload__cancel" id="qi-editor-cancel" data-t="creator.quick_inspirations.editor_cancel">Cancel</button>
+      <button type="button" class="qi-upload__submit" id="qi-editor-save" data-t="creator.quick_inspirations.editor_save">Save</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="qi-nested-dialog qi-segment-config-dialog" id="qi-segment-config-modal" aria-labelledby="qi-segment-config-title">
+  <div class="qi-nested-dialog__header">
+    <h3 id="qi-segment-config-title" class="qi-nested-dialog__title" data-t="creator.quick_inspirations.segment_modal_title">Segment image</h3>
+    <button type="button" class="qi-nested-dialog__close" id="qi-segment-config-close" aria-label="Close dialog">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="qi-nested-dialog__body">
+    <label class="qi-segment-config__field" for="qi-segment-count">
+      <span data-t="creator.quick_inspirations.segment_count_label">Number of segments</span>
+      <input type="number" id="qi-segment-count" class="qi-segment-config__input" min="2" max="12" value="4" step="1">
+    </label>
+    <label class="qi-segment-config__check" for="qi-segment-analyze">
+      <input type="checkbox" id="qi-segment-analyze">
+      <span>
+        <strong data-t="creator.quick_inspirations.segment_analyze">Analyze Segment</strong>
+        <small data-t="creator.quick_inspirations.segment_analyze_hint">Detect designs with AI and place frames around them.</small>
+      </span>
+    </label>
+    <div id="qi-segment-config-status" class="qi-upload__status" style="display:none;" role="status"></div>
+    <div class="qi-upload__actions">
+      <button type="button" class="qi-upload__cancel" id="qi-segment-config-cancel" data-t="creator.common.cancel">Cancel</button>
+      <button type="button" class="qi-upload__submit" id="qi-segment-config-confirm" data-t="creator.quick_inspirations.segment_confirm">Confirm</button>
+    </div>
+  </div>
+</dialog>
