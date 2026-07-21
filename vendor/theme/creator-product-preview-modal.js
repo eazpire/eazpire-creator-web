@@ -68,6 +68,28 @@
       '<svg class="cppm__channel-logo-svg cppm__channel-logo-svg--etsy" viewBox="0 0 64 64" aria-hidden="true"><text x="6" y="40" fill="currentColor" font-size="28" font-weight="800" font-family="Georgia,serif">etsy</text></svg>',
     ebay:
       '<svg class="cppm__channel-logo-svg cppm__channel-logo-svg--ebay" viewBox="0 0 64 64" aria-hidden="true"><text x="4" y="28" fill="#e53238" font-size="16" font-weight="800" font-family="Inter,Arial,sans-serif">e</text><text x="18" y="28" fill="#0064d2" font-size="16" font-weight="800" font-family="Inter,Arial,sans-serif">b</text><text x="32" y="28" fill="#f5af02" font-size="16" font-weight="800" font-family="Inter,Arial,sans-serif">a</text><text x="46" y="28" fill="#86b817" font-size="16" font-weight="800" font-family="Inter,Arial,sans-serif">y</text></svg>',
+    all:
+      '<svg class="cppm__channel-logo-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h5A1.5 1.5 0 0 1 12 5.5v5A1.5 1.5 0 0 1 10.5 12h-5A1.5 1.5 0 0 1 4 10.5v-5Zm8 0A1.5 1.5 0 0 1 13.5 4h5A1.5 1.5 0 0 1 20 5.5v5A1.5 1.5 0 0 1 18.5 12h-5A1.5 1.5 0 0 1 12 10.5v-5ZM4 13.5A1.5 1.5 0 0 1 5.5 12h5a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 10.5 20h-5A1.5 1.5 0 0 1 4 18.5v-5Zm8 0a1.5 1.5 0 0 1 1.5-1.5h5a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 12 18.5v-5Z" fill="currentColor"/></svg>',
+  };
+
+  var STAT_ICONS = {
+    sales:
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19h16M6 16l3.2-4.2a1 1 0 0 1 1.5-.1L13 14l3.3-4.4a1 1 0 0 1 1.6.1L20 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18.5" cy="6.5" r="2" fill="currentColor"/></svg>',
+    add_to_cart:
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 5h1.8l1.4 10.2a1.5 1.5 0 0 0 1.5 1.3h8.7a1.5 1.5 0 0 0 1.5-1.2L19.5 8H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="20" r="1.4" fill="currentColor"/><circle cx="16.5" cy="20" r="1.4" fill="currentColor"/></svg>',
+    impressions:
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>',
+    clicks:
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4.5v9.2l2.4-1.5 1.6 3.8 2.2-.9-1.6-3.8L16.5 10 8 4.5Z" fill="currentColor"/><path d="M14.5 16.5 16 20.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  };
+
+  var NAV_ICONS = {
+    overview:
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 13.5V6.8A1.8 1.8 0 0 1 5.8 5h4.4A1.8 1.8 0 0 1 12 6.8v6.7M12 10.2V17a1.8 1.8 0 0 0 1.8 1.8h4.4A1.8 1.8 0 0 0 20 17v-6.8A1.8 1.8 0 0 0 18.2 8.4H12" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    variants:
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6" stroke="currentColor" stroke-width="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6" stroke="currentColor" stroke-width="1.8"/></svg>',
+    channels:
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="6.5" cy="12" r="2.2" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="6.5" r="2.2" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="17.5" r="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M8.6 11.1 15.4 7.4M8.7 12.9l6.7 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
   };
 
   var root = null;
@@ -333,19 +355,25 @@
       esc(t('title', 'Product Preview')) +
       '">' +
       '      <button type="button" class="cppm__nav-btn cppm__nav-btn--active" data-cppm-nav="overview">' +
-      '        <span class="cppm__nav-icon" aria-hidden="true">◎</span>' +
+      '        <span class="cppm__nav-icon" aria-hidden="true">' +
+      NAV_ICONS.overview +
+      '</span>' +
       '        <span class="cppm__nav-label" data-t="creator.product_preview.overview">' +
       esc(t('overview', 'Overview')) +
       '</span>' +
       '      </button>' +
       '      <button type="button" class="cppm__nav-btn" data-cppm-nav="variants">' +
-      '        <span class="cppm__nav-icon" aria-hidden="true">▦</span>' +
+      '        <span class="cppm__nav-icon" aria-hidden="true">' +
+      NAV_ICONS.variants +
+      '</span>' +
       '        <span class="cppm__nav-label" data-t="creator.product_preview.variants">' +
       esc(t('variants', 'Variants')) +
       '</span>' +
       '      </button>' +
       '      <button type="button" class="cppm__nav-btn" data-cppm-nav="channels">' +
-      '        <span class="cppm__nav-icon" aria-hidden="true">⬡</span>' +
+      '        <span class="cppm__nav-icon" aria-hidden="true">' +
+      NAV_ICONS.channels +
+      '</span>' +
       '        <span class="cppm__nav-label" data-t="creator.product_preview.channels">' +
       esc(t('channels', 'Channels')) +
       '</span>' +
@@ -503,12 +531,19 @@
         'creator.product_preview.stats_' +
         (k === 'add_to_cart' ? 'add_to_cart' : k);
       return (
-        '<div class="cppm__stat">' +
+        '<div class="cppm__stat cppm__stat--' +
+        esc(k) +
+        '">' +
+        '<div class="cppm__stat-top">' +
+        '<span class="cppm__stat-icon" aria-hidden="true">' +
+        (STAT_ICONS[k] || '') +
+        '</span>' +
         '<span class="cppm__stat-label" data-t="' +
         dataT +
         '">' +
         esc(label) +
         '</span>' +
+        '</div>' +
         '<span class="cppm__stat-value cppm__stat-value--placeholder" data-t="creator.product_preview.stats_placeholder">' +
         esc(t('stats_placeholder', '—')) +
         '</span>' +
@@ -516,13 +551,25 @@
       );
     }).join('');
 
-    return (
-      '<div class="cppm__stats-block" data-cppm-stats-channel="' +
+    var logoWrap =
+      '<span class="cppm__stats-block-logo cppm__stats-block-logo--' +
       esc(channelId) +
       '">' +
+      channelLogoHtml(channelId) +
+      '</span>';
+
+    return (
+      '<div class="cppm__stats-block cppm__stats-block--' +
+      esc(channelId) +
+      '" data-cppm-stats-channel="' +
+      esc(channelId) +
+      '">' +
+      '<div class="cppm__stats-block-head">' +
+      logoWrap +
       '<h4 class="cppm__stats-block-title">' +
       esc(channelLabel) +
       '</h4>' +
+      '</div>' +
       '<div class="cppm__stats-grid">' +
       cells +
       '</div>' +
@@ -580,6 +627,12 @@
   function extractCatalogByView(defaultsResp) {
     var out = Object.create(null);
     if (!defaultsResp) return out;
+
+    // Prefer full catalog map (all colors × front/back), then print_areas fallback.
+    if (defaultsResp.mockup_images_by_view && typeof defaultsResp.mockup_images_by_view === 'object') {
+      out = mergeByViewMaps(out, defaultsResp.mockup_images_by_view);
+    }
+
     var printAreas = defaultsResp.print_areas || [];
     for (var i = 0; i < printAreas.length; i++) {
       var pa = printAreas[i];
@@ -601,23 +654,11 @@
   }
 
   function buildVariantGroups(defaultsResp, byViewProduct) {
+    // Prefer published/product mockups (design printed), then fill missing
+    // colors + views from catalog so Front/Back and all colors show up.
     var byView = mergeByViewMaps({}, byViewProduct);
-    var productUrlCount = countByViewUrls(byView);
     var catalogByView = extractCatalogByView(defaultsResp);
-
-    if (productUrlCount === 0) {
-      byView = mergeByViewMaps(byView, catalogByView);
-    } else if (countByViewUrls(catalogByView) > 0) {
-      ['front', 'back'].forEach(function (vk) {
-        if (!byView[vk] || !Object.keys(byView[vk]).length) {
-          if (catalogByView[vk]) {
-            var patch = Object.create(null);
-            patch[vk] = catalogByView[vk];
-            byView = mergeByViewMaps(byView, patch);
-          }
-        }
-      });
-    }
+    byView = mergeByViewMaps(byView, catalogByView);
 
     var groups = buildVariantGroupsFromProductMockups(byView);
     groups.sort(function (a, b) {
@@ -665,10 +706,20 @@
     for (var g = 0; g < groups.length; g++) {
       var group = groups[g];
       var trackId = 'v-' + group.viewKey + '-' + g;
+      var colorCount = group.items.length;
       html +=
         '<div class="cppm__view-block">' +
         '<h4 class="cppm__view-title">' +
         esc(viewLabel(group.viewKey)) +
+        '<span class="cppm__view-count">' +
+        colorCount +
+        ' ' +
+        esc(
+          colorCount === 1
+            ? t('color_singular', 'color')
+            : t('color_plural', 'colors')
+        ) +
+        '</span>' +
         '</h4>' +
         '<div class="cppm__carousel">' +
         '<button type="button" class="cppm__carousel-btn" data-cppm-carousel="' +
@@ -1097,7 +1148,17 @@
     if (titleEl) titleEl.textContent = ctx.productName;
 
     renderOverviewPanel();
-    renderVariantsPanel(null, ctx.mockupsByView);
+    var variantsEl = root.querySelector('[data-cppm-panel="variants"]');
+    if (variantsEl && (ctx.productKey || ctx.publishedDesignId || ctx.designId)) {
+      variantsEl.innerHTML =
+        '<h3 class="cppm__section-title" data-t="creator.product_preview.variants">' +
+        esc(t('variants', 'Variants')) +
+        '</h3><p class="cppm__variants-loading" data-t="creator.product_preview.loading_variants">' +
+        esc(t('loading_variants', 'Loading color variants…')) +
+        '</p>';
+    } else {
+      renderVariantsPanel(null, ctx.mockupsByView);
+    }
     renderChannelsPanel();
     setPanel('overview');
 
