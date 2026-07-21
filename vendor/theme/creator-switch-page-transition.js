@@ -15,7 +15,9 @@
   /** Shop → Creator: shorter — portal still has its own boot. */
   var DURATION_TO_CREATOR_DESKTOP_MS = 1100;
   var DURATION_TO_CREATOR_MOBILE_MS = 800;
+  /** Shop → Creator: wait for handoff URL before navigating (avoids landing logged out). */
   var NAV_FALLBACK_MS = 5200;
+  var NAV_FALLBACK_TO_CREATOR_MS = 12000;
   var HTML2CANVAS_SRC = (typeof window !== 'undefined' && window.__eazHtml2canvasSrc) ||
     'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
   var html2canvasReadyPromise = null;
@@ -433,7 +435,7 @@
     var durationMs = mode === 'to-creator'
       ? (isLikelyMobile ? DURATION_TO_CREATOR_MOBILE_MS : DURATION_TO_CREATOR_DESKTOP_MS)
       : (isLikelyMobile ? DURATION_MOBILE_MS : DURATION_DESKTOP_MS);
-    var finishNavigate = navigateWhenReady(targetUrl, NAV_FALLBACK_MS);
+    var finishNavigate = navigateWhenReady(targetUrl, mode === 'to-creator' ? NAV_FALLBACK_TO_CREATOR_MS : NAV_FALLBACK_MS);
     var navigated = false;
 
     function goToTarget() {
@@ -447,7 +449,7 @@
       if (window[ACTIVE_KEY]) {
         goToTarget();
       }
-    }, NAV_FALLBACK_MS);
+    }, mode === 'to-creator' ? NAV_FALLBACK_TO_CREATOR_MS : NAV_FALLBACK_MS);
 
     try {
       if (isLikelyMobile) {
