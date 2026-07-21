@@ -1295,17 +1295,18 @@
   }
 
   function applyViewerBg() {
-    // Design preview bg goes on the canvas frame only; viewer keeps a fixed anthracite workspace.
-    var frame = $('ces-canvas-frame');
-    if (!frame) return;
+    // Design preview bg on the canvas element (shows through transparent pixels).
+    // Viewer pasteboard stays fixed anthracite so design bounds stay visible.
+    var target = canvas || $('ces-canvas');
+    if (!target) return;
     var isChecker = viewerBg === 'checker';
-    frame.classList.toggle('is-checker-bg', isChecker);
+    target.classList.toggle('is-checker-bg', isChecker);
     if (isChecker) {
-      frame.style.backgroundColor = '';
-      frame.style.backgroundImage = '';
+      target.style.backgroundColor = '';
+      target.style.backgroundImage = '';
     } else {
-      frame.style.backgroundColor = viewerBg;
-      frame.style.backgroundImage = 'none';
+      target.style.backgroundColor = viewerBg;
+      target.style.backgroundImage = 'none';
     }
     var sw = $('ces-bg-swatch');
     if (sw) {

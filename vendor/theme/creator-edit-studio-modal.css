@@ -327,7 +327,7 @@
   border: 1px solid rgba(249, 115, 22, 0.35);
   margin: 10px;
   border-radius: 12px;
-  /* Workspace around the design — mid anthracite gray, clearly apart from modal #0b0b12 / #1a1a2e */
+  /* Pasteboard around the design — mid anthracite, apart from modal navy (#0b0b12 / #1a1a2e) */
   background: #3f454d;
   touch-action: none;
 }
@@ -410,20 +410,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Design preview background (user-changeable); shows exact design bounds */
-  background: #37375a;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
-}
-
-.ces-canvas-frame.is-checker-bg {
-  background-color: #2a2a3a;
-  background-image:
-    linear-gradient(45deg, #3a3a4a 25%, transparent 25%),
-    linear-gradient(-45deg, #3a3a4a 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #3a3a4a 75%),
-    linear-gradient(-45deg, transparent 75%, #3a3a4a 75%);
-  background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  flex: 0 0 auto;
+  /* Keep frame tight to the canvas so pasteboard shows around exact design bounds */
+  width: fit-content;
+  height: fit-content;
+  line-height: 0;
+  background: transparent;
 }
 
 .ces-canvas {
@@ -435,6 +427,23 @@
   user-select: none;
   -webkit-user-drag: none;
   image-rendering: auto;
+  /* Design preview bg (user-changeable) — CSS bg shows through transparent pixels */
+  background-color: #37375a;
+  background-image: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.ces-canvas.is-checker-bg {
+  background-color: #2a2a3a;
+  background-image:
+    linear-gradient(45deg, #3a3a4a 25%, transparent 25%),
+    linear-gradient(-45deg, #3a3a4a 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #3a3a4a 75%),
+    linear-gradient(-45deg, transparent 75%, #3a3a4a 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
 
 .ces-chrome-top-left,
