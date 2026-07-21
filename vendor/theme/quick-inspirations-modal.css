@@ -929,7 +929,20 @@
 }
 
 .qi-nested-dialog__body {
+  flex: 1;
+  min-height: 0;
   padding: 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.qi-nested-dialog__body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .qi-upload__hint {

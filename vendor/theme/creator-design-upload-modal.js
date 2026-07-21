@@ -867,13 +867,77 @@
       return apiBase;
     }
 
+    /**
+     * Same-origin / portal dispatch — never block UI on workers.dev alone
+     * (can hang while /api/dispatch works on creator.eazpire.com).
+     */
+    function resolveDispatchUrl() {
+      try {
+        if (window.CREATOR_API_CONFIG && typeof window.CREATOR_API_CONFIG.getDispatchUrl === 'function') {
+          var via = window.CREATOR_API_CONFIG.getDispatchUrl();
+          if (via) return String(via).replace(/\/$/, '');
+        }
+      } catch (_e0) {}
+      try {
+        var host = (window.location && window.location.hostname) || '';
+        if (host === 'creator.eazpire.com' || window.__CREATOR_PORTAL_HOST__) {
+          return String(window.location.origin).replace(/\/$/, '') + '/api/dispatch';
+        }
+        if (host === 'www.eazpire.com' || host === 'eazpire.com') {
+          return String(window.location.origin).replace(/\/$/, '') + '/__eaz/creator-dispatch';
+        }
+      } catch (_e1) {}
+      if (window.CreatorWidget && window.CreatorWidget.apiBaseUrl) {
+        return String(window.CreatorWidget.apiBaseUrl).replace(/\/$/, '');
+      }
+      var base = resolveApiBase();
+      if (!base) return 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
+      if (base.indexOf('/apps/creator-dispatch') !== -1 || base.indexOf('/api/dispatch') !== -1) {
+        return base;
+      }
+      return base + '/apps/creator-dispatch';
+    }
+
+    var SETTINGS_FETCH_TIMEOUT_MS = 5000;
+
+    function fetchWithTimeout(url, options, timeoutMs) {
+      var ms = typeof timeoutMs === 'number' ? timeoutMs : SETTINGS_FETCH_TIMEOUT_MS;
+      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = null;
+      var opts = Object.assign({ credentials: 'include', cache: 'no-store' }, options || {});
+      if (ctrl) opts.signal = ctrl.signal;
+      var pending = fetch(url, opts);
+      if (ctrl) {
+        timer = setTimeout(function () {
+          try { ctrl.abort(); } catch (_a) {}
+        }, ms);
+      }
+      return pending.finally(function () {
+        if (timer) clearTimeout(timer);
+      });
+    }
+
+    async function parseJsonResponse(response) {
+      var ct = (response.headers.get('content-type') || '').toLowerCase();
+      var text = await response.text();
+      if (!text) return {};
+      var trimmed = text.trim();
+      if (trimmed.charAt(0) === '<') {
+        throw new Error('non_json_html_response');
+      }
+      if (ct.indexOf('application/json') === -1 && trimmed.charAt(0) !== '{' && trimmed.charAt(0) !== '[') {
+        throw new Error('non_json_response');
+      }
+      return JSON.parse(text);
+    }
+
     async function waitForOwnerId(maxMs) {
-      var limit = typeof maxMs === 'number' ? maxMs : 4000;
+      var limit = typeof maxMs === 'number' ? maxMs : 1500;
       var id = resolveOwnerId();
       if (id) return id;
       var start = Date.now();
       while (Date.now() - start < limit) {
-        await new Promise(function (r) { setTimeout(r, 100); });
+        await new Promise(function (r) { setTimeout(r, 50); });
         id = resolveOwnerId();
         if (id) return id;
       }
@@ -1082,41 +1146,37 @@
       }
     }
 
-    async function fetchCreatorNamesFromApi(oid, base) {
+    async function fetchCreatorNamesFromApi(oid, dispatchBase) {
       const names = [];
       let activeName = '';
-      const endpoints = [
-        `${base}/creator`,
-        `${base}/apps/creator-dispatch`
-      ];
-      for (let i = 0; i < endpoints.length; i++) {
-        try {
-          const url = new URL(endpoints[i]);
-          url.searchParams.set('op', 'get-settings');
-          url.searchParams.set('owner_id', oid);
-          url.searchParams.set('logged_in_customer_id', oid);
-          url.searchParams.set('_t', String(Date.now()));
-          const res = await fetch(url.toString(), { credentials: 'include', cache: 'no-store' });
-          if (!res.ok) continue;
-          const data = await res.json().catch(function () { return {}; });
-          const settings = data.settings || data || {};
-          const arr = Array.isArray(settings.creator_names) ? settings.creator_names.slice() : [];
-          if (settings.creator_name && arr.indexOf(settings.creator_name) === -1) {
-            arr.unshift(settings.creator_name);
-          }
-          const normalized = normalizeCreatorNames(arr);
-          if (normalized.length) {
-            names.push.apply(names, normalized);
-          }
-          if (settings.active_creator_name != null && String(settings.active_creator_name).trim()) {
-            activeName = String(settings.active_creator_name).trim();
-          } else if (settings.creator_name != null && String(settings.creator_name).trim()) {
-            activeName = String(settings.creator_name).trim();
-          }
-          if (names.length) break;
-        } catch (e) {
-          console.warn('Upload modal: get-settings failed for', endpoints[i], e);
+      const base = dispatchBase || resolveDispatchUrl();
+      if (!base || !oid) return { names: [], activeName: '' };
+
+      try {
+        const url = new URL(base, window.location.origin);
+        url.searchParams.set('op', 'get-settings');
+        url.searchParams.set('owner_id', oid);
+        url.searchParams.set('logged_in_customer_id', oid);
+        url.searchParams.set('_t', String(Date.now()));
+        const res = await fetchWithTimeout(url.toString(), {}, SETTINGS_FETCH_TIMEOUT_MS);
+        if (!res.ok) return { names: [], activeName: '' };
+        const data = await parseJsonResponse(res).catch(function () { return {}; });
+        const settings = data.settings || data || {};
+        const arr = Array.isArray(settings.creator_names) ? settings.creator_names.slice() : [];
+        if (settings.creator_name && arr.indexOf(settings.creator_name) === -1) {
+          arr.unshift(settings.creator_name);
         }
+        const normalized = normalizeCreatorNames(arr);
+        if (normalized.length) {
+          names.push.apply(names, normalized);
+        }
+        if (settings.active_creator_name != null && String(settings.active_creator_name).trim()) {
+          activeName = String(settings.active_creator_name).trim();
+        } else if (settings.creator_name != null && String(settings.creator_name).trim()) {
+          activeName = String(settings.creator_name).trim();
+        }
+      } catch (e) {
+        console.warn('Upload modal: get-settings failed', e);
       }
       return { names: normalizeCreatorNames(names), activeName: activeName };
     }
@@ -1134,12 +1194,15 @@
         }
       }
 
-      const oid = await waitForOwnerId(4000);
-      const base = resolveApiBase();
-      if (names.length === 0 && oid && base) {
-        const fetched = await fetchCreatorNamesFromApi(oid, base);
-        names = fetched.names;
-        if (fetched.activeName) activeName = fetched.activeName;
+      // Fill from cache immediately so UI is usable; refresh from API in background if empty.
+      if (names.length === 0) {
+        const oid = resolveOwnerId() || (await waitForOwnerId(800));
+        const base = resolveDispatchUrl();
+        if (oid && base) {
+          const fetched = await fetchCreatorNamesFromApi(oid, base);
+          names = fetched.names;
+          if (fetched.activeName) activeName = fetched.activeName;
+        }
       }
 
       const emptyLabel = (typeof window.getI18n === 'function'
@@ -1204,31 +1267,34 @@
     }
 
     async function loadSavedUploadSettings() {
-      const oid = await waitForOwnerId(4000);
-      const base = resolveApiBase();
+      const oid = resolveOwnerId() || (await waitForOwnerId(800));
+      const base = resolveDispatchUrl();
       if (!oid || !base) {
         console.warn('⚠️ Keine ownerId oder apiBase - Upload-Einstellungen können nicht geladen werden');
         return null;
       }
 
       try {
-        const url = new URL(`${base}/creator`);
+        const url = new URL(base, window.location.origin);
         url.searchParams.set('op', 'get-upload-settings');
         url.searchParams.set('owner_id', oid);
+        url.searchParams.set('logged_in_customer_id', oid);
         url.searchParams.set('_t', Date.now().toString());
 
-        const response = await fetch(url.toString(), { credentials: 'include', cache: 'no-store' });
+        const response = await fetchWithTimeout(url.toString(), {}, SETTINGS_FETCH_TIMEOUT_MS);
 
         if (!response.ok) {
           console.warn('⚠️ Upload-Einstellungen konnten nicht geladen werden (HTTP ' + response.status + ')');
           return null;
         }
 
-        const data = await response.json();
+        const data = await parseJsonResponse(response);
         if (data.ok && data.settings && data.settings.upload) return data.settings.upload;
         return null;
       } catch (error) {
-        if (error.name === 'TypeError' && String(error.message || '').includes('Failed to fetch')) {
+        if (error && (error.name === 'AbortError' || String(error.message || '').indexOf('aborted') >= 0)) {
+          console.warn('⚠️ Timeout beim Laden der Upload-Einstellungen');
+        } else if (error.name === 'TypeError' && String(error.message || '').includes('Failed to fetch')) {
           console.warn('⚠️ CORS-Fehler beim Laden der Upload-Einstellungen');
         } else {
           console.warn('⚠️ Fehler beim Laden der Upload-Einstellungen:', error);
@@ -1239,7 +1305,7 @@
 
     async function saveUploadSettings(settings) {
       const oid = resolveOwnerId();
-      const base = resolveApiBase();
+      const base = resolveDispatchUrl();
       if (!oid || !base) {
         console.warn('⚠️ Keine ownerId oder apiBase - Upload-Einstellungen können nicht gespeichert werden');
         return;
@@ -1248,19 +1314,22 @@
       try {
         const settingsToSave = settings ? { ...settings } : {};
 
-        const url = new URL(`${base}/creator`);
+        const url = new URL(base, window.location.origin);
         url.searchParams.set('op', 'set-upload-settings');
         url.searchParams.set('owner_id', oid);
+        url.searchParams.set('logged_in_customer_id', oid);
 
-        const response = await fetch(url.toString(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          cache: 'no-store',
-          body: JSON.stringify({ upload: settingsToSave }),
-        });
+        const response = await fetchWithTimeout(
+          url.toString(),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ upload: settingsToSave }),
+          },
+          SETTINGS_FETCH_TIMEOUT_MS
+        );
 
-        const data = await response.json();
+        const data = await parseJsonResponse(response).catch(function () { return {}; });
         if (!data.ok) console.warn('⚠️ Fehler beim Speichern der Upload-Einstellungen:', data);
       } catch (error) {
         if (error.name === 'TypeError' && String(error.message || '').includes('Failed to fetch')) {
@@ -1272,11 +1341,7 @@
     }
 
     function buildDispatchBaseUrl() {
-      const raw = String(resolveApiBase() || window.api_base_url || window.API_BASE_URL || window.creator_api_base_url || '').trim();
-      if (!raw) return '';
-      const clean = raw.split('?')[0].replace(/\/+$/, '');
-      if (clean.indexOf('/apps/creator-dispatch') !== -1) return clean;
-      return clean + '/apps/creator-dispatch';
+      return resolveDispatchUrl();
     }
 
     async function pollUploadStatus(jobId) {
@@ -1428,27 +1493,32 @@
       }
     }
 
-    async function openDesignUploadModal() {
-      const loadedSettings = await loadSavedUploadSettings();
-      const settingsToApply = loadedSettings !== null ? loadedSettings : (savedUploadSettings || {});
-      savedUploadSettings = settingsToApply;
-      if (window.CreatorDesignUploadModal) window.CreatorDesignUploadModal.savedUploadSettings = savedUploadSettings;
-
-      await loadCreatorNamesForUploadModal();
-      applyUploadSettingsToUI(savedUploadSettings);
-
-      if (tempSelectedFile) {
-        displayFilePreview(modal, tempSelectedFile);
-      } else {
-        setActionsBarVisible(false);
+    function fillCreatorSelectFromCache() {
+      if (!creatorSelect || shopModeRef) return false;
+      if (!window.CreatorSettings || !Array.isArray(window.CreatorSettings.creatorNames)) return false;
+      const names = normalizeCreatorNames(window.CreatorSettings.creatorNames);
+      if (!names.length) return false;
+      creatorSelect.innerHTML = '';
+      names.forEach(function (n) {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        creatorSelect.appendChild(opt);
+      });
+      const active =
+        (window.CreatorSettings.creatorName != null && String(window.CreatorSettings.creatorName).trim()) ||
+        (savedUploadSettings && savedUploadSettings.creator_name) ||
+        '';
+      if (active && Array.from(creatorSelect.options).some(function (opt) { return opt.value === active; })) {
+        creatorSelect.value = active;
+      } else if (creatorSelect.options.length) {
+        creatorSelect.selectedIndex = 0;
       }
+      return true;
+    }
 
-      updateActionButtons();
-      bindActionButtonHandlersOnce();
-      prefetchUploadModalEazCosts();
-
+    function showUploadModalShell() {
       window.scrollTo({ top: 0, behavior: 'instant' });
-      await new Promise(resolve => setTimeout(resolve, 50));
 
       modal.style.display = '';
       modal.setAttribute('aria-hidden', 'false');
@@ -1459,8 +1529,44 @@
         document.body.style.overflow = 'hidden';
       }
 
-      // mark active instance for displayFilePreview fallback hooks
       window.CreatorDesignUploadModalInstances.__active = api;
+    }
+
+    async function hydrateUploadModalSettings() {
+      try {
+        const loadedSettings = await loadSavedUploadSettings();
+        const settingsToApply = loadedSettings !== null ? loadedSettings : (savedUploadSettings || {});
+        savedUploadSettings = settingsToApply;
+        if (window.CreatorDesignUploadModal) {
+          window.CreatorDesignUploadModal.savedUploadSettings = savedUploadSettings;
+        }
+        await loadCreatorNamesForUploadModal();
+        applyUploadSettingsToUI(savedUploadSettings);
+      } catch (e) {
+        console.warn('⚠️ Upload-Modal Hydration fehlgeschlagen:', e);
+        try {
+          await loadCreatorNamesForUploadModal();
+          applyUploadSettingsToUI(savedUploadSettings || {});
+        } catch (_e2) {}
+      }
+    }
+
+    function openDesignUploadModal() {
+      // Show immediately — never await network before paint (workers.dev can hang for minutes).
+      fillCreatorSelectFromCache();
+      applyUploadSettingsToUI(savedUploadSettings || {});
+      if (tempSelectedFile) {
+        displayFilePreview(modal, tempSelectedFile);
+      } else {
+        setActionsBarVisible(false);
+      }
+      updateActionButtons();
+      bindActionButtonHandlersOnce();
+      prefetchUploadModalEazCosts();
+      showUploadModalShell();
+
+      // Refresh settings/names in background
+      void hydrateUploadModalSettings();
     }
 
     function resetFilePreview() {

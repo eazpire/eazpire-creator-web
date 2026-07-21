@@ -1066,9 +1066,42 @@
     }
   }
 
-  function loadProductMockups() {
+  function fetchJSONWithTimeout(url, ms) {
+    var timeoutMs = typeof ms === 'number' && ms > 0 ? ms : 8000;
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = null;
+    var fetchOpts = { credentials: 'include' };
+    if (ctrl) fetchOpts.signal = ctrl.signal;
+    var fetchPromise = fetch(url, fetchOpts).then(function (r) {
+      return r.json().catch(function () {
+        return {};
+      });
+    });
+    var timeoutPromise = new Promise(function (resolve) {
+      timer = setTimeout(function () {
+        if (ctrl) {
+          try {
+            ctrl.abort();
+          } catch (_e) {}
+        }
+        resolve({ ok: false, error: 'timeout' });
+      }, timeoutMs);
+    });
+    return Promise.race([fetchPromise, timeoutPromise]).then(
+      function (data) {
+        if (timer) clearTimeout(timer);
+        return data;
+      },
+      function (err) {
+        if (timer) clearTimeout(timer);
+        console.warn('[ProductPreviewModal] fetch failed', err);
+        return { ok: false, error: 'fetch_failed' };
+      }
+    );
+  }
+
+  function loadProductMockups(requestToken) {
     if (!ctx) return Promise.resolve(null);
-    var token = ++variantsLoadToken;
 
     if (ctx.mockupsByView && countByViewUrls(ctx.mockupsByView) > 0) {
       productMockupsByView = mergeByViewMaps({}, ctx.mockupsByView);
@@ -1078,18 +1111,37 @@
     if (ctx.publishedDesignId) {
       parts.push('published_design_id=' + encodeURIComponent(String(ctx.publishedDesignId)));
     }
-    if (ctx.designId) parts.push('design_id=' + encodeURIComponent(String(ctx.designId)));
+    if (ctx.designId) parts.push('design_id=' + encodeURIComponent(ctx.designId));
     if (ctx.productKey) parts.push('product_key=' + encodeURIComponent(ctx.productKey));
     if (ctx.printifyProductId) {
       parts.push('printify_product_id=' + encodeURIComponent(String(ctx.printifyProductId)));
+    }
+
+    // Fast path: already have product mockups (or printify images) — skip slow network.
+    if (countByViewUrls(productMockupsByView) > 0) {
+      return Promise.resolve(productMockupsByView);
+    }
+    if (ctx.printifyImages) {
+      productMockupsByView = mergeByViewMaps(
+        productMockupsByView,
+        parsePrintifyImagesToByView(ctx.printifyImages)
+      );
+      if (countByViewUrls(productMockupsByView) > 0) {
+        return Promise.resolve(productMockupsByView);
+      }
     }
     if (!parts.length) {
       return Promise.resolve(productMockupsByView);
     }
 
-    return fetchJSON(apiBase() + '?op=get-published-product-mockups&' + parts.join('&'))
+    return fetchJSONWithTimeout(
+      apiBase() + '?op=get-published-product-mockups&' + parts.join('&'),
+      6000
+    )
       .then(function (data) {
-        if (!isOpen || token !== variantsLoadToken) return productMockupsByView;
+        if (!isOpen || (requestToken != null && requestToken !== variantsLoadToken)) {
+          return productMockupsByView;
+        }
         if (data && data.ok && data.by_view) {
           productMockupsByView = mergeByViewMaps(productMockupsByView, data.by_view);
         }
@@ -1107,19 +1159,59 @@
       });
   }
 
+  /**
+   * Fastest path: render catalog colors ASAP from get-mockup-defaults,
+   * then optionally enrich with published product mockups (design printed).
+   */
   function loadVariantPanels() {
     var token = ++variantsLoadToken;
-    var defaultsPromise = ctx.productKey
-      ? fetchJSON(
-          apiBase() + '?op=get-mockup-defaults&product_key=' + encodeURIComponent(ctx.productKey)
-        )
-      : Promise.resolve(null);
-    return Promise.all([loadProductMockups(), defaultsPromise]).then(function (results) {
-      if (!isOpen || token !== variantsLoadToken) return;
-      var mockData = results[0];
-      var defaultsResp = results[1];
+    var lastDefaults = null;
+
+    function stillCurrent() {
+      return isOpen && token === variantsLoadToken;
+    }
+
+    function paint(defaultsResp, mockData) {
+      if (!stillCurrent()) return;
       if (mockData) productMockupsByView = mockData;
-      renderVariantsPanel(defaultsResp && defaultsResp.ok !== false ? defaultsResp : null, mockData);
+      renderVariantsPanel(
+        defaultsResp && defaultsResp.ok !== false ? defaultsResp : lastDefaults,
+        mockData || productMockupsByView
+      );
+    }
+
+    // 1) Immediate paint from whatever we already have (card mockups / image).
+    if (countByViewUrls(ctx.mockupsByView) > 0 || ctx.imageUrl) {
+      productMockupsByView = mergeByViewMaps({}, ctx.mockupsByView);
+      paint(null, productMockupsByView);
+    }
+
+    // 2) Catalog defaults = all colors × front/back (fast, no Printify).
+    var defaultsPromise = ctx.productKey
+      ? fetchJSONWithTimeout(
+          apiBase() +
+            '?op=get-mockup-defaults&product_key=' +
+            encodeURIComponent(ctx.productKey),
+          8000
+        ).then(function (defaultsResp) {
+          if (!stillCurrent()) return null;
+          lastDefaults = defaultsResp && defaultsResp.ok !== false ? defaultsResp : null;
+          paint(lastDefaults, productMockupsByView);
+          return lastDefaults;
+        })
+      : Promise.resolve(null);
+
+    // 3) Published mockups in parallel (may be slower) — re-paint when ready.
+    var productPromise = loadProductMockups(token).then(function (mockData) {
+      if (!stillCurrent()) return null;
+      paint(lastDefaults, mockData);
+      return mockData;
+    });
+
+    return Promise.all([defaultsPromise, productPromise]).then(function () {
+      if (!stillCurrent()) return;
+      // Final paint in case one path finished before the other set lastDefaults.
+      paint(lastDefaults, productMockupsByView);
     });
   }
 
@@ -1148,27 +1240,34 @@
     if (titleEl) titleEl.textContent = ctx.productName;
 
     renderOverviewPanel();
-    var variantsEl = root.querySelector('[data-cppm-panel="variants"]');
-    if (variantsEl && (ctx.productKey || ctx.publishedDesignId || ctx.designId)) {
-      variantsEl.innerHTML =
-        '<h3 class="cppm__section-title" data-t="creator.product_preview.variants">' +
-        esc(t('variants', 'Variants')) +
-        '</h3><p class="cppm__variants-loading" data-t="creator.product_preview.loading_variants">' +
-        esc(t('loading_variants', 'Loading color variants…')) +
-        '</p>';
-    } else {
-      renderVariantsPanel(null, ctx.mockupsByView);
-    }
     renderChannelsPanel();
     setPanel('overview');
+
+    // Variants: show loading only briefly; loadVariantPanels paints ASAP.
+    var variantsEl = root.querySelector('[data-cppm-panel="variants"]');
+    if (variantsEl) {
+      if (countByViewUrls(ctx.mockupsByView) > 0 || ctx.imageUrl) {
+        productMockupsByView = mergeByViewMaps({}, ctx.mockupsByView);
+        renderVariantsPanel(null, productMockupsByView);
+      } else {
+        variantsEl.innerHTML =
+          '<h3 class="cppm__section-title" data-t="creator.product_preview.variants">' +
+          esc(t('variants', 'Variants')) +
+          '</h3><p class="cppm__variants-loading" data-t="creator.product_preview.loading_variants">' +
+          esc(t('loading_variants', 'Loading color variants…')) +
+          '</p>';
+      }
+    }
 
     root.classList.add('cppm--open', 'creator-modal--open');
     root.setAttribute('aria-hidden', 'false');
     isOpen = true;
     document.body.style.overflow = 'hidden';
 
-    if (ctx.productKey || ctx.publishedDesignId || ctx.designId) {
+    if (ctx.productKey || ctx.publishedDesignId || ctx.designId || countByViewUrls(ctx.mockupsByView) > 0) {
       loadVariantPanels();
+    } else if (variantsEl) {
+      renderVariantsPanel(null, null);
     }
   }
 
