@@ -1596,11 +1596,21 @@
   }
 
   function openEditorQueue() {
-    if (!editorModal) editorModal = document.getElementById('qi-editor-modal');
+    editorModal = document.getElementById('qi-editor-modal');
     if (!editorModal) {
+      console.warn('[QI] qi-editor-modal missing — hard-refresh or wait for portal partial reload');
+      showUploadStatus(
+        t(
+          'creator.quick_inspirations.editor_missing',
+          'Image editor is loading. Please close and try again, or refresh the page.'
+        ),
+        'error'
+      );
       openConfirmUpload();
       return;
     }
+    bindEditorControls();
+    hideDialog(uploadModal || document.getElementById('qi-upload-modal'));
     bindEditorPointers();
     showDialog(editorModal);
     loadEditorFile(editorQueue[editorQueueIndex]);
@@ -1788,6 +1798,22 @@
     editorQueueIndex = 0;
     closeSourcePicker();
     hideDialog(uploadModal || document.getElementById('qi-upload-modal'));
+    // Always prefer the crop/segment editor (never stay on the legacy preview modal).
+    ensureEls();
+    editorModal = document.getElementById('qi-editor-modal');
+    if (!editorModal) {
+      // Portal may still be injecting the updated partial — retry briefly.
+      var tries = 0;
+      var timer = setInterval(function () {
+        tries += 1;
+        editorModal = document.getElementById('qi-editor-modal');
+        if (editorModal || tries >= 20) {
+          clearInterval(timer);
+          openEditorQueue();
+        }
+      }, 100);
+      return;
+    }
     openEditorQueue();
   }
 
@@ -2239,19 +2265,27 @@
     var submit = document.getElementById('qi-upload-submit');
     if (submit) submit.addEventListener('click', submitUpload);
 
+    bindEditorControls();
+  }
+
+  function bindEditorControls() {
+    editorModal = document.getElementById('qi-editor-modal');
+    segmentConfigModal = document.getElementById('qi-segment-config-modal');
+    if (!editorModal) return;
+    if (editorModal.getAttribute('data-qi-editor-bound') === '1') return;
+    editorModal.setAttribute('data-qi-editor-bound', '1');
+
     var editorClose = document.getElementById('qi-editor-close');
     var editorCancel = document.getElementById('qi-editor-cancel');
     if (editorClose) editorClose.addEventListener('click', function () { closeEditor(true); });
     if (editorCancel) editorCancel.addEventListener('click', function () { closeEditor(true); });
-    if (editorModal) {
-      editorModal.addEventListener('click', function (e) {
-        if (e.target === editorModal) closeEditor(true);
-      });
-      editorModal.addEventListener('cancel', function (e) {
-        e.preventDefault();
-        closeEditor(true);
-      });
-    }
+    editorModal.addEventListener('click', function (e) {
+      if (e.target === editorModal) closeEditor(true);
+    });
+    editorModal.addEventListener('cancel', function (e) {
+      e.preventDefault();
+      closeEditor(true);
+    });
     var editorSave = document.getElementById('qi-editor-save');
     if (editorSave) editorSave.addEventListener('click', saveEditorCurrent);
     var cropTab = document.getElementById('qi-editor-tab-crop');
@@ -2266,15 +2300,20 @@
         setEditorMode('segment');
       });
     }
-    window.addEventListener('resize', function () {
-      if (editorModal && editorModal.open) paintEditorDim();
-    });
+    if (!window.__qiEditorResizeBound) {
+      window.__qiEditorResizeBound = true;
+      window.addEventListener('resize', function () {
+        var em = document.getElementById('qi-editor-modal');
+        if (em && em.open) paintEditorDim();
+      });
+    }
 
-    var segClose = document.getElementById('qi-segment-config-close');
-    var segCancel = document.getElementById('qi-segment-config-cancel');
-    if (segClose) segClose.addEventListener('click', closeSegmentConfigModal);
-    if (segCancel) segCancel.addEventListener('click', closeSegmentConfigModal);
-    if (segmentConfigModal) {
+    if (segmentConfigModal && segmentConfigModal.getAttribute('data-qi-seg-bound') !== '1') {
+      segmentConfigModal.setAttribute('data-qi-seg-bound', '1');
+      var segClose = document.getElementById('qi-segment-config-close');
+      var segCancel = document.getElementById('qi-segment-config-cancel');
+      if (segClose) segClose.addEventListener('click', closeSegmentConfigModal);
+      if (segCancel) segCancel.addEventListener('click', closeSegmentConfigModal);
       segmentConfigModal.addEventListener('click', function (e) {
         if (e.target === segmentConfigModal) closeSegmentConfigModal();
       });
@@ -2282,9 +2321,9 @@
         e.preventDefault();
         closeSegmentConfigModal();
       });
+      var segConfirm = document.getElementById('qi-segment-config-confirm');
+      if (segConfirm) segConfirm.addEventListener('click', confirmSegmentConfig);
     }
-    var segConfirm = document.getElementById('qi-segment-config-confirm');
-    if (segConfirm) segConfirm.addEventListener('click', confirmSegmentConfig);
   }
 
   function tryBind() {

@@ -14,8 +14,8 @@
     dashboard: null,
   };
   var partialsHostId = "creatorPortalModals";
-  /** Bump on portal JS/CSS changes. /vendor + Creations bundle are cached ~7d. */
-  var PORTAL_ASSET_V = "design-studio-layers-20260721d";
+  /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
+  var PORTAL_ASSET_V = "qi-crop-segment-20260721a";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -105,14 +105,21 @@
   async function injectPartial(name, hostEl) {
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
-    // Portal serves /partials with max-age=7d â€” bump when modal markup/CSS in partials changes.
+    // Portal serves /partials with max-age=7d — bump PORTAL_ASSET_V when markup changes.
     var url = withAssetV("/partials/" + name);
-    if (host.querySelector('[data-partial="' + name + '"]')) return;
+    var existing = host.querySelector('[data-partial="' + name + '"]');
+    if (existing) {
+      if (existing.getAttribute("data-partial-v") === PORTAL_ASSET_V) return;
+      try {
+        existing.remove();
+      } catch (_eRem) {}
+    }
     var res = await fetch(url, { credentials: "same-origin" });
     if (!res.ok) return;
     var html = await res.text();
     var wrap = document.createElement("div");
     wrap.setAttribute("data-partial", name);
+    wrap.setAttribute("data-partial-v", PORTAL_ASSET_V);
     wrap.innerHTML = html;
     host.appendChild(wrap);
     applyPartialI18n(wrap);
