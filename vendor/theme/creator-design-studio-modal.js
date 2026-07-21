@@ -3937,6 +3937,7 @@
     }
     pendingAssetKey = null;
     pendingAssetAction = null;
+    pendingAssetSourcePos = null;
   }
 
   function openAssetActionsDialog(assetKey) {
@@ -3961,7 +3962,9 @@
       else if (action === 'reset') {
         btn.disabled = !(asset && asset.original_url && asset.preview_url !== asset.original_url);
       } else if (action === 'remove') {
-        btn.disabled = asset && asset.kind === 'primary';
+        // Front product primary cannot be removed; other-view primary can.
+        btn.disabled =
+          !!(asset && asset.kind === 'primary' && normPos(pendingAssetSourcePos) === 'front');
       } else btn.disabled = false;
     });
     assetActionsEl.hidden = false;
@@ -3975,6 +3978,12 @@
     var others = enabledPositions().filter(function (p) {
       return p !== source;
     });
+    if (!others.length) {
+      setStatus(
+        t('designStudioAssetNoOtherPlacements', 'No other views available for this product.')
+      );
+      return;
+    }
     assetPlacementListEl.innerHTML = '';
     for (var i = 0; i < others.length; i++) {
       (function (pk) {
@@ -3996,26 +4005,89 @@
     assetPlacementEl.setAttribute('aria-hidden', 'false');
   }
 
-  function cloneAssetSlot(asset) {
+  function cloneAssetSlot(asset, opts) {
     if (!asset) return null;
+    var offset = opts && opts.offset;
+    var tr;
     if (asset.kind === 'primary') {
+      tr = cloneTransform(asset.transform);
+      if (offset) tr = offsetDuplicateTransform(tr);
       return {
         design_id: ctxDesign && ctxDesign.id,
         preview_url: asset.preview_url,
         original_url: asset.original_url || asset.preview_url,
         label: 'Primary',
-        transform: cloneTransform(asset.transform),
+        transform: tr,
       };
     }
     var slot = asset.slot || {};
+    tr = cloneTransform(slot.transform || asset.transform);
+    if (offset) tr = offsetDuplicateTransform(tr);
     return {
       design_id: slot.design_id,
       preview_url: slot.preview_url || asset.preview_url,
       original_url: slot.original_url || asset.original_url || slot.preview_url,
       label: slot.label || 'Design',
       owner_id: slot.owner_id || null,
-      transform: cloneTransform(slot.transform || asset.transform),
+      transform: tr,
     };
+  }
+
+  /** Nudge a duplicate so it is visibly distinct from the source on the same view. */
+  function offsetDuplicateTransform(tr) {
+    var t = cloneTransform(tr);
+    t.x = clamp((Number(t.x) || 0.5) + 0.06, 0.08, 0.92);
+    t.y = clamp((Number(t.y) || 0.5) + 0.06, 0.08, 0.92);
+    return t;
+  }
+
+  /**
+   * Place a cloned slot onto a target view.
+   * Empty non-front views get it as primary (primary_url); otherwise as additional.
+   * Front primary is never overwritten (product primary is locked to Front).
+   */
+  function placeClonedOnTarget(targetPos, targetBucket, cloned) {
+    var key = normPos(targetPos);
+    var canBecomePrimary =
+      key !== 'front' && !targetBucket.primary_url && !targetBucket.primary_original_url;
+    if (canBecomePrimary) {
+      targetBucket.primary_url = cloned.preview_url || null;
+      targetBucket.primary_original_url = cloned.original_url || cloned.preview_url || null;
+      targetBucket.primary = cloneTransform(cloned.transform || adminDefaultTransform(key));
+      return { ok: true, key: 'primary' };
+    }
+    if ((targetBucket.additional || []).length >= MAX_OWN_ADDITIONAL) {
+      return { ok: false, error: 'limit' };
+    }
+    targetBucket.additional.push(cloned);
+    return { ok: true, key: 'own-' + (targetBucket.additional.length - 1) };
+  }
+
+  /** Remove source asset after a successful Move (Front product primary stays). */
+  function removeAssetAfterMove(sourcePos, sourceBucket, asset) {
+    if (!asset) return false;
+    if (asset.kind === 'own') {
+      sourceBucket.additional.splice(asset.index, 1);
+      return true;
+    }
+    if (asset.kind === 'public') {
+      sourceBucket.public_additional = null;
+      return true;
+    }
+    if (asset.kind === 'primary' && normPos(sourcePos) !== 'front') {
+      sourceBucket.primary_url = null;
+      sourceBucket.primary_original_url = null;
+      sourceBucket.primary = adminDefaultTransform(sourcePos);
+      return true;
+    }
+    // Front primary cannot be removed — Move acts as Copy for that slot.
+    return false;
+  }
+
+  function switchToPositionAsset(pos, assetKey) {
+    ensurePrintArea().position = normPos(pos);
+    activeAssetKey = assetKey || null;
+    setAssetSelected(!!assetKey);
   }
 
   function executeAssetAction(action, targetPos) {
@@ -4027,64 +4099,75 @@
       return;
     }
     var sourceBucket = ensurePositionBucket(sourcePos);
+    var didChange = false;
+    var statusMsg = '';
 
     if (action === 'duplicate') {
-      if (asset.kind === 'primary') {
+      if (asset.kind === 'primary' || asset.kind === 'own') {
         if ((sourceBucket.additional || []).length >= MAX_OWN_ADDITIONAL) {
-          setStatus(t('designStudioAddLimit', 'Additional design limit reached.'));
+          statusMsg = t('designStudioAddLimit', 'Additional design limit reached.');
         } else {
-          sourceBucket.additional.push(cloneAssetSlot(asset));
+          sourceBucket.additional.push(cloneAssetSlot(asset, { offset: true }));
           activeAssetKey = 'own-' + (sourceBucket.additional.length - 1);
+          setAssetSelected(true);
+          didChange = true;
+          statusMsg = t(
+            'designStudioAssetToastDuplicated',
+            'Duplicate created on {{placement}}.'
+          ).replace('{{placement}}', formatPlacementLabel(sourcePos));
         }
-      } else if (asset.kind === 'own') {
+      } else if (asset.kind === 'public') {
+        // Public slot is unique — duplicate creates an own additional copy.
         if ((sourceBucket.additional || []).length >= MAX_OWN_ADDITIONAL) {
-          setStatus(t('designStudioAddLimit', 'Additional design limit reached.'));
+          statusMsg = t('designStudioAddLimit', 'Additional design limit reached.');
         } else {
-          sourceBucket.additional.push(cloneAssetSlot(asset));
+          sourceBucket.additional.push(cloneAssetSlot(asset, { offset: true }));
           activeAssetKey = 'own-' + (sourceBucket.additional.length - 1);
+          setAssetSelected(true);
+          didChange = true;
+          statusMsg = t(
+            'designStudioAssetToastDuplicated',
+            'Duplicate created on {{placement}}.'
+          ).replace('{{placement}}', formatPlacementLabel(sourcePos));
         }
-      } else if (asset.kind === 'public' && !sourceBucket.public_additional) {
-        sourceBucket.public_additional = cloneAssetSlot(asset);
-        activeAssetKey = 'public';
       }
-      setStatus(
-        t('designStudioAssetDuplicated', 'Duplicate created on {{placement}}.').replace(
-          '{{placement}}',
-          formatPlacementLabel(sourcePos)
-        )
-      );
     } else if (action === 'reset') {
       if (asset.kind === 'primary' && sourceBucket.primary_original_url) {
         sourceBucket.primary_url = sourceBucket.primary_original_url;
+        didChange = true;
       } else if (asset.slot && asset.slot.original_url) {
         asset.slot.preview_url = asset.slot.original_url;
+        didChange = true;
       }
-      setStatus(t('designStudioAssetReset', 'Design reset to original.'));
+      if (didChange) statusMsg = t('designStudioAssetToastReset', 'Design reset to original.');
     } else if ((action === 'copy' || action === 'move') && targetPos) {
       var targetBucket = ensurePositionBucket(targetPos);
       var cloned = cloneAssetSlot(asset);
-      if (cloned) {
-        if ((targetBucket.additional || []).length >= MAX_OWN_ADDITIONAL) {
-          setStatus(t('designStudioAddLimit', 'Additional design limit reached.'));
+      if (cloned && cloned.preview_url) {
+        var placed = placeClonedOnTarget(targetPos, targetBucket, cloned);
+        if (!placed.ok) {
+          statusMsg = t('designStudioAddLimit', 'Additional design limit reached.');
         } else {
-          targetBucket.additional.push(cloned);
+          var movedAway = false;
           if (action === 'move') {
-            if (asset.kind === 'own') {
-              sourceBucket.additional.splice(asset.index, 1);
-            } else if (asset.kind === 'public') {
-              sourceBucket.public_additional = null;
-            } else if (asset.kind === 'primary') {
-              // Keep primary on source; move means copy of primary as additional on target.
-            }
+            movedAway = removeAssetAfterMove(sourcePos, sourceBucket, asset);
           }
-          setStatus(
-            t(
-              action === 'copy' ? 'designStudioAssetCopied' : 'designStudioAssetMoved',
+          switchToPositionAsset(targetPos, placed.key);
+          didChange = true;
+          if (action === 'move' && !movedAway && asset.kind === 'primary') {
+            // Front primary stays; still show as placed on the other view.
+            statusMsg = t(
+              'designStudioAssetToastCopied',
+              'Design copied to {{placement}}.'
+            ).replace('{{placement}}', formatPlacementLabel(targetPos));
+          } else {
+            statusMsg = t(
+              action === 'copy' ? 'designStudioAssetToastCopied' : 'designStudioAssetToastMoved',
               action === 'copy'
                 ? 'Design copied to {{placement}}.'
                 : 'Design moved to {{placement}}.'
-            ).replace('{{placement}}', formatPlacementLabel(targetPos))
-          );
+            ).replace('{{placement}}', formatPlacementLabel(targetPos));
+          }
         }
       }
     } else if (action === 'remove') {
@@ -4092,20 +4175,33 @@
         sourceBucket.additional.splice(asset.index, 1);
         activeAssetKey = null;
         setAssetSelected(false);
-        setStatus(t('designStudioAssetRemoved', 'Asset removed.'));
+        didChange = true;
+        statusMsg = t('designStudioAssetToastRemoved', 'Asset removed.');
       } else if (asset.kind === 'public') {
         sourceBucket.public_additional = null;
         activeAssetKey = null;
         setAssetSelected(false);
-        setStatus(t('designStudioAssetRemoved', 'Asset removed.'));
+        didChange = true;
+        statusMsg = t('designStudioAssetToastRemoved', 'Asset removed.');
+      } else if (asset.kind === 'primary' && normPos(sourcePos) !== 'front') {
+        sourceBucket.primary_url = null;
+        sourceBucket.primary_original_url = null;
+        sourceBucket.primary = adminDefaultTransform(sourcePos);
+        activeAssetKey = null;
+        setAssetSelected(false);
+        didChange = true;
+        statusMsg = t('designStudioAssetToastRemoved', 'Asset removed.');
       }
     }
 
     closeAssetDialogs();
+    if (statusMsg) setStatus(statusMsg);
     setAssetSelected(!!activeAssetKey);
     renderStudioUi();
-    markDirtyUi();
-    commitHistoryAfterEdit();
+    if (didChange) {
+      markDirtyUi();
+      commitHistoryAfterEdit();
+    }
   }
 
   var PHONE_UPLOAD_WORKER_FALLBACK = 'https://creator-engine.eazpire.workers.dev';
