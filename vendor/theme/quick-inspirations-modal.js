@@ -3411,6 +3411,42 @@
       tryBind();
       open(opts);
     },
-    close: close
+    close: close,
+    refreshYours: function () {
+      tryBind();
+      if (!modal) return;
+      setActiveTab('yours');
+      items = [];
+      selectedId = null;
+      loadItems();
+    }
   };
+
+  if (!window.__qiCollageRefreshBound) {
+    window.__qiCollageRefreshBound = true;
+    window.addEventListener('creatorQiRefresh', function () {
+      try {
+        if (window.QuickInspirationsModal && typeof window.QuickInspirationsModal.refreshYours === 'function') {
+          // Defer until job may have finished; soft refresh if modal open
+          setTimeout(function () {
+            ensureEls();
+            if (modal && modal.open) {
+              window.QuickInspirationsModal.refreshYours();
+            }
+          }, 2500);
+        }
+      } catch (_e) {}
+    });
+    window.addEventListener('creatorNotificationsRefresh', function (ev) {
+      try {
+        var d = ev && ev.detail;
+        if (!d) return;
+        if (d.open_target === 'quick_inspirations_yours' || d.generator_mode === 'quick_inspirations') {
+          if (window.QuickInspirationsModal) {
+            window.QuickInspirationsModal.open({ tab: 'yours', focusYours: true });
+          }
+        }
+      } catch (_e2) {}
+    });
+  }
 })();

@@ -136,6 +136,17 @@
     var prompt = (s.prompt && String(s.prompt).trim()) || null;
     if (!prompt && !imageUrl) prompt = ''; // allow empty prompt if image present; backend may still require one
 
+    var generatorMode = (s.generatorMode && String(s.generatorMode).trim()) || 'design';
+    generatorMode = generatorMode.toLowerCase().replace(/-/g, '_');
+    if (generatorMode !== 'quick_inspirations') generatorMode = 'design';
+
+    // Quick Inspirations mode: force collage settings
+    if (generatorMode === 'quick_inspirations') {
+      ratio = '16:9';
+      background = { mode: 'auto' };
+      backgroundColors = [];
+    }
+
     return {
       prompt: prompt || '',
       image_url: imageUrl,
@@ -152,7 +163,8 @@
       language: language,
       reference_strength: refStrength,
       reference_images: withLabels,
-      owner_id: (s.owner_id && String(s.owner_id).trim()) || null
+      owner_id: (s.owner_id && String(s.owner_id).trim()) || null,
+      generator_mode: generatorMode
     };
   }
 
@@ -215,7 +227,8 @@
       background: payload.background,
       language: payload.language,
       reference_strength: payload.reference_strength,
-      reference_images: payload.reference_images
+      reference_images: payload.reference_images,
+      generator_mode: payload.generator_mode || 'design'
     };
     if (payload.generator_ui_snapshot != null && typeof payload.generator_ui_snapshot === 'object') {
       body.generator_ui_snapshot = payload.generator_ui_snapshot;

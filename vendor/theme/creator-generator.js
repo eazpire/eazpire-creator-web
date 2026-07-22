@@ -899,6 +899,18 @@
     { value: 'panorama', label: 'Panorama', preview: 'panorama' }
   ];
 
+  var GENERATOR_MODE_OPTIONS = [
+    { value: 'design', label: 'Design' },
+    { value: 'quick_inspirations', label: 'Quick Inspirations' }
+  ];
+
+  function modeOptionLabel(value) {
+    if (value === 'quick_inspirations') {
+      return tCreator('generatorModeQuickInspirations', 'Quick Inspirations');
+    }
+    return tCreator('generatorModeDesign', 'Design');
+  }
+
   function getDesignTypePreviewSvg(type) {
     var w = 64;
     var h = 64;
@@ -954,6 +966,8 @@
     var targetVal = document.getElementById('genTargetProductVal');
     var designBtn = document.getElementById('genDesignType');
     var designVal = document.getElementById('genDesignTypeVal');
+    var modeBtn = document.getElementById('genMode');
+    var modeVal = document.getElementById('genModeVal');
     var overlay = document.getElementById('genSelectOverlay');
     var modalTitle = document.getElementById('genSelectTitle');
     var modalList = document.getElementById('genSelectList');
@@ -1094,6 +1108,7 @@
 
     var targetLabel = window.CreatorI18n && window.CreatorI18n.generator_target_product ? window.CreatorI18n.generator_target_product : 'Target Product';
     var designLabel = window.CreatorI18n && window.CreatorI18n.generator_design_type ? window.CreatorI18n.generator_design_type : 'Design Type';
+    var modeLabel = tCreator('generatorMode', 'Mode');
 
     targetBtn.addEventListener('click', function () {
       openModal(targetLabel, TARGET_PRODUCT_OPTIONS, targetVal.dataset.value || 'all', targetVal, false, true);
@@ -1102,6 +1117,16 @@
     designBtn.addEventListener('click', function () {
       openModal(designLabel, DESIGN_TYPE_OPTIONS, designVal.dataset.value || 'classic', designVal, true);
     });
+
+    if (modeBtn && modeVal) {
+      modeBtn.addEventListener('click', function () {
+        var opts = [
+          { value: 'design', label: modeOptionLabel('design') },
+          { value: 'quick_inspirations', label: modeOptionLabel('quick_inspirations') }
+        ];
+        openModal(modeLabel, opts, modeVal.dataset.value || 'design', modeVal, false, false);
+      });
+    }
 
     if (modalClose) {
       modalClose.addEventListener('click', closeModal);
@@ -1199,6 +1224,7 @@
 
     var anythingLabel = tCreator('generatorAnything', 'Anything');
     var classicLabel = tCreator('designTypeClassic', 'Classic');
+    var designModeLabel = modeOptionLabel('design');
     if (targetVal) {
       targetVal.dataset.value = 'all';
       targetVal.textContent = anythingLabel;
@@ -1206,6 +1232,11 @@
     if (designVal) {
       designVal.dataset.value = 'classic';
       designVal.textContent = classicLabel;
+    }
+    var modeValClear = document.getElementById('genModeVal');
+    if (modeValClear) {
+      modeValClear.dataset.value = 'design';
+      modeValClear.textContent = designModeLabel;
     }
 
     window.__creatorGenOptionsState = {
@@ -1226,6 +1257,7 @@
     var textarea = document.getElementById('genPrompt');
     var targetVal = document.getElementById('genTargetProductVal');
     var designVal = document.getElementById('genDesignTypeVal');
+    var modeVal = document.getElementById('genModeVal');
     var confirmOverlay = document.getElementById('genConfirmOverlay');
     var confirmClose = document.getElementById('genConfirmClose');
     var confirmCancel = document.getElementById('genConfirmCancel');
@@ -1360,6 +1392,7 @@
       var uiState = {
         prompt: prompt,
         designType: (designVal && designVal.dataset.value) ? designVal.dataset.value : 'classic',
+        generatorMode: (modeVal && modeVal.dataset.value) ? modeVal.dataset.value : 'design',
         targetProduct: (targetVal && targetVal.dataset.value) ? targetVal.dataset.value : 'all',
         ratio: opts.ratio || 'portrait',
         contentType: (opts.content_type || opts.contentType) || 'design-text',
@@ -1433,10 +1466,18 @@
         };
       }
       lastGeneratePayload = payload;
-      lastShopProductKey = isShop ? shopCtx.product_key : null;
+      lastShopProductKey =
+        isShop && uiState.generatorMode !== 'quick_inspirations' ? shopCtx.product_key : null;
       var targetLabel = (targetVal && targetVal.textContent) ? targetVal.textContent.trim() : TARGET_PRODUCT_OPTIONS.find(function (o) { return o.value === uiState.targetProduct; })?.label || 'Anything';
       var designLabel = (designVal && designVal.textContent) ? designVal.textContent.trim() : DESIGN_TYPE_OPTIONS.find(function (o) { return o.value === uiState.designType; })?.label || 'Classic';
-      var ratioLabel = (uiState.ratio === 'square') ? tCreator('generatorRatioSquare', 'Square') : (uiState.ratio === 'landscape') ? tCreator('generatorRatioLandscape', 'Landscape') : tCreator('generatorRatioPortrait', 'Portrait');
+      var modeLabel = (modeVal && modeVal.textContent) ? modeVal.textContent.trim() : modeOptionLabel(uiState.generatorMode);
+      var ratioLabel = (uiState.ratio === '16:9')
+        ? '16:9'
+        : (uiState.ratio === 'square')
+          ? tCreator('generatorRatioSquare', 'Square')
+          : (uiState.ratio === 'landscape')
+            ? tCreator('generatorRatioLandscape', 'Landscape')
+            : tCreator('generatorRatioPortrait', 'Portrait');
       var stylesCount = (uiState.styles && uiState.styles.length) ? uiState.styles.length : 0;
       var promptTrunc = (prompt && prompt.length > 80) ? prompt.slice(0, 77) + '…' : (prompt || '—');
 
@@ -1444,6 +1485,7 @@
         var rows = [
           [tCreator('generatorConfirmSummaryTarget', 'Target product'), targetLabel],
           [tCreator('generatorConfirmSummaryDesign', 'Design type'), designLabel],
+          [tCreator('generatorConfirmSummaryMode', 'Mode'), modeLabel],
           [tCreator('generatorConfirmSummaryPrompt', 'Prompt'), promptTrunc],
           [tCreator('generatorConfirmSummaryRefs', 'Reference images'), refImages.length > 0 ? refImages.length + ' ' + (refImages.length === 1 ? 'image' : 'images') : '—'],
           [tCreator('generatorConfirmSummaryRatio', 'Ratio'), ratioLabel],
@@ -1526,7 +1568,7 @@
           });
       }
 
-      if (isShop) {
+      if (isShop && uiState.generatorMode !== 'quick_inspirations') {
         if (confirmSummary) confirmSummary.innerHTML = buildSummaryHtml();
         if (confirmBalance) {
           confirmBalance.textContent = (window.CreatorI18n && window.CreatorI18n.eaz_shop_shop_design_confirm_balance)
@@ -1556,14 +1598,25 @@
           }
           var p = lastGeneratePayload;
           var shopKey = lastShopProductKey;
-          var submitPromise = shopKey && typeof payloadLib.submitShopDesignGenerateJob === 'function'
-            ? payloadLib.submitShopDesignGenerateJob(p, shopKey, ownerId, { apiBase: DISPATCH_URL })
-            : payloadLib.submitGenerateJob(p, { apiBase: DISPATCH_URL });
+          var isQiMode = p && String(p.generator_mode || '') === 'quick_inspirations';
+          var submitPromise =
+            shopKey && !isQiMode && typeof payloadLib.submitShopDesignGenerateJob === 'function'
+              ? payloadLib.submitShopDesignGenerateJob(p, shopKey, ownerId, { apiBase: DISPATCH_URL })
+              : payloadLib.submitGenerateJob(p, { apiBase: DISPATCH_URL });
           submitPromise
             .then(function (res) {
               if (window.CreatorChat && typeof window.CreatorChat.openJobs === 'function') {
                 window.CreatorChat.openJobs({ focusJobId: res.jobId });
               }
+              try {
+                if (isQiMode) {
+                  window.dispatchEvent(
+                    new CustomEvent('creatorQiRefresh', {
+                      detail: { reason: 'qi_collage_started', jobId: res.jobId }
+                    })
+                  );
+                }
+              } catch (_e) {}
               if (typeof window.reloadCreatorFooterEazBalance === 'function') {
                 window.reloadCreatorFooterEazBalance();
               } else if (typeof window.loadCreatorBalance === 'function') {

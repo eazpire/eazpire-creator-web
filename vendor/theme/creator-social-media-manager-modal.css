@@ -501,8 +501,9 @@ body.smm-modal-open {
   max-width: min(340px, 42vw);
   min-width: 0;
   min-height: 0;
+  /* Definite height from stage stretch so inner overflow-y can scroll */
+  height: 100%;
   max-height: 100%;
-  height: auto;
   align-self: stretch;
   display: flex;
   flex-direction: row;
@@ -564,7 +565,6 @@ body.smm-modal-open {
   /* basis 0 so flex height is viewport-bound and overflow can scroll */
   flex: 1 1 0;
   min-height: 0;
-  max-height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -577,6 +577,15 @@ body.smm-modal-open {
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+/*
+  Flex children default to flex-shrink:1. With overflow:hidden on compose
+  sections they shrink+clip instead of growing scrollHeight — no scrollbar.
+  Keep natural height so overflow-y:auto on this pane actually scrolls.
+*/
+.smm-new-post__settings-scroll > * {
+  flex-shrink: 0;
+  min-height: auto;
 }
 .smm-new-post__settings-scroll::-webkit-scrollbar {
   width: 8px;
