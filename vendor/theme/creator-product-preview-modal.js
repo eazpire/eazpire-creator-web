@@ -9,6 +9,8 @@
   var ROOT_ID = 'creator-product-preview-modal';
   var STAT_KEYS = ['sales', 'add_to_cart', 'impressions', 'clicks'];
   var CHANNEL_STAT_IDS = ['eazpire', 'amazon', 'etsy', 'ebay'];
+  var STAT_RANGE_KEYS = ['1d', '7d', '14d', '30d', 'all'];
+  var STAT_RANGE_DAYS = { '1d': 1, '7d': 7, '14d': 14, '30d': 30, all: 0 };
 
   /**
    * Amazon marketplaces we sell on (aligned with src/config/amazonMarketplaces.js + MX).
@@ -103,6 +105,10 @@
   var amazonExpanded = false;
   var studioLoadPromise = null;
   var boundOnce = false;
+  /** Overview stats: one channel tab, one open metric (accordion), date range. */
+  var statsChannel = 'all';
+  var statsMetric = null;
+  var statsRange = '7d';
 
   function t(key, fallback) {
     var i18n = window.CreatorI18n || {};
@@ -451,8 +457,45 @@
         var track = root.querySelector('[data-cppm-track="' + trackId + '"]');
         if (track) {
           var dir = carBtn.getAttribute('data-cppm-dir') === 'prev' ? -1 : 1;
-          var step = trackId === 'channels' ? 232 : trackId === 'amazon-regions' ? 180 : 180;
+          var step =
+            trackId === 'channels'
+              ? 232
+              : trackId === 'amazon-regions'
+                ? 180
+                : trackId === 'stats-channels'
+                  ? 64
+                  : 180;
           track.scrollBy({ left: dir * step, behavior: 'smooth' });
+        }
+        return;
+      }
+
+      var statsChBtn = target.closest('[data-cppm-stats-channel]');
+      if (statsChBtn) {
+        var nextCh = statsChBtn.getAttribute('data-cppm-stats-channel') || 'all';
+        if (nextCh !== statsChannel) {
+          statsChannel = nextCh;
+          statsMetric = null;
+          renderOverviewPanel();
+        }
+        return;
+      }
+
+      var statsMetricBtn = target.closest('[data-cppm-stats-metric]');
+      if (statsMetricBtn) {
+        var nextMetric = statsMetricBtn.getAttribute('data-cppm-stats-metric') || '';
+        statsMetric = statsMetric === nextMetric ? null : nextMetric;
+        renderOverviewPanel();
+        return;
+      }
+
+      var statsRangeBtn = target.closest('[data-cppm-stats-range]');
+      if (statsRangeBtn) {
+        var nextRange = statsRangeBtn.getAttribute('data-cppm-stats-range') || '7d';
+        if (STAT_RANGE_DAYS[nextRange] == null) nextRange = '7d';
+        if (nextRange !== statsRange) {
+          statsRange = nextRange;
+          renderOverviewPanel();
         }
         return;
       }
@@ -517,23 +560,134 @@
     }
   }
 
-  function placeholderStatsHtml(channelId, channelLabel) {
-    var cells = STAT_KEYS.map(function (k) {
-      var label =
-        k === 'sales'
-          ? t('stats_sales', 'Sales')
-          : k === 'add_to_cart'
-            ? t('stats_add_to_cart', 'Add to Cart')
-            : k === 'impressions'
-              ? t('stats_impressions', 'Impressions')
-              : t('stats_clicks', 'Clicks');
-      var dataT =
-        'creator.product_preview.stats_' +
-        (k === 'add_to_cart' ? 'add_to_cart' : k);
+  function channelLabel(channelId) {
+    if (channelId === 'all') return t('stats_section_all', 'All channels');
+    if (channelId === 'eazpire') return t('channel_eazpire', 'Eazpire');
+    if (channelId === 'amazon') return t('channel_amazon', 'Amazon');
+    if (channelId === 'etsy') return t('channel_etsy', 'Etsy');
+    if (channelId === 'ebay') return t('channel_ebay', 'eBay');
+    return channelId;
+  }
+
+  function statLabel(key) {
+    if (key === 'sales') return t('stats_sales', 'Sales');
+    if (key === 'add_to_cart') return t('stats_add_to_cart', 'Add to Cart');
+    if (key === 'impressions') return t('stats_impressions', 'Impressions');
+    return t('stats_clicks', 'Clicks');
+  }
+
+  function rangeLabel(key) {
+    if (key === '1d') return t('stats_range_today', 'Today');
+    if (key === '7d') return t('stats_range_7d', '7 Days');
+    if (key === '14d') return t('stats_range_14d', '14 Days');
+    if (key === '30d') return t('stats_range_30d', '30 Days');
+    return t('stats_range_all', 'All Time');
+  }
+
+  function formatStatsDay(date) {
+    try {
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (_e) {
+      return date.toISOString().slice(0, 10);
+    }
+  }
+
+  /** Placeholder daily rows until Phase 3 API exists. Newest first. */
+  function buildStatsDayRows(rangeKey) {
+    var days = STAT_RANGE_DAYS[rangeKey];
+    if (days == null) days = 7;
+    if (days === 0) {
       return (
-        '<div class="cppm__stat cppm__stat--' +
+        '<li class="cppm__stats-day cppm__stats-day--empty">' +
+        '<span class="cppm__stats-day-empty" data-t="creator.product_preview.stats_no_daily_yet">' +
+        esc(t('stats_no_daily_yet', 'No daily data yet')) +
+        '</span>' +
+        '</li>'
+      );
+    }
+    var placeholder = esc(t('stats_placeholder', '—'));
+    var html = '';
+    var now = new Date();
+    for (var i = 0; i < days; i++) {
+      var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      html +=
+        '<li class="cppm__stats-day">' +
+        '<span class="cppm__stats-day-date">' +
+        esc(formatStatsDay(d)) +
+        '</span>' +
+        '<span class="cppm__stats-day-value cppm__stat-value--placeholder" data-t="creator.product_preview.stats_placeholder">' +
+        placeholder +
+        '</span>' +
+        '</li>';
+    }
+    return html;
+  }
+
+  function statsChannelTabsHtml() {
+    var ids = ['all'].concat(CHANNEL_STAT_IDS);
+    var tabs = ids
+      .map(function (id) {
+        var active = id === statsChannel;
+        var label = channelLabel(id);
+        return (
+          '<button type="button" class="cppm__stats-ch-tab' +
+          (active ? ' cppm__stats-ch-tab--active' : '') +
+          ' cppm__stats-ch-tab--' +
+          esc(id) +
+          '" data-cppm-stats-channel="' +
+          esc(id) +
+          '" title="' +
+          esc(label) +
+          '" aria-label="' +
+          esc(label) +
+          '" aria-pressed="' +
+          (active ? 'true' : 'false') +
+          '">' +
+          '<span class="cppm__stats-ch-tab-icon" aria-hidden="true">' +
+          channelLogoHtml(id) +
+          '</span>' +
+          '</button>'
+        );
+      })
+      .join('');
+
+    return (
+      '<div class="cppm__stats-channel-bar" role="tablist" aria-label="' +
+      esc(t('stats_channels', 'Channels')) +
+      '">' +
+      '<button type="button" class="cppm__carousel-btn cppm__carousel-btn--sm" data-cppm-carousel="stats-channels" data-cppm-dir="prev" aria-label="' +
+      esc(t('stats_channels_prev', 'Previous channels')) +
+      '">‹</button>' +
+      '<div class="cppm__stats-channel-track cppm__scroll-hide" data-cppm-track="stats-channels">' +
+      tabs +
+      '</div>' +
+      '<button type="button" class="cppm__carousel-btn cppm__carousel-btn--sm" data-cppm-carousel="stats-channels" data-cppm-dir="next" aria-label="' +
+      esc(t('stats_channels_next', 'Next channels')) +
+      '">›</button>' +
+      '</div>'
+    );
+  }
+
+  function statsMetricCardsHtml() {
+    var forkCol = Math.max(0, STAT_KEYS.indexOf(statsMetric));
+    var cells = STAT_KEYS.map(function (k) {
+      var label = statLabel(k);
+      var dataT =
+        'creator.product_preview.stats_' + (k === 'add_to_cart' ? 'add_to_cart' : k);
+      var open = statsMetric === k;
+      return (
+        '<button type="button" class="cppm__stat cppm__stat--' +
         esc(k) +
-        '">' +
+        (open ? ' cppm__stat--open' : '') +
+        '" data-cppm-stats-metric="' +
+        esc(k) +
+        '" aria-expanded="' +
+        (open ? 'true' : 'false') +
+        '" aria-controls="cppm-stats-detail">' +
         '<div class="cppm__stat-top">' +
         '<span class="cppm__stat-icon" aria-hidden="true">' +
         (STAT_ICONS[k] || '') +
@@ -547,56 +701,82 @@
         '<span class="cppm__stat-value cppm__stat-value--placeholder" data-t="creator.product_preview.stats_placeholder">' +
         esc(t('stats_placeholder', '—')) +
         '</span>' +
-        '</div>'
+        '</button>'
       );
     }).join('');
 
-    var logoWrap =
-      '<span class="cppm__stats-block-logo cppm__stats-block-logo--' +
-      esc(channelId) +
-      '">' +
-      channelLogoHtml(channelId) +
-      '</span>';
+    var detail = '';
+    if (statsMetric) {
+      var ranges = STAT_RANGE_KEYS.map(function (rk) {
+        var on = rk === statsRange;
+        return (
+          '<button type="button" class="cppm__stats-range' +
+          (on ? ' cppm__stats-range--active' : '') +
+          '" data-cppm-stats-range="' +
+          esc(rk) +
+          '" aria-pressed="' +
+          (on ? 'true' : 'false') +
+          '" data-t="creator.product_preview.stats_range_' +
+          (rk === '1d' ? 'today' : rk) +
+          '">' +
+          esc(rangeLabel(rk)) +
+          '</button>'
+        );
+      }).join('');
+
+      detail =
+        '<div class="cppm__stats-detail" id="cppm-stats-detail" style="--cppm-fork-col:' +
+        forkCol +
+        '">' +
+        '<div class="cppm__stats-fork" aria-hidden="true">' +
+        '<div class="cppm__stats-line"></div>' +
+        '</div>' +
+        '<div class="cppm__stats-detail-panel">' +
+        '<div class="cppm__stats-ranges" role="group" aria-label="' +
+        esc(t('stats_date_range', 'Date range')) +
+        '">' +
+        ranges +
+        '</div>' +
+        '<ul class="cppm__stats-day-list" role="list">' +
+        buildStatsDayRows(statsRange) +
+        '</ul>' +
+        '</div>' +
+        '</div>';
+    }
 
     return (
-      '<div class="cppm__stats-block cppm__stats-block--' +
-      esc(channelId) +
-      '" data-cppm-stats-channel="' +
-      esc(channelId) +
+      '<div class="cppm__stats-grid" role="group" aria-label="' +
+      esc(channelLabel(statsChannel)) +
       '">' +
-      '<div class="cppm__stats-block-head">' +
-      logoWrap +
-      '<h4 class="cppm__stats-block-title">' +
-      esc(channelLabel) +
-      '</h4>' +
-      '</div>' +
-      '<div class="cppm__stats-grid">' +
       cells +
       '</div>' +
-      '</div>'
+      detail
     );
   }
 
   function renderOverviewPanel() {
     var el = root && root.querySelector('[data-cppm-panel="overview"]');
     if (!el) return;
-    var labels = {
-      eazpire: t('channel_eazpire', 'Eazpire'),
-      amazon: t('channel_amazon', 'Amazon'),
-      etsy: t('channel_etsy', 'Etsy'),
-      ebay: t('channel_ebay', 'eBay'),
-    };
-    var html =
+    if (CHANNEL_STAT_IDS.indexOf(statsChannel) < 0 && statsChannel !== 'all') {
+      statsChannel = 'all';
+    }
+    if (statsMetric && STAT_KEYS.indexOf(statsMetric) < 0) statsMetric = null;
+    if (STAT_RANGE_DAYS[statsRange] == null) statsRange = '7d';
+
+    el.innerHTML =
       '<h3 class="cppm__section-title" data-t="creator.product_preview.overview">' +
       esc(t('overview', 'Overview')) +
-      '</h3><div class="cppm__channel-stats">';
-    html += placeholderStatsHtml('all', t('stats_section_all', 'All channels'));
-    for (var i = 0; i < CHANNEL_STAT_IDS.length; i++) {
-      var id = CHANNEL_STAT_IDS[i];
-      html += placeholderStatsHtml(id, labels[id] || id);
-    }
-    html += '</div>';
-    el.innerHTML = html;
+      '</h3>' +
+      '<div class="cppm__channel-stats">' +
+      '<div class="cppm__stats-block cppm__stats-block--' +
+      esc(statsChannel) +
+      '" data-cppm-stats-channel-block="' +
+      esc(statsChannel) +
+      '">' +
+      statsChannelTabsHtml() +
+      statsMetricCardsHtml() +
+      '</div>' +
+      '</div>';
   }
 
   var SIZE_COLOR_LABEL_RE =
@@ -1056,6 +1236,9 @@
     amazonExpanded = false;
     collapsed = false;
     activePanel = 'overview';
+    statsChannel = 'all';
+    statsMetric = null;
+    statsRange = '7d';
     if (root) {
       root.classList.remove('cppm--collapsed');
       var collapseBtn = root.querySelector('[data-cppm-collapse]');
