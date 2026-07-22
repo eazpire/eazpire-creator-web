@@ -618,6 +618,7 @@
 }
 
 .qi-preview__image-wrap {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -637,6 +638,7 @@
   width: auto;
   height: auto;
   object-fit: contain;
+  object-position: center;
   display: block;
   border-radius: 12px;
 }
@@ -1516,9 +1518,15 @@
 
 .qi-preview__stage {
   position: relative;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   max-width: 100%;
   max-height: 100%;
+  min-width: 0;
+  min-height: 0;
   line-height: 0;
 }
 
@@ -1592,6 +1600,14 @@
   border: 1px solid #374151;
   z-index: 5;
   max-width: calc(100% - 16px);
+}
+
+/* `display:flex` above would otherwise override the HTML hidden attribute */
+#quick-inspirations-modal .qi-preview__float-bar[hidden],
+#quick-inspirations-modal .qi-preview__edit-icon[hidden],
+#quick-inspirations-modal .qi-preview__crop-frame[hidden],
+#quick-inspirations-modal .qi-preview__dim[hidden] {
+  display: none !important;
 }
 
 .qi-preview__float-btn {
