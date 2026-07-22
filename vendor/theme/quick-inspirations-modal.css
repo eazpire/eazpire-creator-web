@@ -1437,32 +1437,73 @@
 /* —— Detail preview: tabs / edit / metadata —— */
 .qi-preview__tabs {
   display: flex;
-  gap: 0;
-  border-bottom: 1px solid #1f2937;
-  margin: -4px 0 4px;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 2px;
+  margin: 0 0 8px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid #1f2937;
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* Beat global `button { background: none }` / UA chrome (same pattern as Public/Yours tabs) */
+#quick-inspirations-modal button.qi-preview__tab,
+#quick-inspirations-modal .qi-preview__tabs > .qi-preview__tab {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  border: none !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 9px 14px !important;
+  margin: 0 !important;
+  cursor: pointer;
+  box-shadow: none !important;
+  outline: none;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+#quick-inspirations-modal button.qi-preview__tab:hover,
+#quick-inspirations-modal .qi-preview__tabs > .qi-preview__tab:hover {
+  color: #e5e7eb !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+  background-color: rgba(245, 158, 11, 0.08) !important;
+}
+
+#quick-inspirations-modal button.qi-preview__tab.is-active,
+#quick-inspirations-modal .qi-preview__tabs > .qi-preview__tab.is-active {
+  color: #0b1220 !important;
+  background: #f59e0b !important;
+  background-color: #f59e0b !important;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35) !important;
+}
+
+.qi-preview__tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
 }
 
-.qi-preview__tab {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: #94a3b8;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px 14px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+.qi-preview__tab-icon svg {
+  display: block;
 }
 
-.qi-preview__tab.is-active {
-  color: #f59e0b;
-  border-bottom-color: #f59e0b;
+.qi-preview__tab-label {
+  display: inline-block;
 }
 
 .qi-preview__panel {
-  display: none;
+  display: none !important;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
@@ -1470,7 +1511,7 @@
 }
 
 .qi-preview__panel.is-active {
-  display: flex;
+  display: flex !important;
 }
 
 .qi-preview__stage {

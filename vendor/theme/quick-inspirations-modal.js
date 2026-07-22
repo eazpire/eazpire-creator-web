@@ -558,14 +558,37 @@
       metaTab.setAttribute('aria-selected', previewTab === 'metadata' ? 'true' : 'false');
     }
     if (overviewPanel) {
-      overviewPanel.classList.toggle('is-active', previewTab === 'overview');
-      overviewPanel.hidden = previewTab !== 'overview';
+      var showOverview = previewTab === 'overview';
+      overviewPanel.classList.toggle('is-active', showOverview);
+      overviewPanel.hidden = !showOverview;
+      overviewPanel.style.display = showOverview ? 'flex' : 'none';
     }
     if (metaPanel) {
-      metaPanel.classList.toggle('is-active', previewTab === 'metadata');
-      metaPanel.hidden = previewTab !== 'metadata';
+      var showMeta = previewTab === 'metadata';
+      metaPanel.classList.toggle('is-active', showMeta);
+      metaPanel.hidden = !showMeta;
+      metaPanel.style.display = showMeta ? 'flex' : 'none';
     }
     if (previewTab === 'metadata') renderMetadataPanel();
+  }
+
+  var previewTabDelegationBound = false;
+  function bindPreviewTabDelegation() {
+    if (previewTabDelegationBound) return;
+    previewTabDelegationBound = true;
+    // Document-level so clicks work even if bind() ran before partial inject / rebind.
+    document.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest && e.target.closest('[data-qi-preview-tab]');
+      if (!btn) return;
+      var previewRoot = document.getElementById('qi-preview-view');
+      if (!previewRoot || !previewRoot.contains(btn)) return;
+      if (previewRoot.hidden || previewRoot.style.display === 'none') return;
+      var tab = btn.getAttribute('data-qi-preview-tab');
+      if (!tab) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setPreviewTab(tab);
+    }, true);
   }
 
   function resetPreviewEditUi() {
@@ -639,6 +662,7 @@
     }
     resetPreviewEditUi();
     resetMetadataState();
+    bindPreviewTabDelegation();
     setPreviewTab('overview');
     if (browse) browse.style.display = 'none';
     if (preview) {
@@ -2828,8 +2852,17 @@
 
     var tabOverview = document.getElementById('qi-preview-tab-overview');
     var tabMeta = document.getElementById('qi-preview-tab-metadata');
-    if (tabOverview) tabOverview.addEventListener('click', function () { setPreviewTab('overview'); });
-    if (tabMeta) tabMeta.addEventListener('click', function () { setPreviewTab('metadata'); });
+    if (tabOverview) tabOverview.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setPreviewTab('overview');
+    });
+    if (tabMeta) tabMeta.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setPreviewTab('metadata');
+    });
+    bindPreviewTabDelegation();
 
     var editIcon = document.getElementById('qi-preview-edit-icon');
     if (editIcon) editIcon.addEventListener('click', openPreviewEditBar);
