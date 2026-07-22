@@ -1530,12 +1530,33 @@
   line-height: 0;
 }
 
+.qi-preview__media {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.qi-preview__media .qi-preview__image {
+  max-width: 100%;
+  max-height: min(62vh, 100%);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  border-radius: 12px;
+}
+
 .qi-preview__dim {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
+  z-index: 1;
 }
 
 .qi-preview__crop-frame {
@@ -1544,22 +1565,26 @@
   box-sizing: border-box;
   cursor: move;
   touch-action: none;
+  z-index: 2;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.55);
+  background: transparent;
 }
 
 .qi-preview__crop-handle {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: #fbbf24;
   border: 1px solid #0b1220;
   border-radius: 2px;
   z-index: 3;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
-.qi-preview__crop-handle--nw { top: -6px; left: -6px; cursor: nwse-resize; }
-.qi-preview__crop-handle--ne { top: -6px; right: -6px; cursor: nesw-resize; }
-.qi-preview__crop-handle--sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
-.qi-preview__crop-handle--se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+.qi-preview__crop-handle--nw { top: -7px; left: -7px; cursor: nwse-resize; }
+.qi-preview__crop-handle--ne { top: -7px; right: -7px; cursor: nesw-resize; }
+.qi-preview__crop-handle--sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.qi-preview__crop-handle--se { bottom: -7px; right: -7px; cursor: nwse-resize; }
 
 .qi-preview__edit-icon {
   position: absolute;
@@ -1610,6 +1635,14 @@
   display: none !important;
 }
 
+#quick-inspirations-modal .qi-preview__crop-frame:not([hidden]) {
+  display: block !important;
+}
+
+#quick-inspirations-modal .qi-preview__dim:not([hidden]) {
+  display: block !important;
+}
+
 .qi-preview__float-btn {
   appearance: none;
   border: 1px solid #4b5563;
@@ -1630,11 +1663,15 @@
   color: #0b1220;
 }
 
-.qi-meta__toolbar {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+.qi-meta__actions {
   flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid #374151;
+  margin-top: auto;
 }
 
 .qi-meta__body {
@@ -1657,6 +1694,23 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.qi-meta__field--title {
+  max-width: 420px;
+}
+
+.qi-meta__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .qi-meta__row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .qi-meta__label {
@@ -1713,17 +1767,42 @@
   line-height: 1;
 }
 
-.qi-meta__input,
-.qi-meta__textarea,
-.qi-meta__select {
+#quick-inspirations-modal .qi-meta__input,
+#quick-inspirations-modal .qi-meta__textarea,
+#quick-inspirations-modal .qi-meta__select,
+#quick-inspirations-modal .qi-meta__chip-add input {
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid #374151;
+  border: 1px solid #4b5563 !important;
+  background: #0b1220 !important;
+  background-color: #0b1220 !important;
+  color: #f3f4f6 !important;
+  font-size: 14px;
+  color-scheme: dark;
+  box-shadow: none !important;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#quick-inspirations-modal .qi-meta__input:focus,
+#quick-inspirations-modal .qi-meta__textarea:focus,
+#quick-inspirations-modal .qi-meta__select:focus,
+#quick-inspirations-modal .qi-meta__chip-add input:focus {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+}
+
+#quick-inspirations-modal .qi-meta__select {
+  cursor: pointer;
+}
+
+#quick-inspirations-modal .qi-meta__select option {
   background: #0b1220;
   color: #f3f4f6;
-  font-size: 14px;
 }
 
 .qi-meta__textarea {
@@ -1734,10 +1813,20 @@
 .qi-meta__chip-add {
   display: flex;
   gap: 8px;
+  align-items: center;
+  max-width: 280px;
 }
 
 .qi-meta__chip-add input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 180px;
+}
+
+.qi-meta__chip-add .qi-preview__btn {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  font-size: 12px;
 }
 
 .qi-rembg__body {

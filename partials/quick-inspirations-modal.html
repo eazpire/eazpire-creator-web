@@ -245,9 +245,11 @@
       <div id="qi-preview-panel-overview" class="qi-preview__panel is-active" data-qi-preview-panel="overview">
         <div class="qi-preview__image-wrap" id="qi-preview-image-wrap">
           <div class="qi-preview__stage" id="qi-preview-stage">
-            <img id="qi-preview-image" class="qi-preview__image" src="" alt="">
-            <canvas id="qi-preview-dim" class="qi-preview__dim" aria-hidden="true" hidden></canvas>
-            <div id="qi-preview-crop-frame" class="qi-preview__crop-frame" hidden></div>
+            <div class="qi-preview__media" id="qi-preview-media">
+              <img id="qi-preview-image" class="qi-preview__image" src="" alt="">
+              <canvas id="qi-preview-dim" class="qi-preview__dim" aria-hidden="true" hidden></canvas>
+              <div id="qi-preview-crop-frame" class="qi-preview__crop-frame" hidden></div>
+            </div>
             <button
               type="button"
               class="qi-preview__edit-icon"
@@ -297,12 +299,12 @@
       </div>
 
       <div id="qi-preview-panel-metadata" class="qi-preview__panel" data-qi-preview-panel="metadata" hidden>
-        <div class="qi-meta__toolbar">
+        <div class="qi-meta__body" id="qi-meta-body"></div>
+        <div class="qi-meta__actions qi-preview__actions">
           <button type="button" class="qi-preview__btn qi-preview__btn--secondary" id="qi-meta-edit-btn" hidden data-t="creator.common.edit">Edit</button>
           <button type="button" class="qi-preview__btn qi-preview__btn--secondary" id="qi-meta-cancel-edit" hidden data-t="creator.common.cancel">Cancel</button>
           <button type="button" class="qi-preview__btn qi-preview__btn--primary" id="qi-meta-save" hidden disabled data-t="creator.common.save">Save</button>
         </div>
-        <div class="qi-meta__body" id="qi-meta-body"></div>
       </div>
     </div>
   </div>

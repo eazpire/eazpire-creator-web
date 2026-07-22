@@ -805,7 +805,7 @@
     if (editable) {
       add =
         '<div class="qi-meta__chip-add">' +
-        '<input type="text" data-qi-chip-input="' +
+        '<input type="text" class="qi-meta__chip-input" data-qi-chip-input="' +
         fieldKey +
         '" placeholder="' +
         escapeHtml(t('creator.quick_inspirations.meta_add_value', 'Add')) +
@@ -862,9 +862,11 @@
       { v: 'text_only', l: CONTENT_TYPE_LABELS.text_only }
     ];
 
-    function field(labelKey, labelFb, inner) {
+    function field(labelKey, labelFb, inner, extraClass) {
       return (
-        '<div class="qi-meta__field"><div class="qi-meta__label" data-t="' +
+        '<div class="qi-meta__field' +
+        (extraClass ? ' ' + extraClass : '') +
+        '"><div class="qi-meta__label" data-t="' +
         labelKey +
         '">' +
         escapeHtml(t(labelKey, labelFb)) +
@@ -879,7 +881,8 @@
       html += field(
         'creator.quick_inspirations.meta_title',
         'Title',
-        '<input class="qi-meta__input" id="qi-meta-title" value="' + escapeHtml(src.title) + '">'
+        '<input class="qi-meta__input" id="qi-meta-title" value="' + escapeHtml(src.title) + '">',
+        'qi-meta__field--title'
       );
       html += field(
         'creator.quick_inspirations.meta_description',
@@ -890,7 +893,8 @@
       html += field(
         'creator.quick_inspirations.meta_title',
         'Title',
-        '<div class="qi-meta__value">' + escapeHtml(src.title || t('creator.quick_inspirations.meta_empty', '—')) + '</div>'
+        '<div class="qi-meta__value">' + escapeHtml(src.title || t('creator.quick_inspirations.meta_empty', '—')) + '</div>',
+        'qi-meta__field--title'
       );
       html += field(
         'creator.quick_inspirations.meta_description',
@@ -908,12 +912,13 @@
         '</div>'
     );
     if (metaEditing) {
-      html += field(
-        'creator.quick_inspirations.meta_product',
-        'Product',
-        '<input class="qi-meta__input" id="qi-meta-product" value="' + escapeHtml(src.product) + '">'
-      );
       html +=
+        '<div class="qi-meta__row">' +
+        field(
+          'creator.quick_inspirations.meta_product',
+          'Product',
+          '<input class="qi-meta__input" id="qi-meta-product" value="' + escapeHtml(src.product) + '">'
+        ) +
         field(
           'creator.quick_inspirations.meta_content_type',
           'Content Type',
@@ -932,22 +937,26 @@
               })
               .join('') +
             '</select>'
-        );
+        ) +
+        '</div>';
     } else {
-      html += field(
-        'creator.quick_inspirations.meta_product',
-        'Product',
-        '<div class="qi-meta__value">' + escapeHtml(src.product || t('creator.quick_inspirations.meta_empty', '—')) + '</div>'
-      );
-      html += field(
-        'creator.quick_inspirations.meta_content_type',
-        'Content Type',
-        '<div class="qi-meta__value">' +
-          escapeHtml(
-            CONTENT_TYPE_LABELS[src.content_type] || src.content_type || t('creator.quick_inspirations.meta_empty', '—')
-          ) +
-          '</div>'
-      );
+      html +=
+        '<div class="qi-meta__row">' +
+        field(
+          'creator.quick_inspirations.meta_product',
+          'Product',
+          '<div class="qi-meta__value">' + escapeHtml(src.product || t('creator.quick_inspirations.meta_empty', '—')) + '</div>'
+        ) +
+        field(
+          'creator.quick_inspirations.meta_content_type',
+          'Content Type',
+          '<div class="qi-meta__value">' +
+            escapeHtml(
+              CONTENT_TYPE_LABELS[src.content_type] || src.content_type || t('creator.quick_inspirations.meta_empty', '—')
+            ) +
+            '</div>'
+        ) +
+        '</div>';
     }
     html += field(
       'creator.quick_inspirations.meta_languages',
@@ -1072,15 +1081,82 @@
   }
 
   async function fetchPreviewImageAsFile() {
-    if (!previewItem) return null;
+    if (!previewItem) throw new Error('client: no preview item');
     var url = previewItem.image_url || previewItem.thumb_url;
-    if (!url) return null;
-    var res = await fetch(url, { credentials: 'omit', mode: 'cors' });
-    if (!res.ok) throw new Error('fetch_failed');
-    var blob = await res.blob();
-    var type = (blob.type || 'image/png').split(';')[0].trim();
-    var ext = type.indexOf('jpeg') !== -1 || type.indexOf('jpg') !== -1 ? 'jpg' : type.indexOf('webp') !== -1 ? 'webp' : 'png';
-    return new File([blob], 'qi-edit.' + ext, { type: type || 'image/png' });
+    if (!url) throw new Error('client: missing image_url');
+    var errors = [];
+
+    async function fromFetch(src, label) {
+      var res = await fetch(src, { credentials: 'omit', mode: 'cors' });
+      if (!res.ok) {
+        var body = await res.text().catch(function () {
+          return '';
+        });
+        throw new Error(label + ' status=' + res.status + (body ? ' body=' + body.slice(0, 180) : ''));
+      }
+      var blob = await res.blob();
+      if (!blob || !blob.size) throw new Error(label + ' empty blob');
+      var type = (blob.type || 'image/png').split(';')[0].trim();
+      if (type && type.indexOf('image/') !== 0 && type !== 'application/octet-stream') {
+        throw new Error(label + ' unexpected type=' + type);
+      }
+      var ext = type.indexOf('jpeg') !== -1 || type.indexOf('jpg') !== -1 ? 'jpg' : type.indexOf('webp') !== -1 ? 'webp' : 'png';
+      return new File([blob], 'qi-edit.' + ext, { type: type.indexOf('image/') === 0 ? type : 'image/png' });
+    }
+
+    try {
+      return await fromFetch(url, 'direct');
+    } catch (e1) {
+      errors.push((e1 && e1.message) || String(e1));
+    }
+
+    try {
+      var proxy =
+        API_BASE +
+        '?op=artifacts-mint-image-proxy&url=' +
+        encodeURIComponent(url);
+      return await fromFetch(proxy, 'proxy');
+    } catch (e2) {
+      errors.push((e2 && e2.message) || String(e2));
+    }
+
+    try {
+      var fileFromCanvas = await new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function () {
+          try {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            if (!canvas.width || !canvas.height) {
+              reject(new Error('canvas zero size'));
+              return;
+            }
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob(function (blob) {
+              if (!blob) {
+                reject(new Error('toBlob_failed'));
+                return;
+              }
+              resolve(new File([blob], 'qi-edit.png', { type: 'image/png' }));
+            }, 'image/png');
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = function () {
+          reject(new Error('image_load_failed'));
+        };
+        img.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+      });
+      return fileFromCanvas;
+    } catch (e3) {
+      errors.push((e3 && e3.message) || String(e3));
+    }
+
+    throw new Error('client: could not load image — ' + errors.join(' | '));
   }
 
   async function replacePreviewImage(file) {
@@ -1122,40 +1198,78 @@
     el.className = 'qi-upload__status' + (kind === 'error' ? ' is-error' : kind === 'warn' ? ' is-warn' : '');
   }
 
+  function formatRembgError(err) {
+    var msg = (err && err.message) || String(err || 'unknown');
+    var status = err && err.status != null ? ' status=' + err.status : '';
+    var body = err && err.body ? ' body=' + String(err.body).slice(0, 220) : '';
+    return (
+      t('creator.quick_inspirations.rembg_failed', 'Could not remove background.') +
+      ' ' +
+      msg +
+      status +
+      body
+    );
+  }
+
   async function startRemoveBackground() {
     if (!previewItem || !isOwnedItem(previewItem)) return;
     if (!window.EazpireRemoveBackground || typeof window.EazpireRemoveBackground.removeBackgroundFlow !== 'function') {
-      window.alert(t('creator.quick_inspirations.rembg_failed', 'Could not remove background.'));
+      window.alert(
+        t('creator.quick_inspirations.rembg_failed', 'Could not remove background.') +
+          ' client: EazpireRemoveBackground missing'
+      );
       return;
     }
     rembgResultFile = null;
     var applyBtn = document.getElementById('qi-rembg-apply');
     var resultImg = document.getElementById('qi-rembg-result');
+    var ownerId = getOwnerId();
     if (applyBtn) applyBtn.disabled = true;
     if (resultImg) {
+      if (resultImg.src && resultImg.src.indexOf('blob:') === 0) {
+        try {
+          URL.revokeObjectURL(resultImg.src);
+        } catch (_e) {}
+      }
       resultImg.hidden = true;
       resultImg.removeAttribute('src');
     }
     showRembgStatus(t('creator.quick_inspirations.rembg_processing', 'Removing background…'), 'warn');
     showDialog(document.getElementById('qi-rembg-modal'));
+
+    // Show current preview so the viewer is never blank while processing / on error.
+    var previewImg = document.getElementById('qi-preview-image');
+    if (resultImg && previewImg && previewImg.src) {
+      resultImg.src = previewImg.src;
+      resultImg.hidden = false;
+    }
+
     try {
+      if (!ownerId) throw new Error('client: missing owner_id');
       var file = await fetchPreviewImageAsFile();
+      if (!file || !file.size) throw new Error('client: empty source file');
       var processed = await window.EazpireRemoveBackground.removeBackgroundFlow({
         modal: document.getElementById('qi-rembg-modal'),
         previewPlaceholderEl: document.getElementById('qi-rembg-viewer'),
         apiBaseUrl: API_BASE,
         file: file,
-        ownerId: getOwnerId()
+        ownerId: ownerId
       });
       rembgResultFile = processed;
       if (resultImg && processed) {
+        if (resultImg.src && resultImg.src.indexOf('blob:') === 0) {
+          try {
+            URL.revokeObjectURL(resultImg.src);
+          } catch (_e2) {}
+        }
         resultImg.src = URL.createObjectURL(processed);
         resultImg.hidden = false;
       }
       showRembgStatus('', '');
       if (applyBtn) applyBtn.disabled = false;
-    } catch (_e) {
-      showRembgStatus(t('creator.quick_inspirations.rembg_failed', 'Could not remove background.'), 'error');
+    } catch (err) {
+      console.error('[qi-rembg]', err);
+      showRembgStatus(formatRembgError(err), 'error');
     }
   }
 
@@ -1192,7 +1306,9 @@
     var w = img.clientWidth;
     var h = img.clientHeight;
     if (!w || !h) return;
-    canvas.hidden = false;
+    setHiddenEl(canvas, false);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
     if (canvas.width !== w) canvas.width = w;
     if (canvas.height !== h) canvas.height = h;
     var ctx = canvas.getContext('2d');
@@ -1208,7 +1324,7 @@
     var el = document.getElementById('qi-preview-crop-frame');
     if (!el) return;
     var f = previewCropFrame;
-    el.hidden = false;
+    setHiddenEl(el, false);
     el.style.left = f.x * 100 + '%';
     el.style.top = f.y * 100 + '%';
     el.style.width = f.w * 100 + '%';
@@ -1237,14 +1353,18 @@
   function startPreviewCrop() {
     if (!previewItem || !isOwnedItem(previewItem)) return;
     previewCropMode = true;
-    previewCropFrame = { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
+    previewCropFrame = { x: 0.08, y: 0.08, w: 0.84, h: 0.84 };
     var floatBar = document.getElementById('qi-preview-float-bar');
     var cropBar = document.getElementById('qi-preview-crop-bar');
     setHiddenEl(floatBar, true);
     setHiddenEl(cropBar, false);
     if (cropBar) cropBar.style.display = 'flex';
-    renderPreviewCropFrame();
     bindPreviewCropPointers();
+    // Wait a frame so the media box has layout before painting the frame/dim.
+    requestAnimationFrame(function () {
+      renderPreviewCropFrame();
+      requestAnimationFrame(renderPreviewCropFrame);
+    });
   }
 
   function discardPreviewCrop() {
@@ -1273,17 +1393,21 @@
     var frameEl = target.closest('#qi-preview-crop-frame');
     if (!frameEl) return;
     var img = document.getElementById('qi-preview-image');
+    var media = document.getElementById('qi-preview-media');
     if (!img) return;
     var handle = target.getAttribute('data-handle') || (target.closest('[data-handle]') && target.closest('[data-handle]').getAttribute('data-handle'));
     var clientX = e.touches ? e.touches[0].clientX : e.clientX;
     var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    var stageW = (media && media.clientWidth) || img.clientWidth;
+    var stageH = (media && media.clientHeight) || img.clientHeight;
+    if (!stageW || !stageH) return;
     previewCropDrag = {
       mode: handle || 'move',
       startX: clientX,
       startY: clientY,
       origin: Object.assign({}, previewCropFrame),
-      stageW: img.clientWidth,
-      stageH: img.clientHeight
+      stageW: stageW,
+      stageH: stageH
     };
     e.preventDefault();
   }
@@ -1328,10 +1452,10 @@
     document.addEventListener('mouseup', onPreviewCropUp);
     document.addEventListener('touchmove', onPreviewCropMove, { passive: false });
     document.addEventListener('touchend', onPreviewCropUp);
-    var stage = document.getElementById('qi-preview-stage');
-    if (stage) {
-      stage.addEventListener('mousedown', onPreviewCropDown);
-      stage.addEventListener('touchstart', onPreviewCropDown, { passive: false });
+    var media = document.getElementById('qi-preview-media') || document.getElementById('qi-preview-stage');
+    if (media) {
+      media.addEventListener('mousedown', onPreviewCropDown);
+      media.addEventListener('touchstart', onPreviewCropDown, { passive: false });
     }
   }
 

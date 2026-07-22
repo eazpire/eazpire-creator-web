@@ -153,12 +153,16 @@
       form.append("owner_id", String(ownerId));
     }
 
-    // AbortController für bessere Kontrolle (verwende übergebenen oder erstelle neuen)
-    const controller = signal ? { abort: () => signal.abort() } : new AbortController();
+    const controller = new AbortController();
+    const onOuterAbort = () => controller.abort();
+    if (signal) {
+      if (signal.aborted) controller.abort();
+      else signal.addEventListener("abort", onOuterAbort, { once: true });
+    }
     const timeoutId = setTimeout(() => {
       console.log("[remove-bg] Request timeout, aborting...");
       controller.abort();
-    }, 30000); // 30 Sekunden Timeout
+    }, 60000);
 
     try {
       const resp = await fetch(url.toString(), {
@@ -194,12 +198,19 @@
           }
         }
 
-        throw new Error(errorMessage);
+        const err = new Error(errorMessage);
+        err.status = resp.status;
+        err.body = t.slice(0, 400);
+        throw err;
       }
 
       console.log("[remove-bg] Processing response...");
       const blob = await resp.blob();
       console.log("[remove-bg] Blob received, size:", blob.size);
+
+      if (!blob || !blob.size) {
+        throw new Error("remove-background returned empty image blob");
+      }
 
       const outFile = new File([blob], normalizePngName(file.name), { type: "image/png" });
       console.log("[remove-bg] File created:", outFile.name, "size:", outFile.size);
@@ -207,10 +218,14 @@
       return outFile;
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Request was cancelled or timed out');
+      if (error && (error.name === "AbortError" || /aborted|timed out|cancelled/i.test(String(error.message || "")))) {
+        const timed = new Error("Request was cancelled or timed out");
+        timed.status = 408;
+        throw timed;
       }
       throw error;
+    } finally {
+      if (signal) signal.removeEventListener("abort", onOuterAbort);
     }
   }
 
