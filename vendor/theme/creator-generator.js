@@ -992,12 +992,13 @@
       window.__creatorGenOptionsState = opts;
     }
 
-    function openModal(title, options, currentValue, valueEl, isDesignType, isTargetProduct) {
+    function openModal(title, options, currentValue, valueEl, isDesignType, isTargetProduct, isMode) {
       modalTitle.textContent = title;
       modalList.innerHTML = '';
-      var useGrid = !!isDesignType || !!isTargetProduct;
-      modalList.classList.toggle('gen-select-modal__list--grid', useGrid && !isTargetProduct);
+      var useGrid = !!isDesignType || !!isTargetProduct || !!isMode;
+      modalList.classList.toggle('gen-select-modal__list--grid', !!isDesignType && !isTargetProduct && !isMode);
       modalList.classList.toggle('gen-select-modal__list--product', !!isTargetProduct);
+      modalList.classList.toggle('gen-select-modal__list--mode', !!isMode);
 
       var container = modalList;
       if (isTargetProduct) {
@@ -1062,6 +1063,17 @@
             applyDesignTypeDefaults(opt.value);
             closeModal();
           });
+        } else if (isMode) {
+          btn.className += ' gen-select-modal__option--mode-pill';
+          btn.innerHTML =
+            '<span class="gen-select-modal__mode-label">' + escapeHtml(title) + '</span>' +
+            '<span class="gen-select-modal__mode-value">' + escapeHtml(opt.label) + '</span>' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>';
+          btn.addEventListener('click', function () {
+            valueEl.textContent = opt.label;
+            valueEl.dataset.value = opt.value;
+            closeModal();
+          });
         } else {
           btn.textContent = opt.label;
           btn.addEventListener('click', function () {
@@ -1124,8 +1136,34 @@
           { value: 'design', label: modeOptionLabel('design') },
           { value: 'quick_inspirations', label: modeOptionLabel('quick_inspirations') }
         ];
-        openModal(modeLabel, opts, modeVal.dataset.value || 'design', modeVal, false, false);
+        openModal(modeLabel, opts, modeVal.dataset.value || 'design', modeVal, false, false, true);
       });
+    } else {
+      // Fallback: Mode pill may appear after a late partial inject
+      var pillsRow = document.querySelector('.creator-generator__pills');
+      if (pillsRow && pillsRow.getAttribute('data-qi-mode-delegated') !== '1') {
+        pillsRow.setAttribute('data-qi-mode-delegated', '1');
+        pillsRow.addEventListener('click', function (e) {
+          var btn = e.target && e.target.closest ? e.target.closest('#genMode') : null;
+          if (!btn) return;
+          var valEl = document.getElementById('genModeVal');
+          if (!valEl || !overlay || !modalList) return;
+          e.preventDefault();
+          var opts = [
+            { value: 'design', label: modeOptionLabel('design') },
+            { value: 'quick_inspirations', label: modeOptionLabel('quick_inspirations') }
+          ];
+          openModal(
+            tCreator('generatorMode', 'Mode'),
+            opts,
+            valEl.dataset.value || 'design',
+            valEl,
+            false,
+            false,
+            true
+          );
+        });
+      }
     }
 
     if (modalClose) {

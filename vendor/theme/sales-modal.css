@@ -1574,6 +1574,52 @@
   color: var(--slm-text);
 }
 
+/* Mode options — same pill look as the Mode dropdown trigger */
+.gen-select-modal__list--mode {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gen-select-modal__option--mode-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 36px 12px 14px;
+  position: relative;
+  background: rgba(35, 38, 52, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.gen-select-modal__option--mode-pill:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(35, 38, 52, 0.95);
+}
+.gen-select-modal__option--mode-pill.is-selected {
+  border-color: rgba(249, 115, 22, 0.65);
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.18) 0%, rgba(35, 38, 52, 0.9) 100%);
+}
+.gen-select-modal__mode-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.gen-select-modal__mode-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+.gen-select-modal__option--mode-pill > svg {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.6;
+}
+
 /* Design-Typ Grid mit Beispiel-Darstellung */
 .gen-select-modal__list--grid {
   display: grid;
