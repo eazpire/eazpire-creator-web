@@ -287,13 +287,16 @@
     if (!d) return '';
     var result = d.result;
     if (result && typeof result === 'object') {
-      var fromResult = result.preview_url || result.image_url || result.original_url || '';
+      var fromResult =
+        result.preview_url || result.image_url || result.original_url || result.url || '';
       if (fromResult) return String(fromResult).trim();
     }
     if (typeof result === 'string' && result.indexOf('http') === 0) {
       return String(result).trim();
     }
-    return String(d.preview_url || d.image_url || d.original_url || '').trim();
+    return String(
+      d.preview_url || d.image_url || d.original_url || d.url || d.thumbnail_url || ''
+    ).trim();
   }
 
   function mountActivateCardMedia(media, pk, product) {

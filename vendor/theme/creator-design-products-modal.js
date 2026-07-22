@@ -131,13 +131,60 @@
     var d = ctxDesign;
     var result = d.result;
     if (result && typeof result === 'object') {
-      var fromResult = result.preview_url || result.image_url || result.original_url || '';
+      var fromResult =
+        result.preview_url || result.image_url || result.original_url || result.url || '';
       if (fromResult) return String(fromResult).trim();
     }
     if (typeof result === 'string' && result.indexOf('http') === 0) {
       return String(result).trim();
     }
-    return String(d.preview_url || d.image_url || d.original_url || '').trim();
+    return String(
+      d.preview_url || d.image_url || d.original_url || d.url || d.thumbnail_url || ''
+    ).trim();
+  }
+
+  /** When catalog enrichment timed out, still composite design onto catalog mock_urls. */
+  function synthesizeCardPreviewFromMocks(urls) {
+    var slides = (urls || [])
+      .map(function (u) {
+        return String(u || '').trim();
+      })
+      .filter(isUsableMockUrl)
+      .slice(0, 6)
+      .map(function (mockUrl) {
+        return {
+          mock_url: mockUrl,
+          print_area_frac: null,
+          placement: Object.assign({}, DEFAULT_CARD_PLACEMENT),
+        };
+      });
+    if (!slides.length) return null;
+    return { slides: slides, placement_source: 'client_fallback' };
+  }
+
+  function hasPreviewSlides(previewConfig) {
+    return !!(previewConfig && Array.isArray(previewConfig.slides) && previewConfig.slides.length);
+  }
+
+  function relayoutComposedStacks(root) {
+    if (!root || !root.querySelectorAll) return;
+    var stacks = root.querySelectorAll('.creator-design-products-modal__card-slide--composed');
+    for (var i = 0; i < stacks.length; i++) {
+      layoutCardPreviewStack(stacks[i]);
+    }
+  }
+
+  function scheduleComposedRelayout(root) {
+    if (!root) return;
+    requestAnimationFrame(function () {
+      relayoutComposedStacks(root);
+      setTimeout(function () {
+        relayoutComposedStacks(root);
+      }, 80);
+      setTimeout(function () {
+        relayoutComposedStacks(root);
+      }, 320);
+    });
   }
 
   function parseZoneFrac(f) {
@@ -246,17 +293,33 @@
     var zone = stackEl.querySelector('.creator-design-products-modal__card-zone');
     var design = stackEl.querySelector('.creator-design-products-modal__card-design');
     if (!frame || !stage || !mock) return;
-    if (!mock.complete || !mock.naturalWidth || !mock.naturalHeight) return;
-    if (!fitCardPreviewStage(stage, mock, frame)) {
-      if (tries < 10) {
-        requestAnimationFrame(function () {
+    if (!mock.complete || !mock.naturalWidth || !mock.naturalHeight) {
+      // Mock still loading (or failed) — retry while listeners may still fire.
+      if (tries < 48) {
+        setTimeout(function () {
           layoutCardPreviewStack(stackEl, tries + 1);
-        });
+        }, tries < 12 ? 16 : 50);
+      }
+      return;
+    }
+    if (!fitCardPreviewStage(stage, mock, frame)) {
+      // Frame often has 0 size while panel/group is still opening — keep retrying.
+      if (tries < 48) {
+        setTimeout(function () {
+          layoutCardPreviewStack(stackEl, tries + 1);
+        }, tries < 12 ? 16 : 50);
       }
       return;
     }
     if (!zone || !design) return;
-    if (!design.complete || !design.naturalWidth) return;
+    if (!design.complete || !design.naturalWidth) {
+      if (tries < 48) {
+        setTimeout(function () {
+          layoutCardPreviewStack(stackEl, tries + 1);
+        }, tries < 12 ? 16 : 50);
+      }
+      return;
+    }
     var placement = null;
     try {
       placement = JSON.parse(stackEl.getAttribute('data-card-placement') || '{}');
@@ -357,7 +420,8 @@
     mock.alt = '';
     mock.decoding = 'async';
     mock.draggable = false;
-    mock.loading = 'lazy';
+    // Eager load: lazy + hidden group/panel often never fires load → design stays opacity:0.
+    mock.loading = 'eager';
     mock.src = mockUrl;
 
     var zone = document.createElement('span');
@@ -369,6 +433,7 @@
     design.alt = '';
     design.decoding = 'async';
     design.draggable = false;
+    design.loading = 'eager';
     design.src = designUrl;
 
     zone.appendChild(design);
@@ -391,7 +456,10 @@
 
     var mockReady = bindLoad(mock);
     var designReady = bindLoad(design);
+    // Bind resize early so opening a collapsed group can recover layout.
+    bindCardPreviewResize(stack);
     if (mockReady && designReady) afterImagesReady();
+    else scheduleComposedRelayout(stack);
 
     return stack;
   }
@@ -576,10 +644,14 @@
 
   function mountCardMediaCarousel(mediaEl, productKey, urls, previewConfig, designUrl) {
     if (!mediaEl) return;
+    var effectivePreview = previewConfig;
+    if (!hasPreviewSlides(effectivePreview) && designUrl && urls && urls.length) {
+      effectivePreview = synthesizeCardPreviewFromMocks(urls);
+    }
     var mountFn = function () {
-      if (previewConfig && previewConfig.slides && previewConfig.slides.length && designUrl) {
+      if (hasPreviewSlides(effectivePreview) && designUrl) {
         try {
-          mountCardMediaComposited(mediaEl, productKey, previewConfig, designUrl);
+          mountCardMediaComposited(mediaEl, productKey, effectivePreview, designUrl);
           return;
         } catch (err) {
           console.warn('[creator-design-products-modal] composited mount failed', productKey, err);
@@ -590,12 +662,7 @@
     // Mount immediately so cards in the Design Preview products panel always composite
     // (lazy IO skipped when panel/tab was hidden during first paint).
     mountFn();
-    requestAnimationFrame(function () {
-      if (previewConfig && previewConfig.slides && previewConfig.slides.length && designUrl) {
-        var stack = mediaEl.querySelector('.creator-design-products-modal__card-slide--composed.is-active');
-        if (stack) layoutCardPreviewStack(stack);
-      }
-    });
+    scheduleComposedRelayout(mediaEl);
   }
 
   function mountCardMediaCarouselPlain(mediaEl, productKey, urls) {
@@ -1088,6 +1155,9 @@
     head.addEventListener('click', function () {
       unlockedGroupOpen[id] = !group.classList.contains('is-open');
       group.classList.toggle('is-open');
+      if (group.classList.contains('is-open')) {
+        scheduleComposedRelayout(group);
+      }
     });
 
     var body = document.createElement('div');
@@ -1137,6 +1207,7 @@
       } else {
         appendCardsTo(gridEl, parts.locked, true);
       }
+      scheduleComposedRelayout(gridEl);
       return;
     }
 
@@ -1150,6 +1221,7 @@
       makeGroup('queue', M.designProductsGroupQueue || M.designProductsTabQueue || 'Queue', parts.queue, false)
     );
     gridEl.appendChild(wrap);
+    scheduleComposedRelayout(gridEl);
   }
 
   function renderGrid(products) {
@@ -1167,6 +1239,7 @@
       var card = buildProductCard(products[i], { locked: !isProductUnlocked(products[i]) });
       if (card) gridEl.appendChild(card);
     }
+    scheduleComposedRelayout(gridEl);
   }
 
   async function loadAndRender(design) {
