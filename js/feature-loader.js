@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "qi-crop-segment-20260721a";
+  var PORTAL_ASSET_V = "qi-detail-meta-20260722a";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -303,6 +303,7 @@
         asset("creator-canvas-sketch-modal.js"),
         asset("reference-influence-modal.js"),
         asset("creator-inspiration-modal.js"),
+        asset("creator-upload-remove-background.js"),
         asset("quick-inspirations-modal.js"),
         asset("creator-phone-upload-modal.js"),
         asset("eaz-screenshot-capture.js"),
@@ -459,6 +460,7 @@
         asset("eaz-clipboard-image.js"),
         asset("reference-influence-modal.js"),
         asset("creator-inspiration-modal.js"),
+        asset("creator-upload-remove-background.js"),
         asset("quick-inspirations-modal.js"),
         asset("creator-phone-upload-modal.js"),
         asset("creator-mobile-gen-my-designs-modal.js"),

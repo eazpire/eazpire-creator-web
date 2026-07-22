@@ -219,30 +219,72 @@
     </div>
 
     <div id="qi-preview-view" class="qi-preview" style="display: none;" hidden aria-hidden="true">
-      <div class="qi-preview__image-wrap">
-        <img id="qi-preview-image" class="qi-preview__image" src="" alt="">
+      <div class="qi-preview__tabs" role="tablist" aria-label="Detail views">
+        <button type="button" class="qi-preview__tab is-active" id="qi-preview-tab-overview" data-qi-preview-tab="overview" role="tab" aria-selected="true" data-t="creator.quick_inspirations.tab_overview">Overview</button>
+        <button type="button" class="qi-preview__tab" id="qi-preview-tab-metadata" data-qi-preview-tab="metadata" role="tab" aria-selected="false" data-t="creator.quick_inspirations.tab_metadata">Metadata</button>
       </div>
-      <div class="qi-preview__actions">
-        <button
-          type="button"
-          id="qi-preview-cancel"
-          class="qi-preview__btn qi-preview__btn--secondary"
-          data-t="creator.common.cancel"
-        >Cancel</button>
-        <button
-          type="button"
-          id="qi-preview-remove"
-          class="qi-preview__btn qi-preview__btn--danger"
-          style="display: none;"
-          hidden
-          data-t="creator.quick_inspirations.remove"
-        >Remove</button>
-        <button
-          type="button"
-          id="qi-preview-apply"
-          class="qi-preview__btn qi-preview__btn--primary"
-          data-t="creator.common.apply"
-        >Apply</button>
+
+      <div id="qi-preview-panel-overview" class="qi-preview__panel is-active" data-qi-preview-panel="overview">
+        <div class="qi-preview__image-wrap" id="qi-preview-image-wrap">
+          <div class="qi-preview__stage" id="qi-preview-stage">
+            <img id="qi-preview-image" class="qi-preview__image" src="" alt="">
+            <canvas id="qi-preview-dim" class="qi-preview__dim" aria-hidden="true" hidden></canvas>
+            <div id="qi-preview-crop-frame" class="qi-preview__crop-frame" hidden></div>
+            <button
+              type="button"
+              class="qi-preview__edit-icon"
+              id="qi-preview-edit-icon"
+              hidden
+              aria-label="Edit image"
+              title="Edit image"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </button>
+            <div class="qi-preview__float-bar" id="qi-preview-float-bar" hidden>
+              <button type="button" class="qi-preview__float-btn" id="qi-preview-float-cancel" data-t="creator.common.cancel">Cancel</button>
+              <button type="button" class="qi-preview__float-btn" id="qi-preview-float-rembg" data-t="creator.quick_inspirations.remove_background">Remove background</button>
+              <button type="button" class="qi-preview__float-btn" id="qi-preview-float-crop" data-t="creator.quick_inspirations.crop">Crop</button>
+            </div>
+            <div class="qi-preview__float-bar qi-preview__float-bar--crop" id="qi-preview-crop-bar" hidden>
+              <button type="button" class="qi-preview__float-btn" id="qi-preview-crop-discard" data-t="creator.quick_inspirations.discard">Discard</button>
+              <button type="button" class="qi-preview__float-btn qi-preview__float-btn--primary" id="qi-preview-crop-confirm" data-t="creator.quick_inspirations.confirm">Confirm</button>
+            </div>
+          </div>
+        </div>
+        <div class="qi-preview__actions">
+          <button
+            type="button"
+            id="qi-preview-cancel"
+            class="qi-preview__btn qi-preview__btn--secondary"
+            data-t="creator.common.cancel"
+          >Cancel</button>
+          <button
+            type="button"
+            id="qi-preview-remove"
+            class="qi-preview__btn qi-preview__btn--danger"
+            style="display: none;"
+            hidden
+            data-t="creator.quick_inspirations.remove"
+          >Remove</button>
+          <button
+            type="button"
+            id="qi-preview-apply"
+            class="qi-preview__btn qi-preview__btn--primary"
+            data-t="creator.common.apply"
+          >Apply</button>
+        </div>
+      </div>
+
+      <div id="qi-preview-panel-metadata" class="qi-preview__panel" data-qi-preview-panel="metadata" hidden>
+        <div class="qi-meta__toolbar">
+          <button type="button" class="qi-preview__btn qi-preview__btn--secondary" id="qi-meta-edit-btn" hidden data-t="creator.common.edit">Edit</button>
+          <button type="button" class="qi-preview__btn qi-preview__btn--secondary" id="qi-meta-cancel-edit" hidden data-t="creator.common.cancel">Cancel</button>
+          <button type="button" class="qi-preview__btn qi-preview__btn--primary" id="qi-meta-save" hidden disabled data-t="creator.common.save">Save</button>
+        </div>
+        <div class="qi-meta__body" id="qi-meta-body"></div>
       </div>
     </div>
   </div>
@@ -400,6 +442,45 @@
     <div class="qi-upload__actions">
       <button type="button" class="qi-upload__cancel" id="qi-segment-config-cancel" data-t="creator.common.cancel">Cancel</button>
       <button type="button" class="qi-upload__submit" id="qi-segment-config-confirm" data-t="creator.quick_inspirations.segment_confirm">Confirm</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="qi-nested-dialog" id="qi-rembg-modal" aria-labelledby="qi-rembg-title">
+  <div class="qi-nested-dialog__header">
+    <h3 id="qi-rembg-title" class="qi-nested-dialog__title" data-t="creator.quick_inspirations.rembg_title">Remove background</h3>
+    <button type="button" class="qi-nested-dialog__close" id="qi-rembg-close" aria-label="Close dialog">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="qi-nested-dialog__body qi-rembg__body">
+    <div id="qi-rembg-status" class="qi-upload__status" style="display:none;" role="status"></div>
+    <div class="qi-rembg__viewer" id="qi-rembg-viewer">
+      <img id="qi-rembg-result" class="qi-rembg__img" alt="" hidden>
+    </div>
+    <div class="qi-upload__actions">
+      <button type="button" class="qi-upload__cancel" id="qi-rembg-discard" data-t="creator.quick_inspirations.discard">Discard</button>
+      <button type="button" class="qi-upload__submit" id="qi-rembg-apply" disabled data-t="creator.quick_inspirations.rembg_apply">Apply</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="qi-nested-dialog" id="qi-meta-unsaved-modal" aria-labelledby="qi-meta-unsaved-title">
+  <div class="qi-nested-dialog__header">
+    <h3 id="qi-meta-unsaved-title" class="qi-nested-dialog__title" data-t="creator.quick_inspirations.unsaved_title">Unsaved changes</h3>
+    <button type="button" class="qi-nested-dialog__close" id="qi-meta-unsaved-close" aria-label="Close dialog">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="qi-nested-dialog__body">
+    <p class="qi-upload__hint" data-t="creator.quick_inspirations.unsaved_message">You have unsaved metadata changes. Save or discard them?</p>
+    <div class="qi-upload__actions">
+      <button type="button" class="qi-upload__cancel" id="qi-meta-unsaved-discard" data-t="creator.quick_inspirations.unsaved_discard">Discard</button>
+      <button type="button" class="qi-upload__submit" id="qi-meta-unsaved-save" data-t="creator.quick_inspirations.unsaved_save">Save</button>
     </div>
   </div>
 </dialog>
