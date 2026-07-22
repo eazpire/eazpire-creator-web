@@ -36,7 +36,10 @@
     channelEnabled: {},
     expandedChannel: null,
     scheduleEnabled: false,
-    channelSettings: { facebook: { post_type: 'photo' }, tiktok: { privacy_level: 'SELF_ONLY' } },
+    channelSettings: {
+      facebook: { post_type: 'photo', destination: '' },
+      tiktok: { privacy_level: 'SELF_ONLY' }
+    },
     tiktokPrivacyOptions: ['SELF_ONLY', 'MUTUAL_FOLLOW_FRIENDS', 'PUBLIC_TO_EVERYONE'],
     confirmMode: 'post'
   };
@@ -526,6 +529,7 @@
       if (data.ok) {
         compose.targets = data.targets || [];
         compose.defaultSelected = data.default_selected || [];
+        syncFacebookDestinationDefault(data.facebook_default_destination);
       }
     } catch (e) {}
   }
@@ -537,8 +541,65 @@
     return ch ? ch.short : String(channelId || '?').slice(0, 2);
   }
 
+  function isFacebookProfileShareTarget(t) {
+    if (!t) return false;
+    return (
+      t.source === 'share' ||
+      t.publish_mode === 'share_dialog' ||
+      t.id === 'share:facebook_profile'
+    );
+  }
+
+  function getFacebookDestination() {
+    var fb = compose.channelSettings.facebook || {};
+    var dest = String(fb.destination || '').trim().toLowerCase();
+    if (dest === 'pages' || dest === 'profile' || dest === 'both') return dest;
+    var hasPage = (compose.targets || []).some(function (t) {
+      return t && t.channel === 'facebook' && !isFacebookProfileShareTarget(t) && isTargetAvailableForCompose(t);
+    });
+    return hasPage ? 'pages' : 'profile';
+  }
+
+  function syncFacebookDestinationDefault(serverDefault) {
+    compose.channelSettings.facebook = compose.channelSettings.facebook || { post_type: 'photo' };
+    if (!compose.channelSettings.facebook.destination) {
+      var fromServer = String(serverDefault || '').trim().toLowerCase();
+      if (fromServer === 'pages' || fromServer === 'profile' || fromServer === 'both') {
+        compose.channelSettings.facebook.destination = fromServer;
+      } else {
+        compose.channelSettings.facebook.destination = getFacebookDestination();
+      }
+    }
+  }
+
+  function openFacebookShareDialogs(shareDialogs) {
+    var list = Array.isArray(shareDialogs) ? shareDialogs : [];
+    list.forEach(function (item, idx) {
+      var url = item && item.dialog_url ? String(item.dialog_url) : '';
+      if (!url) return;
+      try {
+        var w = 680;
+        var h = 720;
+        var left = Math.max(0, (window.screen.width - w) / 2);
+        var top = Math.max(0, (window.screen.height - h) / 2);
+        var name = 'eazpire_fb_profile_share_' + idx;
+        var features =
+          'popup=yes,width=' + w + ',height=' + h + ',left=' + left + ',top=' + top + ',scrollbars=yes';
+        var popup = window.open(url, name, features);
+        if (!popup) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      } catch (e) {
+        try {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } catch (e2) {}
+      }
+    });
+  }
+
   function isTargetAvailableForCompose(t) {
     if (!t || !t.channel) return false;
+    if (t.source === 'share' || isFacebookProfileShareTarget(t)) return !!t.online;
     if (t.source === 'creator') return !!t.online;
     if (t.source === 'admin') return !!t.admin_auto;
     return false;
@@ -556,8 +617,6 @@
       var st = channelState[id];
       if (!st || !st.online || Number(st.account_count || 0) < 1) return;
       if (seen[id]) return;
-      // Only surface Connect-online channels that also have a compose target row
-      // (or are live creator channels). Avoid phantom cards with no publish target.
       var hasTarget = (compose.targets || []).some(function (t) {
         return t && t.channel === id && isTargetAvailableForCompose(t);
       });
@@ -565,6 +624,16 @@
       seen[id] = true;
       out.push(id);
     });
+    // Facebook profile share is available without a connected Page (skill-gated via targets).
+    if (!seen.facebook) {
+      var hasFbShare = (compose.targets || []).some(function (t) {
+        return t && t.channel === 'facebook' && isFacebookProfileShareTarget(t) && isTargetAvailableForCompose(t);
+      });
+      if (hasFbShare) {
+        seen.facebook = true;
+        out.unshift('facebook');
+      }
+    }
     return out;
   }
 
@@ -646,24 +715,76 @@
       '</h4>';
     if (ch === 'facebook') {
       var postType = (compose.channelSettings.facebook && compose.channelSettings.facebook.post_type) || 'photo';
+      var destination = getFacebookDestination();
+      var hasPageTarget = (compose.targets || []).some(function (t) {
+        return t && t.channel === 'facebook' && !isFacebookProfileShareTarget(t) && isTargetAvailableForCompose(t);
+      });
+      var hasProfileTarget = (compose.targets || []).some(function (t) {
+        return t && t.channel === 'facebook' && isFacebookProfileShareTarget(t) && isTargetAvailableForCompose(t);
+      });
       html +=
         '<div class="smm-channel-panel__row">' +
-        '<label class="smm-field" style="flex:1;min-width:140px">' +
+        '<label class="smm-field" style="flex:1;min-width:160px">' +
         '<span class="smm-field__label">' +
-        esc(i18n('facebook_post_type', 'Post type')) +
+        esc(i18n('facebook_destination', 'Post to')) +
         '</span>' +
-        '<select class="smm-field__select" data-smm-fb-post-type>' +
-        '<option value="photo"' +
-        (postType === 'photo' ? ' selected' : '') +
-        '>' +
-        esc(i18n('facebook_post_photo', 'Photo post')) +
-        '</option>' +
-        '<option value="link"' +
-        (postType === 'link' ? ' selected' : '') +
-        '>' +
-        esc(i18n('facebook_post_link', 'Link post')) +
-        '</option>' +
-        '</select></label></div>';
+        '<select class="smm-field__select" data-smm-fb-destination>';
+      if (hasPageTarget) {
+        html +=
+          '<option value="pages"' +
+          (destination === 'pages' ? ' selected' : '') +
+          '>' +
+          esc(i18n('facebook_destination_pages', 'Connected pages')) +
+          '</option>';
+      }
+      if (hasProfileTarget) {
+        html +=
+          '<option value="profile"' +
+          (destination === 'profile' ? ' selected' : '') +
+          '>' +
+          esc(i18n('facebook_destination_profile', 'My profile (Share dialog)')) +
+          '</option>';
+      }
+      if (hasPageTarget && hasProfileTarget) {
+        html +=
+          '<option value="both"' +
+          (destination === 'both' ? ' selected' : '') +
+          '>' +
+          esc(i18n('facebook_destination_both', 'Pages + my profile')) +
+          '</option>';
+      }
+      html +=
+        '</select></label></div>' +
+        '<p class="smm-channel-panel__note">' +
+        esc(
+          destination === 'profile' || destination === 'both'
+            ? i18n(
+                'facebook_profile_share_note',
+                'Profile posts open Facebook so you can confirm. Add a link for the best preview. Scheduling is for pages only.'
+              )
+            : i18n('facebook_pages_note', 'Posts to your connected Facebook Pages automatically.')
+        ) +
+        '</p>';
+      if (destination === 'pages' || destination === 'both') {
+        html +=
+          '<div class="smm-channel-panel__row">' +
+          '<label class="smm-field" style="flex:1;min-width:140px">' +
+          '<span class="smm-field__label">' +
+          esc(i18n('facebook_post_type', 'Post type')) +
+          '</span>' +
+          '<select class="smm-field__select" data-smm-fb-post-type>' +
+          '<option value="photo"' +
+          (postType === 'photo' ? ' selected' : '') +
+          '>' +
+          esc(i18n('facebook_post_photo', 'Photo post')) +
+          '</option>' +
+          '<option value="link"' +
+          (postType === 'link' ? ' selected' : '') +
+          '>' +
+          esc(i18n('facebook_post_link', 'Link post')) +
+          '</option>' +
+          '</select></label></div>';
+      }
     } else if (ch === 'tiktok') {
       if (getMediaKind() !== 'video') {
         html +=
@@ -725,6 +846,14 @@
     }
     options.hidden = false;
     options.innerHTML = buildChannelOptionsHtml(ch);
+    var fbDest = options.querySelector('[data-smm-fb-destination]');
+    if (fbDest) {
+      fbDest.addEventListener('change', function () {
+        compose.channelSettings.facebook = compose.channelSettings.facebook || {};
+        compose.channelSettings.facebook.destination = fbDest.value;
+        renderChannelOptions();
+      });
+    }
     var fbSel = options.querySelector('[data-smm-fb-post-type]');
     if (fbSel) {
       fbSel.addEventListener('change', function () {
@@ -749,7 +878,12 @@
     if (!channels.length) {
       wrap.innerHTML =
         '<p class="smm-channel-panel__note">' +
-        esc(i18n('no_targets', 'No connected accounts.')) +
+        esc(
+          i18n(
+            'no_targets_with_hint',
+            'Connect a Facebook Page in Connect, or unlock Facebook in Creator Journey to share to your profile.'
+          )
+        ) +
         '</p>';
       renderChannelOptions();
       return;
@@ -1404,21 +1538,37 @@
   }
 
   function getSelectedTargetsFromComposer() {
+    var destination = getFacebookDestination();
     return (compose.targets || []).filter(function (t) {
-      return (
-        isTargetAvailableForCompose(t) &&
-        !!t.publish_ready &&
-        isChannelEnabled(t.channel)
-      );
+      if (!isTargetAvailableForCompose(t) || !t.publish_ready || !isChannelEnabled(t.channel)) {
+        return false;
+      }
+      if (t.channel === 'facebook') {
+        var isShare = isFacebookProfileShareTarget(t);
+        if (compose.scheduleEnabled && isShare) return false;
+        if (destination === 'pages' && isShare) return false;
+        if (destination === 'profile' && !isShare) return false;
+      }
+      return true;
     });
   }
 
   function formatChannelSettingsSummary(ch) {
     if (ch === 'facebook') {
+      var destination = getFacebookDestination();
+      var destLabel =
+        destination === 'profile'
+          ? i18n('facebook_destination_profile', 'My profile (Share dialog)')
+          : destination === 'both'
+            ? i18n('facebook_destination_both', 'Pages + my profile')
+            : i18n('facebook_destination_pages', 'Connected pages');
+      if (destination === 'profile') return destLabel;
       var postType = (compose.channelSettings.facebook && compose.channelSettings.facebook.post_type) || 'photo';
-      return postType === 'link'
-        ? i18n('facebook_post_link', 'Link post')
-        : i18n('facebook_post_photo', 'Photo post');
+      var typeLabel =
+        postType === 'link'
+          ? i18n('facebook_post_link', 'Link post')
+          : i18n('facebook_post_photo', 'Photo post');
+      return destLabel + ' · ' + typeLabel;
     }
     if (ch === 'tiktok') {
       var privacy =
@@ -1508,17 +1658,30 @@
 
   function openTargetConfirmModal() {
     compose.confirmMode = compose.scheduleEnabled ? 'schedule' : 'post';
+    var selected = getSelectedTargetsFromComposer();
+    var hasProfileShare = selected.some(function (t) {
+      return isFacebookProfileShareTarget(t);
+    });
+    var onlyProfileShare = selected.length > 0 && selected.every(function (t) {
+      return isFacebookProfileShareTarget(t);
+    });
     var title = $('#smm-target-confirm-title');
     var submitBtn = $('#smm-btn-confirm-submit');
     if (title) {
       title.textContent = compose.scheduleEnabled
         ? i18n('confirm_schedule_title', 'Schedule post')
-        : i18n('confirm_post_title', 'Confirm post');
+        : onlyProfileShare
+          ? i18n('confirm_share_profile_title', 'Share to Facebook profile')
+          : i18n('confirm_post_title', 'Confirm post');
     }
     if (submitBtn) {
       submitBtn.textContent = compose.scheduleEnabled
         ? i18n('btn_confirm_schedule', 'Confirm & schedule')
-        : i18n('btn_confirm_post', 'Confirm & post');
+        : onlyProfileShare
+          ? i18n('btn_confirm_share_profile', 'Open Facebook share')
+          : hasProfileShare
+            ? i18n('btn_confirm_post_and_share', 'Post & open profile share')
+            : i18n('btn_confirm_post', 'Confirm & post');
     }
     var status = $('#smm-target-status');
     if (status) {
@@ -1619,6 +1782,9 @@
       });
       if (data.ok) {
         closeSubmodal('target');
+        if (compose.confirmMode === 'post' && Array.isArray(data.share_dialogs) && data.share_dialogs.length) {
+          openFacebookShareDialogs(data.share_dialogs);
+        }
         setNewPostStatus(
           data.message ||
             (compose.confirmMode === 'schedule'
