@@ -1545,6 +1545,9 @@
       }
       if (t.channel === 'facebook') {
         var isShare = isFacebookProfileShareTarget(t);
+        var isAdminBrand = t.admin_auto === true || t.source === 'admin';
+        // Brand eazpire Facebook stays on even if destination is profile-only.
+        if (isAdminBrand) return true;
         if (compose.scheduleEnabled && isShare) return false;
         if (destination === 'pages' && isShare) return false;
         if (destination === 'profile' && !isShare) return false;

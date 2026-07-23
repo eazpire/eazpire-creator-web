@@ -175,9 +175,10 @@
 
   function syncPresentationState() {
     if (!panelElement) return;
-    // Never blank the Level pane while the Level tab is active — only hide when leaving.
+    // Inactive Level pane is already hidden by Journey/Settings CSS.
+    // Do not blank loading/content/error here — that left an empty Level tab when
+    // load() never ran (e.g. Creator Portal opened Journey without level-panel.js).
     if (!isLevelTabActive()) {
-      hideAllPresentationStates();
       return;
     }
     if (!hasVisiblePresentation()) {

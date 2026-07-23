@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "qi-mode-pills-20260722a";
+  var PORTAL_ASSET_V = "journey-level-panel-20260723a";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -484,6 +484,7 @@
     state.dashboard = (async function () {
       loadCss("/vendor/theme/sales-modal.css");
       loadCss("/vendor/theme/creator-journey-modal.css");
+      loadCss("/vendor/theme/creator-level-panel.css");
       loadCss("/vendor/theme/creator-level-celebration.css");
 
       await Promise.all([
@@ -492,6 +493,8 @@
         injectPartial("creator-level-celebration-overlay.html"),
       ]);
 
+      // Level tab lives inside Journey — must load with dashboard, not only Settings.
+      await loadScript(asset("creator-level-panel.js"));
       await loadScriptsParallel([
         asset("sales-modal.js"),
         asset("creator-journey-modal.js"),
@@ -572,6 +575,8 @@
 
       await injectPartial("creator-journey-modal.html");
 
+      // Level panel markup is in the journey partial; JS must load here too.
+      await loadScript(asset("creator-level-panel.js"));
       await loadScript(asset("creator-journey-modal.js"));
     })();
 
