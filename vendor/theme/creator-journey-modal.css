@@ -4219,13 +4219,15 @@
 }
 
 .cj-creation-limit-branch,
-.cj-listing-limit-branch {
+.cj-listing-limit-branch,
+.cj-social-branch {
   margin-top: 0;
   padding-top: 16px;
 }
 
 .cj-tree-card.is-expanded.cj-tree-card--creation-limit-parent,
-.cj-tree-card.is-expanded.cj-tree-card--listing-channel {
+.cj-tree-card.is-expanded.cj-tree-card--listing-channel,
+.cj-tree-card.is-expanded.cj-tree-card--social-platform {
   position: relative;
   z-index: 1;
 }

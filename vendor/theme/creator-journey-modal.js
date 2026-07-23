@@ -215,6 +215,7 @@
   var expandedSlotLevelKeys = {};
   var expandedCreationLimitKeys = {};
   var expandedListingLimitKeys = {};
+  var expandedSocialKeys = {};
 
   var CATEGORY_ICON_SVG = {
     royalty: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
@@ -655,6 +656,9 @@
     if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
       return String(node.channel_id || '');
     }
+    if (node.metadata && node.metadata.social_post_limit_kind === 'platform') {
+      return String(node.metadata.title || node.social_platform || '');
+    }
     return '';
   }
 
@@ -679,6 +683,13 @@
       if (dailyVal == null || dailyVal === '') return '';
       return tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(dailyVal) });
     }
+    if (node.metadata && node.metadata.social_post_limit_kind === 'platform') {
+      var activeSocial = highestUnlockedTierNode(socialPostTierNodes(node));
+      if (!activeSocial || !activeSocial.metadata) return '';
+      var postsVal = activeSocial.metadata.posts_per_day;
+      if (postsVal == null || postsVal === '') return '';
+      return tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(postsVal) });
+    }
     return '';
   }
 
@@ -692,6 +703,12 @@
     if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
       return {
         iconSvg: listingLimitChannelIconSvg(node.channel_id),
+        limitLabel: activeLimitLabelForParent(node)
+      };
+    }
+    if (node.metadata && node.metadata.social_post_limit_kind === 'platform') {
+      return {
+        iconSvg: socialPlatformIconSvg(node.social_platform),
         limitLabel: activeLimitLabelForParent(node)
       };
     }
@@ -719,6 +736,16 @@
     if (node.metadata && node.metadata.listing_limit_kind === 'tier') {
       return {
         iconSvg: listingLimitChannelIconSvg(node.channel_id)
+      };
+    }
+    return null;
+  }
+
+  function socialPostLimitCardMediaOpts(node) {
+    if (isSocialPlatformNode(node)) return parentLimitMediaOpts(node);
+    if (node.metadata && node.metadata.social_post_limit_kind === 'tier') {
+      return {
+        iconSvg: socialPlatformIconSvg(node.social_platform)
       };
     }
     return null;
@@ -947,6 +974,9 @@
     }
     if (isListingLimitChannel(node)) {
       return !!node.unlocked && listingLimitTierNodes(node).some(function (tier) { return !tier.unlocked; });
+    }
+    if (isSocialPlatformNode(node)) {
+      return !!node.unlocked && socialPostTierNodes(node).some(function (tier) { return !tier.unlocked; });
     }
     return false;
   }
@@ -1970,7 +2000,6 @@
   }
 
   var CAROUSEL_SKILL_CATEGORIES = {
-    social: true,
     creator_name: true,
     hero: true,
     promotion: true,
@@ -2300,6 +2329,12 @@
       node.metadata && node.metadata.listing_limit_kind === 'channel';
   }
 
+  function isSocialPlatformNode(node) {
+    return node && node.category === 'social' &&
+      (!node.parent_key) &&
+      (!node.metadata || node.metadata.social_post_limit_kind !== 'tier');
+  }
+
   function creationLimitTierNodes(parentNode) {
     var axis = parentNode && parentNode.metadata && parentNode.metadata.creation_limit_axis;
     if (!axis) return [];
@@ -2323,6 +2358,20 @@
         n.channel_id === ch;
     }).sort(function (a, b) {
       return (Number(a.metadata.listing_tier_level) || 0) - (Number(b.metadata.listing_tier_level) || 0);
+    });
+  }
+
+  function socialPostTierNodes(platformNode) {
+    var plat = platformNode && (platformNode.social_platform ||
+      (platformNode.node_key && String(platformNode.node_key).replace(/^social:/, '')));
+    if (!plat) return [];
+    var all = (journeyData && journeyData.nodes) || [];
+    return all.filter(function (n) {
+      return n.category === 'social' &&
+        n.metadata && n.metadata.social_post_limit_kind === 'tier' &&
+        String(n.social_platform || '') === String(plat);
+    }).sort(function (a, b) {
+      return (Number(a.metadata.social_tier_level) || 0) - (Number(b.metadata.social_tier_level) || 0);
     });
   }
 
@@ -2480,6 +2529,89 @@
     return html;
   }
 
+  function renderSocialCard(node) {
+    var lock = resolveCardLockOpts(node);
+    var act = cardActionState(node, lock.levelLocked);
+    var isPlatform = isSocialPlatformNode(node);
+    var tiers = isPlatform ? socialPostTierNodes(node) : [];
+    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
+    var expandable = isPlatform && !!node.unlocked && lockedTiers.length > 0;
+    var expanded = expandable && !!expandedSocialKeys[node.node_key];
+    var isTier = node.metadata && node.metadata.social_post_limit_kind === 'tier';
+    var cls = 'cj-tree-card cj-tree-card--social';
+    if (isPlatform) cls += ' cj-tree-card--social-platform';
+    if (isTier) cls += ' cj-tree-card--social-post-tier';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
+    if (node.unlocked) cls += ' is-unlocked';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
+    if (expandable) cls += ' is-expandable';
+    if (expanded) cls += ' is-expanded';
+    var expandAttr = expandable
+      ? ' data-cj-expand-social="' + escapeHtml(node.node_key) + '" role="button" tabindex="0" aria-expanded="' +
+        (expanded ? 'true' : 'false') + '"'
+      : '';
+    var cardMedia = socialPostLimitCardMediaOpts(node);
+    var infoChrome = skillCardInfoChrome(node, expandable);
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
+      '<div class="cj-tree-card__stack">' +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason,
+        iconSvg: cardMedia ? cardMedia.iconSvg : null,
+        limitLabel: cardMedia ? cardMedia.limitLabel : ''
+      }) +
+      infoChrome.infoBtn +
+      act.actionHtml + '</div></article>';
+  }
+
+  function renderSocialExpandPanel(platformNode) {
+    if (!platformNode || !platformNode.unlocked || !expandedSocialKeys[platformNode.node_key]) return '';
+    var tiers = socialPostTierNodes(platformNode);
+    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
+    if (!lockedTiers.length) return '';
+    return '<div class="cj-variant-branch cj-social-branch" data-cj-social-branch="' +
+      escapeHtml(platformNode.node_key) + '">' +
+      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+      '<div class="cj-variant-panel" data-cj-social-panel="' + escapeHtml(platformNode.node_key) + '">' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(platformNode)) + ' · ' +
+      escapeHtml(t('creator.journey.social_posts_title', 'Daily posts')) + '</h4>' +
+      renderCarouselShell(lockedTiers.map(renderSocialCard).join('')) +
+      '</div></div>';
+  }
+
+  function renderSocialTree(nodes) {
+    var platforms = (nodes || []).filter(isSocialPlatformNode);
+    var split = splitUnlockedLocked(platforms);
+    if (!platforms.length) {
+      return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+    }
+    var html = '<div class="cj-product-sections">';
+    if (split.unlocked.length) {
+      var cardsHtml = '';
+      var expandHtml = '';
+      split.unlocked.forEach(function (n) {
+        cardsHtml += renderSocialCard(n);
+        if (expandedSocialKeys[n.node_key]) {
+          expandHtml += renderSocialExpandPanel(n);
+        }
+      });
+      html += '<section class="cj-product-section cj-unlocked-skills">' +
+        renderSectionHead(t('creator.journey.unlocked_skills', 'Unlocked'), '', '') +
+        renderCarouselShell(cardsHtml) + expandHtml + '</section>';
+    }
+    if (split.locked.length) {
+      html += '<section class="cj-product-section">' +
+        renderSectionHead(t('creator.journey.available_skills', 'Available'), '', '') +
+        renderCarouselShell(split.locked.map(renderSocialCard).join('')) +
+        '</section>';
+    }
+    html += '</div>';
+    return html;
+  }
+
   function renderRoyaltyCard(node) {
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
@@ -2525,6 +2657,7 @@
     if (node.category === 'royalty') return renderRoyaltyCard(node);
     if (node.category === 'creation_limit') return renderCreationLimitCard(node);
     if (node.category === 'listing_limit') return renderListingLimitCard(node);
+    if (node.category === 'social') return renderSocialCard(node);
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
 
@@ -3218,6 +3351,8 @@
       html = renderCreationLimitTree(filtered);
     } else if (treeFilter === 'listing_limit') {
       html = renderListingLimitTree(filtered);
+    } else if (treeFilter === 'social') {
+      html = renderSocialTree(filtered);
     } else if (CAROUSEL_SKILL_CATEGORIES[treeFilter]) {
       html = renderCarouselSkillTree(filtered);
     } else {
@@ -3654,6 +3789,24 @@
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault();
         toggleListing(e);
+      });
+    });
+    root.querySelectorAll('[data-cj-expand-social]').forEach(function (card) {
+      function toggleSocial(e) {
+        if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
+        var key = card.getAttribute('data-cj-expand-social');
+        if (!key) return;
+        var wasOpen = !!expandedSocialKeys[key];
+        expandedSocialKeys = {};
+        if (!wasOpen) expandedSocialKeys[key] = true;
+        renderTree();
+      }
+      card.addEventListener('click', toggleSocial);
+      card.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        toggleSocial(e);
       });
     });
     root.querySelectorAll('[data-cj-goto-eaz-daily]').forEach(function (btn) {
