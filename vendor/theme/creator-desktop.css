@@ -3376,6 +3376,8 @@ body.creator-video-motion-info-modal-open {
 .creator-desktop-generator-host .creator-generator__pills {
   grid-area: pills;
   margin-bottom: 0;
+  grid-template-columns: 1fr 1fr 1fr;
+  overflow: visible;
 }
 
 .creator-desktop-generator-host .creator-gen-card--upload {

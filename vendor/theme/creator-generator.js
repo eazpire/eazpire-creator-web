@@ -1120,7 +1120,6 @@
 
     var targetLabel = window.CreatorI18n && window.CreatorI18n.generator_target_product ? window.CreatorI18n.generator_target_product : 'Target Product';
     var designLabel = window.CreatorI18n && window.CreatorI18n.generator_design_type ? window.CreatorI18n.generator_design_type : 'Design Type';
-    var modeLabel = tCreator('generatorMode', 'Mode');
 
     targetBtn.addEventListener('click', function () {
       openModal(targetLabel, TARGET_PRODUCT_OPTIONS, targetVal.dataset.value || 'all', targetVal, false, true);
@@ -1130,39 +1129,106 @@
       openModal(designLabel, DESIGN_TYPE_OPTIONS, designVal.dataset.value || 'classic', designVal, true);
     });
 
-    if (modeBtn && modeVal) {
-      modeBtn.addEventListener('click', function () {
+    function initModeDropdown(btn, valEl) {
+      if (!btn || !valEl || btn.getAttribute('data-mode-dropdown') === '1') return;
+      btn.setAttribute('data-mode-dropdown', '1');
+      btn.setAttribute('aria-haspopup', 'listbox');
+
+      var menu = document.getElementById('genModeMenu');
+      if (!menu) {
+        var wrap = btn.closest('.creator-pill-wrap') || btn.parentElement;
+        if (!wrap) return;
+        if (!wrap.classList.contains('creator-pill-wrap')) {
+          var newWrap = document.createElement('div');
+          newWrap.className = 'creator-pill-wrap creator-pill-wrap--mode';
+          wrap.insertBefore(newWrap, btn);
+          newWrap.appendChild(btn);
+          wrap = newWrap;
+        }
+        menu = document.createElement('ul');
+        menu.className = 'creator-pill-menu';
+        menu.id = 'genModeMenu';
+        menu.setAttribute('role', 'listbox');
+        menu.hidden = true;
+        wrap.appendChild(menu);
+      }
+      btn.setAttribute('aria-controls', 'genModeMenu');
+
+      function closeModeMenu() {
+        menu.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+      }
+
+      function openModeMenu() {
+        var current = valEl.dataset.value || 'design';
         var opts = [
           { value: 'design', label: modeOptionLabel('design') },
           { value: 'quick_inspirations', label: modeOptionLabel('quick_inspirations') }
         ];
-        openModal(modeLabel, opts, modeVal.dataset.value || 'design', modeVal, false, false, true);
+        menu.innerHTML = '';
+        opts.forEach(function (opt) {
+          var li = document.createElement('li');
+          li.setAttribute('role', 'presentation');
+          var optBtn = document.createElement('button');
+          optBtn.type = 'button';
+          optBtn.className = 'creator-pill-menu__option' + (opt.value === current ? ' is-selected' : '');
+          optBtn.setAttribute('role', 'option');
+          optBtn.setAttribute('aria-selected', opt.value === current ? 'true' : 'false');
+          optBtn.dataset.value = opt.value;
+          optBtn.textContent = opt.label;
+          optBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            valEl.textContent = opt.label;
+            valEl.dataset.value = opt.value;
+            closeModeMenu();
+          });
+          li.appendChild(optBtn);
+          menu.appendChild(li);
+        });
+        menu.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+      }
+
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (menu.hidden) openModeMenu();
+        else closeModeMenu();
       });
+
+      document.addEventListener('click', function (e) {
+        if (menu.hidden) return;
+        if (btn.contains(e.target) || menu.contains(e.target)) return;
+        closeModeMenu();
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !menu.hidden) closeModeMenu();
+      });
+    }
+
+    if (modeBtn && modeVal) {
+      initModeDropdown(modeBtn, modeVal);
     } else {
       // Fallback: Mode pill may appear after a late partial inject
       var pillsRow = document.querySelector('.creator-generator__pills');
       if (pillsRow && pillsRow.getAttribute('data-qi-mode-delegated') !== '1') {
         pillsRow.setAttribute('data-qi-mode-delegated', '1');
-        pillsRow.addEventListener('click', function (e) {
-          var btn = e.target && e.target.closest ? e.target.closest('#genMode') : null;
-          if (!btn) return;
-          var valEl = document.getElementById('genModeVal');
-          if (!valEl || !overlay || !modalList) return;
-          e.preventDefault();
-          var opts = [
-            { value: 'design', label: modeOptionLabel('design') },
-            { value: 'quick_inspirations', label: modeOptionLabel('quick_inspirations') }
-          ];
-          openModal(
-            tCreator('generatorMode', 'Mode'),
-            opts,
-            valEl.dataset.value || 'design',
-            valEl,
-            false,
-            false,
-            true
-          );
-        });
+        pillsRow.addEventListener(
+          'click',
+          function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('#genMode') : null;
+            if (!btn || btn.getAttribute('data-mode-dropdown') === '1') return;
+            var valEl = document.getElementById('genModeVal');
+            if (!valEl) return;
+            e.preventDefault();
+            e.stopPropagation();
+            initModeDropdown(btn, valEl);
+            btn.click();
+          },
+          true
+        );
       }
     }
 

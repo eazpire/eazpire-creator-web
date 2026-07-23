@@ -25,6 +25,13 @@
   gap: 12px;
   margin-bottom: 20px;
 }
+.creator-pill-wrap {
+  position: relative;
+  min-width: 0;
+}
+.creator-pill-wrap .creator-pill {
+  width: 100%;
+}
 .creator-pill {
   display: flex;
   flex-direction: column;
@@ -41,7 +48,8 @@
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
-.creator-pill:hover { border-color: rgba(249, 115, 22, 0.4); }
+.creator-pill:hover,
+.creator-pill[aria-expanded="true"] { border-color: rgba(249, 115, 22, 0.4); }
 .creator-pill__label {
   font-size: 11px;
   font-weight: 600;
@@ -49,13 +57,57 @@
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
-.creator-pill__value { font-size: 15px; font-weight: 600; color: #fff; }
+.creator-pill__value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  padding-right: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
 .creator-pill svg {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
   opacity: 0.6;
+  pointer-events: none;
+}
+.creator-pill-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1a2030;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.creator-pill-menu[hidden] { display: none; }
+.creator-pill-menu__option {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.creator-pill-menu__option:hover,
+.creator-pill-menu__option.is-selected {
+  background: rgba(249, 115, 22, 0.18);
+  color: #fff;
 }
 .creator-gen-card--upload {
   position: relative;

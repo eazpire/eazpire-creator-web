@@ -341,10 +341,71 @@
   gap: var(--clp-spacing-md);
 }
 
-.clp-levels-grid {
+.clp-levels-carousel {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.clp-levels-carousel.is-scrollable {
+  grid-template-columns: 36px 1fr 36px;
+}
+
+.clp-levels-carousel__track,
+.clp-levels-grid {
+  display: flex;
+  flex-wrap: nowrap;
   gap: var(--clp-spacing-md);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding: 10px 4px 14px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.clp-levels-carousel__track::-webkit-scrollbar,
+.clp-levels-grid::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.clp-levels-carousel__nav {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(20, 24, 34, 0.92);
+  color: var(--clp-accent);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.clp-levels-carousel.is-scrollable .clp-levels-carousel__nav {
+  display: inline-flex;
+}
+
+.clp-levels-carousel.is-scrollable .clp-levels-carousel__nav[hidden] {
+  display: none;
+}
+
+.clp-levels-carousel__nav:hover {
+  border-color: rgba(245, 158, 11, 0.7);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.clp-levels-carousel__nav:focus-visible {
+  outline: 2px solid var(--clp-accent);
+  outline-offset: 2px;
 }
 
 .clp-level-item {
@@ -360,6 +421,10 @@
   transition: all 0.2s ease;
   position: relative;
   min-height: 100px;
+  flex: 0 0 132px;
+  width: 132px;
+  max-width: 132px;
+  scroll-snap-align: start;
 }
 
 .clp-level-item:hover {
@@ -471,14 +536,27 @@
     grid-template-columns: 1fr;
   }
 
+  .clp-levels-carousel.is-scrollable {
+    grid-template-columns: 32px 1fr 32px;
+  }
+
+  .clp-levels-carousel__nav {
+    width: 32px;
+    height: 32px;
+    font-size: 1.25rem;
+  }
+
+  .clp-levels-carousel__track,
   .clp-levels-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: var(--clp-spacing-sm);
   }
 
   .clp-level-item {
     padding: var(--clp-spacing-md);
     min-height: 80px;
+    flex-basis: 112px;
+    width: 112px;
+    max-width: 112px;
   }
 
   .clp-level-icon {

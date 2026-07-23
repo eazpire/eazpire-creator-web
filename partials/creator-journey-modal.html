@@ -187,8 +187,12 @@
     <!-- Upcoming Levels -->
     <div class="clp-levels-section">
       <h4 class="clp-section-title">Upcoming Levels</h4>
-      <div class="clp-levels-grid" id="clpLevelsGrid">
-        <!-- Level-Liste wird per JS geladen -->
+      <div class="clp-levels-carousel" id="clpLevelsCarousel" data-clp-carousel>
+        <button type="button" class="clp-levels-carousel__nav clp-levels-carousel__nav--prev" data-clp-carousel-prev hidden aria-hidden="true" tabindex="-1" aria-label="Previous levels">‹</button>
+        <div class="clp-levels-grid clp-levels-carousel__track" id="clpLevelsGrid" data-clp-carousel-track role="list">
+          <!-- Level-Liste wird per JS geladen -->
+        </div>
+        <button type="button" class="clp-levels-carousel__nav clp-levels-carousel__nav--next" data-clp-carousel-next hidden aria-hidden="true" tabindex="-1" aria-label="Next levels">›</button>
       </div>
     </div>
 

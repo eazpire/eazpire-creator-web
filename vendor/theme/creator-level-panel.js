@@ -619,6 +619,80 @@
     `).join('');
   }
 
+  let levelsCarouselBound = false;
+
+  function updateLevelsCarouselNav() {
+    if (!panelElement || !levelsGridElement) return;
+    var carousel = panelElement.querySelector('#clpLevelsCarousel');
+    if (!carousel) return;
+    var track = levelsGridElement;
+    var prev = carousel.querySelector('[data-clp-carousel-prev]');
+    var next = carousel.querySelector('[data-clp-carousel-next]');
+    var overflow = track.scrollWidth > track.clientWidth + 4;
+    carousel.classList.toggle('is-scrollable', overflow);
+    var atStart = track.scrollLeft <= 2;
+    var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+    function setNav(btn, hide) {
+      if (!btn) return;
+      btn.hidden = hide;
+      btn.setAttribute('aria-hidden', hide ? 'true' : 'false');
+      btn.tabIndex = hide ? -1 : 0;
+    }
+    setNav(prev, !overflow || atStart);
+    setNav(next, !overflow || atEnd);
+  }
+
+  function scrollLevelsCarousel(dir) {
+    if (!levelsGridElement) return;
+    var amount = Math.max(140, Math.floor(levelsGridElement.clientWidth * 0.75));
+    levelsGridElement.scrollBy({ left: dir * amount, behavior: 'smooth' });
+  }
+
+  function ensureLevelsCarousel() {
+    if (!panelElement || !levelsGridElement) return;
+    var carousel = panelElement.querySelector('#clpLevelsCarousel');
+    if (!carousel) return;
+
+    var I = window.CreatorI18n || {};
+    var prev = carousel.querySelector('[data-clp-carousel-prev]');
+    var next = carousel.querySelector('[data-clp-carousel-next]');
+    if (prev && !prev.getAttribute('aria-label')) {
+      prev.setAttribute('aria-label', I.levelCarouselPrev || 'Previous levels');
+    }
+    if (next && !next.getAttribute('aria-label')) {
+      next.setAttribute('aria-label', I.levelCarouselNext || 'Next levels');
+    }
+
+    if (!levelsCarouselBound) {
+      levelsCarouselBound = true;
+      if (prev) {
+        prev.addEventListener('click', function () { scrollLevelsCarousel(-1); });
+      }
+      if (next) {
+        next.addEventListener('click', function () { scrollLevelsCarousel(1); });
+      }
+      levelsGridElement.addEventListener('scroll', function () {
+        window.requestAnimationFrame(updateLevelsCarouselNav);
+      }, { passive: true });
+      window.addEventListener('resize', function () {
+        window.requestAnimationFrame(updateLevelsCarouselNav);
+      });
+    }
+
+    updateLevelsCarouselNav();
+
+    var current = levelsGridElement.querySelector('.clp-level-item.is-current');
+    if (current && typeof current.scrollIntoView === 'function') {
+      // Keep current level visible in the carousel without jumping the whole page.
+      try {
+        current.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
+      } catch (_e) {
+        current.scrollIntoView(false);
+      }
+      window.requestAnimationFrame(updateLevelsCarouselNav);
+    }
+  }
+
   /**
    * Rendert die Level-Liste (kommende Level)
    */
@@ -672,7 +746,7 @@
     }
 
     levelsGridElement.innerHTML = levels.map(lvl => `
-      <div class="clp-level-item is-${lvl.state}">
+      <div class="clp-level-item is-${lvl.state}" role="listitem">
         ${lvl.badge ? `<span class="clp-level-current-badge">${escapeHtml(lvl.badge)}</span>` : ''}
         <div class="clp-level-icon">
           ${lvl.state === 'locked'
@@ -691,6 +765,8 @@
         <span class="clp-level-meta">${escapeHtml(lvl.meta)}</span>
       </div>
     `).join('');
+
+    ensureLevelsCarousel();
   }
 
   /**
