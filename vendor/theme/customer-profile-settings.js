@@ -366,10 +366,19 @@
       var nextUsername = usernameInput ? String(usernameInput.value || "").trim() : "";
       var savedUsername =
         typeof root.__cpsGetSavedUsername === "function" ? root.__cpsGetSavedUsername() : "";
+      if (usernameInput && !nextUsername) {
+        var emptyMsg =
+          root.getAttribute("data-msg-username-required") || "Username cannot be empty.";
+        setUsernameStatus(root, emptyMsg, "error");
+        setStatus(root, emptyMsg, "error");
+        setFooterStatus(root, emptyMsg, "error");
+        setLoading(root, false);
+        return false;
+      }
       return apiPost("save-customer-account-profile", getPayload(root))
         .then(function (data) {
           if (!data || data.ok !== true) throw new Error("profile_save_failed");
-          if (!nextUsername || nextUsername === savedUsername) return { ok: true };
+          if (!usernameInput || nextUsername === savedUsername) return { ok: true };
           return apiPost("set-account-username", { username: nextUsername });
         })
         .then(function (usernameResult) {
@@ -392,9 +401,30 @@
         })
         .catch(function (err) {
           setLoading(root, false);
-          if (err && (err.message === "username_save_failed" || err.message === "username_taken")) {
+          var errCode = err && err.message ? String(err.message) : "";
+          if (
+            errCode === "username_save_failed" ||
+            errCode === "username_taken" ||
+            errCode === "username_required" ||
+            errCode === "empty" ||
+            errCode === "too_short" ||
+            errCode === "too_long" ||
+            errCode === "invalid_chars" ||
+            errCode === "numeric_only"
+          ) {
             var umsg =
-              root.getAttribute("data-msg-username-save-failed") || "Could not save username.";
+              errCode === "username_taken"
+                ? root.getAttribute("data-msg-username-taken") || "Already taken"
+                : errCode === "username_required" || errCode === "empty"
+                  ? root.getAttribute("data-msg-username-required") || "Username cannot be empty."
+                  : errCode === "too_short" ||
+                      errCode === "too_long" ||
+                      errCode === "invalid_chars" ||
+                      errCode === "numeric_only"
+                    ? root.getAttribute("data-msg-username-invalid") || "Invalid username."
+                    : root.getAttribute("data-msg-username-save-failed") ||
+                      "Could not save username.";
+            setUsernameStatus(root, umsg, "error");
             setStatus(root, umsg, "error");
             setFooterStatus(root, umsg, "error");
             return false;
@@ -427,7 +457,15 @@
     function scheduleCheck() {
       if (timer) clearTimeout(timer);
       var value = (input.value || "").trim();
-      if (!value || value === savedUsername) {
+      if (!value) {
+        setUsernameStatus(
+          root,
+          root.getAttribute("data-msg-username-required") || "Username cannot be empty.",
+          "error"
+        );
+        return;
+      }
+      if (value === savedUsername) {
         setUsernameStatus(root, "", "");
         return;
       }

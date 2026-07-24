@@ -21,6 +21,30 @@
       <button type="button" class="pa-btn pa-btn--icon" id="pa-btn-close" aria-label="Close">×</button>
     </header>
 
+    <div class="pa-limits" id="pa-limits" aria-label="Daily assist limits">
+      <div class="pa-limits__row">
+        <div class="pa-limits__item" data-pa-limit="offer">
+          <span class="pa-limits__label">
+            <span class="pa-limits__name" data-t="creator.publish_assist.limit_offer">Offer Limit</span>
+          </span>
+          <span class="pa-limits__bar" aria-hidden="true">
+            <span class="pa-limits__bar-fill pa-limits__bar-fill--offer" data-pa-limit-fill style="width:0%"></span>
+            <span class="pa-limits__bar-text" data-pa-limit-count>—</span>
+          </span>
+        </div>
+        <span class="pa-limits__divider" aria-hidden="true">│</span>
+        <div class="pa-limits__item" data-pa-limit="request">
+          <span class="pa-limits__label">
+            <span class="pa-limits__name" data-t="creator.publish_assist.limit_request">Request Limit</span>
+          </span>
+          <span class="pa-limits__bar" aria-hidden="true">
+            <span class="pa-limits__bar-fill pa-limits__bar-fill--request" data-pa-limit-fill style="width:0%"></span>
+            <span class="pa-limits__bar-text" data-pa-limit-count>—</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
     <div class="pa-body" id="pa-body">
       <aside class="pa-sidebar" id="pa-sidebar" aria-label="Creator Community">
         <div class="pa-sidebar__nav">
@@ -43,11 +67,11 @@
           </button>
         </div>
 
-        <p class="pa-tab-hint" id="pa-tab-hint" data-t="creator.publish_assist.hint_offer">Partner designs missing on variants you already unlocked.</p>
+        <p class="pa-tab-hint" id="pa-tab-hint" data-t="creator.publish_assist.hint_offer">Partner designs missing on variants you already unlocked. Select up to your daily Offer Limit.</p>
 
         <div class="pa-partner-banner" id="pa-partner-banner" hidden>
           <span data-t="creator.publish_assist.selected_partner">Selected</span>
-          <strong id="pa-partner-name" translate="no" data-eaz-creator-name="1"></strong>
+          <strong id="pa-partner-name" translate="no"></strong>
         </div>
 
         <div class="pa-content" id="pa-content">
@@ -57,5 +81,15 @@
         </div>
       </main>
     </div>
+
+    <footer class="pa-footer" id="pa-footer" hidden>
+      <div class="pa-footer__meta">
+        <span id="pa-footer-count">0</span>
+        <span data-t="creator.publish_assist.selected_of">selected ·</span>
+        <span id="pa-footer-remaining">0</span>
+        <span data-t="creator.publish_assist.slots_left">slots left today</span>
+      </div>
+      <button type="button" class="pa-btn pa-btn--primary" id="pa-btn-send" disabled>Send offer</button>
+    </footer>
   </div>
 </div>
