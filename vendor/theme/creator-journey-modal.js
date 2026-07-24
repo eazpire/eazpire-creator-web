@@ -976,7 +976,7 @@
       return !!node.unlocked && listingLimitTierNodes(node).some(function (tier) { return !tier.unlocked; });
     }
     if (isSocialPlatformNode(node)) {
-      return !!node.unlocked && socialPostTierNodes(node).some(function (tier) { return !tier.unlocked; });
+      return !!node.unlocked;
     }
     return false;
   }
@@ -2329,10 +2329,26 @@
       node.metadata && node.metadata.listing_limit_kind === 'channel';
   }
 
+  function socialPlatformIdFromNode(node) {
+    if (!node) return '';
+    if (node.social_platform) return String(node.social_platform).toLowerCase();
+    var key = String(node.node_key || '');
+    var m = key.match(/^social:([a-z0-9_]+)(?::tier:\d+)?$/i);
+    return m ? String(m[1]).toLowerCase() : '';
+  }
+
+  function isSocialPostTierNode(node) {
+    if (!node || node.category !== 'social') return false;
+    if (node.metadata && node.metadata.social_post_limit_kind === 'tier') return true;
+    return /^social:[a-z0-9_]+:tier:\d+$/i.test(String(node.node_key || ''));
+  }
+
   function isSocialPlatformNode(node) {
-    return node && node.category === 'social' &&
-      (!node.parent_key) &&
-      (!node.metadata || node.metadata.social_post_limit_kind !== 'tier');
+    if (!node || node.category !== 'social') return false;
+    if (isSocialPostTierNode(node)) return false;
+    var key = String(node.node_key || '');
+    if (/^social:[a-z0-9_]+$/i.test(key)) return true;
+    return !node.parent_key && (!node.metadata || node.metadata.social_post_limit_kind !== 'tier');
   }
 
   function creationLimitTierNodes(parentNode) {
@@ -2362,16 +2378,18 @@
   }
 
   function socialPostTierNodes(platformNode) {
-    var plat = platformNode && (platformNode.social_platform ||
-      (platformNode.node_key && String(platformNode.node_key).replace(/^social:/, '')));
+    var plat = socialPlatformIdFromNode(platformNode);
     if (!plat) return [];
     var all = (journeyData && journeyData.nodes) || [];
     return all.filter(function (n) {
-      return n.category === 'social' &&
-        n.metadata && n.metadata.social_post_limit_kind === 'tier' &&
-        String(n.social_platform || '') === String(plat);
+      if (!isSocialPostTierNode(n)) return false;
+      return socialPlatformIdFromNode(n) === plat;
     }).sort(function (a, b) {
-      return (Number(a.metadata.social_tier_level) || 0) - (Number(b.metadata.social_tier_level) || 0);
+      var la = Number((a.metadata && a.metadata.social_tier_level) ||
+        String(a.node_key || '').replace(/^.*:tier:/, '')) || 0;
+      var lb = Number((b.metadata && b.metadata.social_tier_level) ||
+        String(b.node_key || '').replace(/^.*:tier:/, '')) || 0;
+      return la - lb;
     });
   }
 
@@ -2535,9 +2553,10 @@
     var isPlatform = isSocialPlatformNode(node);
     var tiers = isPlatform ? socialPostTierNodes(node) : [];
     var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
-    var expandable = isPlatform && !!node.unlocked && lockedTiers.length > 0;
+    // Unlocked platforms always expand for daily-post tiers (even if catalog still syncing).
+    var expandable = isPlatform && !!node.unlocked;
     var expanded = expandable && !!expandedSocialKeys[node.node_key];
-    var isTier = node.metadata && node.metadata.social_post_limit_kind === 'tier';
+    var isTier = isSocialPostTierNode(node);
     var cls = 'cj-tree-card cj-tree-card--social';
     if (isPlatform) cls += ' cj-tree-card--social-platform';
     if (isTier) cls += ' cj-tree-card--social-post-tier';
@@ -2571,14 +2590,18 @@
     if (!platformNode || !platformNode.unlocked || !expandedSocialKeys[platformNode.node_key]) return '';
     var tiers = socialPostTierNodes(platformNode);
     var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
-    if (!lockedTiers.length) return '';
+    var panelBody = lockedTiers.length
+      ? renderCarouselShell(lockedTiers.map(renderSocialCard).join(''))
+      : (tiers.length
+        ? '<p class="cj-muted">' + escapeHtml(t('creator.journey.social_posts_all_unlocked', 'All daily post tiers unlocked for this platform.')) + '</p>'
+        : '<p class="cj-muted">' + escapeHtml(t('creator.journey.social_posts_loading', 'Daily post skills are syncing — close and reopen Creator Journey in a moment.')) + '</p>');
     return '<div class="cj-variant-branch cj-social-branch" data-cj-social-branch="' +
       escapeHtml(platformNode.node_key) + '">' +
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
       '<div class="cj-variant-panel" data-cj-social-panel="' + escapeHtml(platformNode.node_key) + '">' +
       '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(platformNode)) + ' · ' +
       escapeHtml(t('creator.journey.social_posts_title', 'Daily posts')) + '</h4>' +
-      renderCarouselShell(lockedTiers.map(renderSocialCard).join('')) +
+      panelBody +
       '</div></div>';
   }
 
@@ -3364,7 +3387,8 @@
     // Carousels on unlocked/locked rows; expand panels for product + markets + channels + slots + limits.
     wireProductCarousel(list);
     if (treeFilter === 'product' || treeFilter === 'market' || treeFilter === 'channel' ||
-        treeFilter === 'design_slot' || treeFilter === 'creation_limit' || treeFilter === 'listing_limit') {
+        treeFilter === 'design_slot' || treeFilter === 'creation_limit' || treeFilter === 'listing_limit' ||
+        treeFilter === 'social') {
       wireProductExpand(list);
     }
 
