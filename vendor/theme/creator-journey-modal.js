@@ -153,7 +153,7 @@
     'royalty',
     'eaz_economy',
     'product', 'design_type', 'creation_limit', 'market', 'channel', 'listing_limit',
-    'automation', 'promotion', 'hero', 'social',
+    'automation', 'promotion', 'hero', 'social', 'creators',
     'design_slot', 'creator_name'
   ];
 
@@ -216,6 +216,7 @@
   var expandedCreationLimitKeys = {};
   var expandedListingLimitKeys = {};
   var expandedSocialKeys = {};
+  var expandedCreatorsKeys = {};
 
   var CATEGORY_ICON_SVG = {
     royalty: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
@@ -231,8 +232,15 @@
     design_slot: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>',
     creation_limit: '<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 21h8"/></svg>',
     listing_limit: '<svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h14"/><circle cx="19" cy="17" r="2"/></svg>',
+    creators: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>',
     creator_name: '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
     eaz_economy: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10h4.5a2 2 0 0 1 0 4H9"/></svg>',
+  };
+
+  var CREATORS_AXIS_ICONS = {
+    daily_codes: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h4M7 13h6M15 9h2"/></svg>',
+    daily_offers: '<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 21h16"/></svg>',
+    daily_requests: '<svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="m16 13-4-4-4 4"/><path d="M4 3h16"/></svg>'
   };
 
   /**
@@ -360,6 +368,7 @@
     var fallbacks = {
       creation_limit: 'Creation Limits',
       listing_limit: 'Listing Limits',
+      creators: 'Creators',
       design_type: 'Design types',
       eaz_economy: 'EAZV Economy'
     };
@@ -659,6 +668,9 @@
     if (node.metadata && node.metadata.social_post_limit_kind === 'platform') {
       return String(node.metadata.title || node.social_platform || '');
     }
+    if (node.metadata && node.metadata.creators_kind === 'parent') {
+      return String(node.metadata.title || node.metadata.creators_axis || '');
+    }
     return '';
   }
 
@@ -690,6 +702,13 @@
       if (postsVal == null || postsVal === '') return '';
       return tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(postsVal) });
     }
+    if (node.metadata && node.metadata.creators_kind === 'parent') {
+      var activeCreators = highestUnlockedTierNode(creatorsTierNodes(node));
+      if (!activeCreators || !activeCreators.metadata) return '';
+      var creatorsVal = activeCreators.metadata.per_day;
+      if (creatorsVal == null || creatorsVal === '') return '';
+      return tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(creatorsVal) });
+    }
     return '';
   }
 
@@ -709,6 +728,13 @@
     if (node.metadata && node.metadata.social_post_limit_kind === 'platform') {
       return {
         iconSvg: socialPlatformIconSvg(node.social_platform),
+        limitLabel: activeLimitLabelForParent(node)
+      };
+    }
+    if (node.metadata && node.metadata.creators_kind === 'parent') {
+      var axisKey = String(node.metadata.creators_axis || '');
+      return {
+        iconSvg: CREATORS_AXIS_ICONS[axisKey] || CATEGORY_ICON_SVG.creators,
         limitLabel: activeLimitLabelForParent(node)
       };
     }
@@ -2640,6 +2666,132 @@
     return html;
   }
 
+  function isCreatorsParent(node) {
+    return node && node.category === 'creators' &&
+      node.metadata && node.metadata.creators_kind === 'parent';
+  }
+
+  function isCreatorsTierNode(node) {
+    return node && node.category === 'creators' &&
+      node.metadata && node.metadata.creators_kind === 'tier';
+  }
+
+  function creatorsTierNodes(parentNode) {
+    var axis = parentNode && parentNode.metadata && parentNode.metadata.creators_axis;
+    if (!axis) return [];
+    var all = (journeyData && journeyData.nodes) || [];
+    return all.filter(function (n) {
+      return isCreatorsTierNode(n) && n.metadata && n.metadata.creators_axis === axis;
+    }).sort(function (a, b) {
+      return (Number(a.metadata.creators_tier_level) || 0) - (Number(b.metadata.creators_tier_level) || 0);
+    });
+  }
+
+  function creatorsCardMediaOpts(node) {
+    if (isCreatorsParent(node)) return parentLimitMediaOpts(node);
+    if (isCreatorsTierNode(node)) {
+      var axis = String((node.metadata && node.metadata.creators_axis) || '');
+      return { iconSvg: CREATORS_AXIS_ICONS[axis] || CATEGORY_ICON_SVG.creators };
+    }
+    return null;
+  }
+
+  function renderCreatorsCard(node) {
+    var lock = resolveCardLockOpts(node);
+    var act = cardActionState(node, lock.levelLocked);
+    var isParent = isCreatorsParent(node);
+    var tiers = isParent ? creatorsTierNodes(node) : [];
+    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
+    // Codes (auto L2): expandable when locked tiers remain. Offer/Request: only after parent unlock.
+    var autoExpand = isParent && !!(node.metadata && node.metadata.auto_tier2);
+    var expandable = isParent && lockedTiers.length > 0 && (!!node.unlocked || autoExpand);
+    var expanded = expandable && !!expandedCreatorsKeys[node.node_key];
+    var isTier = isCreatorsTierNode(node);
+    var cls = 'cj-tree-card cj-tree-card--creators';
+    if (isParent) cls += ' cj-tree-card--creators-parent';
+    if (isTier) cls += ' cj-tree-card--creators-tier';
+    if (lock.visuallyLocked) cls += ' is-level-locked';
+    if (node.unlocked) cls += ' is-unlocked';
+    if (act.unlockReady) cls += ' is-ready';
+    if (act.hasAction) cls += ' has-action';
+    if (expandable) cls += ' is-expandable';
+    if (expanded) cls += ' is-expanded';
+    var expandAttr = expandable
+      ? ' data-cj-expand-creators="' + escapeHtml(node.node_key) + '" role="button" tabindex="0" aria-expanded="' +
+        (expanded ? 'true' : 'false') + '"'
+      : '';
+    var cardMedia = creatorsCardMediaOpts(node);
+    var infoChrome = skillCardInfoChrome(node, expandable);
+    return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
+      expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
+      '<div class="cj-tree-card__stack">' +
+      renderTreeCardFrame(node, {
+        hasAction: act.hasAction,
+        levelLocked: lock.levelLocked,
+        lockReason: lock.lockReason,
+        iconSvg: cardMedia ? cardMedia.iconSvg : null,
+        limitLabel: cardMedia ? cardMedia.limitLabel : ''
+      }) +
+      infoChrome.infoBtn +
+      act.actionHtml + '</div></article>';
+  }
+
+  function renderCreatorsExpandPanel(parentNode) {
+    if (!parentNode || !expandedCreatorsKeys[parentNode.node_key]) return '';
+    var tiers = creatorsTierNodes(parentNode);
+    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
+    if (!lockedTiers.length) {
+      return '<div class="cj-variant-branch cj-creators-branch" data-cj-creators-branch="' +
+        escapeHtml(parentNode.node_key) + '">' +
+        '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+        '<div class="cj-variant-panel" data-cj-creators-panel="' + escapeHtml(parentNode.node_key) + '">' +
+        '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(parentNode)) + '</h4>' +
+        '<p class="cj-muted">' + escapeHtml(t('creator.journey.creators_all_unlocked', 'All daily tiers unlocked for this skill.')) + '</p>' +
+        '</div></div>';
+    }
+    return '<div class="cj-variant-branch cj-creators-branch" data-cj-creators-branch="' +
+      escapeHtml(parentNode.node_key) + '">' +
+      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+      '<div class="cj-variant-panel" data-cj-creators-panel="' + escapeHtml(parentNode.node_key) + '">' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(parentNode)) + '</h4>' +
+      renderCarouselShell(lockedTiers.map(renderCreatorsCard).join('')) +
+      '</div></div>';
+  }
+
+  function renderCreatorsTree(nodes) {
+    var parents = (nodes || []).filter(isCreatorsParent);
+    var split = splitUnlockedLocked(parents);
+    if (!parents.length) {
+      return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
+    }
+    var html = '<div class="cj-product-sections">' +
+      '<section class="cj-product-section cj-unlocked-skills cj-creators-row">' +
+      renderSectionHead(t('creator.journey.creators_title', 'Creators'), '', '') +
+      '</section>';
+    if (split.unlocked.length) {
+      var cardsHtml = '';
+      var expandHtml = '';
+      split.unlocked.forEach(function (n) {
+        cardsHtml += renderCreatorsCard(n);
+        if (expandedCreatorsKeys[n.node_key]) {
+          expandHtml += renderCreatorsExpandPanel(n);
+        }
+      });
+      html += '<section class="cj-product-section cj-unlocked-skills">' +
+        renderSectionHead(t('creator.journey.unlocked_skills', 'Unlocked'), '', '') +
+        '<div class="cj-creators-parents">' + renderCarouselShell(cardsHtml) + '</div>' +
+        expandHtml + '</section>';
+    }
+    if (split.locked.length) {
+      html += '<section class="cj-product-section">' +
+        renderSectionHead(t('creator.journey.available_skills', 'Available'), '', '') +
+        renderCarouselShell(split.locked.map(renderCreatorsCard).join('')) +
+        '</section>';
+    }
+    html += '</div>';
+    return html;
+  }
+
   function renderRoyaltyCard(node) {
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
@@ -2686,6 +2838,7 @@
     if (node.category === 'creation_limit') return renderCreationLimitCard(node);
     if (node.category === 'listing_limit') return renderListingLimitCard(node);
     if (node.category === 'social') return renderSocialCard(node);
+    if (node.category === 'creators') return renderCreatorsCard(node);
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
 
@@ -3381,6 +3534,8 @@
       html = renderListingLimitTree(filtered);
     } else if (treeFilter === 'social') {
       html = renderSocialTree(filtered);
+    } else if (treeFilter === 'creators') {
+      html = renderCreatorsTree(filtered);
     } else if (CAROUSEL_SKILL_CATEGORIES[treeFilter]) {
       html = renderCarouselSkillTree(filtered);
     } else {
@@ -3393,7 +3548,7 @@
     wireProductCarousel(list);
     if (treeFilter === 'product' || treeFilter === 'market' || treeFilter === 'channel' ||
         treeFilter === 'design_slot' || treeFilter === 'creation_limit' || treeFilter === 'listing_limit' ||
-        treeFilter === 'social') {
+        treeFilter === 'social' || treeFilter === 'creators') {
       wireProductExpand(list);
     }
 
@@ -3836,6 +3991,24 @@
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault();
         toggleSocial(e);
+      });
+    });
+    root.querySelectorAll('[data-cj-expand-creators]').forEach(function (card) {
+      function toggleCreators(e) {
+        if (e.target.closest('[data-cj-tree-action]')) return;
+        if (e.target.closest('[data-cj-skill-info-btn]')) return;
+        var key = card.getAttribute('data-cj-expand-creators');
+        if (!key) return;
+        var wasOpen = !!expandedCreatorsKeys[key];
+        expandedCreatorsKeys = {};
+        if (!wasOpen) expandedCreatorsKeys[key] = true;
+        renderTree();
+      }
+      card.addEventListener('click', toggleCreators);
+      card.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        toggleCreators(e);
       });
     });
     root.querySelectorAll('[data-cj-goto-eaz-daily]').forEach(function (btn) {
