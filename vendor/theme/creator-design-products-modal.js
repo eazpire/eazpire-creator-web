@@ -783,17 +783,20 @@
       ctxPubRowByKey[pk] = r;
       var intent = String(r.publish_intent || '');
       var completion = String(r.shopify_completion_status || '');
-      if (intent === 'test_publish' && completion !== 'complete' && completion !== 'failed') {
+      var isQueueIntent = intent === 'test_publish' || intent === 'creator_publish';
+      if (isQueueIntent && completion !== 'complete' && completion !== 'failed') {
         ctxTestPublishByKey[pk] = {
           phase: completion || 'pending',
           message: r.publish_status_detail || 'Publishing…',
           in_progress: true,
+          intent: intent,
         };
-      } else if (intent === 'test_publish' && (completion === 'complete' || completion === 'failed')) {
+      } else if (isQueueIntent && (completion === 'complete' || completion === 'failed')) {
         ctxTestPublishByKey[pk] = {
           phase: completion,
           message: r.publish_status_detail || '',
           in_progress: false,
+          intent: intent,
         };
       }
     }
@@ -805,17 +808,24 @@
       var d = (ev && ev.detail) || {};
       var pk = String(d.product_key || '').trim();
       if (!pk) return;
+      var intent = d.publish_intent || 'test_publish';
       ctxTestPublishByKey[pk] = {
         phase: d.phase || 'queued',
         message: d.message || 'Publishing…',
         in_progress: d.in_progress !== false && d.phase !== 'complete' && d.phase !== 'failed',
+        intent: intent,
       };
-      if (d.published_design_id || d.shopify_completion_status || d.printify_product_id) {
+      if (d.published_design_id || d.shopify_completion_status || d.printify_product_id || d.phase) {
         ctxPubRowByKey[pk] = Object.assign({}, ctxPubRowByKey[pk] || {}, {
           product_key: pk,
           id: d.published_design_id || (ctxPubRowByKey[pk] && ctxPubRowByKey[pk].id),
-          publish_intent: 'test_publish',
-          shopify_completion_status: d.shopify_completion_status || 'pending_shopify',
+          publish_intent: intent,
+          shopify_completion_status:
+            d.phase === 'failed'
+              ? 'failed'
+              : d.phase === 'complete'
+                ? 'complete'
+                : d.shopify_completion_status || 'pending_shopify',
           printify_product_id: d.printify_product_id || null,
           publish_status_detail: d.message || null,
         });
@@ -834,9 +844,18 @@
     var M = Mi();
     var badges = document.createElement('div');
     badges.className = 'creator-design-products-modal__card-badges';
-    var isTest =
-      (pubRow && String(pubRow.publish_intent || '') === 'test_publish') ||
-      (testSt && testSt.in_progress);
+    var intent =
+      (testSt && testSt.intent) ||
+      (pubRow && String(pubRow.publish_intent || '')) ||
+      '';
+    var isTest = intent === 'test_publish';
+    var inProgress = !!(testSt && testSt.in_progress);
+    var failed =
+      !!(testSt && testSt.phase === 'failed') ||
+      (pubRow && String(pubRow.shopify_completion_status || '') === 'failed');
+    var isComplete =
+      (pubRow && String(pubRow.shopify_completion_status || '') === 'complete') ||
+      (testSt && testSt.phase === 'complete');
     if (isTest) {
       var tp = document.createElement('span');
       tp.className =
@@ -848,7 +867,7 @@
         'Test Product';
       badges.appendChild(tp);
     }
-    if (testSt && testSt.in_progress) {
+    if (inProgress) {
       card.classList.add('is-test-publishing');
       var spinWrap = card.querySelector('.creator-design-products-modal__card-loading');
       if (!spinWrap) {
@@ -872,12 +891,19 @@
       var oldStatus = card.querySelector('.creator-design-products-modal__card-status');
       if (oldStatus) oldStatus.remove();
     }
-    if (pubRow && !(testSt && testSt.in_progress)) {
+    if (failed && !inProgress) {
+      var fail = document.createElement('span');
+      fail.className =
+        'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--failed';
+      fail.textContent = M.designProductsBadgeFailed || 'Failed';
+      fail.title = (testSt && testSt.message) || (pubRow && pubRow.publish_status_detail) || '';
+      badges.appendChild(fail);
+    } else if (isComplete && !inProgress) {
       var on = document.createElement('span');
       on.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--online';
       on.textContent = M.designProductsBadgeOnline || M.designProductsBadgeActive || 'Active';
       badges.appendChild(on);
-    } else if (isChecked && !(testSt && testSt.in_progress)) {
+    } else if (isChecked || inProgress || intent === 'creator_publish') {
       var qu = document.createElement('span');
       qu.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--queue';
       qu.textContent = M.designProductsBadgeQueue || 'Queue';

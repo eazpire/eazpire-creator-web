@@ -918,6 +918,7 @@
   }
 
   function ensurePrintArea() {
+    if (!draft) return { position: 'front', by_position: {} };
     draft.print_area = draft.print_area || {};
     var pa = draft.print_area;
     if (!pa.position) pa.position = 'front';
@@ -4698,18 +4699,15 @@
     return ck === 'white' || lb === 'white' || /^white(\b|_)/i.test(ck) || /^white\b/i.test(lb);
   }
 
-  /** Prefer White + unlocked; else random unlocked admin-pool color. */
+  /** Prefer White if unlocked; else first unlocked admin-pool color. Never pick locked. */
   function pickDefaultPreviewColor(colors) {
     var list = Array.isArray(colors) ? colors : [];
     if (!list.length) return null;
     var white = list.find(isWhitePreviewColor) || null;
     if (white && isPreviewColorUnlocked(white)) return white;
     var unlocked = list.filter(isPreviewColorUnlocked);
-    if (unlocked.length) {
-      return unlocked[Math.floor(Math.random() * unlocked.length)];
-    }
-    if (white) return white;
-    return list[0];
+    if (unlocked.length) return unlocked[0];
+    return null;
   }
 
   function pickPreferredPreviewView(views, preferred) {
@@ -4762,15 +4760,25 @@
         previewActiveColor &&
         previewColorKeysMatch(previewMainColor, previewActiveColor);
       var isCurrent = !!(sameView && sameColor);
+      var activeColorObj =
+        previewColors.find(function (c) {
+          return previewColorKeysMatch(c.color_key, previewActiveColor);
+        }) || null;
+      var activeLocked = !!(activeColorObj && !isPreviewColorUnlocked(activeColorObj));
       previewSetMainEl.hidden = !previewColors.length;
       previewSetMainEl.classList.toggle('is-current', !!isCurrent);
-      previewSetMainEl.disabled = !!isCurrent || previewBusy || previewSaving;
-      previewSetMainEl.setAttribute('aria-disabled', isCurrent || previewBusy || previewSaving ? 'true' : 'false');
+      previewSetMainEl.disabled = !!isCurrent || !!activeLocked || previewBusy || previewSaving;
+      previewSetMainEl.setAttribute(
+        'aria-disabled',
+        isCurrent || activeLocked || previewBusy || previewSaving ? 'true' : 'false'
+      );
       previewSetMainEl.style.pointerEvents = 'auto';
       previewSetMainEl.style.cursor = previewSetMainEl.disabled ? 'default' : 'pointer';
       previewSetMainEl.textContent = isCurrent
         ? t('designStudioPreviewIsMain', 'Main preview')
-        : t('designStudioPreviewSetAsPreview', 'Set as Preview');
+        : activeLocked
+          ? t('designStudioPreviewLocked', 'Locked')
+          : t('designStudioPreviewSetAsPreview', 'Set as Preview');
     }
   }
 
@@ -5165,6 +5173,14 @@
   function setAsMainPreview() {
     if (previewBusy || previewSaving) return;
     if (!previewActiveView) return;
+    var activeColorObj =
+      previewColors.find(function (c) {
+        return previewColorKeysMatch(c.color_key, previewActiveColor);
+      }) || null;
+    if (activeColorObj && !isPreviewColorUnlocked(activeColorObj)) {
+      setStatus(t('designStudioPreviewMainLocked', 'Unlock this color before setting it as main preview.'));
+      return;
+    }
     previewMainView = previewActiveView;
     previewMainColor = previewActiveColor || previewMainColor || null;
     syncStudioDraftFromPreviewColors();

@@ -1378,6 +1378,11 @@
         publish_intent: p.publish_intent || null,
         publish_status_detail: p.publish_status_detail || null,
         is_test_product: !!p.is_test_product || p.publish_intent === 'test_publish',
+        is_queue_product:
+          !!p.is_queue_product ||
+          ((p.publish_intent === 'test_publish' || p.publish_intent === 'creator_publish') &&
+            p.shopify_completion_status !== 'complete' &&
+            p.shopify_completion_status !== 'failed'),
         published_design_id: p.published_design_id || null,
         design_ids: Array.isArray(p.design_ids) ? p.design_ids : []
       });
@@ -2581,7 +2586,9 @@
     card.className = 'creator-creations-card';
     var isTest = !!prod.is_test_product || prod.publish_intent === 'test_publish';
     var inProgress =
-      isTest &&
+      (!!prod.is_queue_product ||
+        isTest ||
+        prod.publish_intent === 'creator_publish') &&
       prod.shopify_completion_status !== 'complete' &&
       prod.shopify_completion_status !== 'failed';
     if (isTest) card.classList.add('is-test-product');
@@ -3733,7 +3740,10 @@
     var hasPending = (products || []).some(function (p) {
       return (
         p &&
-        (p.is_test_product || p.publish_intent === 'test_publish') &&
+        (p.is_queue_product ||
+          p.is_test_product ||
+          p.publish_intent === 'test_publish' ||
+          p.publish_intent === 'creator_publish') &&
         p.shopify_completion_status !== 'complete' &&
         p.shopify_completion_status !== 'failed'
       );

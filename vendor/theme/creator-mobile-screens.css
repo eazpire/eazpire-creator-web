@@ -2149,6 +2149,12 @@ html.creator-design-products-modal-open {
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+.creator-design-products-modal__card-badge--failed {
+  background: rgba(239, 68, 68, 0.92);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
 .creator-design-products-modal__card.is-test-publishing {
   position: relative;
 }
