@@ -918,7 +918,9 @@
   }
 
   function ensurePrintArea() {
-    if (!draft) return { position: 'front', by_position: {} };
+    if (!draft) {
+      return { position: 'front', by_position: {} };
+    }
     draft.print_area = draft.print_area || {};
     var pa = draft.print_area;
     if (!pa.position) pa.position = 'front';
@@ -1118,8 +1120,8 @@
   }
 
   function currentPosition() {
-    ensurePrintArea();
-    return normPos(draft.print_area.position || 'front');
+    var pa = ensurePrintArea();
+    return normPos((pa && pa.position) || (draft && draft.print_area && draft.print_area.position) || 'front');
   }
 
   function currentBucket() {
