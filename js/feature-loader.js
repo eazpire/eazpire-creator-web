@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "level-carousel-20260724a";
+  var PORTAL_ASSET_V = "test-publish-20260724b";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {

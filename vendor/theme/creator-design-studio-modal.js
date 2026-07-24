@@ -352,9 +352,31 @@
   }
 
   function apiBase() {
-    return window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL
-      ? window.CREATOR_API_CONFIG.BASE_URL + '/apps/creator-dispatch'
-      : 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
+    var cfg = window.CREATOR_API_CONFIG;
+    if (cfg && typeof cfg.getDispatchUrl === 'function') {
+      try {
+        var via = cfg.getDispatchUrl();
+        if (via) return String(via).replace(/\/+$/, '');
+      } catch (_e) {}
+    }
+    var base =
+      (cfg && cfg.BASE_URL) ||
+      window.__CREATOR_API_BASE ||
+      'https://creator-engine.eazpire.workers.dev';
+    base = String(base).replace(/\/+$/, '');
+    if (/\/api\/dispatch$/i.test(base) || /\/apps\/creator-dispatch$/i.test(base)) return base;
+    try {
+      if (
+        window.__CREATOR_PORTAL_HOST__ ||
+        (window.location &&
+          window.location.hostname &&
+          (window.location.hostname === 'creator.eazpire.com' ||
+            window.location.hostname.indexOf('creator.') === 0))
+      ) {
+        return String(window.location.origin || '').replace(/\/+$/, '') + '/api/dispatch';
+      }
+    } catch (_e2) {}
+    return base + '/apps/creator-dispatch';
   }
 
   function getOwnerId() {
@@ -584,7 +606,7 @@
       }
     }
     if (btnClose) btnClose.disabled = !!cropApplying;
-    if (btnTestPublish) btnTestPublish.disabled = !!show || isStudioBusy();
+    if (btnTestPublish) btnTestPublish.disabled = !!show;
   }
 
   function clearTestPublishPoll() {
@@ -637,7 +659,8 @@
     if (cancelBtn) cancelBtn.disabled = !!cropApplying || !!isLoading;
     if (btnSetVersion) btnSetVersion.disabled = busy;
     if (btnSaveVersion) btnSaveVersion.disabled = busy;
-    if (btnTestPublish) btnTestPublish.disabled = busy;
+    // Keep Test Publish enabled so clicks can report "busy" instead of silent no-op.
+    if (btnTestPublish) btnTestPublish.disabled = !!isTestPublishing;
     if (btnClose) btnClose.disabled = !!cropApplying;
     syncHistoryToolbar();
   }
@@ -6159,7 +6182,14 @@
 
     if (btnClose) btnClose.addEventListener('click', function () { close(false); });
     if (btnSave) btnSave.addEventListener('click', onSave);
-    // Delegated click so Test Publish works even if footer was re-rendered / late DOM.
+    // Direct + delegated + document capture: portal busy CSS can swallow footer clicks.
+    if (btnTestPublish) {
+      btnTestPublish.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        onTestPublish();
+      });
+    }
     root.addEventListener('click', function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest('#cds-btn-test-publish');
       if (!btn || !root.contains(btn)) return;
@@ -6167,6 +6197,22 @@
       ev.stopPropagation();
       onTestPublish();
     });
+    if (!document.documentElement.__cdsTestPublishDocBound) {
+      document.documentElement.__cdsTestPublishDocBound = true;
+      document.addEventListener(
+        'click',
+        function (ev) {
+          var btn = ev.target && ev.target.closest && ev.target.closest('#cds-btn-test-publish');
+          if (!btn) return;
+          var studio = findStudioRoot();
+          if (!studio || !studio.contains(btn) || studio.hidden) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          onTestPublish();
+        },
+        true
+      );
+    }
     if (btnSetVersion) btnSetVersion.addEventListener('click', openVersionsModal);
     if (btnSaveVersion) btnSaveVersion.addEventListener('click', openVersionSaveModal);
 
@@ -6654,12 +6700,37 @@
   }
 
   async function onTestPublish() {
+    console.info('[creator-design-studio] Test Publish clicked', {
+      isTestPublishing: !!isTestPublishing,
+      isSaving: !!isSaving,
+      cropApplying: !!cropApplying,
+      isLoading: !!isLoading,
+      hasDesign: !!(ctxDesign && ctxDesign.id),
+      productKey: ctxProductKey || null,
+      api: apiBase(),
+    });
     if (isTestPublishing || isSaving || cropApplying || isLoading) {
+      var waitMsg = t('designStudioLoading', 'Loading…');
+      setStatus(waitMsg);
+      console.warn('[creator-design-studio] Test Publish ignored (busy)', {
+        isTestPublishing: !!isTestPublishing,
+        isSaving: !!isSaving,
+        cropApplying: !!cropApplying,
+        isLoading: !!isLoading,
+      });
       return false;
     }
-    if (!cacheDom()) return false;
+    if (!cacheDom()) {
+      console.warn('[creator-design-studio] Test Publish: studio DOM missing');
+      return false;
+    }
     if (!ctxDesign || !ctxProductKey || !draft) {
       setStatus(t('designStudioLoadError', 'Could not load studio.'));
+      console.warn('[creator-design-studio] Test Publish: missing context', {
+        hasDesign: !!ctxDesign,
+        productKey: ctxProductKey || null,
+        hasDraft: !!draft,
+      });
       return false;
     }
     var owner = getOwnerId();

@@ -321,10 +321,17 @@
   opacity: 0.55;
 }
 
+/* Keep footer clickable so Test Publish can show a busy message instead of silent no-op. */
+.cds-modal-root.is-busy .cds-settings-footer {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.cds-modal-root.is-busy .cds-settings-footer .cds-btn-secondary,
 .cds-modal-root.is-busy .cds-modal__btn--save,
 .cds-modal-root.is-busy #cds-btn-reset {
-  pointer-events: none;
-  opacity: 0.55;
+  pointer-events: auto;
+  opacity: 0.85;
 }
 
 .cds-modal-root.is-test-publishing .cds-settings-column,
