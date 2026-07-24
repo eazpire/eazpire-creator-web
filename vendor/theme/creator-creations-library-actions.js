@@ -401,6 +401,18 @@
       card.appendChild(cb);
       card.appendChild(media);
       card.appendChild(ttl);
+      var vUnlocked = Number(p.variants_unlocked);
+      var vTotal = Number(p.variants_total);
+      if (Number.isFinite(vTotal) && vTotal > 0) {
+        if (!Number.isFinite(vUnlocked) || vUnlocked < 0) vUnlocked = 0;
+        var vLabel = document.createElement('div');
+        vLabel.className = 'creator-design-products-modal__card-variants';
+        var vTpl = Mgrid.designProductsVariantsCount || 'Variants: {{unlocked}}/{{total}}';
+        vLabel.textContent = String(vTpl)
+          .replace(/\{\{\s*unlocked\s*\}\}/gi, String(vUnlocked))
+          .replace(/\{\{\s*total\s*\}\}/gi, String(vTotal));
+        card.appendChild(vLabel);
+      }
       refreshActivateCardBadges(card, pk);
       gridEl.appendChild(card);
     }

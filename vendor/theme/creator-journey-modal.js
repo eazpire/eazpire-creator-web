@@ -1615,7 +1615,10 @@
     var expandAttr = expandable
       ? ' data-cj-expand-color="' + escapeHtml(node.node_key) + '"'
       : '';
-    var infoChrome = skillCardInfoChrome(node, expandable);
+    // Never nest Unlock/Commit inside role=button info cards — clicks were swallowed.
+    var infoChrome = act.hasAction
+      ? { extraCls: '', infoBtn: '', cardAttrs: '' }
+      : skillCardInfoChrome(node, expandable);
 
     return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
       expandAttr + infoChrome.cardAttrs + lock.titleAttr + '>' +
@@ -1639,7 +1642,9 @@
     if (act.unlockReady) cls += ' is-ready';
     if (act.hasAction) cls += ' has-action';
     if (act.freePick) cls += ' is-free-pick';
-    var infoChrome = skillCardInfoChrome(node, false);
+    // Size cards are not product skill-info targets (IDEA-002). Whole-card
+    // role=button + Unlock button nested → Unlock clicks did nothing.
+    var infoChrome = { extraCls: '', infoBtn: '', cardAttrs: '' };
 
     return '<article class="' + cls + infoChrome.extraCls + '" data-node="' + escapeHtml(node.node_key) + '"' +
       infoChrome.cardAttrs + lock.titleAttr + '>' +
@@ -5600,8 +5605,14 @@
       storeJourneyOnWindow(journeyData);
       return journeyData;
     }
-    if (window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__) return window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__;
-    if (journeyLoadPromise) return journeyLoadPromise;
+    // force=true must always refetch — do not reuse an in-flight stale load
+    // (size/color unlocks looked like they did nothing after Unlock).
+    if (!force) {
+      if (window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__) return window.__EAZ_CREATOR_JOURNEY_LOAD_PROMISE__;
+      if (journeyLoadPromise) return journeyLoadPromise;
+    } else if (journeyLoadPromise) {
+      try { await journeyLoadPromise; } catch (_e) { /* continue with forced reload */ }
+    }
 
     setPanelLoading(true);
     renderSidebarBalance();

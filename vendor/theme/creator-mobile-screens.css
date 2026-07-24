@@ -2051,6 +2051,15 @@ html.creator-design-products-modal-open {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.creator-design-products-modal__card-variants {
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  padding: 2px 4px 6px;
+  color: rgba(255, 200, 120, 0.92);
+  letter-spacing: 0.02em;
+}
 .creator-design-products-modal__card-badges {
   position: absolute;
   top: 8px;

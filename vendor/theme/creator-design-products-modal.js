@@ -805,6 +805,25 @@
     if (badges.childNodes.length) card.appendChild(badges);
   }
 
+  function refreshCardVariantsLabel(card, product) {
+    if (!card || !product) return;
+    var old = card.querySelector('.creator-design-products-modal__card-variants');
+    if (old) old.remove();
+    var unlocked = Number(product.variants_unlocked);
+    var total = Number(product.variants_total);
+    if (!Number.isFinite(total) || total < 1) return;
+    if (!Number.isFinite(unlocked) || unlocked < 0) unlocked = 0;
+    var M = Mi();
+    var tpl = M.designProductsVariantsCount || 'Variants: {{unlocked}}/{{total}}';
+    var label = document.createElement('div');
+    label.className = 'creator-design-products-modal__card-variants';
+    label.textContent = String(tpl)
+      .replace(/\{\{\s*unlocked\s*\}\}/gi, String(unlocked))
+      .replace(/\{\{\s*total\s*\}\}/gi, String(total))
+      .replace(/\{\{\s*x\s*\}\}/gi, String(unlocked));
+    card.appendChild(label);
+  }
+
   function refreshAllCardBadges() {
     if (!gridEl) return;
     var cards = gridEl.querySelectorAll('.creator-design-products-modal__card');
@@ -1121,6 +1140,7 @@
     card.appendChild(cb);
     card.appendChild(media);
     card.appendChild(ttl);
+    refreshCardVariantsLabel(card, p);
     refreshCardBadges(card, pk);
     return card;
   }
