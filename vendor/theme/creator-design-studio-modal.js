@@ -12,6 +12,7 @@
   var btnClose = null;
   var btnSetVersion = null;
   var btnSaveVersion = null;
+  var btnTestPublish = null;
   var viewerEl = null;
   var viewerStageEl = null;
   var mockImgEl = null;
@@ -131,6 +132,7 @@
   var isOpen = false;
   var isSaving = false;
   var isLoading = false;
+  var isTestPublishing = false;
   var pickerMode = 'mine';
   var transformDrag = null;
   var cropDrag = null;
@@ -560,7 +562,7 @@
   }
 
   function isStudioBusy() {
-    return !!(isLoading || isSaving || cropApplying);
+    return !!(isLoading || isSaving || cropApplying || isTestPublishing);
   }
 
   function setViewerBusy(show, message) {
@@ -596,6 +598,7 @@
     if (cancelBtn) cancelBtn.disabled = !!cropApplying || !!isLoading;
     if (btnSetVersion) btnSetVersion.disabled = busy;
     if (btnSaveVersion) btnSaveVersion.disabled = busy;
+    if (btnTestPublish) btnTestPublish.disabled = busy;
     if (btnClose) btnClose.disabled = !!cropApplying;
     syncHistoryToolbar();
   }
@@ -1078,6 +1081,7 @@
     btnClose = root.querySelector('#cds-btn-close');
     btnSetVersion = root.querySelector('#cds-btn-set-version') || root.querySelector('#cds-btn-reset');
     btnSaveVersion = root.querySelector('#cds-btn-save-version');
+    btnTestPublish = root.querySelector('#cds-btn-test-publish');
     viewerEl = root.querySelector('#cds-viewer');
     viewerStageEl = root.querySelector('#cds-viewer-stage');
     mockImgEl = root.querySelector('#cds-mock-img');
@@ -4706,35 +4710,67 @@
     }
   }
 
+  function unlockedVariantIdsForPreviewColor(c) {
+    if (!c) return [];
+    var groups = (ctxData && ctxData.variant_groups) || {};
+    var keys = Object.keys(groups);
+    for (var i = 0; i < keys.length; i++) {
+      var gk = keys[i];
+      if (
+        !previewColorKeysMatch(gk, c.color_key) &&
+        !previewColorKeysMatch(gk, c.label) &&
+        normColorKey(gk) !== normColorKey(c.color_key) &&
+        normColorKey(gk) !== normColorKey(c.label)
+      ) {
+        continue;
+      }
+      return (groups[gk] || [])
+        .filter(function (v) {
+          return v && v.in_admin_pool && v.unlocked && v.id != null;
+        })
+        .map(function (v) {
+          return Number(v.id);
+        })
+        .filter(function (n) {
+          return Number.isFinite(n);
+        });
+    }
+    // Fallback: Printify ids only when group mapping is missing.
+    return (Array.isArray(c.variant_ids) ? c.variant_ids : [])
+      .map(Number)
+      .filter(function (n) {
+        return Number.isFinite(n);
+      });
+  }
+
+  function seedPreviewColorEnabled(c) {
+    if (!c) return false;
+    if (!isPreviewColorUnlocked(c)) return false;
+    var selected = new Set(
+      ((draft && draft.variants && draft.variants.selected_ids) || []).map(Number).filter(Number.isFinite)
+    );
+    if (selected.size) {
+      var unlockedIds = unlockedVariantIdsForPreviewColor(c);
+      if (unlockedIds.some(function (id) { return selected.has(id); })) return true;
+      var vids = Array.isArray(c.variant_ids) ? c.variant_ids : [];
+      return vids.some(function (id) {
+        return selected.has(Number(id));
+      });
+    }
+    // Fresh open: unlockable colors start checked.
+    return true;
+  }
+
   function syncStudioDraftFromPreviewColors() {
     if (!draft) return;
     draft.variants = draft.variants || { selected_ids: [] };
     var ids = new Set();
     for (var i = 0; i < previewColors.length; i++) {
       var c = previewColors[i];
-      if (!c || !c.enabled) continue;
-      var vids = Array.isArray(c.variant_ids) ? c.variant_ids : [];
-      for (var j = 0; j < vids.length; j++) {
-        var n = Number(vids[j]);
-        if (Number.isFinite(n)) ids.add(n);
-      }
-    }
-    // Prefer mapping via studio variant groups when Printify ids are missing.
-    if (!ids.size && ctxData && ctxData.variant_groups) {
-      var groups = ctxData.variant_groups;
-      for (var ck in groups) {
-        if (!Object.prototype.hasOwnProperty.call(groups, ck)) continue;
-        var match = previewColors.find(function (pc) {
-          return (
-            normColorKey(pc.color_key) === normColorKey(ck) ||
-            normColorKey(pc.label) === normColorKey(ck)
-          );
-        });
-        if (!match || !match.enabled) continue;
-        (groups[ck] || []).forEach(function (v) {
-          if (v && v.unlocked && v.in_admin_pool && v.id != null) ids.add(Number(v.id));
-        });
-      }
+      if (!c || !c.enabled || !isPreviewColorUnlocked(c)) continue;
+      unlockedVariantIdsForPreviewColor(c).forEach(function (n) {
+        ids.add(n);
+      });
     }
     draft.variants.selected_ids = Array.from(ids);
     draft.mockups = draft.mockups || {};
@@ -4949,7 +4985,8 @@
     for (var i = 0; i < previewColors.length; i++) {
       var c = previewColors[i];
       var on = c.color_key === previewActiveColor;
-      var enabled = c.enabled !== false;
+      var locked = !isPreviewColorUnlocked(c);
+      var enabled = !locked && c.enabled !== false;
       var hexStyle = colorDotStyle(
         { color_hex: c.hex, color: c.label || c.color_key },
         c.label || c.color_key
@@ -4957,27 +4994,33 @@
       html +=
         '<div class="cds-preview-color' +
         (on ? ' is-active' : '') +
-        (enabled ? '' : ' is-disabled') +
+        (!locked && !enabled ? ' is-disabled' : '') +
+        (locked ? ' is-locked' : '') +
         '" data-cds-preview-color="' +
         encodeURIComponent(c.color_key) +
         '" role="option" aria-selected="' +
         (on ? 'true' : 'false') +
         '" title="' +
         String(c.label || c.color_key).replace(/"/g, '&quot;') +
+        (locked ? ' — ' + t('designStudioLocked', 'Locked') : '') +
         '">' +
-        '<button type="button" class="cds-preview-color__toggle' +
-        (enabled ? ' is-on' : '') +
-        '" data-cds-preview-color-toggle="' +
-        encodeURIComponent(c.color_key) +
-        '" aria-pressed="' +
-        (enabled ? 'true' : 'false') +
-        '" title="' +
-        (enabled
-          ? t('designStudioPreviewColorDisable', 'Disable color')
-          : t('designStudioPreviewColorEnable', 'Enable color')) +
-        '">' +
-        (enabled ? '✓' : '') +
-        '</button>' +
+        (locked
+          ? '<span class="cds-preview-color__locked" aria-hidden="true">' +
+            t('designStudioLocked', 'Locked') +
+            '</span>'
+          : '<button type="button" class="cds-preview-color__toggle' +
+            (enabled ? ' is-on' : '') +
+            '" data-cds-preview-color-toggle="' +
+            encodeURIComponent(c.color_key) +
+            '" aria-pressed="' +
+            (enabled ? 'true' : 'false') +
+            '" title="' +
+            (enabled
+              ? t('designStudioPreviewColorDisable', 'Disable color')
+              : t('designStudioPreviewColorEnable', 'Enable color')) +
+            '">' +
+            (enabled ? '✓' : '') +
+            '</button>') +
         '<button type="button" class="cds-preview-color__pick" data-cds-preview-color-pick="' +
         encodeURIComponent(c.color_key) +
         '">' +
@@ -5038,13 +5081,14 @@
   function togglePreviewColorEnabled(colorKey) {
     var ck = normColorKey(colorKey) || colorKey;
     var enabledCount = previewColors.filter(function (c) {
-      return c && c.enabled !== false;
+      return c && c.enabled !== false && isPreviewColorUnlocked(c);
     }).length;
     for (var i = 0; i < previewColors.length; i++) {
       if (previewColors[i].color_key !== ck) continue;
+      if (!isPreviewColorUnlocked(previewColors[i])) return;
       var next = previewColors[i].enabled === false;
       if (!next && enabledCount <= 1) {
-        // Keep at least one color enabled (Printify requires ≥1 variant).
+        // Keep at least one unlockable color enabled (Printify requires ≥1 variant).
         return;
       }
       previewColors[i].enabled = next;
@@ -5070,7 +5114,10 @@
     previewPersisted = !!(data && data.persisted) || previewPersisted;
     var rawColors = Array.isArray(data && data.colors)
       ? data.colors.map(function (c) {
-          return Object.assign({}, c, { enabled: c.enabled !== false });
+          var row = Object.assign({}, c);
+          // Seed from studio draft / skill-tree unlocks — not Printify's all-enabled draft state.
+          row.enabled = seedPreviewColorEnabled(row);
+          return row;
         })
       : [];
     previewColors = filterPreviewColorsToAdminPool(rawColors, data && data.allowed_color_keys);
@@ -5301,17 +5348,16 @@
     try {
       var enabledKeys = previewColors
         .filter(function (c) {
-          return c && c.enabled !== false;
+          return c && c.enabled !== false && isPreviewColorUnlocked(c);
         })
         .map(function (c) {
           return c.color_key;
         });
       var selectedIds = [];
       previewColors.forEach(function (c) {
-        if (!c || c.enabled === false) return;
-        (c.variant_ids || []).forEach(function (id) {
-          var n = Number(id);
-          if (Number.isFinite(n)) selectedIds.push(n);
+        if (!c || c.enabled === false || !isPreviewColorUnlocked(c)) return;
+        unlockedVariantIdsForPreviewColor(c).forEach(function (n) {
+          selectedIds.push(n);
         });
       });
       if (!selectedIds.length && draft && draft.variants && Array.isArray(draft.variants.selected_ids)) {
@@ -6072,6 +6118,7 @@
 
     if (btnClose) btnClose.addEventListener('click', function () { close(false); });
     if (btnSave) btnSave.addEventListener('click', onSave);
+    if (btnTestPublish) btnTestPublish.addEventListener('click', onTestPublish);
     if (btnSetVersion) btnSetVersion.addEventListener('click', openVersionsModal);
     if (btnSaveVersion) btnSaveVersion.addEventListener('click', openVersionSaveModal);
 
@@ -6493,7 +6540,7 @@
   }
 
   async function onSave() {
-    if (isSaving || cropApplying || isLoading || !ctxDesign || !ctxProductKey || !draft) return false;
+    if (isSaving || cropApplying || isLoading || isTestPublishing || !ctxDesign || !ctxProductKey || !draft) return false;
     var owner = getOwnerId();
     if (!owner) return false;
 
@@ -6531,6 +6578,101 @@
       return false;
     } finally {
       isSaving = false;
+      setViewerBusy(false);
+      syncBusyChrome();
+    }
+  }
+
+  function collectSelectedVariantIdsForPublish() {
+    // Only sync from Product Preview carousel when it has color rows (Preview was opened).
+    if (previewColors && previewColors.length) {
+      syncStudioDraftFromPreviewColors();
+    }
+    var ids = ((draft && draft.variants && draft.variants.selected_ids) || [])
+      .map(Number)
+      .filter(Number.isFinite);
+    if (ids.length) return ids;
+    var groups = (ctxData && ctxData.variant_groups) || {};
+    var out = [];
+    Object.keys(groups).forEach(function (color) {
+      (groups[color] || []).forEach(function (v) {
+        if (v && v.in_admin_pool && v.unlocked && v.id != null) out.push(Number(v.id));
+      });
+    });
+    return out.filter(Number.isFinite);
+  }
+
+  async function onTestPublish() {
+    if (isTestPublishing || isSaving || cropApplying || isLoading || !ctxDesign || !ctxProductKey || !draft) {
+      return false;
+    }
+    var owner = getOwnerId();
+    if (!owner) return false;
+
+    var selectedIds = collectSelectedVariantIdsForPublish();
+    if (!selectedIds.length) {
+      setStatus(t('designStudioTestPublishNeedVariants', 'Select at least one unlocked variant first.'));
+      return false;
+    }
+    draft.variants = draft.variants || { selected_ids: [] };
+    draft.variants.selected_ids = selectedIds;
+
+    isTestPublishing = true;
+    syncBusyChrome();
+    setViewerBusy(true, t('designStudioTestPublishBusy', 'Publishing…'));
+    setStatus(t('designStudioTestPublishBusy', 'Publishing…'));
+
+    try {
+      var res = await fetch(
+        apiBase() + '?op=creator-studio-test-publish&owner_id=' + encodeURIComponent(owner),
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            owner_id: owner,
+            design_id: Number(ctxDesign.id),
+            product_key: ctxProductKey,
+            region_code: catalogRegion(),
+            printify_product_id: previewPrintifyId || undefined,
+            selected_variant_ids: selectedIds,
+            draft: draft,
+            blueprint_id:
+              (ctxData && ctxData.studio_config && ctxData.studio_config.blueprint_id) ||
+              (ctxData && ctxData.blueprint_id),
+            print_provider_id:
+              (ctxData && ctxData.studio_config && ctxData.studio_config.print_provider_id) ||
+              (ctxData && ctxData.print_provider_id),
+          }),
+        }
+      );
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!data.ok) {
+        if (data.error === 'no_unlocked_selected_variants') {
+          setStatus(t('designStudioTestPublishNeedVariants', 'Select at least one unlocked variant first.'));
+        } else {
+          setStatus(
+            (data.detail && String(data.detail)) ||
+              t('designStudioTestPublishError', 'Test publish failed.')
+          );
+        }
+        return false;
+      }
+      if (data.printify_product_id) {
+        previewPrintifyId = String(data.printify_product_id);
+        previewPersisted = true;
+      }
+      savedDraftJson = draftJson();
+      setStatus(t('designStudioTestPublishOk', 'Published to Shopify.'));
+      return true;
+    } catch (e) {
+      console.warn('[creator-design-studio] test publish', e);
+      setStatus(t('designStudioTestPublishError', 'Test publish failed.'));
+      return false;
+    } finally {
+      isTestPublishing = false;
       setViewerBusy(false);
       syncBusyChrome();
     }
