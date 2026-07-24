@@ -131,6 +131,7 @@
       "/vendor/theme/creator-mobile.css",
       "/vendor/theme/creator-daily-limits-subheader.css",
       "/vendor/theme/creator-mobile-screens.css",
+      "/vendor/theme/creator-personalization-zones.css",
       "/vendor/theme/creator-my-creations.css",
       "/vendor/theme/creator-mobile-filter-modal.css",
       "/vendor/theme/creator-mobile-options-modal.css",
@@ -224,6 +225,7 @@
       // Must include ?v= here: ensureCreationsBundle loads via CreatorLazyModals (no feature-loader bust).
       global.__CREATOR_LAZY_CREATIONS_BUNDLE = [
         asset("creator-perf-debug.js"),
+        asset("creator-personalization-zones.js"),
         asset("creator-creations-library-actions.js"),
         asset("creator-creations-bulk.js"),
         asset("creator-mock-compositing.js"),

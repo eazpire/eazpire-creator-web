@@ -38,6 +38,9 @@
   /** 'direct_sell' | 'personalized_sample' — chosen in the Activate modal (fixed per design). */
   var activateListingMode = 'direct_sell';
 
+  /** Active personalization-zones editor API (Personalizable Sample mode). */
+  var activateZonesApi = null;
+
   /** Embedded Activate UI inside Design Preview Modal (no separate overlay). */
   var activateEmbedActive = false;
   var activateEmbedContentHost = null;
@@ -146,6 +149,35 @@
     syncListingModeUi();
   }
 
+  function parseDesignMetadata(design) {
+    var meta = design && design.metadata;
+    if (!meta) return {};
+    if (typeof meta === 'string') {
+      try {
+        return JSON.parse(meta) || {};
+      } catch (_) {
+        return {};
+      }
+    }
+    return typeof meta === 'object' ? meta : {};
+  }
+
+  function readPersonalizationZonesFromDesign(design) {
+    var meta = parseDesignMetadata(design);
+    var CPZ = window.CreatorPersonalizationZones;
+    if (CPZ && typeof CPZ.normalizeZones === 'function') {
+      return CPZ.normalizeZones(meta.personalization_zones);
+    }
+    return Array.isArray(meta.personalization_zones) ? meta.personalization_zones : [];
+  }
+
+  function getActivatePersonalizationZones() {
+    if (activateZonesApi && typeof activateZonesApi.getZones === 'function') {
+      return activateZonesApi.getZones();
+    }
+    return [];
+  }
+
   /** Refresh the mode switch + hint text (called after toggle). */
   function syncListingModeUi() {
     var M = Mi();
@@ -165,6 +197,10 @@
         ? M.listingModeHintSample || 'Only mockups are shown. Customers personalize before they buy.'
         : M.listingModeHintDirect || 'Products are listed in the shop and can be bought directly.';
     }
+    document.querySelectorAll('[data-creator-personalization-zones]').forEach(function (el) {
+      if (sample) el.removeAttribute('hidden');
+      else el.setAttribute('hidden', '');
+    });
   }
 
   function apiBase() {
@@ -562,7 +598,7 @@
     var h = document.createElement('h3');
     h.id = 'creator-listing-mode-info-title';
     h.className = 'creator-library-action-modal__info-title';
-    h.textContent = M.listingModeInfoTitle || 'Direct Sell vs. Personalized Sample';
+    h.textContent = M.listingModeInfoTitle || 'Direct Sell vs. Personalizable Sample';
     panel.appendChild(h);
 
     appendListingModeInfoSection(
@@ -574,7 +610,7 @@
 
     appendListingModeInfoSection(
       panel,
-      M.listingModeInfoSampleHeading || M.listingModePersonalizedSample || 'Personalized Sample',
+      M.listingModeInfoSampleHeading || M.listingModePersonalizedSample || 'Personalizable Sample',
       M.listingModeInfoSampleBody ||
         'Your design is activated as a sample only — not as a direct shop listing. Mockups appear in the Personalizable Samples carousel and sample pages. Customers choose a sample, personalize it with your design, then order the finished product. This still counts toward activation limits and creator rewards.'
     );
@@ -800,7 +836,7 @@
     var labelSample = document.createElement('span');
     labelSample.className = 'creator-library-action-modal__listing-label';
     labelSample.setAttribute('data-creator-listing-mode-label', 'sample');
-    labelSample.textContent = M.listingModePersonalizedSample || 'Personalized Sample';
+    labelSample.textContent = M.listingModePersonalizedSample || 'Personalizable Sample';
 
     var info = document.createElement('button');
     info.type = 'button';
@@ -828,6 +864,34 @@
 
     parentEl.appendChild(wrap);
     syncListingModeUi();
+  }
+
+  /**
+   * Personalizable Sample zones editor — design viewer (left) + element list (right).
+   * Mounted after listing-mode switch; visible only in sample mode.
+   */
+  function appendPersonalizationZonesPanel(parentEl, design) {
+    var host = document.createElement('div');
+    host.setAttribute('data-creator-personalization-zones', '1');
+    host.setAttribute('hidden', '');
+    parentEl.appendChild(host);
+
+    var CPZ = window.CreatorPersonalizationZones;
+    if (!CPZ || typeof CPZ.mountEdit !== 'function') {
+      console.warn('[creator-creations-library-actions] CreatorPersonalizationZones unavailable');
+      return;
+    }
+
+    if (activateZonesApi && typeof activateZonesApi.destroy === 'function') {
+      try {
+        activateZonesApi.destroy();
+      } catch (_) {}
+    }
+
+    activateZonesApi = CPZ.mountEdit(host, {
+      imageUrl: activateDesignPreviewUrl(design),
+      zones: readPersonalizationZonesFromDesign(design),
+    });
   }
 
   /**
@@ -1455,6 +1519,9 @@
     var metaOut = {};
     if (Array.isArray(excludedPayload)) metaOut.publish_excluded_product_keys = excludedPayload;
     metaOut.library_listing_mode = listingMode;
+    if (listingMode === 'personalized_sample' && Array.isArray(opts && opts.personalization_zones)) {
+      metaOut.personalization_zones = opts.personalization_zones;
+    }
     body.metadata = metaOut;
     var isSampleMode = listingMode === 'personalized_sample';
 
@@ -1484,12 +1551,16 @@
       var CS = window.CreationsScreen;
       if (CS) {
         if (typeof CS.applyDesignLibraryPatch === 'function') {
-          CS.applyDesignLibraryPatch(String(design.id), {
+          var patch = {
             library_status: 'active',
             visibility: visibility,
             creator_name: activateWithout ? '' : creatorName,
             publish_excluded_product_keys: excludedMeta,
-          });
+          };
+          if (isSampleMode && Array.isArray(metaOut.personalization_zones)) {
+            patch.personalization_zones = metaOut.personalization_zones;
+          }
+          CS.applyDesignLibraryPatch(String(design.id), patch);
         }
         if (typeof CS.setDesignsActivityFilter === 'function') {
           CS.setDesignsActivityFilter('active');
@@ -1541,6 +1612,9 @@
     var metaOut = {};
     if (Array.isArray(excludedPayload)) metaOut.publish_excluded_product_keys = excludedPayload;
     metaOut.library_listing_mode = listingMode;
+    if (listingMode === 'personalized_sample' && Array.isArray(opts && opts.personalization_zones)) {
+      metaOut.personalization_zones = opts.personalization_zones;
+    }
     body.metadata = metaOut;
 
     setActivateBusy(true, M.librarySaving || window.CreatorI18n?.saving || 'Saving…');
@@ -1776,6 +1850,9 @@
       var ex = getActivateExcludedKeysFromCtx();
       if (ex !== null) extra.publish_excluded_product_keys = ex;
       extra.listing_mode = getActivateListingMode();
+      if (getActivateListingMode() === 'personalized_sample') {
+        extra.personalization_zones = getActivatePersonalizationZones();
+      }
       return extra;
     }
 
@@ -1799,8 +1876,11 @@
       bindActivateSaveHandler(fn);
     }
 
-    // Order: listing mode → visibility → creator → products (quick only)
+    // Order: listing mode → zones (sample) → visibility → creator → products (quick only)
+    activateZonesApi = null;
     appendListingModeSwitch(contentEl);
+    appendPersonalizationZonesPanel(contentEl, design);
+    syncListingModeUi();
     appendVisibilitySettingsBox(contentEl, visSwitch);
 
     if (activateWithoutCreator) {
@@ -1829,7 +1909,18 @@
     if (includeCatalog) appendActivateCatalogBlock(contentEl, design, catalog);
 
     wireConfirm(function () {
-      runActivate(design, pushExcluded(collectCreatorOpts()));
+      var opts = pushExcluded(collectCreatorOpts());
+      if (
+        opts.listing_mode === 'personalized_sample' &&
+        (!Array.isArray(opts.personalization_zones) || !opts.personalization_zones.length)
+      ) {
+        window.alert(
+          M.zonesMinError ||
+            'Add at least one personalizable element before activating a Personalizable Sample.'
+        );
+        return;
+      }
+      runActivate(design, opts);
     });
     wireSave(function () {
       runSaveActivateSettings(design, pushExcluded(collectCreatorOpts()));
