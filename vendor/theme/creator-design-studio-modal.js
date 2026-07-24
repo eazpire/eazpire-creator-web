@@ -133,6 +133,9 @@
   var isSaving = false;
   var isLoading = false;
   var isTestPublishing = false;
+  var testPublishLockEl = null;
+  var testPublishLockTextEl = null;
+  var testPublishPollTimer = null;
   var pickerMode = 'mine';
   var transformDrag = null;
   var cropDrag = null;
@@ -562,7 +565,43 @@
   }
 
   function isStudioBusy() {
-    return !!(isLoading || isSaving || cropApplying || isTestPublishing);
+    // Test publish locks settings via overlay; Save/crop still use isBusy.
+    return !!(isLoading || isSaving || cropApplying);
+  }
+
+  function setTestPublishLock(show, message) {
+    if (root) root.classList.toggle('is-test-publishing', !!show);
+    if (testPublishLockEl) {
+      if (show) {
+        testPublishLockEl.hidden = false;
+        testPublishLockEl.removeAttribute('hidden');
+        if (testPublishLockTextEl && message) {
+          testPublishLockTextEl.textContent = message;
+        }
+      } else {
+        testPublishLockEl.hidden = true;
+        testPublishLockEl.setAttribute('hidden', '');
+      }
+    }
+    if (btnClose) btnClose.disabled = !!cropApplying;
+    if (btnTestPublish) btnTestPublish.disabled = !!show || isStudioBusy();
+  }
+
+  function clearTestPublishPoll() {
+    if (testPublishPollTimer) {
+      clearInterval(testPublishPollTimer);
+      testPublishPollTimer = null;
+    }
+  }
+
+  function emitTestPublishEvent(detail) {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('eaz-studio-test-publish', {
+          detail: detail || {},
+        })
+      );
+    } catch (_) {}
   }
 
   function setViewerBusy(show, message) {
@@ -1082,6 +1121,8 @@
     btnSetVersion = root.querySelector('#cds-btn-set-version') || root.querySelector('#cds-btn-reset');
     btnSaveVersion = root.querySelector('#cds-btn-save-version');
     btnTestPublish = root.querySelector('#cds-btn-test-publish');
+    testPublishLockEl = root.querySelector('#cds-test-publish-lock');
+    testPublishLockTextEl = root.querySelector('#cds-test-publish-lock-text');
     viewerEl = root.querySelector('#cds-viewer');
     viewerStageEl = root.querySelector('#cds-viewer-stage');
     mockImgEl = root.querySelector('#cds-mock-img');
@@ -6118,7 +6159,14 @@
 
     if (btnClose) btnClose.addEventListener('click', function () { close(false); });
     if (btnSave) btnSave.addEventListener('click', onSave);
-    if (btnTestPublish) btnTestPublish.addEventListener('click', onTestPublish);
+    // Delegated click so Test Publish works even if footer was re-rendered / late DOM.
+    root.addEventListener('click', function (ev) {
+      var btn = ev.target && ev.target.closest && ev.target.closest('#cds-btn-test-publish');
+      if (!btn || !root.contains(btn)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      onTestPublish();
+    });
     if (btnSetVersion) btnSetVersion.addEventListener('click', openVersionsModal);
     if (btnSaveVersion) btnSaveVersion.addEventListener('click', openVersionSaveModal);
 
@@ -6482,6 +6530,9 @@
     isOpen = false;
     isLoading = false;
     cropApplying = false;
+    isTestPublishing = false;
+    clearTestPublishPoll();
+    setTestPublishLock(false);
     setViewerBusy(false);
     setLayoutReady(false);
     if (layoutRaf) {
@@ -6603,24 +6654,38 @@
   }
 
   async function onTestPublish() {
-    if (isTestPublishing || isSaving || cropApplying || isLoading || !ctxDesign || !ctxProductKey || !draft) {
+    if (isTestPublishing || isSaving || cropApplying || isLoading) {
+      return false;
+    }
+    if (!cacheDom()) return false;
+    if (!ctxDesign || !ctxProductKey || !draft) {
+      setStatus(t('designStudioLoadError', 'Could not load studio.'));
       return false;
     }
     var owner = getOwnerId();
-    if (!owner) return false;
+    if (!owner) {
+      setStatus(t('designStudioTestPublishError', 'Test publish failed.') + ' (no owner)');
+      return false;
+    }
 
     var selectedIds = collectSelectedVariantIdsForPublish();
     if (!selectedIds.length) {
-      setStatus(t('designStudioTestPublishNeedVariants', 'Select at least one unlocked variant first.'));
+      var need = t('designStudioTestPublishNeedVariants', 'Select at least one unlocked variant first.');
+      setStatus(need);
+      setTestPublishLock(true, need);
+      setTimeout(function () {
+        if (!isTestPublishing) setTestPublishLock(false);
+      }, 2200);
       return false;
     }
     draft.variants = draft.variants || { selected_ids: [] };
     draft.variants.selected_ids = selectedIds;
 
     isTestPublishing = true;
+    var busyMsg = t('designStudioTestPublishBusy', 'Publishing…');
+    setTestPublishLock(true, busyMsg);
+    setStatus(busyMsg);
     syncBusyChrome();
-    setViewerBusy(true, t('designStudioTestPublishBusy', 'Publishing…'));
-    setStatus(t('designStudioTestPublishBusy', 'Publishing…'));
 
     try {
       var res = await fetch(
@@ -6650,14 +6715,16 @@
         return {};
       });
       if (!data.ok) {
-        if (data.error === 'no_unlocked_selected_variants') {
-          setStatus(t('designStudioTestPublishNeedVariants', 'Select at least one unlocked variant first.'));
-        } else {
-          setStatus(
-            (data.detail && String(data.detail)) ||
-              t('designStudioTestPublishError', 'Test publish failed.')
-          );
-        }
+        var errMsg =
+          data.error === 'no_unlocked_selected_variants'
+            ? t('designStudioTestPublishNeedVariants', 'Select at least one unlocked variant first.')
+            : (data.detail && String(data.detail)) ||
+              t('designStudioTestPublishError', 'Test publish failed.');
+        setStatus(errMsg);
+        setTestPublishLock(true, errMsg);
+        setTimeout(function () {
+          setTestPublishLock(false);
+        }, 2400);
         return false;
       }
       if (data.printify_product_id) {
@@ -6665,17 +6732,91 @@
         previewPersisted = true;
       }
       savedDraftJson = draftJson();
-      setStatus(t('designStudioTestPublishOk', 'Published to Shopify.'));
+      var queuedMsg = t('designStudioTestPublishQueued', 'Test Publish queued.');
+      setStatus(queuedMsg);
+      setTestPublishLock(true, (data.status && data.status.message) || queuedMsg);
+      emitTestPublishEvent({
+        design_id: Number(ctxDesign.id),
+        product_key: ctxProductKey,
+        published_design_id: data.published_design_id || null,
+        printify_product_id: data.printify_product_id || previewPrintifyId || null,
+        phase: (data.status && data.status.phase) || 'queued',
+        message: (data.status && data.status.message) || queuedMsg,
+        in_progress: true,
+      });
+      startTestPublishStatusPoll(owner, Number(ctxDesign.id), ctxProductKey);
       return true;
     } catch (e) {
       console.warn('[creator-design-studio] test publish', e);
-      setStatus(t('designStudioTestPublishError', 'Test publish failed.'));
+      var fail = t('designStudioTestPublishError', 'Test publish failed.');
+      setStatus(fail);
+      setTestPublishLock(true, fail);
+      setTimeout(function () {
+        setTestPublishLock(false);
+      }, 2400);
       return false;
     } finally {
       isTestPublishing = false;
-      setViewerBusy(false);
       syncBusyChrome();
     }
+  }
+
+  function startTestPublishStatusPoll(owner, designId, productKey) {
+    clearTestPublishPoll();
+    var ticks = 0;
+    testPublishPollTimer = setInterval(function () {
+      ticks += 1;
+      if (ticks > 90) {
+        clearTestPublishPoll();
+        return;
+      }
+      fetch(
+        apiBase() +
+          '?op=creator-studio-test-publish-status&owner_id=' +
+          encodeURIComponent(owner) +
+          '&design_id=' +
+          encodeURIComponent(String(designId)) +
+          '&product_key=' +
+          encodeURIComponent(productKey),
+        { credentials: 'include', headers: { Accept: 'application/json' } }
+      )
+        .then(function (r) {
+          return r.json().catch(function () {
+            return {};
+          });
+        })
+        .then(function (data) {
+          if (!data || !data.ok) return;
+          var st = data.status || {};
+          var phase = st.phase || '';
+          var msg = st.message || '';
+          if (msg && root && root.classList.contains('is-test-publishing')) {
+            setTestPublishLock(true, msg);
+          }
+          emitTestPublishEvent({
+            design_id: designId,
+            product_key: productKey,
+            published_design_id: data.published_design_id || null,
+            printify_product_id: data.printify_product_id || null,
+            shopify_product_id: data.shopify_product_id || null,
+            shopify_completion_status: data.shopify_completion_status || null,
+            phase: phase,
+            message: msg,
+            in_progress: !!data.in_progress,
+          });
+          if (!data.in_progress) {
+            clearTestPublishPoll();
+            if (phase === 'complete') {
+              setStatus(t('designStudioTestPublishOk', 'Published to Shopify.'));
+            } else if (phase === 'failed') {
+              setStatus(msg || t('designStudioTestPublishError', 'Test publish failed.'));
+            }
+            // Keep lock only while studio still open for this product; allow edits after done.
+            setTestPublishLock(false);
+          }
+        })
+        .catch(function () {});
+    }, 4000);
   }
 
   function ensureStudioStyles() {

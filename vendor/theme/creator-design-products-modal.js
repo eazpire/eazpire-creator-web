@@ -115,6 +115,8 @@
   /** 'unlocked' | 'locked' | 'all' — unlocked shows Active/Queue groups */
   var ctxFilter = 'unlocked';
   var unlockedGroupOpen = { active: true, queue: true };
+  /** product_key → { phase, message, in_progress } for Test Publish overlays */
+  var ctxTestPublishByKey = {};
 
   /** @type {WeakMap<Element, IntersectionObserver>} lazy card media observers */
   var cardMediaObservers = new WeakMap();
@@ -779,7 +781,47 @@
       var pk = String(r.product_key).trim();
       if (!pk || ctxPubRowByKey[pk]) continue;
       ctxPubRowByKey[pk] = r;
+      var intent = String(r.publish_intent || '');
+      var completion = String(r.shopify_completion_status || '');
+      if (intent === 'test_publish' && completion !== 'complete' && completion !== 'failed') {
+        ctxTestPublishByKey[pk] = {
+          phase: completion || 'pending',
+          message: r.publish_status_detail || 'Publishing…',
+          in_progress: true,
+        };
+      } else if (intent === 'test_publish' && (completion === 'complete' || completion === 'failed')) {
+        ctxTestPublishByKey[pk] = {
+          phase: completion,
+          message: r.publish_status_detail || '',
+          in_progress: false,
+        };
+      }
     }
+  }
+
+  if (!window.__eazCdpTestPublishBound) {
+    window.__eazCdpTestPublishBound = true;
+    window.addEventListener('eaz-studio-test-publish', function (ev) {
+      var d = (ev && ev.detail) || {};
+      var pk = String(d.product_key || '').trim();
+      if (!pk) return;
+      ctxTestPublishByKey[pk] = {
+        phase: d.phase || 'queued',
+        message: d.message || 'Publishing…',
+        in_progress: d.in_progress !== false && d.phase !== 'complete' && d.phase !== 'failed',
+      };
+      if (d.published_design_id || d.shopify_completion_status || d.printify_product_id) {
+        ctxPubRowByKey[pk] = Object.assign({}, ctxPubRowByKey[pk] || {}, {
+          product_key: pk,
+          id: d.published_design_id || (ctxPubRowByKey[pk] && ctxPubRowByKey[pk].id),
+          publish_intent: 'test_publish',
+          shopify_completion_status: d.shopify_completion_status || 'pending_shopify',
+          printify_product_id: d.printify_product_id || null,
+          publish_status_detail: d.message || null,
+        });
+      }
+      refreshAllCardBadges();
+    });
   }
 
   function refreshCardBadges(card, pk) {
@@ -788,15 +830,54 @@
     if (old) old.remove();
     var pubRow = ctxPubRowByKey[pk];
     var isChecked = !!ctxChecked[pk];
+    var testSt = ctxTestPublishByKey[pk];
     var M = Mi();
     var badges = document.createElement('div');
     badges.className = 'creator-design-products-modal__card-badges';
-    if (pubRow) {
+    var isTest =
+      (pubRow && String(pubRow.publish_intent || '') === 'test_publish') ||
+      (testSt && testSt.in_progress);
+    if (isTest) {
+      var tp = document.createElement('span');
+      tp.className =
+        'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--test';
+      tp.textContent =
+        M.testProduct ||
+        M.designProductsTestProduct ||
+        (window.CreatorI18n && window.CreatorI18n['creator.creations.test_product']) ||
+        'Test Product';
+      badges.appendChild(tp);
+    }
+    if (testSt && testSt.in_progress) {
+      card.classList.add('is-test-publishing');
+      var spinWrap = card.querySelector('.creator-design-products-modal__card-loading');
+      if (!spinWrap) {
+        spinWrap = document.createElement('div');
+        spinWrap.className = 'creator-design-products-modal__card-loading';
+        spinWrap.innerHTML =
+          '<span class="creator-design-products-modal__card-spinner" aria-hidden="true"></span>';
+        card.appendChild(spinWrap);
+      }
+      var statusLine = card.querySelector('.creator-design-products-modal__card-status');
+      if (!statusLine) {
+        statusLine = document.createElement('div');
+        statusLine.className = 'creator-design-products-modal__card-status';
+        card.appendChild(statusLine);
+      }
+      statusLine.textContent = testSt.message || M.testProductPublishing || 'Publishing…';
+    } else {
+      card.classList.remove('is-test-publishing');
+      var oldLoad = card.querySelector('.creator-design-products-modal__card-loading');
+      if (oldLoad) oldLoad.remove();
+      var oldStatus = card.querySelector('.creator-design-products-modal__card-status');
+      if (oldStatus) oldStatus.remove();
+    }
+    if (pubRow && !(testSt && testSt.in_progress)) {
       var on = document.createElement('span');
       on.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--online';
       on.textContent = M.designProductsBadgeOnline || M.designProductsBadgeActive || 'Active';
       badges.appendChild(on);
-    } else if (isChecked) {
+    } else if (isChecked && !(testSt && testSt.in_progress)) {
       var qu = document.createElement('span');
       qu.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--queue';
       qu.textContent = M.designProductsBadgeQueue || 'Queue';

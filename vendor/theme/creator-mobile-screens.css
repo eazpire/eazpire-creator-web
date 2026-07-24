@@ -821,6 +821,55 @@
   padding: 8px;
   box-sizing: border-box;
 }
+.creator-creations-card-badge--test {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 6;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(249, 115, 22, 0.95);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.creator-creations-card-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.45);
+  pointer-events: none;
+}
+.creator-creations-card-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #f97316;
+  animation: cdp-test-spin 0.8s linear infinite;
+}
+.creator-creations-card-status {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 5;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.25;
+  pointer-events: none;
+}
 .creator-creations-card:hover {
   border-color: rgba(249, 115, 22, 0.5);
   transform: scale(1.02);
@@ -2093,6 +2142,55 @@ html.creator-design-products-modal-open {
   color: #fcd34d;
   border: 1px solid rgba(251, 191, 36, 0.42);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.creator-design-products-modal__card-badge--test {
+  background: rgba(249, 115, 22, 0.92);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.creator-design-products-modal__card.is-test-publishing {
+  position: relative;
+}
+.creator-design-products-modal__card-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.45);
+  pointer-events: none;
+  border-radius: inherit;
+}
+.creator-design-products-modal__card-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #f97316;
+  animation: cdp-test-spin 0.8s linear infinite;
+}
+.creator-design-products-modal__card-status {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 36px;
+  z-index: 5;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.25;
+  pointer-events: none;
+}
+@keyframes cdp-test-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .creator-design-products-modal__card-published {
   display: none;

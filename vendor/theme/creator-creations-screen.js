@@ -1375,11 +1375,23 @@
         published_at: p.last_published_at || null,
         review_status: p.review_status || null,
         shopify_completion_status: p.shopify_completion_status || null,
+        publish_intent: p.publish_intent || null,
+        publish_status_detail: p.publish_status_detail || null,
+        is_test_product: !!p.is_test_product || p.publish_intent === 'test_publish',
         published_design_id: p.published_design_id || null,
         design_ids: Array.isArray(p.design_ids) ? p.design_ids : []
       });
     });
     items.sort(function (a, b) {
+      var aTest =
+        a.is_test_product &&
+        a.shopify_completion_status !== 'complete' &&
+        a.shopify_completion_status !== 'failed';
+      var bTest =
+        b.is_test_product &&
+        b.shopify_completion_status !== 'complete' &&
+        b.shopify_completion_status !== 'failed';
+      if (aTest !== bTest) return aTest ? -1 : 1;
       var ta = a.published_at ? (typeof a.published_at === 'string' ? new Date(a.published_at).getTime() : (a.published_at < 1e12 ? a.published_at * 1000 : a.published_at)) : 0;
       var tb = b.published_at ? (typeof b.published_at === 'string' ? new Date(b.published_at).getTime() : (b.published_at < 1e12 ? b.published_at * 1000 : b.published_at)) : 0;
       return tb - ta;
@@ -2567,7 +2579,15 @@
   function createProductCard(prod, index) {
     var card = document.createElement('div');
     card.className = 'creator-creations-card';
+    var isTest = !!prod.is_test_product || prod.publish_intent === 'test_publish';
+    var inProgress =
+      isTest &&
+      prod.shopify_completion_status !== 'complete' &&
+      prod.shopify_completion_status !== 'failed';
+    if (isTest) card.classList.add('is-test-product');
+    if (inProgress) card.classList.add('is-test-publishing');
     card.setAttribute('data-eazy-guide', 'creations.product-card');
+    if (prod.product_key) card.setAttribute('data-product-key', String(prod.product_key));
     var media = document.createElement('div');
     media.className = 'creator-creations-card-media';
     appendProductImageCarousel(media, prod, index);
@@ -2577,6 +2597,26 @@
       noImg.textContent = '—';
       media.appendChild(noImg);
       tryHydrateProductCardImage(media, prod);
+    }
+    if (inProgress) {
+      var load = document.createElement('div');
+      load.className = 'creator-creations-card-loading';
+      load.innerHTML = '<span class="creator-creations-card-spinner" aria-hidden="true"></span>';
+      media.appendChild(load);
+      var st = document.createElement('div');
+      st.className = 'creator-creations-card-status';
+      st.textContent =
+        prod.publish_status_detail ||
+        (window.CreatorI18n && window.CreatorI18n['creator.creations.test_product_publishing']) ||
+        'Publishing…';
+      card.appendChild(st);
+    }
+    if (isTest) {
+      var badge = document.createElement('span');
+      badge.className = 'creator-creations-card-badge creator-creations-card-badge--test';
+      badge.textContent =
+        (window.CreatorI18n && window.CreatorI18n['creator.creations.test_product']) || 'Test Product';
+      card.appendChild(badge);
     }
     appendReviewStatusBadge(card, prod);
     card.appendChild(media);
@@ -3243,6 +3283,7 @@
       filteredProducts = products.slice();
       filterProducts(document.getElementById('creatorProductsSearch')?.value || '');
       renderProductsGrid();
+      ensureTestPublishProductsPoll();
       window.dispatchEvent(new CustomEvent('creator-products-loaded', { detail: { count: products.length } }));
     }).catch(function (err) {
       console.error('[CreationsScreen] loadProducts: fetch error', err);
@@ -3685,6 +3726,89 @@
     if (!designsLoadedOnce && currentTab === 'designs') {
       loadDesigns(true);
     }
+  });
+
+  var testPublishProductsPoll = null;
+  function ensureTestPublishProductsPoll() {
+    var hasPending = (products || []).some(function (p) {
+      return (
+        p &&
+        (p.is_test_product || p.publish_intent === 'test_publish') &&
+        p.shopify_completion_status !== 'complete' &&
+        p.shopify_completion_status !== 'failed'
+      );
+    });
+    if (!hasPending) {
+      if (testPublishProductsPoll) {
+        clearInterval(testPublishProductsPoll);
+        testPublishProductsPoll = null;
+      }
+      return;
+    }
+    if (testPublishProductsPoll) return;
+    testPublishProductsPoll = setInterval(function () {
+      if (currentTab !== 'products') return;
+      loadProducts();
+    }, 5000);
+  }
+
+  window.addEventListener('eaz-studio-test-publish', function (ev) {
+    var d = (ev && ev.detail) || {};
+    var pk = String(d.product_key || '').trim();
+    if (!pk) return;
+    var found = false;
+    for (var i = 0; i < products.length; i++) {
+      if (String(products[i].product_key || '') !== pk) continue;
+      found = true;
+      products[i].is_test_product = true;
+      products[i].publish_intent = 'test_publish';
+      products[i].publish_status_detail = d.message || products[i].publish_status_detail;
+      if (d.shopify_completion_status) {
+        products[i].shopify_completion_status = d.shopify_completion_status;
+      } else if (d.in_progress) {
+        products[i].shopify_completion_status = 'pending_shopify';
+      }
+      if (d.published_design_id) products[i].published_design_id = d.published_design_id;
+      if (d.printify_product_id) products[i].printify_product_id = d.printify_product_id;
+      break;
+    }
+    if (!found) {
+      products.unshift({
+        id: 'test-' + pk,
+        title: d.message || pk,
+        product_key: pk,
+        product_name: pk,
+        is_test_product: true,
+        publish_intent: 'test_publish',
+        shopify_completion_status: d.in_progress === false ? d.phase || 'complete' : 'pending_shopify',
+        publish_status_detail: d.message || 'Publishing…',
+        published_design_id: d.published_design_id || null,
+        printify_product_id: d.printify_product_id || null,
+        published_at: Date.now(),
+        design_ids: d.design_id ? [d.design_id] : [],
+        image_url: null,
+        printify_images: null,
+        mockups_by_view: null,
+      });
+    }
+    products.sort(function (a, b) {
+      var aTest =
+        a.is_test_product &&
+        a.shopify_completion_status !== 'complete' &&
+        a.shopify_completion_status !== 'failed';
+      var bTest =
+        b.is_test_product &&
+        b.shopify_completion_status !== 'complete' &&
+        b.shopify_completion_status !== 'failed';
+      if (aTest !== bTest) return aTest ? -1 : 1;
+      return 0;
+    });
+    if (currentTab === 'products') {
+      filteredProducts = products.slice();
+      productsLoadedOnce = true;
+      renderProductsGrid();
+    }
+    ensureTestPublishProductsPoll();
   });
 
   window.addEventListener('creator-creations-bundle-ready', function () {

@@ -59,6 +59,14 @@
 
     <div class="cds-modal__status" id="cds-status" role="status"></div>
 
+    <div class="cds-test-publish-lock" id="cds-test-publish-lock" hidden aria-live="polite">
+      <div class="cds-test-publish-lock__card">
+        <div class="cds-test-publish-lock__spinner" aria-hidden="true"></div>
+        <p class="cds-test-publish-lock__text" id="cds-test-publish-lock-text" data-t="creator.design_studio.test_publish_busy">Publishing…</p>
+        <p class="cds-test-publish-lock__hint" data-t="creator.design_studio.test_publish_lock_hint">You can close this window. Publishing continues in the background.</p>
+      </div>
+    </div>
+
     <div class="cds-modal__workspace">
       <section class="cds-viewer-column" aria-label="Product mock preview">
         <div class="cds-viewer" id="cds-viewer">
