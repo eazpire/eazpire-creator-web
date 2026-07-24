@@ -1,0 +1,61 @@
+<div
+  id="creatorPublishAssistModal"
+  class="pa-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pa-modal-title"
+>
+  <div class="pa-modal__shell">
+    <header class="pa-modal__header">
+      <div class="pa-modal__header-left">
+        <button type="button" class="pa-btn pa-btn--icon pa-btn--menu" id="pa-btn-menu" aria-label="Open community menu">
+          <span aria-hidden="true">☰</span>
+        </button>
+        <div>
+          <h2 id="pa-modal-title" class="pa-modal__title" data-t="creator.publish_assist.title">Publish Assist</h2>
+          <p class="pa-modal__subtitle" data-t="creator.publish_assist.subtitle">Help community partners publish designs on unlocked variants.</p>
+        </div>
+      </div>
+      <button type="button" class="pa-btn pa-btn--icon" id="pa-btn-close" aria-label="Close">×</button>
+    </header>
+
+    <div class="pa-body" id="pa-body">
+      <aside class="pa-sidebar" id="pa-sidebar" aria-label="Creator Community">
+        <div class="pa-sidebar__nav">
+          <h3 class="pa-sidebar__heading" data-t="creator.publish_assist.community">Creator Community</h3>
+          <div class="pa-sidebar__groups" id="pa-partner-list"></div>
+          <p class="pa-sidebar__empty" id="pa-partner-empty" hidden data-t="creator.publish_assist.no_partners">No active community partners yet.</p>
+        </div>
+        <button type="button" class="pa-rail" id="pa-sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="true">‹</button>
+      </aside>
+
+      <div class="pa-drawer-scrim" id="pa-drawer-scrim" hidden></div>
+
+      <main class="pa-main" id="pa-main">
+        <div class="pa-tabs" role="tablist">
+          <button type="button" class="pa-tab is-active" data-pa-tab="offer" role="tab" aria-selected="true" data-t="creator.publish_assist.tab_offer">Offer</button>
+          <button type="button" class="pa-tab" data-pa-tab="request" role="tab" aria-selected="false" data-t="creator.publish_assist.tab_request">Request</button>
+          <button type="button" class="pa-tab" data-pa-tab="pending" role="tab" aria-selected="false" data-t="creator.publish_assist.tab_pending">
+            Pending
+            <span class="pa-tab__badge" id="pa-pending-badge" hidden>0</span>
+          </button>
+        </div>
+
+        <p class="pa-tab-hint" id="pa-tab-hint" data-t="creator.publish_assist.hint_offer">Partner designs missing on variants you already unlocked.</p>
+
+        <div class="pa-partner-banner" id="pa-partner-banner" hidden>
+          <span data-t="creator.publish_assist.selected_partner">Selected</span>
+          <strong id="pa-partner-name" translate="no" data-eaz-creator-name="1"></strong>
+        </div>
+
+        <div class="pa-content" id="pa-content">
+          <p class="pa-empty" id="pa-empty" data-t="creator.publish_assist.select_partner">Select a community member to continue.</p>
+          <div class="pa-list" id="pa-list" hidden></div>
+          <div class="pa-loading" id="pa-loading" hidden>Loading…</div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>

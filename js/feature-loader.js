@@ -532,6 +532,8 @@
       settingsCss();
 
       await injectPartial("creator-settings-v2-modal.html");
+      await injectPartial("creator-publish-assist-modal.html");
+      loadCss(asset("creator-publish-assist-modal.css"));
 
       await loadScriptsSequential([
         asset("share-button.js"),
@@ -541,6 +543,7 @@
         asset("eaz-insufficient-actions.js"),
         asset("notification-preferences-panel.js"),
         asset("community-panel.js"),
+        asset("creator-publish-assist-modal.js"),
         asset("creator-codes-panel.js"),
         asset("creator-level-panel.js"),
         asset("creator-level-celebration.js"),
