@@ -834,11 +834,14 @@
   }
 
   function buildVariantGroups(defaultsResp, byViewProduct) {
-    // Prefer published/product mockups (design printed), then fill missing
-    // colors + views from catalog so Front/Back and all colors show up.
+    // Published / Printify products: only show colors that exist on the product.
+    // Catalog get-mockup-defaults is the full admin pool and must NOT fill Variants.
+    var productCount = countByViewUrls(byViewProduct);
+    var hasPrintifyProduct = !!(ctx && ctx.printifyProductId);
     var byView = mergeByViewMaps({}, byViewProduct);
-    var catalogByView = extractCatalogByView(defaultsResp);
-    byView = mergeByViewMaps(byView, catalogByView);
+    if (!hasPrintifyProduct && productCount === 0) {
+      byView = mergeByViewMaps(byView, extractCatalogByView(defaultsResp));
+    }
 
     var groups = buildVariantGroupsFromProductMockups(byView);
     groups.sort(function (a, b) {
@@ -1343,12 +1346,13 @@
   }
 
   /**
-   * Fastest path: render catalog colors ASAP from get-mockup-defaults,
-   * then optionally enrich with published product mockups (design printed).
+   * Variants for a published Printify product = product mockups only.
+   * Catalog defaults (all admin colors) are only used for unpublished / draft cards.
    */
   function loadVariantPanels() {
     var token = ++variantsLoadToken;
     var lastDefaults = null;
+    var publishedOnly = !!(ctx && ctx.printifyProductId);
 
     function stillCurrent() {
       return isOpen && token === variantsLoadToken;
@@ -1358,33 +1362,34 @@
       if (!stillCurrent()) return;
       if (mockData) productMockupsByView = mockData;
       renderVariantsPanel(
-        defaultsResp && defaultsResp.ok !== false ? defaultsResp : lastDefaults,
+        publishedOnly ? null : defaultsResp && defaultsResp.ok !== false ? defaultsResp : lastDefaults,
         mockData || productMockupsByView
       );
     }
 
-    // 1) Immediate paint from whatever we already have (card mockups / image).
+    // 1) Immediate paint from card mockups / image (never catalog for Printify products).
     if (countByViewUrls(ctx.mockupsByView) > 0 || ctx.imageUrl) {
       productMockupsByView = mergeByViewMaps({}, ctx.mockupsByView);
       paint(null, productMockupsByView);
     }
 
-    // 2) Catalog defaults = all colors × front/back (fast, no Printify).
-    var defaultsPromise = ctx.productKey
-      ? fetchJSONWithTimeout(
-          apiBase() +
-            '?op=get-mockup-defaults&product_key=' +
-            encodeURIComponent(ctx.productKey),
-          8000
-        ).then(function (defaultsResp) {
-          if (!stillCurrent()) return null;
-          lastDefaults = defaultsResp && defaultsResp.ok !== false ? defaultsResp : null;
-          paint(lastDefaults, productMockupsByView);
-          return lastDefaults;
-        })
-      : Promise.resolve(null);
+    // 2) Catalog defaults only when there is no Printify product yet.
+    var defaultsPromise =
+      ctx.productKey && !publishedOnly
+        ? fetchJSONWithTimeout(
+            apiBase() +
+              '?op=get-mockup-defaults&product_key=' +
+              encodeURIComponent(ctx.productKey),
+            8000
+          ).then(function (defaultsResp) {
+            if (!stillCurrent()) return null;
+            lastDefaults = defaultsResp && defaultsResp.ok !== false ? defaultsResp : null;
+            paint(lastDefaults, productMockupsByView);
+            return lastDefaults;
+          })
+        : Promise.resolve(null);
 
-    // 3) Published mockups in parallel (may be slower) — re-paint when ready.
+    // 3) Published / Printify mockups — authoritative for Variants when product exists.
     var productPromise = loadProductMockups(token).then(function (mockData) {
       if (!stillCurrent()) return null;
       paint(lastDefaults, mockData);
@@ -1393,7 +1398,6 @@
 
     return Promise.all([defaultsPromise, productPromise]).then(function () {
       if (!stillCurrent()) return;
-      // Final paint in case one path finished before the other set lastDefaults.
       paint(lastDefaults, productMockupsByView);
     });
   }
