@@ -775,6 +775,8 @@
 
   function rebuildPublishedRowMap(rows) {
     ctxPubRowByKey = {};
+    var now = Date.now();
+    var STALE_MS = 25 * 60 * 1000;
     for (var i = 0; i < (rows || []).length; i++) {
       var r = rows[i];
       if (!r || !r.product_key) continue;
@@ -784,7 +786,24 @@
       var intent = String(r.publish_intent || '');
       var completion = String(r.shopify_completion_status || '');
       var isQueueIntent = intent === 'test_publish' || intent === 'creator_publish';
-      if (isQueueIntent && completion !== 'complete' && completion !== 'failed') {
+      var hasPrintify = !!(r.printify_product_id && String(r.printify_product_id).trim());
+      var updatedAt = Number(r.updated_at || 0) || 0;
+      var stale =
+        isQueueIntent &&
+        !hasPrintify &&
+        completion !== 'complete' &&
+        completion !== 'failed' &&
+        updatedAt > 0 &&
+        now - updatedAt > STALE_MS;
+      if (stale) {
+        ctxTestPublishByKey[pk] = {
+          phase: 'failed',
+          message: r.publish_status_detail || 'Publish timed out. Please try Test Publish again.',
+          in_progress: false,
+          intent: intent,
+        };
+        r.shopify_completion_status = 'failed';
+      } else if (isQueueIntent && completion !== 'complete' && completion !== 'failed') {
         ctxTestPublishByKey[pk] = {
           phase: completion || 'pending',
           message: r.publish_status_detail || 'Publishing…',
