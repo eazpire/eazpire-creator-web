@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "test-publish-stuck-20260725a";
+  var PORTAL_ASSET_V = "test-publish-queue-mock-20260725a";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {

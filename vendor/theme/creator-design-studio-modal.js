@@ -6706,15 +6706,88 @@
     var ids = ((draft && draft.variants && draft.variants.selected_ids) || [])
       .map(Number)
       .filter(Number.isFinite);
-    if (ids.length) return ids;
+    // Do not expand to all unlocked variants — empty selection must fail closed.
+    return ids;
+  }
+
+  function buildTestPublishMockPayload() {
+    var designUrl =
+      (ctxDesign &&
+        (ctxDesign.image_url || ctxDesign.preview_url || ctxDesign.url || ctxDesign.design_url)) ||
+      null;
+    var cfg = (ctxData && (ctxData.studio_config || ctxData)) || {};
+    var mocks = cfg.mocks_by_color || {};
+    var ids = ((draft && draft.variants && draft.variants.selected_ids) || [])
+      .map(Number)
+      .filter(Number.isFinite);
     var groups = (ctxData && ctxData.variant_groups) || {};
-    var out = [];
+    var colors = [];
+    var seen = {};
     Object.keys(groups).forEach(function (color) {
       (groups[color] || []).forEach(function (v) {
-        if (v && v.in_admin_pool && v.unlocked && v.id != null) out.push(Number(v.id));
+        if (!v || ids.indexOf(Number(v.id)) < 0) return;
+        var key = String(color || '').trim();
+        if (!key || seen[key.toLowerCase()]) return;
+        seen[key.toLowerCase()] = true;
+        colors.push(key);
       });
     });
-    return out.filter(Number.isFinite);
+    if (!colors.length) {
+      var ck =
+        (draft && draft.print_area && draft.print_area.color_key) ||
+        (draft && draft.mockups && draft.mockups.main_preview_color) ||
+        '';
+      if (ck) colors.push(String(ck));
+    }
+    var slides = [];
+    var mockUrls = [];
+    colors.forEach(function (color) {
+      var mockKey = typeof findMocksColorKey === 'function' ? findMocksColorKey(color) : color;
+      var list = (mocks && (mocks[mockKey] || mocks[color])) || [];
+      if (!list.length) return;
+      var preferred =
+        (draft && draft.print_area && draft.print_area.position) ||
+        cfg.default_view_key ||
+        'front';
+      var mock = null;
+      for (var i = 0; i < list.length; i++) {
+        var pos = String((list[i] && list[i].position) || '').toLowerCase();
+        if (pos === String(preferred).toLowerCase()) {
+          mock = list[i];
+          break;
+        }
+      }
+      if (!mock) mock = list[0];
+      var url =
+        (mock &&
+          (mock.clean_mock_url || mock.editor_mock_url || mock.mock_url || mock.shop_mock_url)) ||
+        '';
+      if (!url) return;
+      mockUrls.push(url);
+      var placement =
+        (draft &&
+          draft.print_area &&
+          draft.print_area.primary && {
+            x: draft.print_area.primary.x,
+            y: draft.print_area.primary.y,
+            scale: draft.print_area.primary.scale,
+            rotate: draft.print_area.primary.rotate || 0,
+          }) ||
+        null;
+      slides.push({
+        color_key: mockKey || color,
+        color_label: color,
+        mock_url: url,
+        position: (mock && mock.position) || preferred,
+        print_area_frac: (mock && mock.print_area_frac) || null,
+        placement: placement,
+      });
+    });
+    return {
+      design_image_url: designUrl,
+      mock_urls: mockUrls,
+      studio_card_preview: slides.length ? { slides: slides } : null,
+    };
   }
 
   async function onTestPublish() {
@@ -6824,15 +6897,21 @@
       var queuedMsg = t('designStudioTestPublishQueued', 'Test Publish queued.');
       setStatus(queuedMsg);
       setTestPublishLock(true, (data.status && data.status.message) || queuedMsg);
-      emitTestPublishEvent({
-        design_id: Number(ctxDesign.id),
-        product_key: ctxProductKey,
-        published_design_id: data.published_design_id || null,
-        printify_product_id: data.printify_product_id || previewPrintifyId || null,
-        phase: (data.status && data.status.phase) || 'queued',
-        message: (data.status && data.status.message) || queuedMsg,
-        in_progress: true,
-      });
+      emitTestPublishEvent(
+        Object.assign(
+          {
+            design_id: Number(ctxDesign.id),
+            product_key: ctxProductKey,
+            published_design_id: data.published_design_id || null,
+            printify_product_id: data.printify_product_id || previewPrintifyId || null,
+            phase: (data.status && data.status.phase) || 'queued',
+            message: (data.status && data.status.message) || queuedMsg,
+            in_progress: true,
+            publish_intent: 'test_publish',
+          },
+          buildTestPublishMockPayload()
+        )
+      );
       startTestPublishStatusPoll(owner, Number(ctxDesign.id), ctxProductKey);
       return true;
     } catch (e) {
@@ -6892,6 +6971,7 @@
             phase: phase,
             message: msg,
             in_progress: !!data.in_progress,
+            publish_intent: data.publish_intent || 'test_publish',
           });
           if (!data.in_progress) {
             clearTestPublishPoll();

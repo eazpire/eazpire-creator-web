@@ -760,8 +760,35 @@
     }
   }
 
+  var queueRotateTimers = {};
+
   function clearAllRotations() {
-    /* Auto mock rotation removed — manual arrows only; kept for library activate API. */
+    Object.keys(queueRotateTimers).forEach(function (pk) {
+      try {
+        clearInterval(queueRotateTimers[pk]);
+      } catch (_) {}
+    });
+    queueRotateTimers = {};
+  }
+
+  function startQueueCardAutoRotate(card, pk) {
+    if (!card || !pk) return;
+    if (queueRotateTimers[pk]) {
+      clearInterval(queueRotateTimers[pk]);
+      delete queueRotateTimers[pk];
+    }
+    var navNext = card.querySelector('.creator-design-products-modal__card-nav--next');
+    if (!navNext) return;
+    queueRotateTimers[pk] = setInterval(function () {
+      if (!card.isConnected || !card.classList.contains('is-test-publishing')) {
+        clearInterval(queueRotateTimers[pk]);
+        delete queueRotateTimers[pk];
+        return;
+      }
+      try {
+        navNext.click();
+      } catch (_) {}
+    }, 2500);
   }
 
   /** Expose for creator-creations-library-actions activate flow */
@@ -803,6 +830,14 @@
           intent: intent,
         };
         r.shopify_completion_status = 'failed';
+      } else if (isQueueIntent && hasPrintify) {
+        // Printify ready → stop queue spinner (Shopify may still sync).
+        ctxTestPublishByKey[pk] = {
+          phase: completion === 'complete' ? 'complete' : 'shopify_sync',
+          message: r.publish_status_detail || '',
+          in_progress: false,
+          intent: intent,
+        };
       } else if (isQueueIntent && completion !== 'complete' && completion !== 'failed') {
         ctxTestPublishByKey[pk] = {
           phase: completion || 'pending',
@@ -831,7 +866,11 @@
       ctxTestPublishByKey[pk] = {
         phase: d.phase || 'queued',
         message: d.message || 'Publishing…',
-        in_progress: d.in_progress !== false && d.phase !== 'complete' && d.phase !== 'failed',
+        in_progress:
+          d.in_progress !== false &&
+          d.phase !== 'complete' &&
+          d.phase !== 'failed' &&
+          !(d.printify_product_id && String(d.printify_product_id).trim()),
         intent: intent,
       };
       if (d.published_design_id || d.shopify_completion_status || d.printify_product_id || d.phase) {
@@ -903,8 +942,13 @@
         card.appendChild(statusLine);
       }
       statusLine.textContent = testSt.message || M.testProductPublishing || 'Publishing…';
+      startQueueCardAutoRotate(card, pk);
     } else {
       card.classList.remove('is-test-publishing');
+      if (queueRotateTimers[pk]) {
+        clearInterval(queueRotateTimers[pk]);
+        delete queueRotateTimers[pk];
+      }
       var oldLoad = card.querySelector('.creator-design-products-modal__card-loading');
       if (oldLoad) oldLoad.remove();
       var oldStatus = card.querySelector('.creator-design-products-modal__card-status');
