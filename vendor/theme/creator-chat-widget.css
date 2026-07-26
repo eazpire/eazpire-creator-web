@@ -3995,6 +3995,29 @@ body:not(.creator-chat-limit-reached) .inbox-container {
 .eazy-mascot-interact-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
 .eazy-mascot-interact-btn:active { transform: scale(0.92); }
 
+/* Deadpool-style interact speech bubble (mascot tab) */
+.eazy-mascot-speech {
+  max-width: 92%;
+  min-height: 0;
+  padding: 8px 12px;
+  border-radius: 12px 12px 12px 4px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.eazy-mascot-speech.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.eazy-mascot-speech__text { display: block; }
+
 /* ── Level bar ── */
 .eazy-mascot-level { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0 8px; }
 .eazy-mascot-level__badge { font-size: 11px; font-weight: 700; color: #fff; padding: 2px 8px; border-radius: 8px; white-space: nowrap; }

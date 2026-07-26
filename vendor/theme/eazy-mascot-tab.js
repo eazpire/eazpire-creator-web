@@ -21,6 +21,253 @@
     eazDiscountPct: 0,
   };
 
+  var _voiceAudio = null;
+  var _sfxAudio = null;
+  var _lastVoiceKey = {};
+  var _bubbleTimer = null;
+
+  /** Inline fallback if #eazy-mascot-voice-data is missing (theme deploy lag). */
+  var FALLBACK_VOICE_LINES = {
+    pet: {
+      de: [
+        "Hey, Händchen weg — warte, doch nicht. Mehr davon.",
+        "Streichel-XP? Bestechung angenommen. Weiter kraulen.",
+        "Ahh. Genau da. Du hast den Cheat-Code gefunden.",
+        "Weiter so und du erbst meinen Sarkasmus. Herzlichen Glückwunsch.",
+      ],
+      en: [
+        "Hands off — wait, no. Hands on. More of that.",
+        "Pet XP? Bribery accepted. Keep going.",
+        "Ahh. Right there. You found the cheat code.",
+        "Keep that up and you inherit my sarcasm. Congrats.",
+      ],
+    },
+    feed: {
+      de: [
+        "Cookie? Für mich? Ich adopte dich. Offiziell.",
+        "Zucker ist mein Benzin. Bitte nachfüllen.",
+        "Ein Keks für Eazy. Fairer Deal. Fast schon ein Raub.",
+        "Nom. Wär das ein Design, wärst du Level neunundneunzig.",
+      ],
+      en: [
+        "Cookie? For me? I officially adopt you.",
+        "Sugar is my fuel. Please refill.",
+        "One cookie for Eazy. Fair trade. Almost a heist.",
+        "Nom. If that was a design, you'd be level ninety-nine.",
+      ],
+    },
+    play: {
+      de: [
+        "Game on. Verlier schön — ich brauch den Ego-Boost.",
+        "Controller raus. Ich spiel unfair und charmant.",
+        "Daily Game? Daily Chaos. Los.",
+        "Gewinnen optional. Drama Pflicht.",
+      ],
+      en: [
+        "Game on. Lose beautifully — I need the ego boost.",
+        "Controllers out. I play dirty and charming.",
+        "Daily game? Daily chaos. Go.",
+        "Winning optional. Drama mandatory.",
+      ],
+    },
+    fart: {
+      de: [
+        "Das war ich nicht. Das war… die Atmosphäre.",
+        "Luftqualität: frech. Genau mein Genre.",
+        "Biowaffe freigeschaltet. Bitte, kein Applaus.",
+        "Wenn das Kunst ist, bin ich Picasso. Stinkender Picasso.",
+      ],
+      en: [
+        "Wasn't me. That was… the atmosphere.",
+        "Air quality: spicy. Right up my alley.",
+        "Biological DLC unlocked. Please, no applause.",
+        "If that's art, I'm Picasso. Stinky Picasso.",
+      ],
+    },
+  };
+
+  function getVoiceLang() {
+    var code = "";
+    try {
+      var cookieMatch = (document.cookie || "").match(/(?:^|;\s*)eaz_lang=([^;]+)/i);
+      if (cookieMatch) code = decodeURIComponent(cookieMatch[1] || "");
+    } catch (_) {}
+    if (!code) {
+      try {
+        code = localStorage.getItem("eaz_dialect") || localStorage.getItem("eaz_lang") || "";
+      } catch (_) {}
+    }
+    if (!code) {
+      try {
+        var pathMatch = (location.pathname || "").match(/^\/([a-z]{2}(?:-[a-z0-9]+)?)(\/|$)/i);
+        if (pathMatch) code = pathMatch[1];
+      } catch (_) {}
+    }
+    if (!code) {
+      code = (document.documentElement && document.documentElement.getAttribute("lang")) || "en";
+    }
+    code = String(code).toLowerCase().replace(/_/g, "-");
+    if (code === "de" || code.indexOf("de-") === 0) return "de";
+    return "en";
+  }
+
+  function getVoiceData() {
+    var el = document.getElementById("eazy-mascot-voice-data");
+    if (!el) return null;
+    try {
+      return JSON.parse(el.textContent);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function pickVoiceLine(action) {
+    var lang = getVoiceLang();
+    var data = getVoiceData();
+    var pool = null;
+    if (data && data.voices && data.voices[action] && data.voices[action][lang]) {
+      pool = data.voices[action][lang];
+    }
+    if ((!pool || !pool.length) && FALLBACK_VOICE_LINES[action]) {
+      pool = (FALLBACK_VOICE_LINES[action][lang] || FALLBACK_VOICE_LINES[action].en || []).map(function (text) {
+        return { text: text, url: null };
+      });
+    }
+    if (!pool || !pool.length) return null;
+
+    var lastKey = _lastVoiceKey[action + ":" + lang] || null;
+    var pick = null;
+    var attempts = 0;
+    do {
+      pick = pool[Math.floor(Math.random() * pool.length)];
+      attempts++;
+      var key = (pick && (pick.url || pick.text)) || "";
+    } while (key && key === lastKey && attempts < 5 && pool.length > 1);
+
+    _lastVoiceKey[action + ":" + lang] = (pick && (pick.url || pick.text)) || null;
+    return { lang: lang, line: pick };
+  }
+
+  function showMascotSpeech(text) {
+    var bubble = document.getElementById("eazy-mascot-speech");
+    if (!bubble) return;
+    var textEl = bubble.querySelector(".eazy-mascot-speech__text");
+    if (textEl) textEl.textContent = text || "";
+    bubble.hidden = !text;
+    bubble.classList.toggle("is-visible", !!text);
+    if (_bubbleTimer) clearTimeout(_bubbleTimer);
+    if (text) {
+      _bubbleTimer = setTimeout(function () {
+        bubble.classList.remove("is-visible");
+        bubble.hidden = true;
+      }, 5200);
+    }
+  }
+
+  function getAudioVolume() {
+    var vol = window.EazySettings ? window.EazySettings.get("audio_volume") : 75;
+    return Math.max(0, Math.min(1, (Number(vol) || 75) / 100));
+  }
+
+  function stopVoiceAudio() {
+    if (_voiceAudio) {
+      try { _voiceAudio.pause(); } catch (_) {}
+      _voiceAudio = null;
+    }
+    if (_sfxAudio) {
+      try { _sfxAudio.pause(); } catch (_) {}
+      _sfxAudio = null;
+    }
+  }
+
+  function playUrl(url, volume) {
+    return new Promise(function (resolve) {
+      if (!url) {
+        resolve(false);
+        return;
+      }
+      try {
+        var audio = new Audio(url);
+        audio.volume = volume;
+        audio.addEventListener("ended", function () { resolve(true); });
+        audio.addEventListener("error", function () { resolve(false); });
+        var p = audio.play();
+        if (p && typeof p.then === "function") {
+          p.then(function () { /* playing */ }).catch(function () { resolve(false); });
+        }
+        _voiceAudio = audio;
+      } catch (_) {
+        resolve(false);
+      }
+    });
+  }
+
+  function playSpeechSynthesis(text, lang) {
+    try {
+      if (!window.speechSynthesis || !text) return false;
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = lang === "de" ? "de-DE" : "en-US";
+      u.rate = 1.05;
+      u.pitch = 1.05;
+      window.speechSynthesis.speak(u);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function playFartSfxThen(next) {
+    var sfxEl = document.getElementById("eazy-sfx-data");
+    var fartUrl = null;
+    if (sfxEl) {
+      try {
+        var sfx = JSON.parse(sfxEl.textContent);
+        var farts = (sfx.sounds || []).filter(function (s) { return s.type === "fart"; });
+        if (farts.length) fartUrl = farts[Math.floor(Math.random() * farts.length)].url;
+      } catch (_) {}
+    }
+    if (!fartUrl) {
+      next();
+      return;
+    }
+    try {
+      _sfxAudio = new Audio(fartUrl);
+      _sfxAudio.volume = Math.min(1, getAudioVolume() * 0.55);
+      _sfxAudio.addEventListener("ended", function () { setTimeout(next, 350); });
+      _sfxAudio.addEventListener("error", function () { next(); });
+      _sfxAudio.play().catch(function () { next(); });
+    } catch (_) {
+      next();
+    }
+  }
+
+  function playDeadpoolLine(action) {
+    var picked = pickVoiceLine(action);
+    if (!picked || !picked.line) return;
+    var text = picked.line.text || "";
+    var url = picked.line.url || null;
+    showMascotSpeech(text);
+
+    function speak() {
+      stopVoiceAudio();
+      if (url) {
+        playUrl(url, getAudioVolume()).then(function (ok) {
+          if (!ok) playSpeechSynthesis(text, picked.lang);
+        });
+      } else {
+        playSpeechSynthesis(text, picked.lang);
+      }
+    }
+
+    if (action === "fart") {
+      stopVoiceAudio();
+      playFartSfxThen(speak);
+    } else {
+      speak();
+    }
+  }
+
   function getOwnerId() {
     if (window.EazyBot && window.EazyBot.getUserId) return window.EazyBot.getUserId();
     if (window.__EAZ_OWNER_ID) return String(window.__EAZ_OWNER_ID);
@@ -152,6 +399,7 @@
 
     // Preview (always visible, not collapsible)
     h += '<div class="eazy-mascot-preview" id="eazy-mascot-preview">';
+    h += '<div class="eazy-mascot-speech" id="eazy-mascot-speech" hidden><span class="eazy-mascot-speech__text"></span></div>';
     h += '<div class="eazy-mascot-preview__figure" id="eazy-mascot-figure">' + buildSVG(active, 120, true) + '</div>';
     h += '<div class="eazy-mascot-preview__info">';
     h += '<span class="eazy-mascot-preview__name" style="color:' + active.color + '">' + (active.nickname || active.name) + '</span>';
@@ -167,9 +415,7 @@
     h += '<button type="button" class="eazy-mascot-interact-btn" data-action="pet" title="Streicheln">&#x1F44B;</button>';
     h += '<button type="button" class="eazy-mascot-interact-btn" data-action="feed" title="F\u00fcttern">&#x1F36A;</button>';
     h += '<button type="button" class="eazy-mascot-interact-btn" data-action="play" title="Spielen">&#x1F3AE;</button>';
-    if (window.EazySoundEffects) {
-      h += '<button type="button" class="eazy-mascot-interact-btn" data-action="sfx-test" title="' + (window.CreatorI18n?.eazy_sfx_test || 'Furz/Burp testen') + '">&#x1F4A6;</button>';
-    }
+    h += '<button type="button" class="eazy-mascot-interact-btn" data-action="sfx-test" title="' + (window.CreatorI18n?.eazy_sfx_test || 'Furz testen') + '">&#x1F4A6;</button>';
     h += '</div>';
     h += '</div>';
 
@@ -339,7 +585,14 @@
       btn.addEventListener("click", function () {
         var action = btn.getAttribute("data-action");
         if (action === "sfx-test") {
-          if (window.EazySoundEffects) window.EazySoundEffects.play();
+          playDeadpoolLine("fart");
+          var figureSfx = document.getElementById("eazy-mascot-figure");
+          if (figureSfx) {
+            figureSfx.classList.remove("eazy-mascot--bounce", "eazy-mascot--wiggle", "eazy-mascot--spin");
+            void figureSfx.offsetWidth;
+            figureSfx.classList.add("eazy-mascot--bounce");
+            spawnParticles(figureSfx, "\u{1F4A8}");
+          }
           return;
         }
         onInteract(action);
@@ -384,6 +637,11 @@
       var anim = { pet: "eazy-mascot--wiggle", feed: "eazy-mascot--bounce", play: "eazy-mascot--spin" };
       figure.classList.add(anim[action] || "eazy-mascot--wiggle");
       spawnParticles(figure, action === "pet" ? "\u2764\uFE0F" : action === "feed" ? "\u{1F36A}" : "\u2B50");
+    }
+
+    // Deadpool-style voice line (DE for German/dialects, EN otherwise)
+    if (action === "pet" || action === "feed" || action === "play") {
+      playDeadpoolLine(action);
     }
 
     api("mascot-interact", "POST", { action: action }).then(function (res) {
@@ -529,6 +787,8 @@
     init: init,
     getActiveMascot: getActive,
     getMascots: function () { return _state.mascots; },
+    getVoiceLang: getVoiceLang,
+    playDeadpoolLine: playDeadpoolLine,
     showGameXp: function (amount) {
       if (amount > 0) showXpPopup(amount, 1);
       loadData();
