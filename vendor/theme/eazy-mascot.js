@@ -383,12 +383,15 @@
     try {
       if (localStorage.getItem(STORAGE_KEY) || localStorage.getItem(CLUSTER_KEY)) return;
     } catch (e) {}
-    fetch(getMascotSyncApiBase() + '?op=eazy-memory&user_id=' + encodeURIComponent(userId), {
-      credentials: 'include'
-    })
-      .then(function (r) {
-        return r.json();
-      })
+    var memPromise =
+      typeof window.__eazFetchEazyMemory === 'function'
+        ? window.__eazFetchEazyMemory(userId)
+        : fetch(getMascotSyncApiBase() + '?op=eazy-memory&user_id=' + encodeURIComponent(userId), {
+            credentials: 'include'
+          }).then(function (r) {
+            return r.json();
+          });
+    memPromise
       .then(function (data) {
         if (!data || !data.ok || !data.memory) return;
         var prefs =

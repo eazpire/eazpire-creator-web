@@ -132,10 +132,15 @@
       if (localStorage.getItem(STORAGE_KEY)) return;
     } catch (e) {}
 
-    fetch(API_BASE + "?op=eazy-memory&user_id=" + encodeURIComponent(userId), { credentials: "include" })
-      .then(function (r) { return r.json(); })
+    var memPromise =
+      typeof window.__eazFetchEazyMemory === 'function'
+        ? window.__eazFetchEazyMemory(userId)
+        : fetch(API_BASE + "?op=eazy-memory&user_id=" + encodeURIComponent(userId), { credentials: "include" }).then(function (r) {
+            return r.json();
+          });
+    memPromise
       .then(function (data) {
-        if (!data.ok || !data.memory || !data.memory.preferences) return;
+        if (!data || !data.ok || !data.memory || !data.memory.preferences) return;
         try {
           var prefs = typeof data.memory.preferences === "string"
             ? JSON.parse(data.memory.preferences) : data.memory.preferences;
