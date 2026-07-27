@@ -12,7 +12,9 @@
   }
 
   function scriptUrls() {
-    return (window.__EAZ_CHAT_LAZY_SCRIPTS || []).filter(function (src) {
+    var shell = window.__EAZ_CHAT_SHELL_SCRIPTS || [];
+    var lazy = window.__EAZ_CHAT_LAZY_SCRIPTS || [];
+    return shell.concat(lazy).filter(function (src) {
       return src && isScriptUrl(src);
     });
   }
