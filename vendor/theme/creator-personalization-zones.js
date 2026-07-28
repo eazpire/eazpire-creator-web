@@ -555,11 +555,128 @@
     return mountShared(host, Object.assign({}, opts || {}, { mode: 'view' }));
   }
 
+  /**
+   * Customer fill UI: design preview + zone frames + text/image inputs per zone.
+   * opts: { imageUrl, zones, fills?, onChange? }
+   */
+  function mountFill(host, opts) {
+    if (!host) return null;
+    opts = opts || {};
+    var zones = normalizeZones(opts.zones);
+    var fills = Object.create(null);
+    var initial = opts.fills && typeof opts.fills === 'object' ? opts.fills : {};
+    zones.forEach(function (z) {
+      var prev = initial[z.id];
+      fills[z.id] =
+        z.type === 'image'
+          ? { type: 'image', image_url: (prev && prev.image_url) || '' }
+          : { type: 'text', text: (prev && prev.text) || '' };
+    });
+
+    host.innerHTML = '';
+    var root = document.createElement('div');
+    root.className = 'cpz-fill';
+
+    var previewHost = document.createElement('div');
+    previewHost.className = 'cpz-fill__preview';
+    root.appendChild(previewHost);
+
+    var form = document.createElement('div');
+    form.className = 'cpz-fill__form';
+    root.appendChild(form);
+
+    host.appendChild(root);
+
+    var viewCtrl = mountView(previewHost, {
+      imageUrl: opts.imageUrl || '',
+      zones: zones,
+    });
+
+    function emit() {
+      if (typeof opts.onChange === 'function') {
+        try {
+          opts.onChange(getFills());
+        } catch (_) {}
+      }
+    }
+
+    function getFills() {
+      var out = {};
+      zones.forEach(function (z) {
+        out[z.id] = Object.assign({}, fills[z.id], { type: z.type, n: z.n });
+      });
+      return out;
+    }
+
+    zones.forEach(function (z) {
+      var row = document.createElement('div');
+      row.className = 'cpz-fill__row';
+      row.setAttribute('data-zone-id', z.id);
+
+      var label = document.createElement('label');
+      label.className = 'cpz-fill__label';
+      label.textContent =
+        (Mi().zonesFillLabel || 'Element {{n}} ({{type}})')
+          .replace('{{n}}', String(z.n))
+          .replace('{{type}}', typeLabel(z.type));
+      row.appendChild(label);
+
+      if (z.type === 'image') {
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.className = 'cpz-fill__file';
+        var preview = document.createElement('img');
+        preview.className = 'cpz-fill__thumb';
+        preview.alt = '';
+        preview.hidden = !fills[z.id].image_url;
+        if (fills[z.id].image_url) preview.src = fills[z.id].image_url;
+        fileInput.addEventListener('change', function () {
+          var file = fileInput.files && fileInput.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function () {
+            fills[z.id] = { type: 'image', image_url: String(reader.result || '') };
+            preview.src = fills[z.id].image_url;
+            preview.hidden = !fills[z.id].image_url;
+            emit();
+          };
+          reader.readAsDataURL(file);
+        });
+        row.appendChild(fileInput);
+        row.appendChild(preview);
+      } else {
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'cpz-fill__text';
+        input.maxLength = 80;
+        input.placeholder = Mi().zonesFillTextPlaceholder || 'Your text';
+        input.value = fills[z.id].text || '';
+        input.addEventListener('input', function () {
+          fills[z.id] = { type: 'text', text: String(input.value || '').slice(0, 80) };
+          emit();
+        });
+        row.appendChild(input);
+      }
+
+      form.appendChild(row);
+    });
+
+    return {
+      getFills: getFills,
+      destroy: function () {
+        if (viewCtrl && typeof viewCtrl.destroy === 'function') viewCtrl.destroy();
+        host.innerHTML = '';
+      },
+    };
+  }
+
   window.CreatorPersonalizationZones = {
     MAX_ZONES: MAX_ZONES,
     normalizeZones: normalizeZones,
     mountEdit: mountEdit,
     mountView: mountView,
+    mountFill: mountFill,
     svgDetail: svgDetail,
   };
 })();

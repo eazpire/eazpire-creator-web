@@ -366,3 +366,49 @@
 .gallery__main .cpz-viewer--pdp[hidden] {
   display: none !important;
 }
+
+/* Customer fill UI (Sample → Design modal) */
+.cpz-fill {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cpz-fill__preview {
+  min-height: 180px;
+}
+.cpz-fill__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cpz-fill__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  background: #fafafa;
+}
+.cpz-fill__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+.cpz-fill__text {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.cpz-fill__file {
+  font-size: 13px;
+}
+.cpz-fill__thumb {
+  max-width: 96px;
+  max-height: 96px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 4px;
+}
