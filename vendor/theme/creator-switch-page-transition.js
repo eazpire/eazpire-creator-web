@@ -475,7 +475,5 @@
 
   window.CreatorSwitchPageTransition = { start: startTransition };
 
-  setTimeout(function () {
-    ensureHtml2CanvasReady().catch(function () {});
-  }, 0);
+  // Soft-gate Total/TBT: do not preload html2canvas on every page — load on first transition.
 })();
