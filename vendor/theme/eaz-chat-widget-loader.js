@@ -19,7 +19,20 @@
     });
   }
 
+  function ensureChatDom() {
+    var tpl = document.getElementById('creator-chat-deferred-tpl');
+    var root = document.getElementById('creator-chat-root');
+    if (!tpl || !root || tpl.getAttribute('data-eaz-mounted') === '1') return;
+    try {
+      root.appendChild(tpl.content.cloneNode(true));
+      tpl.setAttribute('data-eaz-mounted', '1');
+    } catch (_e) {}
+  }
+
+  window.eazEnsureCreatorChatDom = ensureChatDom;
+
   function openChatIfClosed() {
+    ensureChatDom();
     if (!window.CreatorChat || typeof window.CreatorChat.open !== 'function') return;
     var panel = document.getElementById('creator-chat-panel');
     if (panel && panel.classList.contains('creator-chat__panel--open')) return;
@@ -50,6 +63,7 @@
   }
 
   function loadChatBundle() {
+    ensureChatDom();
     if (loaded) return Promise.resolve();
     if (loading) return loading;
     var urls = scriptUrls();
