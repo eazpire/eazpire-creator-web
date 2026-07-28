@@ -5084,6 +5084,33 @@
     window.location.href = "/pages/creator-settings";
   }
 
+  function isPublishAssistNotificationCategory(cat) {
+    var c = String(cat || "").toLowerCase();
+    return c === "publish_assist_offer_received" || c === "publish_assist_request_received" || c.indexOf("publish_assist_") === 0;
+  }
+
+  function openPublishAssistFromNotification(parsed) {
+    var tab = (parsed && parsed.open_tab) || "pending";
+    if (window.CreatorPublishAssist && typeof window.CreatorPublishAssist.open === "function") {
+      window.CreatorPublishAssist.open({ tab: tab });
+      return;
+    }
+    // Lazy-load script if present in assets config, else fall back to Creator Codes entry.
+    var trigger = document.querySelector("[data-pa-open], [data-cc-publish-assist]");
+    if (trigger) {
+      trigger.click();
+      setTimeout(function () {
+        if (window.CreatorPublishAssist && typeof window.CreatorPublishAssist.open === "function") {
+          window.CreatorPublishAssist.open({ tab: tab });
+        }
+      }, 400);
+      return;
+    }
+    if (window.CreatorSettingsV2Modal && typeof window.CreatorSettingsV2Modal.open === "function") {
+      window.CreatorSettingsV2Modal.open({ tab: "creator-codes" });
+    }
+  }
+
   function maybeShowCreatorCodeMascotBubble() {
     if (window.__eaz_mode_active || window.__eaz_guide_active) return;
     if (window.EazySettings && !window.EazySettings.isMessageTypeEnabled("messages_mascot_bubbles")) return;
@@ -5147,7 +5174,8 @@
       var cat = (n.category || "").toLowerCase();
       var hasSystemAction = cat === "system" && !!(parsed.design_id || parsed.job_id || parsed.preview_url || parsed.session_id);
       var hasCreatorCodeAction = isCreatorCodeNotificationCategory(cat);
-      var hasAction = hasCreatorCodeAction || hasSystemAction || (cat !== "system" && (cat === "generated" || cat === "saved" || cat === "uploaded" || cat === "merged" || cat === "hero_image" || cat === "published" || cat === "publish" || cat === "removed_products" || cat === "removed_designs" || cat === "card_collection"));
+      var hasPublishAssistAction = isPublishAssistNotificationCategory(cat);
+      var hasAction = hasCreatorCodeAction || hasPublishAssistAction || hasSystemAction || (cat !== "system" && (cat === "generated" || cat === "saved" || cat === "uploaded" || cat === "merged" || cat === "hero_image" || cat === "published" || cat === "publish" || cat === "removed_products" || cat === "removed_designs" || cat === "card_collection"));
       var item = document.createElement("div");
       item.className = "creator-chat__notif-item" + (!n.is_read ? " is-unread" : "") + (hasAction ? " has-action creator-chat__notif-item--shimmer" : "");
       item.setAttribute("data-notif-id", String(nid));
@@ -5179,6 +5207,10 @@
           if (isUnread) markNotificationRead(nid);
           if (hasCreatorCodeAction) {
             openCreatorCodesFromNotification(parsed);
+            return;
+          }
+          if (hasPublishAssistAction) {
+            openPublishAssistFromNotification(parsed);
             return;
           }
           if (_notifParsedMap[nid]) openNotificationModal(_notifParsedMap[nid]);
@@ -5404,6 +5436,8 @@
       }
     } else if (isCreatorCodeNotificationCategory(cat)) {
       openCreatorCodesFromNotification(parsed);
+    } else if (isPublishAssistNotificationCategory(cat)) {
+      openPublishAssistFromNotification(parsed);
     }
     // Other categories (e.g., "publish", "transfer", etc.) can be added here if needed
   }
