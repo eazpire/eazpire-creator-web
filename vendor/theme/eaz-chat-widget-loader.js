@@ -95,7 +95,18 @@
     }
   }
 
+  function isPdpModalEmbed() {
+    try {
+      return document.documentElement.classList.contains('eaz-pdp-modal-embed');
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function scheduleIdleWarmup() {
+    // PERF-FOLLOWUP-15: never warm/mount chat panel inside PDP quick-view iframe
+    // (Liquid QS often blank — embed class is set client-side from URL).
+    if (isPdpModalEmbed()) return;
     try {
       if (localStorage.getItem('eazy_docked') === 'true') {
         loadChatBundle().catch(function () {});
@@ -116,6 +127,7 @@
   }
 
   function bindToggle() {
+    if (isPdpModalEmbed()) return;
     var toggle = document.getElementById('creator-chat-toggle');
     if (!toggle || toggle.dataset.eazChatLazyBound === '1') return;
     toggle.dataset.eazChatLazyBound = '1';
