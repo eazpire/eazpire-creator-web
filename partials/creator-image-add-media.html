@@ -6,26 +6,34 @@
     aria-labelledby="cimg-addsrc-title"
   >
     <h3 class="cvs-confirm-title" id="cimg-addsrc-title">Add media</h3>
+    <div class="cimg-addsrc-tabs" id="cimg-addsrc-tabs" hidden role="tablist" aria-label="Media type">
+      <button type="button" class="cimg-addsrc-tab is-active" id="cimg-addsrc-tab-image" role="tab" aria-selected="true" data-cimg-tab="image">
+        Image
+      </button>
+      <button type="button" class="cimg-addsrc-tab" id="cimg-addsrc-tab-video-scene" role="tab" aria-selected="false" data-cimg-tab="video-scene">
+        Video Scene
+      </button>
+    </div>
     <div class="cvs-addsrc-grid cvs-addsrc-grid--with-paste" id="cimg-addsrc-grid">
       <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-assets" data-cimg-opt="assets">
         <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128193;</span>
         <span class="cvs-addsrc-option__label">Assets</span>
-        <span class="cvs-addsrc-option__hint">Your uploaded library</span>
+        <span class="cvs-addsrc-option__hint" id="cimg-addsrc-assets-hint">Your uploaded library</span>
       </button>
       <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-device" data-cimg-opt="device">
         <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128187;</span>
         <span class="cvs-addsrc-option__label">Device</span>
-        <span class="cvs-addsrc-option__hint">Upload from this device</span>
+        <span class="cvs-addsrc-option__hint" id="cimg-addsrc-device-hint">Upload from this device</span>
       </button>
       <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-phone" data-cimg-opt="phone" data-desktop-only="1">
         <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128241;</span>
         <span class="cvs-addsrc-option__label">Phone</span>
-        <span class="cvs-addsrc-option__hint">Scan a QR code to upload</span>
+        <span class="cvs-addsrc-option__hint" id="cimg-addsrc-phone-hint">Scan a QR code to upload</span>
       </button>
       <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-link" data-cimg-opt="link">
         <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128279;</span>
         <span class="cvs-addsrc-option__label">Link</span>
-        <span class="cvs-addsrc-option__hint">Paste a media URL</span>
+        <span class="cvs-addsrc-option__hint" id="cimg-addsrc-link-hint">Paste a media URL</span>
       </button>
       <button type="button" class="cvs-addsrc-option" id="cimg-addsrc-paste" data-cimg-opt="paste">
         <span class="cvs-addsrc-option__icon" aria-hidden="true">&#128203;</span>
@@ -61,6 +69,7 @@
         <p class="cvs-link-status" id="cimg-link-status" role="status"></p>
         <div class="cvs-link-preview" id="cimg-link-preview" hidden>
           <img id="cimg-link-preview-image" class="cvs-link-preview__media" alt="" hidden>
+          <video id="cimg-link-preview-video" class="cvs-link-preview__media" controls playsinline muted hidden></video>
         </div>
       </div>
       <div class="cvs-link-phone" id="cimg-link-phone" data-desktop-only="1">
@@ -79,4 +88,30 @@
   </div>
 </div>
 
+<div id="cimgScenePickerModal" class="cvs-confirm-overlay" hidden aria-hidden="true">
+  <div
+    class="cvs-confirm-box cimg-scene-box"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cimg-scene-title"
+  >
+    <h3 class="cvs-confirm-title" id="cimg-scene-title">Select video scene</h3>
+    <div class="cimg-scene-body">
+      <video id="cimg-scene-video" class="cimg-scene-video" controls playsinline preload="metadata"></video>
+      <label class="cimg-scene-scrub-label">
+        <span>Scrub to pick a frame</span>
+        <input type="range" id="cimg-scene-scrub" class="cimg-scene-scrub" min="0" max="1000" value="0" step="1">
+      </label>
+      <p class="cimg-scene-status" id="cimg-scene-status" role="status"></p>
+    </div>
+    <div class="cvs-confirm-actions">
+      <button type="button" class="cvs-btn cvs-btn--ghost" id="cimg-scene-cancel">Cancel</button>
+      <button type="button" class="cvs-btn cvs-btn--primary" id="cimg-scene-use" disabled>
+        Use this scene
+      </button>
+    </div>
+  </div>
+</div>
+
 <input type="file" accept="image/*" id="cimg-device-input" hidden tabindex="-1" aria-hidden="true">
+<input type="file" accept="video/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" id="cimg-device-video-input" hidden tabindex="-1" aria-hidden="true">

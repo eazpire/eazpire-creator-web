@@ -1,6 +1,7 @@
 /**
  * Shared image Add-media + Add-from-link (with Extract + desktop QR) — IDEA-044
  * Used by Hero Generator and Character Generator (Model/Character + Background slots).
+ * Character Model/Background: Image | Video Scene tabs → frame capture → Assets.
  */
 (function () {
   'use strict';
@@ -10,10 +11,14 @@
       ? window.CREATOR_API_CONFIG.BASE_URL + '/apps/creator-dispatch'
       : 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch';
 
+  var VIDEO_SCENE_TITLE = 'Video Scene Image';
   var activeCb = null; // { onUrl(url), onFile(file), purpose, label }
+  var mediaMode = 'image'; // 'image' | 'video-scene'
   var linkExtracted = null;
   var linkPhonePollTimer = null;
   var linkPhoneSessionId = null;
+  var sceneObjectUrl = null;
+  var sceneBusy = false;
   var bound = false;
 
   function i18n(key, fallback) {
@@ -42,6 +47,15 @@
     }
   }
 
+  function supportsVideoSceneTabs(purpose) {
+    var p = String(purpose || '');
+    return p === 'character-model' || p === 'character-background';
+  }
+
+  function isVideoSceneMode() {
+    return mediaMode === 'video-scene';
+  }
+
   function phoneBridgeApiBase() {
     try {
       if (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) {
@@ -61,6 +75,59 @@
     });
   }
 
+  function sleep(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  function setHint(id, text) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function syncModeUi() {
+    var tabs = document.getElementById('cimg-addsrc-tabs');
+    var showTabs = !!(activeCb && supportsVideoSceneTabs(activeCb.purpose));
+    if (tabs) tabs.hidden = !showTabs;
+
+    var imageTab = document.getElementById('cimg-addsrc-tab-image');
+    var videoTab = document.getElementById('cimg-addsrc-tab-video-scene');
+    if (imageTab) {
+      imageTab.classList.toggle('is-active', mediaMode === 'image');
+      imageTab.setAttribute('aria-selected', mediaMode === 'image' ? 'true' : 'false');
+    }
+    if (videoTab) {
+      videoTab.classList.toggle('is-active', mediaMode === 'video-scene');
+      videoTab.setAttribute('aria-selected', mediaMode === 'video-scene' ? 'true' : 'false');
+    }
+
+    var pasteBtn = document.getElementById('cimg-addsrc-paste');
+    if (pasteBtn) pasteBtn.hidden = isVideoSceneMode();
+
+    var phoneBtn = document.getElementById('cimg-addsrc-phone');
+    if (phoneBtn) {
+      // Phone upload is image-only today; hide on Video Scene.
+      phoneBtn.hidden = isVideoSceneMode() || !isDesktopViewport();
+    }
+
+    if (isVideoSceneMode()) {
+      setHint('cimg-addsrc-assets-hint', i18n('add_source_assets_hint_video', 'Pick a video from your library'));
+      setHint('cimg-addsrc-device-hint', i18n('add_source_device_hint_video', 'Upload a video from this device'));
+      setHint('cimg-addsrc-link-hint', i18n('add_source_link_hint_video', 'Paste a video URL'));
+    } else {
+      setHint('cimg-addsrc-assets-hint', i18n('add_source_assets_hint', 'Your uploaded library'));
+      setHint('cimg-addsrc-device-hint', i18n('add_source_device_hint', 'Upload from this device'));
+      setHint('cimg-addsrc-link-hint', i18n('add_source_link_hint', 'Paste a media URL'));
+      setHint('cimg-addsrc-phone-hint', i18n('add_source_phone_hint', 'Scan a QR code to upload'));
+    }
+  }
+
+  function setMediaMode(mode) {
+    mediaMode = mode === 'video-scene' ? 'video-scene' : 'image';
+    syncModeUi();
+  }
+
   function closeAddSource() {
     var overlay = document.getElementById('cimgAddSourceModal');
     if (!overlay) return;
@@ -70,11 +137,13 @@
 
   function openAddSource(opts) {
     activeCb = opts || null;
+    mediaMode = 'image';
     bindUi();
+    syncModeUi();
     var overlay = document.getElementById('cimgAddSourceModal');
     if (!overlay) return;
     var phoneBtn = document.getElementById('cimg-addsrc-phone');
-    if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
+    if (phoneBtn && !isVideoSceneMode()) phoneBtn.hidden = !isDesktopViewport();
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
   }
@@ -99,19 +168,40 @@
     if (btn) btn.disabled = !on;
   }
 
-  function showLinkPreview(url) {
+  function showLinkPreview(url, kind) {
     var wrap = document.getElementById('cimg-link-preview');
     var img = document.getElementById('cimg-link-preview-image');
-    if (!wrap || !img) return;
-    if (!url) {
-      wrap.hidden = true;
+    var video = document.getElementById('cimg-link-preview-video');
+    if (!wrap) return;
+    if (img) {
       img.hidden = true;
       img.removeAttribute('src');
+    }
+    if (video) {
+      try {
+        video.pause();
+      } catch (e) {}
+      video.hidden = true;
+      video.removeAttribute('src');
+      try {
+        video.load();
+      } catch (e2) {}
+    }
+    if (!url) {
+      wrap.hidden = true;
       return;
     }
-    img.src = url;
-    img.hidden = false;
-    wrap.hidden = false;
+    if (kind === 'video' && video) {
+      video.src = url;
+      video.hidden = false;
+      wrap.hidden = false;
+      return;
+    }
+    if (img) {
+      img.src = url;
+      img.hidden = false;
+      wrap.hidden = false;
+    }
   }
 
   function closeLinkModal() {
@@ -238,10 +328,43 @@
       showLinkPreview(null);
       return;
     }
-    linkExtracted = { url: raw, kind: 'image' };
-    setLinkStatus(i18n('link_extract_ready', 'Ready — tap Download to use this image.'), 'is-success');
+    var kind = isVideoSceneMode() ? 'video' : 'image';
+    linkExtracted = { url: raw, kind: kind, format: kind === 'video' ? 'mp4' : 'image' };
+    setLinkStatus(
+      kind === 'video'
+        ? i18n('link_extract_ready_video', 'Ready — tap Download to open the scene picker.')
+        : i18n('link_extract_ready', 'Ready — tap Download to use this image.'),
+      'is-success'
+    );
     setDownloadEnabled(true);
-    showLinkPreview(raw);
+    showLinkPreview(raw, kind);
+  }
+
+  async function pollLinkIngestStatus(assetId) {
+    var maxAttempts = 90;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      if (attempt > 0 && attempt % 3 === 0) {
+        setLinkStatus(i18n('link_processing', 'Downloading media in the background…'), 'is-info');
+      }
+      var res = await fetch(
+        API_BASE + '?op=video-studio-link-ingest-status&asset_id=' + encodeURIComponent(assetId),
+        { credentials: 'include' }
+      );
+      var data = await res.json().catch(function () {
+        return { ok: false };
+      });
+      if (data.status === 'ready' && data.asset) {
+        return { ok: true, asset: data.asset };
+      }
+      if (data.status === 'failed') {
+        return { ok: false, data: data };
+      }
+      if (!data.ok && data.error && data.error !== 'asset_not_found') {
+        return { ok: false, data: data };
+      }
+      await sleep(2000);
+    }
+    return { ok: false, data: { error: 'timeout' } };
   }
 
   async function submitLinkDownload() {
@@ -250,35 +373,281 @@
       return;
     }
     var url = linkExtracted.url;
+    var wantVideo = isVideoSceneMode() || linkExtracted.kind === 'video';
     setLinkStatus(i18n('link_downloading', 'Downloading…'), 'is-info');
+    setDownloadEnabled(false);
     try {
-      // Prefer ingest into assets library when available
       var owner = getOwnerId();
       if (owner) {
         var res = await fetch(API_BASE + '?op=video-studio-link-ingest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ owner_id: owner, url: url, format: 'image' }),
+          body: JSON.stringify({
+            owner_id: owner,
+            url: url,
+            format: wantVideo ? 'mp4' : 'image',
+          }),
         });
         var data = await res.json().catch(function () {
           return {};
         });
         if (data.ok && data.asset && data.asset.url) {
           closeLinkModal();
-          closeAddSource();
-          deliverUrl(data.asset.url);
+          if (wantVideo) {
+            openScenePicker({ url: data.asset.url });
+          } else {
+            closeAddSource();
+            deliverUrl(data.asset.url);
+          }
+          return;
+        }
+        if (data.ok && data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
+          setLinkStatus(i18n('link_queued', 'Import queued — preparing download…'), 'is-info');
+          var polled = await pollLinkIngestStatus(data.asset_id);
+          if (polled.ok && polled.asset && polled.asset.url) {
+            closeLinkModal();
+            if (wantVideo) {
+              openScenePicker({ url: polled.asset.url });
+            } else {
+              closeAddSource();
+              deliverUrl(polled.asset.url);
+            }
+            return;
+          }
+          setLinkStatus(i18n('link_error_generic', 'Could not add media from that link.'), '');
+          setDownloadEnabled(true);
           return;
         }
       }
-      // Direct URL fallback for images
+      if (wantVideo) {
+        closeLinkModal();
+        openScenePicker({ url: url });
+        return;
+      }
       closeLinkModal();
       closeAddSource();
       deliverUrl(url);
     } catch (e) {
+      if (wantVideo) {
+        closeLinkModal();
+        openScenePicker({ url: url });
+        return;
+      }
       closeLinkModal();
       closeAddSource();
       deliverUrl(url);
+    } finally {
+      setDownloadEnabled(true);
+    }
+  }
+
+  function revokeSceneObjectUrl() {
+    if (sceneObjectUrl) {
+      try {
+        URL.revokeObjectURL(sceneObjectUrl);
+      } catch (e) {}
+      sceneObjectUrl = null;
+    }
+  }
+
+  function setSceneStatus(msg, kind) {
+    var el = document.getElementById('cimg-scene-status');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = 'cimg-scene-status' + (kind ? ' ' + kind : '');
+  }
+
+  function setSceneUseEnabled(on) {
+    var btn = document.getElementById('cimg-scene-use');
+    if (btn) btn.disabled = !on || sceneBusy;
+  }
+
+  function closeScenePicker() {
+    var overlay = document.getElementById('cimgScenePickerModal');
+    var video = document.getElementById('cimg-scene-video');
+    if (video) {
+      try {
+        video.pause();
+      } catch (e) {}
+      video.removeAttribute('crossOrigin');
+      video.removeAttribute('src');
+      try {
+        video.load();
+      } catch (e2) {}
+    }
+    revokeSceneObjectUrl();
+    sceneBusy = false;
+    setSceneStatus('', '');
+    setSceneUseEnabled(false);
+    if (overlay) {
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function openScenePicker(opts) {
+    bindUi();
+    opts = opts || {};
+    var overlay = document.getElementById('cimgScenePickerModal');
+    var video = document.getElementById('cimg-scene-video');
+    var scrub = document.getElementById('cimg-scene-scrub');
+    if (!overlay || !video) return;
+
+    revokeSceneObjectUrl();
+    sceneBusy = false;
+    setSceneStatus(i18n('scene_picker_loading', 'Loading video…'), 'is-info');
+    setSceneUseEnabled(false);
+    if (scrub) scrub.value = '0';
+
+    var src = opts.url || null;
+    if (opts.file) {
+      sceneObjectUrl = URL.createObjectURL(opts.file);
+      src = sceneObjectUrl;
+    }
+    if (!src) {
+      setSceneStatus(i18n('scene_picker_no_video', 'No video available.'), '');
+      return;
+    }
+
+    // Remote CDN frames need CORS for canvas capture.
+    if (!opts.file && /^https?:\/\//i.test(src)) {
+      video.crossOrigin = 'anonymous';
+    } else {
+      video.removeAttribute('crossOrigin');
+    }
+    video.src = src;
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+
+    var onMeta = function () {
+      video.removeEventListener('loadedmetadata', onMeta);
+      if (scrub && video.duration && isFinite(video.duration)) {
+        scrub.max = String(Math.max(1, Math.floor(video.duration * 1000)));
+        scrub.value = '0';
+      }
+      try {
+        video.currentTime = 0;
+      } catch (e) {}
+      setSceneStatus(i18n('scene_picker_ready', 'Scrub to the frame you want, then use this scene.'), 'is-success');
+      setSceneUseEnabled(true);
+    };
+    var onErr = function () {
+      video.removeEventListener('error', onErr);
+      setSceneStatus(i18n('scene_picker_load_failed', 'Could not load this video. Try another source.'), '');
+      setSceneUseEnabled(false);
+    };
+    video.addEventListener('loadedmetadata', onMeta);
+    video.addEventListener('error', onErr);
+    try {
+      video.load();
+    } catch (e3) {}
+  }
+
+  function onSceneScrub() {
+    var video = document.getElementById('cimg-scene-video');
+    var scrub = document.getElementById('cimg-scene-scrub');
+    if (!video || !scrub || !video.duration || !isFinite(video.duration)) return;
+    var ms = Number(scrub.value) || 0;
+    var t = Math.min(Math.max(0, ms / 1000), Math.max(0, video.duration - 0.05));
+    try {
+      video.pause();
+      video.currentTime = t;
+    } catch (e) {}
+  }
+
+  function blobToFile(blob, name, mime) {
+    try {
+      return new File([blob], name, { type: mime || blob.type || 'image/png' });
+    } catch (e) {
+      blob.name = name;
+      return blob;
+    }
+  }
+
+  async function uploadSceneImageBlob(blob, width, height) {
+    var name = VIDEO_SCENE_TITLE + '.png';
+    var file = blobToFile(blob, name, 'image/png');
+    if (
+      window.CreatorVideoStudioModal &&
+      typeof window.CreatorVideoStudioModal.uploadBlobAsAsset === 'function'
+    ) {
+      try {
+        var asset = await window.CreatorVideoStudioModal.uploadBlobAsAsset(file, {
+          name: name,
+          mime: 'image/png',
+          width: width || null,
+          height: height || null,
+        });
+        if (asset && asset.url) return asset.url;
+      } catch (e) {
+        console.warn('[CreatorImageAddMedia] uploadBlobAsAsset failed', e);
+      }
+    }
+    try {
+      var fd = new FormData();
+      fd.append('file', file, name);
+      if (width) fd.append('width', String(width));
+      if (height) fd.append('height', String(height));
+      var res = await fetch(API_BASE + '?op=video-studio-asset-upload-simple', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (data.ok && data.asset && data.asset.url) return data.asset.url;
+    } catch (e2) {
+      console.warn('[CreatorImageAddMedia] asset upload-simple failed', e2);
+    }
+    return uploadFile(file);
+  }
+
+  async function useSelectedScene() {
+    var video = document.getElementById('cimg-scene-video');
+    var useBtn = document.getElementById('cimg-scene-use');
+    if (!video || !video.videoWidth || sceneBusy) {
+      setSceneStatus(i18n('scene_picker_no_frame', 'No video frame available yet.'), '');
+      return;
+    }
+    sceneBusy = true;
+    setSceneUseEnabled(false);
+    if (useBtn) useBtn.disabled = true;
+    setSceneStatus(i18n('scene_picker_saving', 'Saving scene image…'), 'is-info');
+    try {
+      try {
+        video.pause();
+      } catch (e) {}
+      var width = video.videoWidth;
+      var height = video.videoHeight;
+      var canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, width, height);
+      var blob = await new Promise(function (resolve) {
+        canvas.toBlob(function (b) {
+          resolve(b);
+        }, 'image/png');
+      });
+      if (!blob) throw new Error('capture_failed');
+      var url = await uploadSceneImageBlob(blob, width, height);
+      if (!url) throw new Error('upload_failed');
+      closeScenePicker();
+      closeAddSource();
+      deliverUrl(url);
+    } catch (err) {
+      console.warn('[CreatorImageAddMedia] scene capture failed', err);
+      setSceneStatus(
+        i18n(
+          'scene_picker_save_failed',
+          'Could not save this scene. Try another frame or a different video.'
+        ),
+        ''
+      );
+      sceneBusy = false;
+      setSceneUseEnabled(true);
     }
   }
 
@@ -293,7 +662,6 @@
     if (activeCb && typeof activeCb.onFile === 'function') {
       activeCb.onFile(file);
     } else if (file && activeCb && typeof activeCb.onUrl === 'function') {
-      // upload then callback
       uploadFile(file).then(function (url) {
         if (url) activeCb.onUrl(url);
       });
@@ -321,31 +689,35 @@
   }
 
   function openAssetsPicker() {
+    var kind = isVideoSceneMode() ? 'video' : 'image';
     if (
       window.CreatorVideoStudioModal &&
       typeof window.CreatorVideoStudioModal.openLibraryPicker === 'function'
     ) {
       window.CreatorVideoStudioModal.openLibraryPicker({
-        kind: 'image',
+        kind: kind,
         onPick: function (asset) {
-          if (asset && asset.url) {
-            closeAddSource();
-            deliverUrl(asset.url);
+          if (!asset || !asset.url) return;
+          if (isVideoSceneMode()) {
+            openScenePicker({ url: asset.url });
+            return;
           }
+          closeAddSource();
+          deliverUrl(asset.url);
         },
       });
       return;
     }
-    // Fallback: device
     triggerDevice();
   }
 
   function triggerDevice() {
-    var input = document.getElementById('cimg-device-input');
+    var input = document.getElementById(isVideoSceneMode() ? 'cimg-device-video-input' : 'cimg-device-input');
     if (input) input.click();
   }
 
   async function pasteFromClipboard() {
+    if (isVideoSceneMode()) return;
     var api = window.EazClipboardImage;
     if (!api || typeof api.start !== 'function') return;
     var pasteBtn = document.getElementById('cimg-addsrc-paste');
@@ -371,6 +743,12 @@
     on('cimgAddSourceModal', 'mousedown', function (e) {
       if (e.target && e.target.id === 'cimgAddSourceModal') closeAddSource();
     });
+    on('cimg-addsrc-tab-image', 'click', function () {
+      setMediaMode('image');
+    });
+    on('cimg-addsrc-tab-video-scene', 'click', function () {
+      setMediaMode('video-scene');
+    });
     on('cimg-addsrc-assets', 'click', function () {
       // Keep Add media open underneath Assets / Link / Phone children
       openAssetsPicker();
@@ -379,6 +757,7 @@
       triggerDevice();
     });
     on('cimg-addsrc-phone', 'click', function () {
+      if (isVideoSceneMode()) return;
       if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
         window.CreatorPhoneUploadModal.open({
           purpose: 'hero-image',
@@ -413,6 +792,16 @@
       }
     });
 
+    on('cimg-scene-cancel', 'click', closeScenePicker);
+    on('cimgScenePickerModal', 'mousedown', function (e) {
+      if (e.target && e.target.id === 'cimgScenePickerModal') closeScenePicker();
+    });
+    on('cimg-scene-use', 'click', function () {
+      useSelectedScene();
+    });
+    on('cimg-scene-scrub', 'input', onSceneScrub);
+    on('cimg-scene-scrub', 'change', onSceneScrub);
+
     var deviceInput = document.getElementById('cimg-device-input');
     if (deviceInput && !deviceInput._cimgBound) {
       deviceInput._cimgBound = true;
@@ -424,9 +813,30 @@
       });
     }
 
+    var videoInput = document.getElementById('cimg-device-video-input');
+    if (videoInput && !videoInput._cimgBound) {
+      videoInput._cimgBound = true;
+      videoInput.addEventListener('change', function () {
+        var file = videoInput.files && videoInput.files[0];
+        videoInput.value = '';
+        if (!file) return;
+        var type = String(file.type || '');
+        var name = String(file.name || '').toLowerCase();
+        var looksVideo =
+          type.indexOf('video/') === 0 ||
+          /\.(mp4|webm|mov|m4v|mkv)$/i.test(name);
+        if (!looksVideo) {
+          setSceneStatus(i18n('scene_picker_need_video', 'Please choose a video file.'), '');
+          return;
+        }
+        openScenePicker({ file: file });
+      });
+    }
+
     // Phone upload bridge for hero/character when phone modal completes with image URL
     window.__eazImageAddMediaPhoneApply = function (imageUrl) {
       if (!imageUrl || !activeCb) return false;
+      if (isVideoSceneMode()) return false;
       closeAddSource();
       deliverUrl(imageUrl);
       return true;
@@ -452,6 +862,7 @@
     openLink: openLinkModal,
     close: closeAddSource,
     closeLink: closeLinkModal,
+    closeScene: closeScenePicker,
     uploadFile: uploadFile,
   };
 })();
