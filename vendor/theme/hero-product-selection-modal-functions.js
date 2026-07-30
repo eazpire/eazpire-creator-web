@@ -42,8 +42,10 @@ function normalizeProductHandleForStorefront(h) {
   } catch (_e) {}
   return s;
 }
-/** Per-product Shopify id → index in color-only variant slices (hero modal). */
+/** Per-product Shopify id → color index (hero modal two-axis nav). */
 let heroColorIndexByProductKey = new Map();
+/** Per-product Shopify id → view index within the active color. */
+let heroViewIndexByProductKey = new Map();
 let heroProductGridDelegationBound = false;
 /** After a horizontal color swipe, ignore the synthetic click on the card briefly. */
 let heroColorSwipeSuppressCardUntil = 0;
@@ -208,13 +210,32 @@ function mapShopifyProductsForHeroModal(products) {
   return (products || [])
     .map(function (product) {
       const id = product.id;
+      const rotation = Array.isArray(product.rotation_images)
+        ? product.rotation_images.map(function (u) { return String(u || '').trim(); }).filter(Boolean)
+        : [];
+      let images = [];
+      if (Array.isArray(product.images) && product.images.length) {
+        images = product.images
+          .map(function (img) {
+            if (!img) return null;
+            if (typeof img === 'string') return { src: img, alt: '' };
+            const src = img.src || img.url || '';
+            if (!src) return null;
+            return { src: String(src), alt: String(img.alt || img.altText || '') };
+          })
+          .filter(Boolean);
+      } else if (product.image) {
+        images = [{ src: String(product.image), alt: String(product.imageAlt || '') }];
+      }
       return {
         id: id,
         shopify_product_id: extractNumericProductId(product.id),
         product_key: product.product_key || null,
         title: product.title,
         product_type: product.product_type || 'Produkt',
-        images: product.image ? [{ src: product.image }] : [],
+        image: product.image || (images[0] && images[0].src) || null,
+        images: images,
+        rotation_images: rotation,
         tags: product.tags || [],
         handle: product.handle,
         price: product.price,
@@ -364,7 +385,7 @@ function teardownHeroStorefrontLazyEnrich() {
 }
 
 /**
- * Merge Shopify `/products/*.js` into a published-hero row (variants + featured image).
+ * Merge Shopify `/products/*.js` into a published-hero row (variants + full images).
  * @returns {boolean} true if anything was applied
  */
 function applyStorefrontJsonToHeroProduct(p, sp) {
@@ -373,19 +394,42 @@ function applyStorefrontJsonToHeroProduct(p, sp) {
   const vars = mapShopifyJsVariantsToInternal(sp);
   if (vars.length) {
     p.variants = vars;
+    changed = true;
+  }
+  if (Array.isArray(sp.images) && sp.images.length) {
+    const mapped = [];
+    const seen = new Set();
+    for (let i = 0; i < sp.images.length; i += 1) {
+      const img = sp.images[i];
+      const src = typeof img === 'string' ? img : img && (img.src || img.url);
+      if (!src || seen.has(src)) continue;
+      seen.add(src);
+      mapped.push({
+        src: String(src),
+        alt: typeof img === 'object' && img ? String(img.alt || '') : '',
+      });
+    }
+    if (mapped.length) {
+      p.images = mapped;
+      if (!p.image) p.image = mapped[0].src;
+      changed = true;
+    }
+  } else {
+    const img =
+      sp.featured_image || (Array.isArray(sp.images) && sp.images.length ? sp.images[0] : null) || null;
+    const src = typeof img === 'string' ? img : img && (img.src || img.url);
+    if (src && (!p.images || !p.images.length || !(p.images[0] && (p.images[0].src || p.images[0].url)))) {
+      p.images = [{ src: src, alt: '' }];
+      changed = true;
+    }
+    if (src) {
+      p.image = src;
+      changed = true;
+    }
+  }
+  if (changed) {
     delete p._heroColorSlices;
-    changed = true;
-  }
-  const img =
-    sp.featured_image || (Array.isArray(sp.images) && sp.images.length ? sp.images[0] : null) || null;
-  const src = typeof img === 'string' ? img : img && (img.src || img.url);
-  if (src && (!p.images || !p.images.length || !(p.images[0] && (p.images[0].src || p.images[0].url)))) {
-    p.images = [{ src: src }];
-    changed = true;
-  }
-  if (src) {
-    p.image = src;
-    changed = true;
+    delete p._heroNavModel;
   }
   return changed;
 }
@@ -399,7 +443,7 @@ function heroPairBucket(p) {
 }
 
 /**
- * Build inner image block for one grid card (color swipe, carousel, or single img).
+ * Build inner image block for one grid card (color + view nav, carousel, or single img).
  * @returns {string}
  */
 function buildHeroProductItemImageBlockHtml(product) {
@@ -412,34 +456,49 @@ function buildHeroProductItemImageBlockHtml(product) {
 
   const productIdAttr = normHeroPid(product.id || product.product_id || product.shopify_id);
   const productTitle = product.title || product.name || 'Unbekanntes Produkt';
+  const nav = getHeroNavIndexes(product);
+  const color = nav.color;
+  const view = nav.view;
+  const visibleImg = (view && view.image) || (color && color.views && color.views[0] && color.views[0].image) || imageUrl;
+  const multiColor = nav.colors.length > 1;
+  const multiView = !!(color && color.views && color.views.length > 1);
 
-  const slices = getHeroColorSlices(product);
-  let colorIdx = heroColorIndexByProductKey.has(productIdAttr)
-    ? Number(heroColorIndexByProductKey.get(productIdAttr))
-    : 0;
-  if (!Number.isFinite(colorIdx) || colorIdx < 0) colorIdx = 0;
-  if (colorIdx >= slices.length) colorIdx = 0;
-  const slice = slices[colorIdx] || slices[0];
-
-  if (slices.length > 1 && slice && slice.image) {
+  if ((multiColor || multiView) && visibleImg) {
     const prevL = heroModalColorAria('prev');
     const nextL = heroModalColorAria('next');
+    const viewPrevL = heroModalViewAria('prev');
+    const viewNextL = heroModalViewAria('next');
+    const colorBtns = multiColor
+      ? '<button type="button" class="hero-product-selection-modal__color-nav hero-product-selection-modal__color-nav--prev" data-hero-color-nav="prev" aria-label="' +
+        escapeHtmlText(prevL) +
+        '">‹</button>'
+      : '<span class="hero-product-selection-modal__color-nav hero-product-selection-modal__color-nav--spacer" aria-hidden="true"></span>';
+    const colorBtnsNext = multiColor
+      ? '<button type="button" class="hero-product-selection-modal__color-nav hero-product-selection-modal__color-nav--next" data-hero-color-nav="next" aria-label="' +
+        escapeHtmlText(nextL) +
+        '">›</button>'
+      : '<span class="hero-product-selection-modal__color-nav hero-product-selection-modal__color-nav--spacer" aria-hidden="true"></span>';
+    const viewBtns = multiView
+      ? '<button type="button" class="hero-product-selection-modal__view-nav hero-product-selection-modal__view-nav--prev" data-hero-view-nav="prev" aria-label="' +
+        escapeHtmlText(viewPrevL) +
+        '">↑</button>' +
+        '<button type="button" class="hero-product-selection-modal__view-nav hero-product-selection-modal__view-nav--next" data-hero-view-nav="next" aria-label="' +
+        escapeHtmlText(viewNextL) +
+        '">↓</button>'
+      : '';
     return (
       '<div class="hero-product-selection-modal__thumb-wrap">' +
-      '<button type="button" class="hero-product-selection-modal__color-nav hero-product-selection-modal__color-nav--prev" data-hero-color-nav="prev" aria-label="' +
-      escapeHtmlText(prevL) +
-      '">‹</button>' +
+      colorBtns +
       '<div class="hero-product-selection-modal__color-img-wrap" data-hero-color-swipe-area>' +
+      viewBtns +
       '<img src="' +
-      escapeHtmlAttr(slice.image) +
+      escapeHtmlAttr(visibleImg) +
       '" alt="" class="hero-product-selection-modal__product-image" data-hero-color-img loading="lazy" decoding="async" onerror="this.style.display=\'none\'">' +
       '</div>' +
-      '<button type="button" class="hero-product-selection-modal__color-nav hero-product-selection-modal__color-nav--next" data-hero-color-nav="next" aria-label="' +
-      escapeHtmlText(nextL) +
-      '">›</button>' +
+      colorBtnsNext +
       '</div>' +
-      (slice.label
-        ? '<div class="hero-product-selection-modal__color-label" data-hero-color-label>' + escapeHtmlText(slice.label) + '</div>'
+      (color && color.label
+        ? '<div class="hero-product-selection-modal__color-label" data-hero-color-label>' + escapeHtmlText(color.label) + '</div>'
         : '<div class="hero-product-selection-modal__color-label" data-hero-color-label style="display:none"></div>')
     );
   }
@@ -475,7 +534,14 @@ async function heroLazyEnrichProductRow(itemEl) {
   const pid = normHeroPid(itemEl.getAttribute('data-product-id'));
   const product = findHeroProductInList(pid);
   if (!product || product._heroSfLazyBusy || product._heroSfLazyDone) return;
-  if (Array.isArray(product.variants) && product.variants.length > 1) {
+  // Still enrich when multi-variant: need full images[] with alts for view axis.
+  const mediaCount = Array.isArray(product.images) ? product.images.length : 0;
+  const hasStructuredAlt =
+    mediaCount > 0 &&
+    product.images.some(function (img) {
+      return img && typeof img === 'object' && String(img.alt || '').includes('|');
+    });
+  if (Array.isArray(product.variants) && product.variants.length > 1 && hasStructuredAlt) {
     product._heroSfLazyDone = true;
     return;
   }
@@ -486,8 +552,12 @@ async function heroLazyEnrichProductRow(itemEl) {
   product._heroSfLazyBusy = true;
   try {
     const sp = await fetchStorefrontProductJson(product.handle, product.storefront_url);
-    applyStorefrontJsonToHeroProduct(product, sp);
-    refreshHeroProductItemImageBlock(itemEl, product);
+    const changed = applyStorefrontJsonToHeroProduct(product, sp);
+    if (changed) {
+      delete product._heroNavModel;
+      delete product._heroColorSlices;
+      refreshHeroProductItemImageBlock(itemEl, product);
+    }
   } catch (_e) {
   } finally {
     product._heroSfLazyBusy = false;
@@ -568,6 +638,12 @@ function heroModalColorAria(dir) {
   return (m && m.color_previous) || 'Previous color';
 }
 
+function heroModalViewAria(dir) {
+  var m = window.CreatorI18n && window.CreatorI18n.hero_product_modal;
+  if (dir === 'next') return (m && m.view_next) || 'Next view';
+  return (m && m.view_previous) || 'Previous view';
+}
+
 function isHeroColorOptionName(name) {
   return /^(color|farbe|colour|couleur|colore)$/i.test(String(name || '').trim());
 }
@@ -576,6 +652,15 @@ function stripUrlForSliceDedup(u) {
   const s = String(u || '').trim();
   const q = s.indexOf('?');
   return (q === -1 ? s : s.slice(0, q)).toLowerCase();
+}
+
+function heroSlugify(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function variantHeroImageUrl(v, fallbackImg) {
@@ -603,45 +688,80 @@ function variantSliceLabelFromOptions(v) {
   return parts.slice(0, 3).join(' · ');
 }
 
-/** Distinct preview images across variants (size, color with different mockups, etc.). */
-function buildDistinctVariantImageSlices(variants, fallbackImg) {
-  const seen = new Map();
+function heroViewRank(view) {
+  const v = String(view || '').toLowerCase();
+  if (v.indexOf('preview-default') >= 0 || v === 'default') return 0;
+  if (v === 'front' || v.indexOf('front') === 0) return 1;
+  if (v === 'back' || v.indexOf('back') === 0) return 2;
+  if (v === 'left' || v.indexOf('left') === 0) return 3;
+  if (v === 'right' || v.indexOf('right') === 0) return 4;
+  if (v.indexOf('folded') === 0) return 5;
+  if (v.indexOf('detail') === 0) return 6;
+  return 50;
+}
+
+function sortHeroViews(views) {
+  return (views || []).slice().sort(function (a, b) {
+    return heroViewRank(a.view) - heroViewRank(b.view);
+  });
+}
+
+function preferHeroViewIndex(views) {
+  if (!views || !views.length) return 0;
+  for (let i = 0; i < views.length; i += 1) {
+    const v = String(views[i].view || '').toLowerCase();
+    if (v.indexOf('preview-default') >= 0) return i;
+  }
+  for (let j = 0; j < views.length; j += 1) {
+    const v2 = String(views[j].view || '').toLowerCase();
+    if (v2 === 'front' || v2.indexOf('front') === 0) return j;
+  }
+  return 0;
+}
+
+function collectHeroProductMediaItems(product) {
   const out = [];
-  for (let j = 0; j < variants.length; j += 1) {
-    const v = variants[j];
-    const vid = String(v.id || '').trim();
-    if (!vid) continue;
-    const img = variantHeroImageUrl(v, fallbackImg);
-    if (!img) continue;
-    const key = stripUrlForSliceDedup(img);
-    if (seen.has(key)) continue;
-    seen.set(key, true);
-    const lab = variantSliceLabelFromOptions(v);
-    out.push({ variantId: vid, label: lab, image: img });
+  const seen = new Set();
+  const imgs = Array.isArray(product && product.images) ? product.images : [];
+  for (let i = 0; i < imgs.length; i += 1) {
+    const img = imgs[i];
+    const src = typeof img === 'string' ? img : img && (img.src || img.url);
+    if (!src || seen.has(src)) continue;
+    seen.add(src);
+    out.push({ src: String(src), alt: typeof img === 'object' && img ? String(img.alt || '') : '' });
   }
   return out;
 }
 
-function getHeroColorSlices(product) {
-  if (!product) return [];
-  if (product._heroColorSlices) return product._heroColorSlices;
+function parseHeroAltParts(alt) {
+  const raw = String(alt || '').trim();
+  if (!raw.includes('|')) return null;
+  const parts = raw.split('|');
+  const group = heroSlugify(parts[0] || '');
+  const view = String(parts[1] || '').trim().toLowerCase();
+  if (!group || !view) return null;
+  return { group: group, view: view };
+}
+
+/**
+ * Two-axis nav model: colors[] each with views[{view,image}].
+ * Cached on product._heroNavModel.
+ */
+function getHeroNavModel(product) {
+  if (!product) return { colors: [] };
+  if (product._heroNavModel && Array.isArray(product._heroNavModel.colors)) {
+    return product._heroNavModel;
+  }
 
   const fallbackImg =
     product.image ||
     (product.images && product.images[0] && (product.images[0].src || product.images[0].url || product.images[0])) ||
     '';
-
   const variants = Array.isArray(product.variants) ? product.variants : [];
-  if (!variants.length) {
-    product._heroColorSlices = [
-      {
-        variantId: product.variantId ? String(product.variantId) : '',
-        label: '',
-        image: String(fallbackImg || ''),
-      },
-    ];
-    return product._heroColorSlices;
-  }
+  const media = collectHeroProductMediaItems(product);
+  const rotation = Array.isArray(product.rotation_images)
+    ? product.rotation_images.map(function (u) { return String(u || '').trim(); }).filter(Boolean)
+    : [];
 
   function colorEntryForVariant(v) {
     const opts = v.options || [];
@@ -653,91 +773,239 @@ function getHeroColorSlices(product) {
     return null;
   }
 
-  let colorSlices = [];
-  const firstColor = colorEntryForVariant(variants[0]);
-  if (firstColor) {
-    const byColor = new Map();
+  /** @type {{ key: string, label: string, variantId: string, views: {view:string,image:string}[] }[]} */
+  let colors = [];
+
+  if (variants.length) {
+    const firstColor = colorEntryForVariant(variants[0]);
+    if (firstColor) {
+      const byColor = new Map();
+      for (let j = 0; j < variants.length; j += 1) {
+        const v = variants[j];
+        const ce = colorEntryForVariant(v);
+        if (!ce || !ce.value) continue;
+        const key = heroSlugify(ce.value);
+        if (!key || byColor.has(key)) continue;
+        byColor.set(key, {
+          key: key,
+          label: ce.label,
+          variantId: String(v.id || ''),
+          views: [],
+          _variantImg: variantHeroImageUrl(v, '') || '',
+        });
+      }
+      colors = Array.from(byColor.values());
+    }
+  }
+
+  // Structured alts: color|view → fill views per color
+  let structuredHits = 0;
+  for (let mi = 0; mi < media.length; mi += 1) {
+    const parsed = parseHeroAltParts(media[mi].alt);
+    if (!parsed) continue;
+    structuredHits += 1;
+    let color = null;
+    for (let ci = 0; ci < colors.length; ci += 1) {
+      if (colors[ci].key === parsed.group) {
+        color = colors[ci];
+        break;
+      }
+    }
+    if (!color) {
+      color = {
+        key: parsed.group,
+        label: parsed.group.replace(/-/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); }),
+        variantId: '',
+        views: [],
+        _variantImg: '',
+      };
+      colors.push(color);
+    }
+    const dup = color.views.some(function (vw) {
+      return vw.view === parsed.view || stripUrlForSliceDedup(vw.image) === stripUrlForSliceDedup(media[mi].src);
+    });
+    if (!dup) color.views.push({ view: parsed.view, image: media[mi].src });
+  }
+
+  // If no color options but structured alts created groups, keep them
+  if (!colors.length && structuredHits) {
+    // already populated above when creating colors from alts
+  }
+
+  // Fallback: build colors from distinct variant images / option labels
+  if (!colors.length && variants.length) {
+    const seenImg = new Map();
     for (let j = 0; j < variants.length; j += 1) {
       const v = variants[j];
-      const ce = colorEntryForVariant(v);
-      if (!ce || !ce.value) continue;
-      const key = ce.value.toLowerCase();
-      if (byColor.has(key)) continue;
-      const img = variantHeroImageUrl(v, fallbackImg) || fallbackImg;
-      byColor.set(key, {
-        variantId: String(v.id || ''),
-        label: ce.label,
-        image: String(img || ''),
+      const vid = String(v.id || '').trim();
+      if (!vid) continue;
+      const img = variantHeroImageUrl(v, fallbackImg);
+      if (!img) continue;
+      const key = stripUrlForSliceDedup(img);
+      if (seenImg.has(key)) continue;
+      seenImg.set(key, true);
+      const lab = variantSliceLabelFromOptions(v);
+      colors.push({
+        key: heroSlugify(lab) || 'variant-' + colors.length,
+        label: lab,
+        variantId: vid,
+        views: [{ view: 'front', image: String(img) }],
+        _variantImg: String(img),
       });
     }
-    colorSlices = Array.from(byColor.values()).filter(function (s) {
-      return s.variantId;
-    });
-    if (colorSlices.length < 2) {
-      const v0 = variants[0];
-      const img = variantHeroImageUrl(v0, fallbackImg) || fallbackImg;
-      colorSlices = [{ variantId: String(v0.id || ''), label: firstColor.label, image: String(img || '') }];
+  }
+
+  // Zip rotation_images onto colors as front when views empty
+  for (let ci = 0; ci < colors.length; ci += 1) {
+    const c = colors[ci];
+    if (!c.views.length && rotation[ci]) {
+      c.views.push({ view: 'front', image: rotation[ci] });
     }
-  } else {
-    const v0 = variants[0];
-    const img = variantHeroImageUrl(v0, fallbackImg) || fallbackImg;
-    colorSlices = [{ variantId: String(v0.id || ''), label: '', image: String(img || '') }];
+    if (!c.views.length && c._variantImg) {
+      c.views.push({ view: 'front', image: c._variantImg });
+    }
+    if (!c.views.length && fallbackImg) {
+      c.views.push({ view: 'front', image: String(fallbackImg) });
+    }
+    c.views = sortHeroViews(c.views);
+    delete c._variantImg;
   }
 
-  const distinctSlices = buildDistinctVariantImageSlices(variants, fallbackImg);
-
-  let resolved;
-  if (colorSlices.length >= 2) {
-    resolved = colorSlices;
-  } else if (distinctSlices.length >= 2) {
-    resolved = distinctSlices;
-  } else if (colorSlices.length) {
-    resolved = colorSlices;
-  } else if (distinctSlices.length) {
-    resolved = distinctSlices;
-  } else {
-    const v0 = variants[0];
-    resolved = [
-      {
-        variantId: String(v0.id || ''),
+  // Single-color multi-view: media without matching color option
+  if (colors.length <= 1 && media.length > 1 && !structuredHits) {
+    const views = media.map(function (m, idx) {
+      return { view: 'view-' + idx, image: m.src };
+    });
+    if (!colors.length) {
+      colors = [{
+        key: 'default',
         label: '',
-        image: String(variantHeroImageUrl(v0, fallbackImg) || fallbackImg || ''),
-      },
-    ];
+        variantId: product.variantId ? String(product.variantId) : (variants[0] && String(variants[0].id || '')) || '',
+        views: views,
+      }];
+    } else if (colors[0].views.length <= 1) {
+      colors[0].views = views;
+    }
   }
 
-  product._heroColorSlices = resolved;
-  return product._heroColorSlices;
+  // Single-color multi-view from structured alts with one group
+  if (colors.length === 1 && colors[0].views.length <= 1 && structuredHits === 0 && media.length > 1) {
+    // keep as-is
+  }
+
+  if (!colors.length) {
+    colors = [{
+      key: 'default',
+      label: '',
+      variantId: product.variantId ? String(product.variantId) : '',
+      views: fallbackImg ? [{ view: 'front', image: String(fallbackImg) }] : [],
+    }];
+  }
+
+  // Drop empty-view colors
+  colors = colors.filter(function (c) {
+    return c.views && c.views.length;
+  });
+  if (!colors.length && fallbackImg) {
+    colors = [{
+      key: 'default',
+      label: '',
+      variantId: product.variantId ? String(product.variantId) : '',
+      views: [{ view: 'front', image: String(fallbackImg) }],
+    }];
+  }
+
+  product._heroNavModel = { colors: colors };
+  // Legacy cache for callers of getHeroColorSlices
+  product._heroColorSlices = colors.map(function (c) {
+    return {
+      variantId: c.variantId,
+      label: c.label,
+      image: (c.views[0] && c.views[0].image) || '',
+    };
+  });
+  return product._heroNavModel;
+}
+
+/** @deprecated Prefer getHeroNavModel — kept for random-pick helpers. */
+function getHeroColorSlices(product) {
+  getHeroNavModel(product);
+  return (product && product._heroColorSlices) || [];
+}
+
+function getHeroNavIndexes(product) {
+  const model = getHeroNavModel(product);
+  const colors = model.colors || [];
+  const pid = normHeroPid(product && (product.id || product.product_id || product.shopify_id));
+  let colorIdx = heroColorIndexByProductKey.has(pid) ? Number(heroColorIndexByProductKey.get(pid)) : 0;
+  if (!Number.isFinite(colorIdx) || colorIdx < 0) colorIdx = 0;
+  if (colorIdx >= colors.length) colorIdx = 0;
+  const color = colors[colorIdx] || colors[0] || null;
+  let viewIdx = heroViewIndexByProductKey.has(pid) ? Number(heroViewIndexByProductKey.get(pid)) : preferHeroViewIndex(color && color.views);
+  if (!Number.isFinite(viewIdx) || viewIdx < 0) viewIdx = 0;
+  const views = (color && color.views) || [];
+  if (viewIdx >= views.length) viewIdx = preferHeroViewIndex(views);
+  return {
+    colors: colors,
+    colorIdx: colorIdx,
+    viewIdx: viewIdx,
+    color: color,
+    view: views[viewIdx] || views[0] || null,
+  };
 }
 
 function applyHeroColorSelectionToProduct(product) {
   if (!product) return;
-  const slices = getHeroColorSlices(product);
-  if (!slices.length) return;
-  const pid = normHeroPid(product.id);
-  let idx = heroColorIndexByProductKey.has(pid) ? Number(heroColorIndexByProductKey.get(pid)) : 0;
-  if (!Number.isFinite(idx) || idx < 0) idx = 0;
-  if (idx >= slices.length) idx = 0;
-  const slice = slices[idx];
-  if (!slice) return;
-  product.selected_variant_id = slice.variantId || null;
-  if (slice.image) {
-    product.images = [{ src: slice.image }];
-    product.image = slice.image;
+  const nav = getHeroNavIndexes(product);
+  if (!nav.color) return;
+  product.selected_variant_id = nav.color.variantId || null;
+  const img = (nav.view && nav.view.image) || (nav.color.views[0] && nav.color.views[0].image) || '';
+  if (img) {
+    // Keep full media list for further view nav; only set primary image for consumers.
+    product.image = img;
+    product.hero_generation_image_url = img;
   }
 }
 
-function updateHeroProductCardColorUI(itemEl, product, slices, idx) {
-  if (!itemEl || !slices || !slices.length) return;
-  const slice = slices[Math.max(0, Math.min(idx, slices.length - 1))];
+function updateHeroProductCardNavUI(itemEl, product) {
+  if (!itemEl || !product) return;
+  const nav = getHeroNavIndexes(product);
   const img = itemEl.querySelector('[data-hero-color-img]');
-  if (img && slice && slice.image) {
-    img.src = slice.image;
+  const visible = (nav.view && nav.view.image) || '';
+  if (img && visible) {
+    img.style.display = '';
+    img.src = visible;
   }
   const lab = itemEl.querySelector('[data-hero-color-label]');
   if (lab) {
-    lab.textContent = slice && slice.label ? slice.label : '';
-    lab.style.display = slice && slice.label ? 'block' : 'none';
+    lab.textContent = nav.color && nav.color.label ? nav.color.label : '';
+    lab.style.display = nav.color && nav.color.label ? 'block' : 'none';
+  }
+  // Rebuild view arrows if view count changed after enrich
+  const wrap = itemEl.querySelector('[data-hero-color-swipe-area]');
+  if (wrap) {
+    const multiView = !!(nav.color && nav.color.views && nav.color.views.length > 1);
+    const existing = wrap.querySelectorAll('[data-hero-view-nav]');
+    if (multiView && !existing.length) {
+      const viewPrevL = heroModalViewAria('prev');
+      const viewNextL = heroModalViewAria('next');
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.className = 'hero-product-selection-modal__view-nav hero-product-selection-modal__view-nav--prev';
+      up.setAttribute('data-hero-view-nav', 'prev');
+      up.setAttribute('aria-label', viewPrevL);
+      up.textContent = '↑';
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.className = 'hero-product-selection-modal__view-nav hero-product-selection-modal__view-nav--next';
+      down.setAttribute('data-hero-view-nav', 'next');
+      down.setAttribute('aria-label', viewNextL);
+      down.textContent = '↓';
+      wrap.insertBefore(down, wrap.firstChild);
+      wrap.insertBefore(up, wrap.firstChild);
+    } else if (!multiView && existing.length) {
+      existing.forEach(function (el) { el.remove(); });
+    }
   }
 }
 
@@ -763,13 +1031,38 @@ function advanceHeroProductColorVariant(itemEl, dir) {
   const pid = normHeroPid(itemEl.getAttribute('data-product-id'));
   const product = findHeroProductInList(pid);
   if (!product) return false;
-  const slices = getHeroColorSlices(product);
-  if (slices.length < 2) return false;
+  const model = getHeroNavModel(product);
+  if (model.colors.length < 2) return false;
   let cur = heroColorIndexByProductKey.has(pid) ? Number(heroColorIndexByProductKey.get(pid)) : 0;
   if (!Number.isFinite(cur)) cur = 0;
-  const next = (cur + dir + slices.length) % slices.length;
+  const next = (cur + dir + model.colors.length) % model.colors.length;
   heroColorIndexByProductKey.set(pid, next);
-  updateHeroProductCardColorUI(itemEl, product, slices, next);
+  // Reset view to preferred front for the new color
+  const views = model.colors[next] && model.colors[next].views;
+  heroViewIndexByProductKey.set(pid, preferHeroViewIndex(views));
+  updateHeroProductCardNavUI(itemEl, product);
+  if (selectedHeroProduct && normHeroPid(selectedHeroProduct.id) === normHeroPid(product.id)) {
+    applyHeroColorSelectionToProduct(product);
+    updateHeroProductSelectionButtons();
+  }
+  return true;
+}
+
+/**
+ * @param {HTMLElement} itemEl
+ * @param {number} dir -1 = previous view, +1 = next
+ */
+function advanceHeroProductView(itemEl, dir) {
+  if (!itemEl || (dir !== 1 && dir !== -1)) return false;
+  const pid = normHeroPid(itemEl.getAttribute('data-product-id'));
+  const product = findHeroProductInList(pid);
+  if (!product) return false;
+  const nav = getHeroNavIndexes(product);
+  const views = (nav.color && nav.color.views) || [];
+  if (views.length < 2) return false;
+  const next = (nav.viewIdx + dir + views.length) % views.length;
+  heroViewIndexByProductKey.set(pid, next);
+  updateHeroProductCardNavUI(itemEl, product);
   if (selectedHeroProduct && normHeroPid(selectedHeroProduct.id) === normHeroPid(product.id)) {
     applyHeroColorSelectionToProduct(product);
     updateHeroProductSelectionButtons();
@@ -778,14 +1071,24 @@ function advanceHeroProductColorVariant(itemEl, dir) {
 }
 
 function onHeroProductGridClick(ev) {
-  const btn = ev.target && ev.target.closest && ev.target.closest('[data-hero-color-nav]');
-  if (btn) {
+  const colorBtn = ev.target && ev.target.closest && ev.target.closest('[data-hero-color-nav]');
+  if (colorBtn) {
     ev.preventDefault();
     ev.stopPropagation();
-    const item = btn.closest('.hero-product-selection-modal__product-item');
+    const item = colorBtn.closest('.hero-product-selection-modal__product-item');
     if (!item) return;
-    const dir = btn.getAttribute('data-hero-color-nav') === 'next' ? 1 : -1;
+    const dir = colorBtn.getAttribute('data-hero-color-nav') === 'next' ? 1 : -1;
     advanceHeroProductColorVariant(item, dir);
+    return;
+  }
+  const viewBtn = ev.target && ev.target.closest && ev.target.closest('[data-hero-view-nav]');
+  if (viewBtn) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const itemV = viewBtn.closest('.hero-product-selection-modal__product-item');
+    if (!itemV) return;
+    const dirV = viewBtn.getAttribute('data-hero-view-nav') === 'next' ? 1 : -1;
+    advanceHeroProductView(itemV, dirV);
     return;
   }
 
@@ -824,9 +1127,16 @@ function bindHeroProductGridDelegationOnce() {
     var dx = ev.changedTouches[0].clientX - heroColorSwipeTouch.x;
     var dy = ev.changedTouches[0].clientY - heroColorSwipeTouch.y;
     heroColorSwipeTouch.wrap = null;
-    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)) return;
     var item = wrap.closest('.hero-product-selection-modal__product-item');
     if (!item) return;
+    if (Math.abs(dy) >= 45 && Math.abs(dy) > Math.abs(dx)) {
+      var vdir = dy > 0 ? 1 : -1;
+      if (!advanceHeroProductView(item, vdir)) return;
+      ev.preventDefault();
+      heroColorSwipeSuppressCardUntil = Date.now() + 450;
+      return;
+    }
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)) return;
     var dir = dx > 0 ? -1 : 1;
     if (!advanceHeroProductColorVariant(item, dir)) return;
     ev.preventDefault();
@@ -864,9 +1174,15 @@ function bindHeroProductGridDelegationOnce() {
     var dx = ev.clientX - heroColorPointerSwipe.x;
     var dy = ev.clientY - heroColorPointerSwipe.y;
     resetHeroColorPointerSwipe();
-    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)) return;
     var item = wrap.closest('.hero-product-selection-modal__product-item');
     if (!item) return;
+    if (Math.abs(dy) >= 45 && Math.abs(dy) > Math.abs(dx)) {
+      var vdir = dy > 0 ? 1 : -1;
+      if (!advanceHeroProductView(item, vdir)) return;
+      heroColorSwipeSuppressCardUntil = Date.now() + 450;
+      return;
+    }
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)) return;
     var dir = dx > 0 ? -1 : 1;
     if (!advanceHeroProductColorVariant(item, dir)) return;
     heroColorSwipeSuppressCardUntil = Date.now() + 450;
@@ -874,12 +1190,20 @@ function bindHeroProductGridDelegationOnce() {
   grid.addEventListener('pointercancel', resetHeroColorPointerSwipe);
 
   grid.addEventListener('keydown', function (ev) {
-    if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
+    if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' || ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
       const card =
         ev.target && ev.target.getAttribute && ev.target.getAttribute('data-hero-select-product') != null
           ? ev.target
           : ev.target.closest && ev.target.closest('[data-hero-select-product]');
       if (!card || !grid.contains(card)) return;
+      if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+        var vdirK = ev.key === 'ArrowDown' ? 1 : -1;
+        if (advanceHeroProductView(card, vdirK)) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }
+        return;
+      }
       var dir = ev.key === 'ArrowRight' ? 1 : -1;
       if (advanceHeroProductColorVariant(card, dir)) {
         ev.preventDefault();
@@ -893,7 +1217,12 @@ function bindHeroProductGridDelegationOnce() {
         ? ev.target
         : ev.target.closest && ev.target.closest('[data-hero-select-product]');
     if (!card || !grid.contains(card)) return;
-    if (ev.target.closest && ev.target.closest('[data-hero-color-nav], [data-creator-carousel-prev], [data-creator-carousel-next]')) {
+    if (
+      ev.target.closest &&
+      ev.target.closest(
+        '[data-hero-color-nav], [data-hero-view-nav], [data-creator-carousel-prev], [data-creator-carousel-next]'
+      )
+    ) {
       return;
     }
     ev.preventDefault();
@@ -1503,16 +1832,21 @@ function confirmHeroProductSelection() {
   if (!selectedHeroProduct) return;
 
   try {
+    applyHeroColorSelectionToProduct(selectedHeroProduct);
     var pid = normHeroPid(
       selectedHeroProduct.id || selectedHeroProduct.product_id || selectedHeroProduct.shopify_id || selectedHeroProduct.shopify_product_id
     );
     var card = document.querySelector('.hero-product-selection-modal__product-item--selected');
     if (card && (!pid || normHeroPid(card.getAttribute('data-product-id')) === pid)) {
-      var u =
-        window.CreatorProductImageCarousel &&
-        typeof window.CreatorProductImageCarousel.getVisibleCarouselImageUrlFromCard === 'function'
-          ? window.CreatorProductImageCarousel.getVisibleCarouselImageUrlFromCard(card)
-          : null;
+      var colorImg = card.querySelector('[data-hero-color-img]');
+      var u = colorImg && colorImg.src ? colorImg.src : null;
+      if (!u) {
+        u =
+          window.CreatorProductImageCarousel &&
+          typeof window.CreatorProductImageCarousel.getVisibleCarouselImageUrlFromCard === 'function'
+            ? window.CreatorProductImageCarousel.getVisibleCarouselImageUrlFromCard(card)
+            : null;
+      }
       if (u) selectedHeroProduct.hero_generation_image_url = u;
     }
   } catch (_syncErr) {}
@@ -1766,6 +2100,7 @@ async function loadHeroProducts(creatorName, retryCount, options) {
     if (emptyElement) emptyElement.style.display = 'none';
     teardownHeroStorefrontLazyEnrich();
     heroColorIndexByProductKey = new Map();
+    heroViewIndexByProductKey = new Map();
     storefrontProductJsonCache = new Map();
     heroProducts = [];
     heroProductsHasMore = true;
@@ -2532,7 +2867,14 @@ function renderHeroProducts(products) {
 }
 
 function selectHeroProduct(productId, ev) {
-  if (ev && ev.target && ev.target.closest && ev.target.closest('[data-creator-carousel-prev], [data-creator-carousel-next]')) {
+  if (
+    ev &&
+    ev.target &&
+    ev.target.closest &&
+    ev.target.closest(
+      '[data-creator-carousel-prev], [data-creator-carousel-next], [data-hero-color-nav], [data-hero-view-nav]'
+    )
+  ) {
     return;
   }
   const pid = normHeroPid(productId);
@@ -2741,16 +3083,20 @@ function cloneProductWithRandomVariantForHero(p) {
     o = Object.assign({}, p);
   }
   delete o._heroColorSlices;
+  delete o._heroNavModel;
   /** Stale URL from a prior modal confirm on the shared catalog row (blob/revoked or wrong variant) breaks hero preview tiles. */
   try {
     delete o.hero_generation_image_url;
   } catch (_del) {}
   const pid = normHeroPid(o.id || o.product_id);
-  const slices = getHeroColorSlices(o);
-  if (slices.length > 1) {
-    heroColorIndexByProductKey.set(pid, Math.floor(Math.random() * slices.length));
+  const model = getHeroNavModel(o);
+  if (model.colors.length > 1) {
+    const cIdx = Math.floor(Math.random() * model.colors.length);
+    heroColorIndexByProductKey.set(pid, cIdx);
+    heroViewIndexByProductKey.set(pid, preferHeroViewIndex(model.colors[cIdx].views));
   } else {
     heroColorIndexByProductKey.delete(pid);
+    heroViewIndexByProductKey.delete(pid);
   }
   applyHeroColorSelectionToProduct(o);
   return o;
