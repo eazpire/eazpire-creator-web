@@ -35,15 +35,20 @@
       seen[u] = true;
       urls.push(u);
     }
+    // Selected mock from hero/character/video product picker must lead the list.
+    if (product && product.hero_generation_image_url) {
+      push(String(product.hero_generation_image_url));
+    }
+    if (product && product.image) {
+      var primary =
+        product.image.src || product.image.url || (typeof product.image === 'string' ? product.image : null);
+      push(primary);
+    }
     if (product && product.images && Array.isArray(product.images)) {
       product.images.forEach(function (im) {
         var u = im && (im.src || im.url || (typeof im === 'string' ? im : null));
         push(u);
       });
-    }
-    if (product && product.image) {
-      var u = product.image.src || product.image.url || (typeof product.image === 'string' ? product.image : null);
-      push(u);
     }
     return urls;
   }

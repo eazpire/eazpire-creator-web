@@ -1039,6 +1039,26 @@
     font: inherit;
   }
 
+  .cdp-modal__meta-bullets {
+    margin-top: 4px;
+  }
+  .cdp-modal__meta-hint {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: #9ca3af;
+    line-height: 1.35;
+  }
+  .cdp-modal__bullet-rows {
+    display: grid;
+    gap: 8px;
+  }
+  .cdp-modal__bullet-row {
+    display: grid;
+    gap: 4px;
+  }
+  .cdp-modal__label--compact {
+    font-size: 12px;
+  }
   .cdp-modal__meta-add-row {
     display: flex;
     gap: 8px;
@@ -3981,6 +4001,11 @@
                 <input type="text" id="cdp-meta-subtopics-input-design-preview" placeholder="Add…" autocomplete="off">
                 <button type="button" class="cdp-modal__meta-btn" id="cdp-meta-subtopics-add-design-preview" data-t="creator.preview_modal.meta_add">Add</button>
               </div>
+            </div>
+            <div class="cdp-modal__meta-field cdp-modal__meta-bullets">
+              <label class="cdp-modal__label" data-t="creator.preview_modal.meta_bullet_points">Amazon bullet points</label>
+              <p class="cdp-modal__meta-hint" data-t="creator.preview_modal.meta_bullet_points_hint">Used for Amazon listings. Generated on Save / Regenerate with other metadata.</p>
+              <div id="cdp-meta-bullets-design-preview" class="cdp-modal__bullet-rows"></div>
             </div>
             <div class="cdp-modal__meta-actions">
               <button type="button" class="cdp-modal__meta-btn" id="cdp-meta-regenerate-design-preview">

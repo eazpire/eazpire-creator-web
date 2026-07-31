@@ -419,6 +419,18 @@
     }
   }
 
+  var AMAZON_BULLETS_META_KEY = 'amazon_bullet_points_de';
+  var AMAZON_BULLET_SLOT_COUNT = 5;
+
+  function normalizeAmazonBullets(meta) {
+    var raw = meta && meta[AMAZON_BULLETS_META_KEY];
+    var list = Array.isArray(raw)
+      ? raw.map(function (x) { return String(x || '').trim(); })
+      : [];
+    while (list.length < AMAZON_BULLET_SLOT_COUNT) list.push('');
+    return list.slice(0, AMAZON_BULLET_SLOT_COUNT);
+  }
+
   function cloneMeta(meta) {
     try {
       return JSON.parse(JSON.stringify(meta || {}));
@@ -5160,9 +5172,40 @@
       if (!Array.isArray(draftMeta.subtopics)) {
         draftMeta.subtopics = normalizeStringList(draftMeta.subtopics || draftMeta.subtopic);
       }
+      draftMeta[AMAZON_BULLETS_META_KEY] = normalizeAmazonBullets(draftMeta).filter(Boolean);
       metaDirty = false;
     }
     return draftMeta;
+  }
+
+  function renderAmazonBulletInputs(meta) {
+    var host = document.getElementById('cdp-meta-bullets-' + sectionId);
+    if (!host) return;
+    var bullets = normalizeAmazonBullets(meta);
+    host.innerHTML = '';
+    bullets.forEach(function (value, index) {
+      var row = document.createElement('div');
+      row.className = 'cdp-modal__bullet-row';
+      var label = document.createElement('label');
+      label.className = 'cdp-modal__label cdp-modal__label--compact';
+      label.setAttribute('for', 'cdp-meta-bullet-' + sectionId + '-' + index);
+      var labelTpl = tPreview('meta_bullet_point_n', 'Bullet point {{ n }}');
+      label.textContent = labelTpl.replace(/\{\{\s*n\s*\}\}/g, String(index + 1));
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'cdp-meta-bullet-' + sectionId + '-' + index;
+      input.className = 'cdp-modal__meta-input';
+      input.maxLength = 256;
+      input.value = value || '';
+      input.setAttribute('data-cdp-meta-bullet', String(index));
+      input.addEventListener('input', function () {
+        metaDirty = true;
+        updateMetadataSaveState();
+      });
+      row.appendChild(label);
+      row.appendChild(input);
+      host.appendChild(row);
+    });
   }
 
   function renderChipList(hostId, values, onRemove) {
@@ -5243,6 +5286,7 @@
     renderEditableList('cdp-meta-subtopics-' + sectionId, meta.subtopics || [], function () {
       renderMetadataPanel(currentDesign);
     });
+    renderAmazonBulletInputs(meta);
     updateMetadataSaveState();
   }
 
@@ -5257,6 +5301,15 @@
     meta.subtopics = normalizeStringList(meta.subtopics);
     meta.topic = meta.topics;
     meta.subtopic = meta.subtopics;
+    var bullets = [];
+    var host = document.getElementById('cdp-meta-bullets-' + sectionId);
+    if (host) {
+      host.querySelectorAll('[data-cdp-meta-bullet]').forEach(function (el) {
+        var v = String(el.value || '').trim();
+        if (v) bullets.push(v);
+      });
+    }
+    meta[AMAZON_BULLETS_META_KEY] = bullets;
     return meta;
   }
 
@@ -5303,11 +5356,16 @@
       if (!response.ok || data.ok === false) {
         throw new Error(data.error || 'save_failed');
       }
-      currentDesign.metadata = metadata;
-      if (metadata.title) currentDesign.title = metadata.title;
-      draftMeta = cloneMeta(metadata);
+      var savedMeta = (data.design && data.design.metadata) || metadata;
+      if (typeof savedMeta === 'string') {
+        try { savedMeta = JSON.parse(savedMeta); } catch (e) { savedMeta = metadata; }
+      }
+      currentDesign.metadata = savedMeta;
+      if (savedMeta.title) currentDesign.title = savedMeta.title;
+      draftMeta = null;
       metaDirty = false;
-      if (modalTitle && metadata.title) modalTitle.textContent = truncateTitle(String(metadata.title), 80);
+      renderMetadataPanel(currentDesign, { forceReset: true });
+      if (modalTitle && savedMeta.title) modalTitle.textContent = truncateTitle(String(savedMeta.title), 80);
       showCropSuccessToast(tPreview('meta_save', 'Save metadata'));
     } catch (err) {
       console.error('[CreatorDesignPreviewModal] metadata save failed', err);

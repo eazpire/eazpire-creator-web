@@ -1847,7 +1847,11 @@ function confirmHeroProductSelection() {
             ? window.CreatorProductImageCarousel.getVisibleCarouselImageUrlFromCard(card)
             : null;
       }
-      if (u) selectedHeroProduct.hero_generation_image_url = u;
+      if (u) {
+        selectedHeroProduct.hero_generation_image_url = u;
+        // Keep image in sync for consumers that still read product.image first.
+        selectedHeroProduct.image = u;
+      }
     }
   } catch (_syncErr) {}
 

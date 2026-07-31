@@ -53,17 +53,38 @@
     return meta ? meta.getAttribute('content') : null;
   }
 
+  /**
+   * Resolve preview + API image URLs from a modal product row.
+   * Must prefer hero_generation_image_url (selected color/view mock) over catalog images[0].
+   */
   function adaptModalProductToHero(product) {
     if (!product) return { image_url: null, image_urls: [] };
     var urls = [];
-    if (Array.isArray(product.images)) {
-      product.images.forEach(function (im) {
-        var u = (im && (im.src || im.url)) || null;
-        if (u) urls.push(u);
+    var seen = Object.create(null);
+    function push(u) {
+      if (u == null) return;
+      u = String(u).trim().replace(/&amp;/g, '&');
+      if (!u || seen[u]) return;
+      if (u.indexOf('blob:') === 0 || u.indexOf('data:') === 0) return;
+      seen[u] = true;
+      urls.push(u);
+    }
+    // Selected mock from product picker (color L/R + view U/D) — must win for overview + generate payload.
+    if (product.hero_generation_image_url) push(product.hero_generation_image_url);
+    if (product.image) {
+      push(typeof product.image === 'string' ? product.image : product.image.src || product.image.url || '');
+    }
+    if (product.image_url) push(product.image_url);
+    if (Array.isArray(product.image_urls)) {
+      product.image_urls.forEach(function (u) {
+        if (u) push(u);
       });
     }
-    if (!urls.length && product.image_url) urls = [product.image_url];
-    if (!urls.length && product.image) urls = [product.image];
+    if (Array.isArray(product.images)) {
+      product.images.forEach(function (im) {
+        push(im && (im.src || im.url || (typeof im === 'string' ? im : null)));
+      });
+    }
     return { image_url: urls[0] || null, image_urls: urls };
   }
 
