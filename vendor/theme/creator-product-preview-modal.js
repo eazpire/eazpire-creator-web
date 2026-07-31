@@ -1000,15 +1000,38 @@
   }
 
   function availableAmazonRegions() {
-    // Admin: only markets unlocked in Catalog Editor → Channels.
+    // Admin: continent publish targets from Catalog Editor → Channels (Europa / USA).
     // Creator: full sell list for now (skill tree still gates publish); later filter by ship-from.
     var unlocks = ctx && ctx.unlockedChannels;
     if (ctx && ctx.adminMode && unlocks && unlocks.amazon) {
       if (!unlocks.amazon.enabled) return [];
+      var continents = unlocks.amazon.continents || {};
       var markets = unlocks.amazon.markets || {};
-      return AMAZON_REGIONS.filter(function (r) {
-        return !!markets[r.code];
-      });
+      var src = unlocks.amazon.source_marketplaces || {};
+      var targets = [];
+      var europaOn =
+        continents.europa === true ||
+        ['FR', 'NL', 'PL', 'UK', 'DE', 'ES', 'IE', 'SE', 'BE', 'IT'].some(function (c) {
+          return !!markets[c];
+        });
+      var amerikaOn = continents.amerika === true || !!markets.US || !!markets.CA;
+      if (europaOn) {
+        targets.push({
+          id: 'europa',
+          code: 'europa',
+          label: 'Europa',
+          source: src.europa || 'DE',
+        });
+      }
+      if (amerikaOn) {
+        targets.push({
+          id: 'amerika',
+          code: 'amerika',
+          label: 'USA / Amerika',
+          source: src.amerika || 'US',
+        });
+      }
+      return targets;
     }
     // v1: full sell list; later filter by product_publish_map / ship-from
     return AMAZON_REGIONS.slice();
@@ -1080,7 +1103,11 @@
     var amzPublished = amazonPublishedCount(regions);
     var amzMeta =
       (amazonExpanded ? '▾ ' : '▸ ') +
-      esc(t('amazon_regions', 'Amazon regions')) +
+      esc(
+        ctx && ctx.adminMode
+          ? t('amazon_continents', 'Continents')
+          : t('amazon_regions', 'Amazon regions')
+      ) +
       ' · ' +
       amzPublished +
       '/' +
@@ -1151,10 +1178,16 @@
       for (var r = 0; r < regions.length; r++) {
         var reg = regions[r];
         var st = getState('amazon', reg.code);
+        var flagCode =
+          reg.code === 'europa'
+            ? reg.source || 'DE'
+            : reg.code === 'amerika'
+              ? 'US'
+              : reg.code;
         html +=
           '<div class="cppm__region-card" role="listitem">' +
           '<div class="cppm__region-head">' +
-          regionFlagHtml(reg.code) +
+          regionFlagHtml(flagCode) +
           '<h5 class="cppm__region-name">' +
           esc(reg.label) +
           '</h5></div>' +
