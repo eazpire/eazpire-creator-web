@@ -1000,8 +1000,28 @@
   }
 
   function availableAmazonRegions() {
+    // Admin: only markets unlocked in Catalog Editor → Channels.
+    // Creator: full sell list for now (skill tree still gates publish); later filter by ship-from.
+    var unlocks = ctx && ctx.unlockedChannels;
+    if (ctx && ctx.adminMode && unlocks && unlocks.amazon) {
+      if (!unlocks.amazon.enabled) return [];
+      var markets = unlocks.amazon.markets || {};
+      return AMAZON_REGIONS.filter(function (r) {
+        return !!markets[r.code];
+      });
+    }
     // v1: full sell list; later filter by product_publish_map / ship-from
     return AMAZON_REGIONS.slice();
+  }
+
+  function channelUnlocked(channelId) {
+    if (!ctx || !ctx.adminMode) return true;
+    var unlocks = ctx.unlockedChannels || {};
+    if (channelId === 'eazpire') return true;
+    if (channelId === 'amazon') return !!(unlocks.amazon && unlocks.amazon.enabled);
+    if (channelId === 'etsy') return !!(unlocks.etsy && unlocks.etsy.enabled);
+    if (channelId === 'ebay') return !!(unlocks.ebay && unlocks.ebay.enabled);
+    return false;
   }
 
   function amazonPublishedCount(regions) {
@@ -1084,31 +1104,37 @@
       actions: actionButtons('eazpire', '', eaz),
     });
 
-    html += renderChannelTile({
-      id: 'amazon',
-      name: t('channel_amazon', 'Amazon'),
-      dataT: 'creator.product_preview.channel_amazon',
-      expanded: amazonExpanded,
-      meta: amzMeta,
-      state:
-        amzPublished > 0
-          ? { status: 'published', queue: false }
-          : { status: 'unpublished', queue: false },
-    });
+    if (channelUnlocked('amazon')) {
+      html += renderChannelTile({
+        id: 'amazon',
+        name: t('channel_amazon', 'Amazon'),
+        dataT: 'creator.product_preview.channel_amazon',
+        expanded: amazonExpanded,
+        meta: amzMeta,
+        state:
+          amzPublished > 0
+            ? { status: 'published', queue: false }
+            : { status: 'unpublished', queue: false },
+      });
+    }
 
-    html += renderChannelTile({
-      id: 'etsy',
-      name: t('channel_etsy', 'Etsy'),
-      dataT: 'creator.product_preview.channel_etsy',
-      soon: true,
-    });
+    if (channelUnlocked('etsy')) {
+      html += renderChannelTile({
+        id: 'etsy',
+        name: t('channel_etsy', 'Etsy'),
+        dataT: 'creator.product_preview.channel_etsy',
+        soon: true,
+      });
+    }
 
-    html += renderChannelTile({
-      id: 'ebay',
-      name: t('channel_ebay', 'eBay'),
-      dataT: 'creator.product_preview.channel_ebay',
-      soon: true,
-    });
+    if (channelUnlocked('ebay')) {
+      html += renderChannelTile({
+        id: 'ebay',
+        name: t('channel_ebay', 'eBay'),
+        dataT: 'creator.product_preview.channel_ebay',
+        soon: true,
+      });
+    }
 
     html +=
       '</div>' +
@@ -1419,6 +1445,9 @@
       printifyImages: Array.isArray(opts.printifyImages) ? opts.printifyImages : null,
       mockupsByView:
         opts.mockupsByView && typeof opts.mockupsByView === 'object' ? opts.mockupsByView : null,
+      /** Admin Creations / ops: skip Skill Tree UI gates; filter by Catalog Channels unlocks. */
+      adminMode: !!opts.adminMode,
+      unlockedChannels: opts.unlockedChannels && typeof opts.unlockedChannels === 'object' ? opts.unlockedChannels : null,
     };
     productMockupsByView = null;
     variantsLoadToken = 0;
