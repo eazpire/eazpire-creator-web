@@ -1016,19 +1016,22 @@
         });
       var amerikaOn = continents.amerika === true || !!markets.US || !!markets.CA;
       if (europaOn) {
+        var euSource = src.europa || 'DE';
         targets.push({
           id: 'europa',
           code: 'europa',
-          label: 'Europa',
-          source: src.europa || 'DE',
+          label: 'Europa → ' + euSource,
+          source: euSource,
+          publishCode: euSource,
         });
       }
       if (amerikaOn) {
         targets.push({
           id: 'amerika',
           code: 'amerika',
-          label: 'USA / Amerika',
+          label: 'USA / Amerika → US',
           source: src.amerika || 'US',
+          publishCode: 'US',
         });
       }
       return targets;
