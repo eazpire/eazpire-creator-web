@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Lazy-load theme creator assets for portal routes.
  */
 (function (global) {
@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "char-mock-select-sync-20260731b";
+  var PORTAL_ASSET_V = "char-aspect-fix-20260731c";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -105,7 +105,7 @@
   async function injectPartial(name, hostEl) {
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
-    // Portal serves /partials with max-age=7d — bump PORTAL_ASSET_V when markup changes.
+    // Portal serves /partials with max-age=7d � bump PORTAL_ASSET_V when markup changes.
     var url = withAssetV("/partials/" + name);
     var existing = host.querySelector('[data-partial="' + name + '"]');
     if (existing) {
@@ -414,7 +414,7 @@
 
       applyMarketingDeepLink();
 
-      // Leaf UIs (video studio) — optional so missing vendor files do not block expand.
+      // Leaf UIs (video studio) � optional so missing vendor files do not block expand.
       await loadScriptsSequentialOptional([
         asset("creator-video-studio-timeline.js"),
         asset("creator-video-studio-modal.js"),
@@ -448,7 +448,7 @@
         await injectPartial("creator-mobile-automations.html", host);
       }
 
-      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas / pasteâ†’influence)
+      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas / paste→influence)
       await injectPartial("reference-influence-modal.html");
       await injectPartial("creator-inspiration-modal.html");
       await injectPartial("quick-inspirations-modal.html");
@@ -495,7 +495,7 @@
         injectPartial("creator-level-celebration-overlay.html"),
       ]);
 
-      // Level tab lives inside Journey — must load with dashboard, not only Settings.
+      // Level tab lives inside Journey � must load with dashboard, not only Settings.
       await loadScript(asset("creator-level-panel.js"));
       await loadScriptsParallel([
         asset("sales-modal.js"),
@@ -512,7 +512,7 @@
         badge_ready_aria: "Level badge ready",
       };
 
-      // Settings modal is large â€” load on first open only (not on dashboard boot).
+      // Settings modal is large — load on first open only (not on dashboard boot).
     })();
 
     try {

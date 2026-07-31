@@ -377,11 +377,48 @@
     return { ids: ids, urls: urls };
   }
 
+  function refreshChatJobs() {
+    try {
+      if (window.CreatorChat && typeof window.CreatorChat.refreshActiveJobs === 'function') {
+        window.CreatorChat.refreshActiveJobs();
+      }
+    } catch (e) {}
+  }
+
+  function updateActiveCharacterJob(jobId, patch) {
+    window.activeHeroJobs = window.activeHeroJobs || [];
+    var list = window.activeHeroJobs;
+    var job = list.find(function (j) {
+      return j.jobId === jobId;
+    });
+    if (!job) {
+      job = {
+        jobId: jobId,
+        status: 'queued',
+        progress: 0,
+        startedAt: Date.now(),
+        prompt: '',
+        productCount: 0,
+        type: 'content-publish-image',
+      };
+      list.push(job);
+    }
+    Object.assign(job, patch || {});
+    refreshChatJobs();
+  }
+
+  function removeActiveCharacterJob(jobId) {
+    window.activeHeroJobs = (window.activeHeroJobs || []).filter(function (j) {
+      return j.jobId !== jobId;
+    });
+    refreshChatJobs();
+  }
+
   async function pollAndSave(ctx, jobId) {
     var n = 0;
     var maxN = 90;
     function tick() {
-      fetch(API_BASE + '?op=job-status&job_id=' + encodeURIComponent(jobId), {
+      fetch(API_BASE + '?op=status&job_id=' + encodeURIComponent(jobId), {
         credentials: 'include',
       })
         .then(function (r) {
@@ -391,17 +428,40 @@
           if (!data || data.not_found) {
             ctx.generating = false;
             updateReady(ctx);
+            removeActiveCharacterJob(jobId);
             setStatus(ctx, i18n('job_lost', 'Job not found.'), true);
             return;
           }
+          var isFailed =
+            data.status === 'failed' ||
+            !!data.error ||
+            (!!data.done && !data.result && !data.not_found);
+          var prog = typeof data.progress === 'number' ? data.progress : 0;
+          updateActiveCharacterJob(jobId, {
+            status: data.message || (isFailed ? 'failed' : data.done ? 'done' : 'running'),
+            progress: prog,
+            done: !!data.done && isFailed,
+          });
           if (!data.done) {
             n += 1;
             if (n < maxN) setTimeout(tick, 2000);
             else {
               ctx.generating = false;
               updateReady(ctx);
+              removeActiveCharacterJob(jobId);
               setStatus(ctx, i18n('job_timeout', 'Still processing… check Active jobs.'), true);
             }
+            return;
+          }
+          if (isFailed) {
+            ctx.generating = false;
+            updateReady(ctx);
+            removeActiveCharacterJob(jobId);
+            setStatus(
+              ctx,
+              data.message || data.error || i18n('generate_failed', 'Generation failed.'),
+              true
+            );
             return;
           }
           fetch(API_BASE + '?op=save-content-publish-image', {
@@ -416,6 +476,7 @@
             .then(function (saveData) {
               ctx.generating = false;
               updateReady(ctx);
+              removeActiveCharacterJob(jobId);
               if (saveData.ok) {
                 var pids = collectProductPayload().ids;
                 setStatus(ctx, i18n('saved', 'Character image saved to Assets.'), false);
@@ -437,6 +498,7 @@
             .catch(function () {
               ctx.generating = false;
               updateReady(ctx);
+              removeActiveCharacterJob(jobId);
               setStatus(ctx, i18n('network_error', 'Network error'), true);
             });
         })
@@ -446,6 +508,7 @@
           else {
             ctx.generating = false;
             updateReady(ctx);
+            removeActiveCharacterJob(jobId);
             setStatus(ctx, i18n('network_error', 'Network error'), true);
           }
         });
@@ -495,6 +558,16 @@
         return {};
       });
       if (data.ok && data.job_id) {
+        window.activeHeroJobs = window.activeHeroJobs || [];
+        window.activeHeroJobs.push({
+          jobId: data.job_id,
+          status: 'queued',
+          progress: 0,
+          startedAt: Date.now(),
+          prompt: prompt || i18n('character_job_title', 'Character image'),
+          productCount: products.ids.length,
+          type: 'content-publish-image',
+        });
         try {
           window.dispatchEvent(
             new CustomEvent('creatorJobStarted', {
@@ -502,6 +575,12 @@
             })
           );
         } catch (e) {}
+        try {
+          if (window.CreatorChat && typeof window.CreatorChat.openJobs === 'function') {
+            window.CreatorChat.openJobs({ focusJobId: data.job_id });
+          }
+        } catch (e2) {}
+        refreshChatJobs();
         setStatus(ctx, i18n('queued', 'Queued… tracking in Active jobs.'), false);
         pollAndSave(ctx, data.job_id);
       } else {

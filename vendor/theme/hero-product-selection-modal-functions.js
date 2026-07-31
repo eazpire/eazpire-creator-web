@@ -1358,6 +1358,27 @@ function isLikelyShopifyLocalePathPrefix(seg) {
   return !!seg && /^[a-z]{2}(-[a-z]{2})?$/i.test(String(seg).trim());
 }
 
+/** Creator Hub is not Shopify — never resolve `/products/*.js` against the portal origin. */
+function getShopifyStorefrontOriginForHero() {
+  try {
+    const h = window.location && window.location.hostname;
+    if (
+      window.__CREATOR_PORTAL_HOST__ ||
+      h === 'creator.eazpire.com' ||
+      (h && String(h).indexOf('creator.') === 0)
+    ) {
+      return 'https://www.eazpire.com';
+    }
+    if (h === 'www.eazpire.com' || h === 'eazpire.com' || (h && String(h).indexOf('.myshopify.com') > 0)) {
+      return window.location.origin;
+    }
+  } catch (_e) {}
+  if (!(window.Shopify && window.Shopify.shop)) {
+    return 'https://www.eazpire.com';
+  }
+  return window.location.origin || 'https://www.eazpire.com';
+}
+
 function buildStorefrontProductJsonUrls(handle, storefrontUrl) {
   const urls = [];
   const cleanHandle = normalizeProductHandleForStorefront(handle);
@@ -1382,12 +1403,17 @@ function buildStorefrontProductJsonUrls(handle, storefrontUrl) {
   /** One canonical `.js` URL when we have a stored storefront link — avoids duplicate locale+default fetches and halves 404 noise. */
   if (urls.length) return urls;
   if (cleanHandle) {
-    const parts = (window.location && window.location.pathname || '').split('/').filter(Boolean);
-    const localeSeg = parts.length && isLikelyShopifyLocalePathPrefix(parts[0]) ? parts[0] : '';
-    if (localeSeg) {
-      push(`${window.location.origin}/${localeSeg}/products/${encodeURIComponent(cleanHandle)}.js`);
+    const storeOrigin = getShopifyStorefrontOriginForHero();
+    const onShopifyOrigin =
+      storeOrigin === (window.location && window.location.origin);
+    if (onShopifyOrigin) {
+      const parts = (window.location && window.location.pathname || '').split('/').filter(Boolean);
+      const localeSeg = parts.length && isLikelyShopifyLocalePathPrefix(parts[0]) ? parts[0] : '';
+      if (localeSeg) {
+        push(`${storeOrigin}/${localeSeg}/products/${encodeURIComponent(cleanHandle)}.js`);
+      }
     }
-    push(`${window.location.origin}/products/${encodeURIComponent(cleanHandle)}.js`);
+    push(`${storeOrigin}/products/${encodeURIComponent(cleanHandle)}.js`);
   }
   return urls;
 }

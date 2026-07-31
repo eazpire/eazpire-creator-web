@@ -241,6 +241,20 @@
   var _cartTimer = null;
 
   function fetchCart() {
+    // Creator Hub / non-Shopify hosts have no /cart.json — skip to avoid console 404 noise.
+    try {
+      var hn = window.location && window.location.hostname;
+      if (
+        window.__CREATOR_PORTAL_HOST__ ||
+        hn === "creator.eazpire.com" ||
+        (hn && String(hn).indexOf("creator.") === 0) ||
+        !(window.Shopify && window.Shopify.shop)
+      ) {
+        return;
+      }
+    } catch (_e) {
+      return;
+    }
     fetch("/cart.json").then(function (r) { return r.json(); }).then(function (data) {
       _cartData = {
         item_count: data.item_count || 0,
