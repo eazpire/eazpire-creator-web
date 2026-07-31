@@ -1266,6 +1266,37 @@
 }
 .cimg-scene-status.is-info { color: #93c5fd; }
 .cimg-scene-status.is-success { color: #86efac; }
+
+/* Hero/Character product picker — view axis (also in layout partial; kept here for cache-bust) */
+.hero-product-selection-modal__color-nav--spacer {
+  visibility: hidden;
+  pointer-events: none;
+}
+.hero-product-selection-modal__view-nav {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 36px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.hero-product-selection-modal__view-nav--prev { top: 6px; }
+.hero-product-selection-modal__view-nav--next { bottom: 6px; }
+.hero-product-selection-modal__view-nav:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
 .cvs-addsrc-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

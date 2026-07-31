@@ -86,7 +86,46 @@
     if (el) el.textContent = text;
   }
 
+  /** If a stale cached partial lacks the tab bar, inject it so Video Scene still works. */
+  function ensureTabsMarkup() {
+    var overlay = document.getElementById('cimgAddSourceModal');
+    if (!overlay) return;
+    var tabs = document.getElementById('cimg-addsrc-tabs');
+    if (tabs) return;
+    var title = overlay.querySelector('#cimg-addsrc-title') || overlay.querySelector('.cvs-confirm-title');
+    var grid = document.getElementById('cimg-addsrc-grid');
+    var bar = document.createElement('div');
+    bar.className = 'cimg-addsrc-tabs';
+    bar.id = 'cimg-addsrc-tabs';
+    bar.setAttribute('role', 'tablist');
+    bar.setAttribute('aria-label', 'Media type');
+    bar.hidden = true;
+    bar.innerHTML =
+      '<button type="button" class="cimg-addsrc-tab is-active" id="cimg-addsrc-tab-image" role="tab" aria-selected="true" data-cimg-tab="image">Image</button>' +
+      '<button type="button" class="cimg-addsrc-tab" id="cimg-addsrc-tab-video-scene" role="tab" aria-selected="false" data-cimg-tab="video-scene">Video Scene</button>';
+    if (title && title.parentNode) {
+      if (title.nextSibling) title.parentNode.insertBefore(bar, title.nextSibling);
+      else title.parentNode.appendChild(bar);
+    } else if (grid && grid.parentNode) {
+      grid.parentNode.insertBefore(bar, grid);
+    } else {
+      return;
+    }
+    // Re-bind tab clicks (bindUi is one-shot; wire these nodes directly).
+    var imageTab = document.getElementById('cimg-addsrc-tab-image');
+    var videoTab = document.getElementById('cimg-addsrc-tab-video-scene');
+    if (imageTab && !imageTab._cimgBound) {
+      imageTab._cimgBound = true;
+      imageTab.addEventListener('click', function () { setMediaMode('image'); });
+    }
+    if (videoTab && !videoTab._cimgBound) {
+      videoTab._cimgBound = true;
+      videoTab.addEventListener('click', function () { setMediaMode('video-scene'); });
+    }
+  }
+
   function syncModeUi() {
+    ensureTabsMarkup();
     var tabs = document.getElementById('cimg-addsrc-tabs');
     var showTabs = !!(activeCb && supportsVideoSceneTabs(activeCb.purpose));
     if (tabs) tabs.hidden = !showTabs;
@@ -138,6 +177,7 @@
   function openAddSource(opts) {
     activeCb = opts || null;
     mediaMode = 'image';
+    ensureTabsMarkup();
     bindUi();
     syncModeUi();
     var overlay = document.getElementById('cimgAddSourceModal');
