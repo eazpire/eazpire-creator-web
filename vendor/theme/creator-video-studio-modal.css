@@ -668,6 +668,7 @@
   gap: 8px;
 }
 .cvs-tools-preview__stage {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -682,6 +683,40 @@
   max-width: 100%;
   max-height: 100%;
   display: block;
+}
+.cvs-remove-object-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  cursor: crosshair;
+  touch-action: none;
+  z-index: 2;
+}
+.cvs-remove-object-mask[hidden] {
+  display: none !important;
+}
+.cvs-remove-object-quality {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+.cvs-remove-object-quality__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+.cvs-remove-object-brush-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.cvs-remove-object-brush-label input[type="range"] {
+  width: 100%;
 }
 .cvs-tools-transport {
   display: flex;
@@ -749,11 +784,18 @@
 }
 .cvs-accordion-item.is-open .cvs-accordion-header__chevron { transform: rotate(180deg); }
 
+/* Bodies stay closed by default. `display:flex` must NOT win over [hidden]
+   (that bug kept every accordion section visually open). */
 .cvs-accordion-body {
   padding: 0 14px 14px;
-  display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.cvs-accordion-body[hidden] {
+  display: none !important;
+}
+.cvs-accordion-item.is-open .cvs-accordion-body:not([hidden]) {
+  display: flex;
 }
 .cvs-tool-hint {
   margin: 0;

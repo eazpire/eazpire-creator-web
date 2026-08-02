@@ -1553,7 +1553,7 @@
         if (qrImg) {
           qrImg.onload = function () {
             if (phoneStatus && linkPhoneSessionId === session.session_id) {
-              phoneStatus.textContent = i18n('link_phone_hint', 'Paste the link on your phone — it fills in here automatically.');
+              phoneStatus.textContent = i18n('link_phone_hint', 'Scan, choose Browser or App, paste the link, tap Extract — it runs here automatically.');
             }
           };
           qrImg.onerror = function () {

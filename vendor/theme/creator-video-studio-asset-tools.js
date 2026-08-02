@@ -434,7 +434,12 @@
 
   function assetPreviewLists(assetId) {
     if (!previewsByAsset[assetId]) {
-      previewsByAsset[assetId] = { 'export-audio': [], 'export-vocals': [], screenshot: [] };
+      previewsByAsset[assetId] = {
+        'export-audio': [],
+        'export-vocals': [],
+        screenshot: [],
+        'remove-object': [],
+      };
     }
     return previewsByAsset[assetId];
   }
@@ -1234,15 +1239,263 @@
     }
   }
 
+  // ── Remove Object (ProPainter standard / BRIA high-quality) ─────────
+  // Paint a mask on the paused video frame (white = remove). Fixed-position
+  // logos/watermarks work best with a static mask; moving objects need a
+  // fuller mask over the object silhouette.
+  var removeObjectBrush = 24;
+  var removeObjectQuality = 'standard';
+  var removeObjectMaskCanvas = null;
+  var removeObjectMaskCtx = null;
+  var removeObjectPainting = false;
+  var removeObjectHasPaint = false;
+  var removeObjectMaskBound = false;
+
+  function removeObjectReset() {
+    clearRemoveObjectMask();
+    setToolStatus('remove-object', '');
+    var std = document.getElementById('cvs-remove-object-quality-standard');
+    if (std) std.checked = true;
+    removeObjectQuality = 'standard';
+  }
+
+  function ensureRemoveObjectMaskCanvas() {
+    var stage = document.getElementById('cvs-tools-stage');
+    if (!stage) return null;
+    var canvas = document.getElementById('cvs-remove-object-mask');
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.id = 'cvs-remove-object-mask';
+      canvas.className = 'cvs-remove-object-mask';
+      canvas.setAttribute('aria-hidden', 'true');
+      stage.appendChild(canvas);
+    }
+    removeObjectMaskCanvas = canvas;
+    removeObjectMaskCtx = canvas.getContext('2d');
+    return canvas;
+  }
+
+  function syncRemoveObjectMaskSize() {
+    var stage = document.getElementById('cvs-tools-stage');
+    var canvas = ensureRemoveObjectMaskCanvas();
+    if (!canvas || !video || !stage) return;
+    var w = video.videoWidth || 0;
+    var h = video.videoHeight || 0;
+    if (!w || !h) return;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      removeObjectHasPaint = false;
+    }
+    var vRect = video.getBoundingClientRect();
+    var sRect = stage.getBoundingClientRect();
+    canvas.style.left = Math.max(0, vRect.left - sRect.left) + 'px';
+    canvas.style.top = Math.max(0, vRect.top - sRect.top) + 'px';
+    canvas.style.width = Math.max(1, vRect.width) + 'px';
+    canvas.style.height = Math.max(1, vRect.height) + 'px';
+  }
+
+  function maskPointerPos(e) {
+    if (!removeObjectMaskCanvas) return null;
+    var rect = removeObjectMaskCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    var clientX = e.clientX;
+    var clientY = e.clientY;
+    if (e.touches && e.touches[0]) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    }
+    return {
+      x: ((clientX - rect.left) / rect.width) * removeObjectMaskCanvas.width,
+      y: ((clientY - rect.top) / rect.height) * removeObjectMaskCanvas.height,
+    };
+  }
+
+  function paintMaskAt(pos) {
+    if (!removeObjectMaskCtx || !pos) return;
+    removeObjectMaskCtx.fillStyle = 'rgba(249, 115, 22, 0.85)';
+    removeObjectMaskCtx.beginPath();
+    removeObjectMaskCtx.arc(pos.x, pos.y, removeObjectBrush, 0, Math.PI * 2);
+    removeObjectMaskCtx.fill();
+    removeObjectHasPaint = true;
+  }
+
+  function onMaskPointerDown(e) {
+    if (currentTool !== 'remove-object') return;
+    e.preventDefault();
+    if (video) video.pause();
+    syncRemoveObjectMaskSize();
+    removeObjectPainting = true;
+    paintMaskAt(maskPointerPos(e));
+  }
+
+  function onMaskPointerMove(e) {
+    if (!removeObjectPainting) return;
+    e.preventDefault();
+    paintMaskAt(maskPointerPos(e));
+  }
+
+  function onMaskPointerUp() {
+    removeObjectPainting = false;
+  }
+
+  function setupRemoveObjectMaskUi() {
+    if (!video || video.hidden) return;
+    var canvas = ensureRemoveObjectMaskCanvas();
+    if (!canvas) return;
+    canvas.hidden = false;
+    syncRemoveObjectMaskSize();
+    if (!removeObjectMaskBound) {
+      removeObjectMaskBound = true;
+      canvas.addEventListener('mousedown', onMaskPointerDown);
+      canvas.addEventListener('mousemove', onMaskPointerMove);
+      window.addEventListener('mouseup', onMaskPointerUp);
+      canvas.addEventListener('touchstart', onMaskPointerDown, { passive: false });
+      canvas.addEventListener('touchmove', onMaskPointerMove, { passive: false });
+      window.addEventListener('touchend', onMaskPointerUp);
+    }
+  }
+
+  function teardownRemoveObjectMaskUi() {
+    removeObjectPainting = false;
+    if (removeObjectMaskCanvas) removeObjectMaskCanvas.hidden = true;
+  }
+
+  function clearRemoveObjectMask() {
+    if (removeObjectMaskCtx && removeObjectMaskCanvas) {
+      removeObjectMaskCtx.clearRect(0, 0, removeObjectMaskCanvas.width, removeObjectMaskCanvas.height);
+    }
+    removeObjectHasPaint = false;
+  }
+
+  /** Export binary mask: white = remove, black = keep (ProPainter / BRIA). */
+  function exportRemoveObjectMaskPngDataUrl() {
+    if (!removeObjectMaskCanvas || !removeObjectHasPaint) return null;
+    var w = removeObjectMaskCanvas.width;
+    var h = removeObjectMaskCanvas.height;
+    if (!w || !h) return null;
+    var out = document.createElement('canvas');
+    out.width = w;
+    out.height = h;
+    var ctx = out.getContext('2d');
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, w, h);
+    var src = removeObjectMaskCtx.getImageData(0, 0, w, h);
+    var dst = ctx.getImageData(0, 0, w, h);
+    for (var i = 0; i < src.data.length; i += 4) {
+      if (src.data[i + 3] > 20) {
+        dst.data[i] = 255;
+        dst.data[i + 1] = 255;
+        dst.data[i + 2] = 255;
+        dst.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(dst, 0, 0);
+    return out.toDataURL('image/png');
+  }
+
+  async function requestRemoveObject(asset, maskDataUrl, quality) {
+    var mod = Mod();
+    var res = await fetch(mod.apiUrl('video-studio-remove-object'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        asset_id: asset.id,
+        quality: quality || 'standard',
+        mask_png_base64: maskDataUrl,
+      }),
+    });
+    if (!res.ok) {
+      var errJson = null;
+      try {
+        errJson = await res.json();
+      } catch (e) {}
+      var err = new Error((errJson && (errJson.message || errJson.error)) || 'remove_object_failed');
+      err.code = errJson && errJson.error;
+      err.status = res.status;
+      err.payload = errJson;
+      throw err;
+    }
+    return res.blob();
+  }
+
+  async function removeObjectPreview() {
+    var asset = currentAsset;
+    if (!asset || asset.kind !== 'video') {
+      setToolStatus('remove-object', t('remove_object_video_only', 'This tool works on video assets only.'));
+      return;
+    }
+    syncRemoveObjectMaskSize();
+    var maskDataUrl = exportRemoveObjectMaskPngDataUrl();
+    if (!maskDataUrl) {
+      setToolStatus(
+        'remove-object',
+        t('remove_object_paint_first', 'Paint over the object or watermark to remove, then try again.')
+      );
+      return;
+    }
+    var qEl = document.querySelector('input[name="cvs-remove-object-quality"]:checked');
+    var quality = (qEl && qEl.value) || removeObjectQuality || 'standard';
+    setToolStatus(
+      'remove-object',
+      quality === 'high'
+        ? t('remove_object_processing_hq', 'Removing with high quality (BRIA)… this can take a minute.')
+        : t('remove_object_processing', 'Removing with standard quality (ProPainter)…')
+    );
+    try {
+      var blob = await requestRemoveObject(asset, maskDataUrl, quality);
+      if (!isViewingAssetTool(asset.id, 'remove-object')) return;
+      var url = blobToObjectUrl(blob);
+      addPreviewItem(asset.id, 'remove-object', {
+        url: url,
+        blob: blob,
+        mime: blob.type || 'video/mp4',
+        kind: 'video',
+        label: t('remove_object_preview_label', 'Cleaned video'),
+        suggestedName: (asset.original_name || 'video').replace(/\.[^.]+$/, '') + '-cleaned.mp4',
+      });
+      setToolStatus(
+        'remove-object',
+        t('remove_object_ready', 'Preview ready — play it, then save as a new asset.')
+      );
+    } catch (e) {
+      console.warn('[VideoStudio] remove-object failed', e);
+      var msg = t('remove_object_failed', 'Could not remove the object. Try again or use Standard quality.');
+      if (e && e.code === 'high_quality_too_long') {
+        msg = t(
+          'remove_object_hq_too_long',
+          'High quality supports clips up to 5 seconds. Trim first, or use Standard quality.'
+        );
+      } else if (e && e.code === 'ai_not_configured') {
+        msg = t('remove_object_not_configured', 'AI remove isn’t configured on this server yet.');
+      } else if (e && e.code === 'INSUFFICIENT_EAZ') {
+        msg = t('remove_object_no_eaz', 'Not enough EAZ for this action.');
+      } else if (e && e.message && e.message !== 'remove_object_failed') {
+        msg = e.message;
+      }
+      setToolStatus('remove-object', msg);
+    }
+  }
+
   // ── Accordion / tool switching ──────────────────────────────────────
   function visibleToolsForKind(kind) {
     if (kind === 'image') return ['duplicate'];
     if (kind === 'audio') return ['cut', 'export-vocals', 'duplicate'];
-    return ['cut', 'audio-remove', 'export-audio', 'export-vocals', 'screenshot', 'duplicate'];
+    return [
+      'cut',
+      'remove-object',
+      'audio-remove',
+      'export-audio',
+      'export-vocals',
+      'screenshot',
+      'duplicate',
+    ];
   }
 
   function resetToolState(tool) {
     if (tool === 'cut') cutResetState();
+    else if (tool === 'remove-object') removeObjectReset();
     else if (tool === 'audio-remove') audioRemoveReset();
     else if (tool === 'export-audio') exportAudioReset();
     else if (tool === 'export-vocals') exportVocalsReset();
@@ -1251,7 +1504,30 @@
   }
 
   function resetAllToolState() {
-    ['cut', 'audio-remove', 'export-audio', 'export-vocals', 'screenshot', 'duplicate'].forEach(resetToolState);
+    [
+      'cut',
+      'remove-object',
+      'audio-remove',
+      'export-audio',
+      'export-vocals',
+      'screenshot',
+      'duplicate',
+    ].forEach(resetToolState);
+  }
+
+  /** All accordion sections closed — default when the tools modal opens. */
+  function collapseAllTools() {
+    leaveCurrentTool();
+    currentTool = null;
+    var items = accordionEl ? accordionEl.querySelectorAll('.cvs-accordion-item') : [];
+    items.forEach(function (item) {
+      item.classList.remove('is-open');
+      var header = item.querySelector('.cvs-accordion-header');
+      var body = item.querySelector('.cvs-accordion-body');
+      if (header) header.setAttribute('aria-expanded', 'false');
+      if (body) body.hidden = true;
+    });
+    teardownRemoveObjectMaskUi();
   }
 
   function leaveCurrentTool() {
@@ -1285,9 +1561,13 @@
     if (tool === 'cut') {
       renderCutRuler();
       renderCutSegments();
+    } else if (tool === 'remove-object') {
+      setupRemoveObjectMaskUi();
+      renderPreviewList(tool);
     } else if (tool === 'export-audio' || tool === 'export-vocals' || tool === 'screenshot') {
       renderPreviewList(tool);
     }
+    if (tool !== 'remove-object') teardownRemoveObjectMaskUi();
   }
 
   function renderTabsForKind(kind) {
@@ -1358,12 +1638,7 @@
         // Clicking the already-open section's header collapses it again
         // (no tool active); clicking any other header opens that one.
         if (currentTool === tool) {
-          leaveCurrentTool();
-          currentTool = null;
-          item.classList.remove('is-open');
-          header.setAttribute('aria-expanded', 'false');
-          var body = item.querySelector('.cvs-accordion-body');
-          if (body) body.hidden = true;
+          collapseAllTools();
           return;
         }
         selectTool(tool);
@@ -1395,6 +1670,20 @@
     on('cvs-screenshot-btn-capture', 'click', screenshotCapture);
 
     on('cvs-duplicate-btn', 'click', duplicateAsset);
+
+    on('cvs-remove-object-btn-clear', 'click', clearRemoveObjectMask);
+    on('cvs-remove-object-btn-preview', 'click', removeObjectPreview);
+    var brushRange = document.getElementById('cvs-remove-object-brush');
+    if (brushRange) {
+      brushRange.addEventListener('input', function () {
+        removeObjectBrush = Math.max(4, Math.min(80, Number(brushRange.value) || 24));
+      });
+    }
+    ['standard', 'high'].forEach(function (q) {
+      on('cvs-remove-object-quality-' + q, 'change', function () {
+        removeObjectQuality = q;
+      });
+    });
 
     if (video) {
       video.addEventListener('timeupdate', function () {
@@ -1428,11 +1717,12 @@
     setStatus('');
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
-    selectTool(defaultToolForKind(asset.kind));
+    // All tool sections start collapsed; user opens one by tapping its header.
+    collapseAllTools();
   }
 
   function close() {
-    leaveCurrentTool();
+    collapseAllTools();
     if (video) video.pause();
     if (audioEl) audioEl.pause();
     if (document.fullscreenElement) document.exitFullscreen().catch(function () {});

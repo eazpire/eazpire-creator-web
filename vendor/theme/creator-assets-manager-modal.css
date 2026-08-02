@@ -198,8 +198,75 @@ body.cam-modal-open {
   line-height: 1.3;
 }
 
-/* Link modal */
-.cam-link-box { max-width: min(720px, 96vw); }
+/* Link modal — header / scroll body / footer */
+.cam-link-box {
+  max-width: min(860px, 96vw);
+  width: min(860px, 100%);
+  max-height: min(86vh, 720px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  box-sizing: border-box;
+}
+.cam-link-top {
+  flex: 0 0 auto;
+  padding: 16px 16px 0;
+  min-width: 0;
+}
+.cam-link-top .cam-submodal__title {
+  margin-bottom: 12px;
+}
+.cam-link-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.cam-link-main { flex: 1 1 auto; min-width: 0; }
+.cam-link-phone {
+  flex: 0 0 150px;
+  text-align: center;
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+.cam-link-phone[data-desktop-only="1"] { display: none; }
+@media (min-width: 768px) {
+  .cam-link-phone[data-desktop-only="1"] { display: block; }
+}
+.cam-link-phone__title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+}
+.cam-link-phone__qr-wrap {
+  display: inline-block;
+  padding: 6px;
+  border-radius: 8px;
+  background: #fff;
+  margin-bottom: 8px;
+}
+.cam-link-phone__qr { display: block; width: 120px; height: 120px; object-fit: contain; }
+.cam-link-phone__hint {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.5);
+}
+.cam-link-phone__status {
+  margin: 6px 0 0;
+  font-size: 10px;
+  min-height: 1.2em;
+  color: #34d399;
+}
+@media (max-width: 640px) {
+  .cam-link-body { flex-direction: column; }
+  .cam-link-phone { flex: none; width: 100%; }
+}
 .cam-link-url-row {
   display: flex;
   gap: 8px;
@@ -221,8 +288,82 @@ body.cam-modal-open {
 .cam-link-status.is-info { color: #93c5fd; }
 .cam-link-status.is-success { color: #86efac; }
 .cam-link-status.is-error { color: #fca5a5; }
+
+/* Bulk controls: one horizontal row, shared baseline */
+.cam-link-bulk-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin: 12px 0 0;
+}
+.cam-link-bulk-controls[hidden] { display: none !important; }
+.cam-link-bulk-controls .cam-field--inline {
+  margin-bottom: 0;
+  min-width: 0;
+  flex: none;
+}
+.cam-link-bulk-controls .cam-field--inline input,
+.cam-link-bulk-controls .cam-field--inline select {
+  width: 100%;
+  height: 38px;
+  box-sizing: border-box;
+}
+.cam-link-bulk-controls__action {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+.cam-link-bulk-controls__action .cam-btn {
+  height: 38px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .cam-link-bulk-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cam-link-bulk-controls__action {
+    grid-column: 1 / -1;
+  }
+  .cam-link-bulk-controls__action .cam-btn {
+    width: 100%;
+  }
+}
+.cam-field--inline {
+  flex: 0 1 160px;
+  min-width: 120px;
+}
+.cam-field--inline input,
+.cam-field--inline select {
+  width: 100%;
+}
+
+/* Scrollable middle: single preview or bulk grid */
+.cam-link-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 12px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+.cam-link-content::-webkit-scrollbar {
+  width: 8px;
+}
+.cam-link-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cam-link-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+}
+.cam-link-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
 .cam-link-single-preview {
-  margin-top: 12px;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -235,29 +376,28 @@ body.cam-modal-open {
   object-fit: contain;
   background: #000;
 }
-.cam-link-bulk { margin-top: 12px; }
-.cam-link-bulk-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: flex-end;
-  margin-bottom: 12px;
+.cam-link-bulk {
+  min-height: 0;
 }
-.cam-field--inline {
-  flex: 0 1 160px;
-  min-width: 120px;
-}
-.cam-field--inline input,
-.cam-field--inline select {
-  width: 100%;
+.cam-link-bulk[hidden],
+.cam-link-single-preview[hidden] {
+  display: none !important;
 }
 .cam-link-bulk-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
-  max-height: min(46vh, 380px);
-  overflow: auto;
   padding: 2px;
+  /* Scroll lives on .cam-link-content so footer stays pinned */
+  max-height: none;
+  overflow: visible;
+}
+.cam-link-bulk-grid::-webkit-scrollbar {
+  width: 8px;
+}
+.cam-link-bulk-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
 }
 .cam-link-bulk-card {
   position: relative;
@@ -265,27 +405,45 @@ body.cam-modal-open {
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.04);
   overflow: hidden;
-  cursor: pointer;
+  cursor: default;
 }
 .cam-link-bulk-card.is-selected {
   border-color: rgba(249, 115, 22, 0.7);
   box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.35);
 }
+.cam-link-bulk-card__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  background: #111;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
 .cam-link-bulk-card__thumb {
   aspect-ratio: 9 / 16;
   width: 100%;
+  height: 100%;
   object-fit: cover;
   background: #111;
   display: block;
+  pointer-events: none;
 }
 .cam-link-bulk-card__placeholder {
   aspect-ratio: 9 / 16;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #111;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 22px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
 }
 .cam-link-bulk-card__meta {
   padding: 6px 8px 8px;
@@ -300,21 +458,16 @@ body.cam-modal-open {
   width: 18px;
   height: 18px;
   margin: 0;
+  z-index: 2;
   accent-color: #f97316;
-}
-.cam-link-bulk-card__play {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
   cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
+}
+.cam-link-footer {
+  flex: 0 0 auto;
+  margin-top: 0 !important;
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(160deg, #161022 0%, #0d0a14 100%);
 }
 .cam-link-fs-panel { max-width: min(900px, 96vw); }
 .cam-link-fs__media {
@@ -322,6 +475,29 @@ body.cam-modal-open {
   max-height: min(70vh, 560px);
   background: #000;
   border-radius: 12px;
+}
+
+/* Bulk mode: fullscreen overlay (matches Assets Manager shell) */
+#camLinkModal.cam-submodal--fullscreen {
+  padding: 0;
+  align-items: stretch;
+  justify-content: stretch;
+  background: rgba(2, 2, 8, 0.96);
+  backdrop-filter: none;
+}
+#camLinkModal.cam-submodal--fullscreen .cam-link-box {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  min-height: 100%;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+  background: linear-gradient(160deg, #0a0614 0%, #120a1e 45%, #080510 100%);
+}
+#camLinkModal.cam-submodal--fullscreen .cam-link-bulk-grid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 }
 @media (max-width: 900px) {
   .cam-btn--menu {
@@ -798,6 +974,15 @@ body.cam-modal-open {
   max-height: min(80vh, 640px);
   display: flex;
   flex-direction: column;
+}
+/* Link panel owns its own chrome padding (header / scroll / footer) */
+#camLinkModal .cam-link-box.cam-submodal__panel {
+  padding: 0;
+  overflow: hidden;
+  max-height: min(86vh, 720px);
+}
+#camLinkModal.cam-submodal--fullscreen .cam-link-box.cam-submodal__panel {
+  max-height: none;
 }
 .cam-move-grid {
   display: grid;

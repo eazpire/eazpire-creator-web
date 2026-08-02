@@ -33,6 +33,9 @@
   var dragPayload = null; // [{ asset_type, asset_id }]
   var dragExpandTimer = null;
   var dragExpandFolderId = null;
+  var linkPhoneSessionId = null;
+  var linkPhonePollTimer = null;
+  var PHONE_UPLOAD_WORKER_FALLBACK = 'https://creator-engine.eazpire.workers.dev';
 
   function isBadTranslationString(s) {
     if (typeof s !== 'string') return true;
@@ -1249,6 +1252,21 @@
     closeSubmodal('camAddSourceModal');
   }
 
+  function setLinkModalBulkFullscreen(on) {
+    var modal = document.getElementById('camLinkModal');
+    if (!modal) return;
+    if (on) modal.classList.add('cam-submodal--fullscreen');
+    else modal.classList.remove('cam-submodal--fullscreen');
+  }
+
+  function setBulkUiVisible(on) {
+    var bulk = document.getElementById('cam-link-bulk');
+    var controls = document.getElementById('cam-link-bulk-controls');
+    if (bulk) bulk.hidden = !on;
+    if (controls) controls.hidden = !on;
+    setLinkModalBulkFullscreen(!!on);
+  }
+
   function resetLinkModal() {
     linkMode = null;
     linkSingle = null;
@@ -1258,7 +1276,6 @@
     var summary = document.getElementById('cam-link-summary');
     var statusEl = document.getElementById('cam-link-status');
     var single = document.getElementById('cam-link-single-preview');
-    var bulk = document.getElementById('cam-link-bulk');
     var submit = document.getElementById('cam-link-submit');
     var video = document.getElementById('cam-link-preview-video');
     var audio = document.getElementById('cam-link-preview-audio');
@@ -1272,7 +1289,7 @@
       statusEl.className = 'cam-link-status';
     }
     if (single) single.hidden = true;
-    if (bulk) bulk.hidden = true;
+    setBulkUiVisible(false);
     if (submit) submit.disabled = true;
     [video, audio, image].forEach(function (el) {
       if (!el) return;
@@ -1283,6 +1300,153 @@
     if (grid) grid.innerHTML = '';
   }
 
+  function isDesktopViewport() {
+    return !(window.matchMedia && window.matchMedia('(max-width: 767px)').matches);
+  }
+
+  function phoneBridgeApiBase() {
+    var cfg = window.CREATOR_API_CONFIG || {};
+    if (cfg.PHONE_UPLOAD_BASE_URL) {
+      return String(cfg.PHONE_UPLOAD_BASE_URL).replace(/\/+$/, '');
+    }
+    if (cfg.WORKER_BASE_URL) {
+      return String(cfg.WORKER_BASE_URL).replace(/\/+$/, '');
+    }
+    var base = cfg.BASE_URL ? String(cfg.BASE_URL).replace(/\/+$/, '') : '';
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(base)) return base;
+    if (window.__CREATOR_PORTAL_HOST__) return PHONE_UPLOAD_WORKER_FALLBACK;
+    var fromApi = String(API_BASE || '').replace(/\/apps\/creator-dispatch$/i, '').replace(/\/+$/, '');
+    if (/^https:\/\/creator-engine\.eazpire\.workers\.dev/i.test(fromApi)) return fromApi;
+    return PHONE_UPLOAD_WORKER_FALLBACK;
+  }
+
+  function fetchPhoneBridgeJson(url, options) {
+    return fetch(url, options || { credentials: 'omit' }).then(function (r) {
+      return r.text().then(function (text) {
+        var data = {};
+        var snippet = String(text || '').trim();
+        if (snippet) {
+          try {
+            data = JSON.parse(snippet);
+          } catch (_e) {
+            var err = new Error('Phone bridge returned non-JSON (HTTP ' + r.status + ')');
+            err.httpStatus = r.status;
+            throw err;
+          }
+        }
+        return { httpOk: r.ok, status: r.status, data: data };
+      });
+    });
+  }
+
+  function stopLinkPhoneBridge() {
+    if (linkPhonePollTimer) {
+      clearInterval(linkPhonePollTimer);
+      linkPhonePollTimer = null;
+    }
+    linkPhoneSessionId = null;
+  }
+
+  function applyPhoneLinkValue(value) {
+    var urlInput = document.getElementById('cam-link-url');
+    var phoneStatus = document.getElementById('cam-link-phone-status');
+    if (urlInput) {
+      urlInput.value = value;
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (phoneStatus) phoneStatus.textContent = i18n('link_phone_received', 'Link received from phone');
+    submitLinkAnalyze();
+  }
+
+  function pollLinkPhoneSession(sessionId, ownerId) {
+    var base = phoneBridgeApiBase();
+    var u =
+      base +
+      '/api/creator-phone-upload/session?id=' +
+      encodeURIComponent(sessionId) +
+      '&owner_id=' +
+      encodeURIComponent(ownerId);
+    fetchPhoneBridgeJson(u, { credentials: 'omit' })
+      .then(function (res) {
+        var data = res.data;
+        if (!data || !data.ok || linkPhoneSessionId !== sessionId) return;
+        if (data.status === 'completed' && data.value) {
+          stopLinkPhoneBridge();
+          applyPhoneLinkValue(data.value);
+        } else if (data.status === 'expired') {
+          stopLinkPhoneBridge();
+        }
+      })
+      .catch(function () {});
+  }
+
+  function startLinkPhoneBridge() {
+    var box = document.getElementById('cam-link-phone');
+    var qrImg = document.getElementById('cam-link-qr-img');
+    var phoneStatus = document.getElementById('cam-link-phone-status');
+    if (!box || !isDesktopViewport()) return;
+    stopLinkPhoneBridge();
+    if (qrImg) {
+      qrImg.removeAttribute('src');
+      qrImg.alt = '';
+    }
+    var ownerId = getOwnerId();
+    if (!ownerId) {
+      if (phoneStatus) {
+        phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+      }
+      return;
+    }
+    if (phoneStatus) phoneStatus.textContent = i18n('link_phone_starting', 'Preparing phone scan…');
+    var base = phoneBridgeApiBase();
+    fetchPhoneBridgeJson(base + '/api/creator-phone-upload/session', {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ owner_id: ownerId, purpose: 'video_link' }),
+    })
+      .then(function (res) {
+        var session = res.data;
+        if (!res.httpOk || !session || !session.ok || !session.session_id) {
+          if (phoneStatus) {
+            phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+          }
+          return;
+        }
+        linkPhoneSessionId = session.session_id;
+        if (qrImg) {
+          qrImg.onload = function () {
+            if (phoneStatus && linkPhoneSessionId === session.session_id) {
+              phoneStatus.textContent = i18n(
+                'link_phone_hint',
+                'Scan, choose Browser or App, paste the link, tap Extract — it runs here automatically.'
+              );
+            }
+          };
+          qrImg.onerror = function () {
+            if (phoneStatus) {
+              phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+            }
+          };
+          qrImg.alt = 'Phone scan QR';
+          qrImg.src =
+            base +
+            '/api/creator-phone-upload/qr-image?session=' +
+            encodeURIComponent(session.session_id) +
+            '&t=' +
+            String(Date.now());
+        }
+        if (phoneStatus) phoneStatus.textContent = i18n('link_phone_ready', 'Scan the QR code with your phone');
+        linkPhonePollTimer = setInterval(function () {
+          pollLinkPhoneSession(session.session_id, ownerId);
+        }, 2000);
+        pollLinkPhoneSession(session.session_id, ownerId);
+      })
+      .catch(function () {
+        if (phoneStatus) phoneStatus.textContent = i18n('link_phone_unavailable', 'Phone scan unavailable right now.');
+      });
+  }
+
   function openLinkModal() {
     closeAddSourceModal();
     resetLinkModal();
@@ -1290,10 +1454,12 @@
     if (input) input.value = '';
     updateExtractButtonLabel();
     openSubmodal('camLinkModal');
+    if (isDesktopViewport()) startLinkPhoneBridge();
     if (input) input.focus();
   }
 
   function closeLinkModal() {
+    stopLinkPhoneBridge();
     closeSubmodal('camLinkModal');
     closeSubmodal('cam-link-fs');
     resetLinkModal();
@@ -1433,11 +1599,13 @@
     });
     grid.innerHTML = sorted
       .map(function (c) {
-        var thumb = c.thumb_url
+        var mediaInner = c.thumb_url
           ? '<img class="cam-link-bulk-card__thumb" src="' +
             escapeHtml(c.thumb_url) +
             '" alt="" loading="lazy">'
-          : '<div class="cam-link-bulk-card__placeholder" aria-hidden="true">▶</div>';
+          : '<div class="cam-link-bulk-card__placeholder" aria-hidden="true">' +
+            escapeHtml(i18n('video', 'Video')) +
+            '</div>';
         var views =
           c.views != null
             ? '<div>' + escapeHtml(String(c.views)) + ' views</div>'
@@ -1449,12 +1617,13 @@
           '<input type="checkbox" class="cam-link-bulk-card__check" checked aria-label="' +
           escapeHtml(i18n('select_asset', 'Select asset')) +
           '">' +
-          '<button type="button" class="cam-link-bulk-card__play" data-cam-bulk-play="' +
+          '<button type="button" class="cam-link-bulk-card__media" data-cam-bulk-play="' +
           escapeHtml(c.url) +
-          '" title="' +
+          '" aria-label="' +
           escapeHtml(i18n('play', 'Play')) +
-          '">▶</button>' +
-          thumb +
+          '">' +
+          mediaInner +
+          '</button>' +
           '<div class="cam-link-bulk-card__meta"><div>#' +
           escapeHtml(String(c.id || '').slice(-8)) +
           '</div>' +
@@ -1519,8 +1688,10 @@
       }
       return;
     }
+    var looksBulk = detectClientBulkUrl(url);
+    if (looksBulk) setLinkModalBulkFullscreen(true);
     if (statusEl) {
-      statusEl.textContent = detectClientBulkUrl(url)
+      statusEl.textContent = looksBulk
         ? i18n('link_analyzing', 'Analyzing…')
         : i18n('link_extracting', 'Extracting preview…');
       statusEl.className = 'cam-link-status is-info';
@@ -1534,6 +1705,7 @@
         sort: 'newest'
       });
       if (!data.ok) {
+        setLinkModalBulkFullscreen(false);
         if (statusEl) {
           statusEl.textContent =
             data.message || i18n('link_error_generic', 'Could not add media from that link.');
@@ -1553,8 +1725,7 @@
             .replace('{count}', String(count))
             .replace('{type}', String(typeLabel));
         }
-        var bulkEl = document.getElementById('cam-link-bulk');
-        if (bulkEl) bulkEl.hidden = false;
+        setBulkUiVisible(true);
         var countInput = document.getElementById('cam-link-bulk-count');
         if (countInput) {
           countInput.max = String(Math.min(40, Math.max(1, linkBulkAll.length || 1)));
@@ -1572,6 +1743,7 @@
 
       // single
       linkMode = 'single';
+      setBulkUiVisible(false);
       linkSingle = {
         url: data.normalized_url || url,
         kind: data.kind || 'video',
@@ -1604,6 +1776,7 @@
       }
     } catch (e) {
       console.warn('[AssetsManager] link analyze failed', e);
+      setLinkModalBulkFullscreen(false);
       if (statusEl) {
         statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
         statusEl.className = 'cam-link-status is-error';
@@ -1895,24 +2068,11 @@
     if (bulkApply) bulkApply.addEventListener('click', renderBulkGrid);
     var bulkGrid = document.getElementById('cam-link-bulk-grid');
     if (bulkGrid) {
-      bulkGrid.addEventListener('click', function (e) {
-        var playBtn = e.target && e.target.closest ? e.target.closest('[data-cam-bulk-play]') : null;
-        if (playBtn) {
-          e.preventDefault();
-          e.stopPropagation();
-          playBulkCandidate(playBtn.getAttribute('data-cam-bulk-play'));
-          return;
-        }
-        var card = e.target && e.target.closest ? e.target.closest('[data-cam-bulk-url]') : null;
+      function syncBulkSelectionFromCard(card) {
         if (!card) return;
         var url = card.getAttribute('data-cam-bulk-url');
         var check = card.querySelector('.cam-link-bulk-card__check');
-        var next = !(check && check.checked);
-        if (e.target !== check) {
-          if (check) check.checked = next;
-        } else {
-          next = !!check.checked;
-        }
+        var next = !!(check && check.checked);
         linkBulkSelected[url] = next;
         card.classList.toggle('is-selected', next);
         card.setAttribute('aria-selected', next ? 'true' : 'false');
@@ -1922,6 +2082,26 @@
             return linkBulkSelected[k];
           });
         }
+      }
+      bulkGrid.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        // Selection only via checkbox — never toggle from media/meta clicks
+        if (t.classList && t.classList.contains('cam-link-bulk-card__check')) {
+          syncBulkSelectionFromCard(t.closest('[data-cam-bulk-url]'));
+          return;
+        }
+        var playBtn = t.closest('[data-cam-bulk-play]');
+        if (playBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          playBulkCandidate(playBtn.getAttribute('data-cam-bulk-play'));
+        }
+      });
+      bulkGrid.addEventListener('change', function (e) {
+        var t = e.target;
+        if (!t || !t.classList || !t.classList.contains('cam-link-bulk-card__check')) return;
+        syncBulkSelectionFromCard(t.closest('[data-cam-bulk-url]'));
       });
     }
     var fsClose = document.getElementById('cam-link-fs-close');

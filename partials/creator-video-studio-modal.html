@@ -230,6 +230,36 @@
             </div>
           </div>
 
+          <div class="cvs-accordion-item" data-tool-item="remove-object">
+            <button type="button" class="cvs-accordion-header" data-tool-header="remove-object" aria-expanded="false">
+              <span class="cvs-accordion-header__title">Remove Object</span>
+              <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="remove-object" hidden>
+              <p class="cvs-tool-hint">Pause the video, paint over the watermark or object to remove, then generate a cleaned preview. Standard uses ProPainter; High quality uses BRIA (clips up to 5 seconds).</p>
+              <div class="cvs-remove-object-quality" role="radiogroup" aria-label="Quality">
+                <label class="cvs-remove-object-quality__opt">
+                  <input type="radio" name="cvs-remove-object-quality" id="cvs-remove-object-quality-standard" value="standard" checked>
+                  <span>Standard</span>
+                </label>
+                <label class="cvs-remove-object-quality__opt">
+                  <input type="radio" name="cvs-remove-object-quality" id="cvs-remove-object-quality-high" value="high">
+                  <span>High quality (≤5s)</span>
+                </label>
+              </div>
+              <label class="cvs-remove-object-brush-label" for="cvs-remove-object-brush">
+                <span>Brush size</span>
+                <input type="range" id="cvs-remove-object-brush" min="6" max="64" value="24">
+              </label>
+              <div class="cvs-tool-footer">
+                <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-remove-object-btn-clear">Clear mask</button>
+                <button type="button" class="cvs-btn cvs-btn--primary" id="cvs-remove-object-btn-preview">Generate cleaned preview</button>
+              </div>
+              <div class="cvs-preview-list" id="cvs-remove-object-previews"></div>
+              <p class="cvs-tool-status" id="cvs-remove-object-status"></p>
+            </div>
+          </div>
+
           <div class="cvs-accordion-item" data-tool-item="audio-remove">
             <button type="button" class="cvs-accordion-header" data-tool-header="audio-remove" aria-expanded="false">
               <span class="cvs-accordion-header__title">Remove Audio</span>
@@ -489,7 +519,7 @@
         <div class="cvs-link-phone__qr-wrap">
           <img id="cvs-link-qr-img" class="cvs-link-phone__qr" alt="" width="120" height="120" loading="lazy">
         </div>
-        <p class="cvs-link-phone__hint">Paste the link on your phone — it fills in here automatically.</p>
+        <p class="cvs-link-phone__hint">Scan, choose Browser or App, paste the link, tap Extract — it runs here automatically.</p>
         <p class="cvs-link-phone__status" id="cvs-link-phone-status" role="status"></p>
       </div>
     </div>
