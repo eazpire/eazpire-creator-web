@@ -57,8 +57,12 @@
               <span class="cam-sidebar__item-label" data-t="creator.assets_manager.all">All</span>
               <span class="cam-sidebar__count" data-cam-all-count>0</span>
             </button>
-            <button type="button" class="cam-btn cam-btn--add-folder" id="cam-btn-add-folder" data-t="creator.assets_manager.add_folder">Add Folder</button>
+            <div class="cam-sidebar__add-actions">
+              <button type="button" class="cam-btn cam-btn--add-folder" id="cam-btn-add-folder" data-t="creator.assets_manager.add_folder">Add Folder</button>
+              <button type="button" class="cam-btn cam-btn--add-file" id="cam-btn-add-file" data-t="creator.assets_manager.add_file">Add File</button>
+            </div>
           </div>
+          <input type="file" id="cam-file-input" class="visually-hidden" accept="image/*,video/*,audio/*" multiple hidden>
           <nav class="cam-sidebar__nav" id="cam-folder-tree" aria-label="Folder tree"></nav>
           <div class="cam-sidebar__footer">
             <button type="button" class="cam-sidebar__item cam-sidebar__item--hidden" data-cam-folder="hidden" id="cam-folder-hidden">
@@ -105,6 +109,90 @@
       <button type="button" class="cam-btn" id="cam-btn-move" data-t="creator.assets_manager.move">Move</button>
       <button type="button" class="cam-btn" id="cam-btn-hide" data-t="creator.assets_manager.hide">Hide</button>
       <button type="button" class="cam-btn cam-btn--danger" id="cam-btn-remove" data-t="creator.assets_manager.remove">Remove</button>
+    </div>
+  </div>
+
+  
+  <div id="camAddSourceModal" class="cam-submodal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cam-addsrc-title">
+    <div class="cam-submodal__panel cam-addsrc-box">
+      <h3 id="cam-addsrc-title" class="cam-submodal__title" data-t="creator.assets_manager.add_source_title">Add media</h3>
+      <div class="cam-addsrc-grid">
+        <button type="button" class="cam-addsrc-option" id="cam-addsrc-device">
+          <span class="cam-addsrc-option__icon" aria-hidden="true">&#128187;</span>
+          <span class="cam-addsrc-option__label" data-t="creator.assets_manager.add_source_device">Device</span>
+          <span class="cam-addsrc-option__hint" data-t="creator.assets_manager.add_source_device_hint">Upload from this device</span>
+        </button>
+        <button type="button" class="cam-addsrc-option" id="cam-addsrc-phone" data-desktop-only="1">
+          <span class="cam-addsrc-option__icon" aria-hidden="true">&#128241;</span>
+          <span class="cam-addsrc-option__label" data-t="creator.assets_manager.add_source_phone">Phone</span>
+          <span class="cam-addsrc-option__hint" data-t="creator.assets_manager.add_source_phone_hint">Scan a QR code to upload</span>
+        </button>
+        <button type="button" class="cam-addsrc-option" id="cam-addsrc-link">
+          <span class="cam-addsrc-option__icon" aria-hidden="true">&#128279;</span>
+          <span class="cam-addsrc-option__label" data-t="creator.assets_manager.add_source_link">Link</span>
+          <span class="cam-addsrc-option__hint" data-t="creator.assets_manager.add_source_link_hint">Paste a media or Reels tab URL</span>
+        </button>
+      </div>
+      <div class="cam-submodal__footer">
+        <button type="button" class="cam-btn" id="cam-addsrc-cancel" data-t="creator.assets_manager.cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="camLinkModal" class="cam-submodal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cam-link-title">
+    <div class="cam-submodal__panel cam-submodal__panel--wide cam-link-box">
+      <h3 id="cam-link-title" class="cam-submodal__title" data-t="creator.assets_manager.link_title">Add from link</h3>
+      <div class="cam-link-body">
+        <label class="cam-field">
+          <span data-t="creator.assets_manager.link_url_label">Media URL</span>
+          <div class="cam-link-url-row">
+            <input type="url" id="cam-link-url" placeholder="https://…" autocomplete="off">
+            <button type="button" class="cam-btn" id="cam-link-extract" data-t="creator.assets_manager.link_extract">Extract</button>
+          </div>
+        </label>
+        <p class="cam-link-summary" id="cam-link-summary" hidden role="status"></p>
+        <p class="cam-link-status" id="cam-link-status" role="status"></p>
+
+        <div class="cam-link-single-preview" id="cam-link-single-preview" hidden>
+          <video id="cam-link-preview-video" class="cam-link-preview__media" controls playsinline hidden></video>
+          <audio id="cam-link-preview-audio" class="cam-link-preview__media" controls hidden></audio>
+          <img id="cam-link-preview-image" class="cam-link-preview__media" alt="" hidden>
+        </div>
+
+        <div class="cam-link-bulk" id="cam-link-bulk" hidden>
+          <div class="cam-link-bulk-controls">
+            <label class="cam-field cam-field--inline">
+              <span data-t="creator.assets_manager.link_bulk_count">Number of assets</span>
+              <input type="number" id="cam-link-bulk-count" min="1" max="40" value="12">
+            </label>
+            <label class="cam-field cam-field--inline">
+              <span data-t="creator.assets_manager.link_bulk_sort">Sort</span>
+              <select id="cam-link-bulk-sort">
+                <option value="newest" data-t="creator.assets_manager.link_sort_newest">Newest first</option>
+                <option value="oldest" data-t="creator.assets_manager.link_sort_oldest">Oldest first</option>
+                <option value="most_views" data-t="creator.assets_manager.link_sort_views">Most views</option>
+              </select>
+            </label>
+            <button type="button" class="cam-btn" id="cam-link-bulk-apply" data-t="creator.assets_manager.link_bulk_apply">Update preview</button>
+          </div>
+          <div class="cam-link-bulk-grid" id="cam-link-bulk-grid" role="listbox" aria-multiselectable="true"></div>
+        </div>
+      </div>
+      <div class="cam-submodal__footer">
+        <button type="button" class="cam-btn" id="cam-link-cancel" data-t="creator.assets_manager.cancel">Cancel</button>
+        <button type="button" class="cam-btn cam-btn--primary" id="cam-link-submit" disabled data-t="creator.assets_manager.link_download">Download</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="cam-link-fs" class="cam-submodal" hidden aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="cam-submodal__panel cam-submodal__panel--wide cam-link-fs-panel">
+      <video id="cam-link-fs-video" class="cam-link-fs__media" controls playsinline></video>
+      <div class="cam-submodal__footer">
+        <button type="button" class="cam-btn" id="cam-link-fs-close" data-t="creator.assets_manager.close">Close</button>
+      </div>
     </div>
   </div>
 

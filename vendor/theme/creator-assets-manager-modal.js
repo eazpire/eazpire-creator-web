@@ -1172,6 +1172,575 @@
     }
   }
 
+  /* ── Add File / link import ── */
+  var MAX_BYTES = 500 * 1024 * 1024;
+  var SIMPLE_MAX = 32 * 1024 * 1024;
+  var PART_SIZE = 5 * 1024 * 1024;
+  var linkMode = null; // 'single' | 'bulk'
+  var linkSingle = null;
+  var linkBulkAll = [];
+  var linkBulkMeta = null;
+  var linkBulkSelected = Object.create(null);
+  var camUploading = false;
+
+  function isDesktopViewport() {
+    return !(window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
+  }
+
+  function detectClientBulkUrl(url) {
+    try {
+      var u = new URL(String(url || '').trim());
+      var host = u.hostname.replace(/^www\./i, '').toLowerCase();
+      if (host.indexOf('facebook.com') === -1 && host !== 'm.facebook.com') return false;
+      if (/\/reel\/\d+/i.test(u.pathname) || /\/watch/i.test(u.pathname) || /\/share\//i.test(u.pathname)) {
+        return false;
+      }
+      var sk = String(u.searchParams.get('sk') || '').toLowerCase();
+      if (sk === 'reels_tab' || sk === 'reels') return true;
+      if (/\/reels\/?$/i.test(u.pathname) || /\/reels\//i.test(u.pathname)) return true;
+      if (/\/videos\/?$/i.test(u.pathname) && !/\/videos\/\d+/i.test(u.pathname)) return true;
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function updateExtractButtonLabel() {
+    var btn = document.getElementById('cam-link-extract');
+    var input = document.getElementById('cam-link-url');
+    if (!btn) return;
+    var url = input ? String(input.value || '').trim() : '';
+    if (detectClientBulkUrl(url)) {
+      btn.textContent = i18n('link_extract_analyze', 'Extract → Analyze');
+    } else {
+      btn.textContent = i18n('link_extract', 'Extract');
+    }
+  }
+
+  function openAddSourceModal() {
+    var phoneBtn = document.getElementById('cam-addsrc-phone');
+    if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
+    openSubmodal('camAddSourceModal');
+  }
+
+  function closeAddSourceModal() {
+    closeSubmodal('camAddSourceModal');
+  }
+
+  function resetLinkModal() {
+    linkMode = null;
+    linkSingle = null;
+    linkBulkAll = [];
+    linkBulkMeta = null;
+    linkBulkSelected = Object.create(null);
+    var summary = document.getElementById('cam-link-summary');
+    var statusEl = document.getElementById('cam-link-status');
+    var single = document.getElementById('cam-link-single-preview');
+    var bulk = document.getElementById('cam-link-bulk');
+    var submit = document.getElementById('cam-link-submit');
+    var video = document.getElementById('cam-link-preview-video');
+    var audio = document.getElementById('cam-link-preview-audio');
+    var image = document.getElementById('cam-link-preview-image');
+    if (summary) {
+      summary.hidden = true;
+      summary.textContent = '';
+    }
+    if (statusEl) {
+      statusEl.textContent = '';
+      statusEl.className = 'cam-link-status';
+    }
+    if (single) single.hidden = true;
+    if (bulk) bulk.hidden = true;
+    if (submit) submit.disabled = true;
+    [video, audio, image].forEach(function (el) {
+      if (!el) return;
+      el.removeAttribute('src');
+      el.hidden = true;
+    });
+    var grid = document.getElementById('cam-link-bulk-grid');
+    if (grid) grid.innerHTML = '';
+  }
+
+  function openLinkModal() {
+    closeAddSourceModal();
+    resetLinkModal();
+    var input = document.getElementById('cam-link-url');
+    if (input) input.value = '';
+    updateExtractButtonLabel();
+    openSubmodal('camLinkModal');
+    if (input) input.focus();
+  }
+
+  function closeLinkModal() {
+    closeSubmodal('camLinkModal');
+    closeSubmodal('cam-link-fs');
+    resetLinkModal();
+  }
+
+  function sleep(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  async function uploadSimple(file) {
+    var fd = new FormData();
+    fd.append('file', file);
+    var res = await fetch(apiUrl('video-studio-asset-upload-simple'), {
+      method: 'POST',
+      credentials: 'include',
+      body: fd
+    });
+    var data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'upload_failed');
+    return data.asset;
+  }
+
+  async function uploadMultipart(file) {
+    var initRes = await fetch(apiUrl('video-studio-asset-upload-init'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mime: file.type || 'application/octet-stream',
+        bytes: file.size,
+        original_name: file.name
+      })
+    });
+    var initData = await initRes.json();
+    if (!initData.ok) throw new Error(initData.error || 'upload_init_failed');
+    var uploadId = initData.upload_id;
+    var assetId = initData.asset_id;
+    var parts = [];
+    var offset = 0;
+    var partNumber = 1;
+    while (offset < file.size) {
+      var end = Math.min(offset + PART_SIZE, file.size);
+      var chunk = file.slice(offset, end);
+      var partFd = new FormData();
+      partFd.append('upload_id', uploadId);
+      partFd.append('asset_id', assetId);
+      partFd.append('part_number', String(partNumber));
+      partFd.append('file', chunk, 'part-' + partNumber);
+      var partRes = await fetch(apiUrl('video-studio-asset-upload-part'), {
+        method: 'POST',
+        credentials: 'include',
+        body: partFd
+      });
+      var partData = await partRes.json();
+      if (!partData.ok) throw new Error(partData.error || 'upload_part_failed');
+      parts.push({ part_number: partData.part_number || partNumber, etag: partData.etag });
+      offset = end;
+      partNumber += 1;
+    }
+    var completeRes = await fetch(apiUrl('video-studio-asset-upload-complete'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ upload_id: uploadId, asset_id: assetId, parts: parts })
+    });
+    var completeData = await completeRes.json();
+    if (!completeData.ok) throw new Error(completeData.error || 'upload_complete_failed');
+    return completeData.asset;
+  }
+
+  async function uploadFile(file) {
+    if (!file) return;
+    if (file.size > MAX_BYTES) {
+      setStatus(i18n('error_upload', 'Upload failed.'), true);
+      return;
+    }
+    camUploading = true;
+    setStatus(i18n('uploading', 'Uploading…'));
+    try {
+      if (file.size <= SIMPLE_MAX) {
+        await uploadSimple(file);
+      } else {
+        await uploadMultipart(file);
+      }
+      setStatus(i18n('upload_done', 'Upload complete'));
+      await refreshAll();
+    } catch (err) {
+      console.warn('[AssetsManager] upload failed', err);
+      setStatus(i18n('error_upload', 'Upload failed.'), true);
+    } finally {
+      camUploading = false;
+    }
+  }
+
+  async function uploadFiles(fileList) {
+    var files = Array.prototype.slice.call(fileList || []);
+    for (var i = 0; i < files.length; i++) {
+      await uploadFile(files[i]);
+    }
+  }
+
+  function sortBulkCandidates(list, sort) {
+    var arr = (list || []).slice();
+    var mode = String(sort || 'newest');
+    arr.sort(function (a, b) {
+      if (mode === 'most_views') {
+        var av = a.views != null ? Number(a.views) : -1;
+        var bv = b.views != null ? Number(b.views) : -1;
+        if (bv !== av) return bv - av;
+      }
+      var at = a.created_at != null ? Number(a.created_at) : 0;
+      var bt = b.created_at != null ? Number(b.created_at) : 0;
+      if (mode === 'oldest') {
+        if (at !== bt) return at - bt;
+      } else if (at !== bt) {
+        return bt - at;
+      }
+      return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true });
+    });
+    return arr;
+  }
+
+  function renderBulkGrid() {
+    var grid = document.getElementById('cam-link-bulk-grid');
+    var countInput = document.getElementById('cam-link-bulk-count');
+    var sortSelect = document.getElementById('cam-link-bulk-sort');
+    var submit = document.getElementById('cam-link-submit');
+    if (!grid) return;
+    var count = Math.max(1, Math.min(40, Number(countInput && countInput.value) || 12));
+    var sort = sortSelect ? sortSelect.value : 'newest';
+    var sorted = sortBulkCandidates(linkBulkAll, sort).slice(0, count);
+    linkBulkSelected = Object.create(null);
+    sorted.forEach(function (c) {
+      linkBulkSelected[c.url] = true;
+    });
+    grid.innerHTML = sorted
+      .map(function (c) {
+        var thumb = c.thumb_url
+          ? '<img class="cam-link-bulk-card__thumb" src="' +
+            escapeHtml(c.thumb_url) +
+            '" alt="" loading="lazy">'
+          : '<div class="cam-link-bulk-card__placeholder" aria-hidden="true">▶</div>';
+        var views =
+          c.views != null
+            ? '<div>' + escapeHtml(String(c.views)) + ' views</div>'
+            : '';
+        return (
+          '<div class="cam-link-bulk-card is-selected" role="option" aria-selected="true" data-cam-bulk-url="' +
+          escapeHtml(c.url) +
+          '">' +
+          '<input type="checkbox" class="cam-link-bulk-card__check" checked aria-label="' +
+          escapeHtml(i18n('select_asset', 'Select asset')) +
+          '">' +
+          '<button type="button" class="cam-link-bulk-card__play" data-cam-bulk-play="' +
+          escapeHtml(c.url) +
+          '" title="' +
+          escapeHtml(i18n('play', 'Play')) +
+          '">▶</button>' +
+          thumb +
+          '<div class="cam-link-bulk-card__meta"><div>#' +
+          escapeHtml(String(c.id || '').slice(-8)) +
+          '</div>' +
+          views +
+          '</div></div>'
+        );
+      })
+      .join('');
+    if (submit) submit.disabled = !sorted.length;
+  }
+
+  async function playBulkCandidate(url) {
+    var statusEl = document.getElementById('cam-link-status');
+    if (statusEl) {
+      statusEl.textContent = i18n('link_extracting', 'Extracting preview…');
+      statusEl.className = 'cam-link-status is-info';
+    }
+    try {
+      var data = await apiPost('video-studio-link-extract', { url: url, format: 'mp4' });
+      if (!data.ok || !data.preview_url) {
+        if (statusEl) {
+          statusEl.textContent = data.message || i18n('link_error_generic', 'Could not add media from that link.');
+          statusEl.className = 'cam-link-status is-error';
+        }
+        return;
+      }
+      var fs = document.getElementById('cam-link-fs');
+      var video = document.getElementById('cam-link-fs-video');
+      if (video) {
+        video.src = data.preview_url;
+        try {
+          video.play();
+        } catch (e) {}
+      }
+      openSubmodal('cam-link-fs');
+      if (statusEl) {
+        statusEl.textContent = '';
+        statusEl.className = 'cam-link-status';
+      }
+    } catch (e) {
+      if (statusEl) {
+        statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+        statusEl.className = 'cam-link-status is-error';
+      }
+    }
+  }
+
+  async function submitLinkAnalyze() {
+    var urlInput = document.getElementById('cam-link-url');
+    var statusEl = document.getElementById('cam-link-status');
+    var summary = document.getElementById('cam-link-summary');
+    var extractBtn = document.getElementById('cam-link-extract');
+    var submit = document.getElementById('cam-link-submit');
+    var url = urlInput ? String(urlInput.value || '').trim() : '';
+    resetLinkModal();
+    if (urlInput) urlInput.value = url;
+    updateExtractButtonLabel();
+    if (!url) {
+      if (statusEl) {
+        statusEl.textContent = i18n('link_error_invalid_url', 'Please enter a valid URL.');
+        statusEl.className = 'cam-link-status is-error';
+      }
+      return;
+    }
+    if (statusEl) {
+      statusEl.textContent = detectClientBulkUrl(url)
+        ? i18n('link_analyzing', 'Analyzing…')
+        : i18n('link_extracting', 'Extracting preview…');
+      statusEl.className = 'cam-link-status is-info';
+    }
+    if (extractBtn) extractBtn.disabled = true;
+    try {
+      var data = await apiPost('marketing-asset-link-analyze', {
+        url: url,
+        format: 'mp4',
+        limit: 40,
+        sort: 'newest'
+      });
+      if (!data.ok) {
+        if (statusEl) {
+          statusEl.textContent =
+            data.message || i18n('link_error_generic', 'Could not add media from that link.');
+          statusEl.className = 'cam-link-status is-error';
+        }
+        return;
+      }
+      if (data.mode === 'bulk') {
+        linkMode = 'bulk';
+        linkBulkAll = Array.isArray(data.candidates) ? data.candidates : [];
+        linkBulkMeta = data;
+        if (summary) {
+          var typeLabel = (data.summary && data.summary.type) || 'video';
+          var count = (data.summary && data.summary.count) || linkBulkAll.length;
+          summary.hidden = false;
+          summary.textContent = i18n('link_bulk_summary', 'Found {count} {type} assets.')
+            .replace('{count}', String(count))
+            .replace('{type}', String(typeLabel));
+        }
+        var bulkEl = document.getElementById('cam-link-bulk');
+        if (bulkEl) bulkEl.hidden = false;
+        var countInput = document.getElementById('cam-link-bulk-count');
+        if (countInput) {
+          countInput.max = String(Math.min(40, Math.max(1, linkBulkAll.length || 1)));
+          countInput.value = String(Math.min(12, linkBulkAll.length || 1));
+        }
+        renderBulkGrid();
+        if (statusEl) {
+          statusEl.textContent = data.warning
+            ? i18n('link_bulk_partial', 'Public list loaded (best effort). Adjust count/sort, then download selected.')
+            : i18n('link_bulk_ready', 'Select assets and click Download.');
+          statusEl.className = 'cam-link-status is-success';
+        }
+        return;
+      }
+
+      // single
+      linkMode = 'single';
+      linkSingle = {
+        url: data.normalized_url || url,
+        kind: data.kind || 'video',
+        preview_url: data.preview_url,
+        cached: !!data.cached,
+        asset_id: data.asset_id || null
+      };
+      if (summary) {
+        summary.hidden = false;
+        summary.textContent = i18n('link_single_summary', '1 {type} asset ready.')
+          .replace('{type}', String(data.kind || 'video'));
+      }
+      var single = document.getElementById('cam-link-single-preview');
+      var video = document.getElementById('cam-link-preview-video');
+      var audio = document.getElementById('cam-link-preview-audio');
+      var image = document.getElementById('cam-link-preview-image');
+      if (single) single.hidden = false;
+      [video, audio, image].forEach(function (el) {
+        if (el) el.hidden = true;
+      });
+      var target = data.kind === 'audio' ? audio : data.kind === 'image' ? image : video;
+      if (target && data.preview_url) {
+        target.src = data.preview_url;
+        target.hidden = false;
+      }
+      if (submit) submit.disabled = false;
+      if (statusEl) {
+        statusEl.textContent = i18n('link_extracted', 'Preview ready — click Download to save it.');
+        statusEl.className = 'cam-link-status is-success';
+      }
+    } catch (e) {
+      console.warn('[AssetsManager] link analyze failed', e);
+      if (statusEl) {
+        statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+        statusEl.className = 'cam-link-status is-error';
+      }
+    } finally {
+      if (extractBtn) extractBtn.disabled = false;
+    }
+  }
+
+  async function pollLinkIngestStatus(assetId, statusEl) {
+    for (var attempt = 0; attempt < 120; attempt++) {
+      if (statusEl && attempt > 0 && attempt % 3 === 0) {
+        statusEl.textContent = i18n('link_processing', 'Downloading media in the background…');
+      }
+      var data = await apiGet('video-studio-link-ingest-status', { asset_id: assetId });
+      if (data.status === 'ready') return { ok: true, asset: data.asset };
+      if (data.status === 'failed') return { ok: false, data: data };
+      await sleep(2000);
+    }
+    return { ok: false, data: { error: 'timeout' } };
+  }
+
+  async function submitLinkDownload() {
+    var statusEl = document.getElementById('cam-link-status');
+    var submit = document.getElementById('cam-link-submit');
+    if (submit) submit.disabled = true;
+
+    if (linkMode === 'single' && linkSingle) {
+      if (statusEl) {
+        statusEl.textContent = i18n('link_downloading', 'Downloading…');
+        statusEl.className = 'cam-link-status is-info';
+      }
+      try {
+        var data = await apiPost('video-studio-link-ingest', {
+          url: linkSingle.url,
+          format: 'mp4'
+        });
+        if (!data.ok && !data.asset_id) {
+          if (statusEl) {
+            statusEl.textContent =
+              data.message || i18n('link_error_generic', 'Could not add media from that link.');
+            statusEl.className = 'cam-link-status is-error';
+          }
+          if (submit) submit.disabled = false;
+          return;
+        }
+        if (data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
+          var polled = await pollLinkIngestStatus(data.asset_id, statusEl);
+          if (!polled.ok) {
+            if (statusEl) {
+              statusEl.textContent =
+                (polled.data && polled.data.message) ||
+                i18n('link_error_generic', 'Could not add media from that link.');
+              statusEl.className = 'cam-link-status is-error';
+            }
+            if (submit) submit.disabled = false;
+            return;
+          }
+        }
+        if (statusEl) {
+          statusEl.textContent = i18n('link_download_done', 'Saved to Unsorted.');
+          statusEl.className = 'cam-link-status is-success';
+        }
+        closeLinkModal();
+        await refreshAll();
+      } catch (e) {
+        if (statusEl) {
+          statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+          statusEl.className = 'cam-link-status is-error';
+        }
+        if (submit) submit.disabled = false;
+      }
+      return;
+    }
+
+    if (linkMode === 'bulk') {
+      var urls = Object.keys(linkBulkSelected).filter(function (u) {
+        return linkBulkSelected[u];
+      });
+      if (!urls.length) {
+        if (statusEl) {
+          statusEl.textContent = i18n('link_bulk_none_selected', 'Select at least one asset.');
+          statusEl.className = 'cam-link-status is-error';
+        }
+        if (submit) submit.disabled = false;
+        return;
+      }
+      if (statusEl) {
+        statusEl.textContent = i18n('link_bulk_downloading', 'Creating folder and downloading…');
+        statusEl.className = 'cam-link-status is-info';
+      }
+      try {
+        var sourceInput = document.getElementById('cam-link-url');
+        var sourceUrl = sourceInput ? String(sourceInput.value || '').trim() : '';
+        var bulk = await apiPost('marketing-asset-link-bulk-ingest', {
+          urls: urls,
+          format: 'mp4',
+          source_url: sourceUrl,
+          folder_title: (linkBulkMeta && linkBulkMeta.folder_title_suggestion) || undefined,
+          folder_description:
+            (linkBulkMeta && linkBulkMeta.folder_description_suggestion) || undefined,
+          parent_system_key: 'motion_videos'
+        });
+        if (!bulk.ok) {
+          if (statusEl) {
+            statusEl.textContent =
+              bulk.message || i18n('link_error_generic', 'Could not add media from that link.');
+            statusEl.className = 'cam-link-status is-error';
+          }
+          if (submit) submit.disabled = false;
+          return;
+        }
+        var jobs = Array.isArray(bulk.jobs) ? bulk.jobs : [];
+        for (var i = 0; i < jobs.length; i++) {
+          var job = jobs[i];
+          if (job.asset_id && (job.status === 'queued' || job.status === 'processing')) {
+            await pollLinkIngestStatus(job.asset_id, statusEl);
+          }
+        }
+        if (statusEl) {
+          statusEl.textContent = i18n('link_bulk_done', 'Download started. Assets will appear in the new folder.')
+            .replace('{folder}', (bulk.folder && bulk.folder.title) || '');
+          statusEl.className = 'cam-link-status is-success';
+        }
+        if (bulk.folder && bulk.folder.id) {
+          currentFolder = bulk.folder.id;
+        }
+        closeLinkModal();
+        await refreshAll();
+      } catch (e) {
+        console.warn('[AssetsManager] bulk ingest failed', e);
+        if (statusEl) {
+          statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+          statusEl.className = 'cam-link-status is-error';
+        }
+        if (submit) submit.disabled = false;
+      }
+    }
+  }
+
+  window.__eazAssetsManagerPhoneApply = function (imageUrl) {
+    if (!root || root.hidden || !imageUrl) return false;
+    closeAddSourceModal();
+    fetch(imageUrl, { mode: 'cors', credentials: 'omit' })
+      .then(function (r) {
+        return r.blob();
+      })
+      .then(function (blob) {
+        var ext = (blob.type || '').split('/')[1] || 'jpg';
+        var file = new File([blob], 'phone-upload.' + ext, { type: blob.type || 'image/jpeg' });
+        return uploadFile(file);
+      })
+      .catch(function (e) {
+        console.warn('[AssetsManager] phone apply failed', e);
+        setStatus(i18n('error_upload', 'Upload failed.'), true);
+      });
+    return true;
+  };
+
   function bindUi() {
     root = document.getElementById('creatorAssetsManagerModal');
     if (!root || root._camBound) return;
@@ -1221,6 +1790,105 @@
           else if (f && f.parent_id) parentId = f.parent_id;
         }
         openFolderSettings('create', { parentId: parentId });
+      });
+    }
+
+    var addFileBtn = $('#cam-btn-add-file');
+    if (addFileBtn) {
+      addFileBtn.addEventListener('click', function () {
+        openAddSourceModal();
+      });
+    }
+    var addSrcCancel = document.getElementById('cam-addsrc-cancel');
+    if (addSrcCancel) addSrcCancel.addEventListener('click', closeAddSourceModal);
+    var addSrcDevice = document.getElementById('cam-addsrc-device');
+    if (addSrcDevice) {
+      addSrcDevice.addEventListener('click', function () {
+        closeAddSourceModal();
+        var input = document.getElementById('cam-file-input');
+        if (input) input.click();
+      });
+    }
+    var addSrcPhone = document.getElementById('cam-addsrc-phone');
+    if (addSrcPhone) {
+      addSrcPhone.addEventListener('click', function () {
+        if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
+          window.CreatorPhoneUploadModal.open({ purpose: 'assets-manager' });
+        }
+      });
+    }
+    var addSrcLink = document.getElementById('cam-addsrc-link');
+    if (addSrcLink) addSrcLink.addEventListener('click', openLinkModal);
+
+    var fileInput = document.getElementById('cam-file-input');
+    if (fileInput) {
+      fileInput.addEventListener('change', function () {
+        var files = fileInput.files;
+        fileInput.value = '';
+        if (files && files.length) uploadFiles(files);
+      });
+    }
+
+    var linkCancel = document.getElementById('cam-link-cancel');
+    if (linkCancel) linkCancel.addEventListener('click', closeLinkModal);
+    var linkExtract = document.getElementById('cam-link-extract');
+    if (linkExtract) linkExtract.addEventListener('click', submitLinkAnalyze);
+    var linkSubmit = document.getElementById('cam-link-submit');
+    if (linkSubmit) linkSubmit.addEventListener('click', submitLinkDownload);
+    var linkUrl = document.getElementById('cam-link-url');
+    if (linkUrl) {
+      linkUrl.addEventListener('input', updateExtractButtonLabel);
+      linkUrl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitLinkAnalyze();
+        }
+      });
+    }
+    var bulkApply = document.getElementById('cam-link-bulk-apply');
+    if (bulkApply) bulkApply.addEventListener('click', renderBulkGrid);
+    var bulkGrid = document.getElementById('cam-link-bulk-grid');
+    if (bulkGrid) {
+      bulkGrid.addEventListener('click', function (e) {
+        var playBtn = e.target && e.target.closest ? e.target.closest('[data-cam-bulk-play]') : null;
+        if (playBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          playBulkCandidate(playBtn.getAttribute('data-cam-bulk-play'));
+          return;
+        }
+        var card = e.target && e.target.closest ? e.target.closest('[data-cam-bulk-url]') : null;
+        if (!card) return;
+        var url = card.getAttribute('data-cam-bulk-url');
+        var check = card.querySelector('.cam-link-bulk-card__check');
+        var next = !(check && check.checked);
+        if (e.target !== check) {
+          if (check) check.checked = next;
+        } else {
+          next = !!check.checked;
+        }
+        linkBulkSelected[url] = next;
+        card.classList.toggle('is-selected', next);
+        card.setAttribute('aria-selected', next ? 'true' : 'false');
+        var submitBtn = document.getElementById('cam-link-submit');
+        if (submitBtn) {
+          submitBtn.disabled = !Object.keys(linkBulkSelected).some(function (k) {
+            return linkBulkSelected[k];
+          });
+        }
+      });
+    }
+    var fsClose = document.getElementById('cam-link-fs-close');
+    if (fsClose) {
+      fsClose.addEventListener('click', function () {
+        var video = document.getElementById('cam-link-fs-video');
+        if (video) {
+          try {
+            video.pause();
+          } catch (e) {}
+          video.removeAttribute('src');
+        }
+        closeSubmodal('cam-link-fs');
       });
     }
 
@@ -1435,6 +2103,8 @@
     closeSubmodal('cam-confirm-assets-permanent');
     closeSubmodal('cam-confirm-asset-action');
     closeSubmodal('cam-move-modal');
+    closeAddSourceModal();
+    closeLinkModal();
     moveItems = null;
     moveSelectedFolderId = null;
     try {

@@ -181,6 +181,13 @@
     }
 
     if (
+      typeof window.__eazAssetsManagerPhoneApply === 'function' &&
+      window.__eazAssetsManagerPhoneApply(imageUrl)
+    ) {
+      return;
+    }
+
+    if (
       typeof window.__eazVideoStudioPhoneApply === 'function' &&
       window.__eazVideoStudioPhoneApply(imageUrl)
     ) {
