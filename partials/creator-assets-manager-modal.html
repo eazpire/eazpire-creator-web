@@ -31,16 +31,16 @@
     </header>
 
     <div class="cam-subheader">
-      <label class="cam-search">
-        <span class="visually-hidden" data-t="creator.assets_manager.search">Search</span>
+      <div class="cam-search">
         <input
           type="search"
           id="cam-search-input"
           class="cam-search__input"
           placeholder="Search assets…"
+          aria-label="Search"
           autocomplete="off"
         >
-      </label>
+      </div>
       <div class="cam-type-filters" role="group" aria-label="Asset types">
         <button type="button" class="cam-chip is-active" data-cam-type="">All</button>
         <button type="button" class="cam-chip" data-cam-type="videos">Videos</button>

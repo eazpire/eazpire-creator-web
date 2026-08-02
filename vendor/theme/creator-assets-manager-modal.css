@@ -134,16 +134,23 @@ body.cam-modal-open {
 }
 .cam-sidebar__add-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
   gap: 6px;
   margin-top: 8px;
   width: 100%;
 }
 .cam-btn--add-folder,
 .cam-btn--add-file {
-  width: 100%;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
   margin-top: 0;
   font-size: 12px;
+  white-space: nowrap;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 /* Add source picker */
@@ -748,18 +755,26 @@ body.cam-modal-open {
   color: #fdba74;
 }
 
+/* Match Video Studio / Images: fixed viewport overlay above Assets Manager (z 10055) */
 .cam-submodal {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 10070;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
   padding: 16px;
+  box-sizing: border-box;
 }
 .cam-submodal[hidden] {
   display: none !important;
+}
+/* Link / fullscreen sit above the Add File source picker */
+#camLinkModal,
+#cam-link-fs {
+  z-index: 10090;
 }
 .cam-submodal__panel {
   width: min(440px, 100%);

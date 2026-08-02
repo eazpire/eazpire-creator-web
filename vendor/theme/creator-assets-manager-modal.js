@@ -164,10 +164,22 @@
     el.style.top = Math.max(8, Math.min(y, window.innerHeight - 100)) + 'px';
   }
 
+  /** Reparent overlays to body so fixed z-index is not trapped in cam-modal-root stacking context. */
+  function mountOverlay(el) {
+    if (!el) return null;
+    try {
+      if (el.parentElement !== document.body) {
+        document.body.appendChild(el);
+      }
+    } catch (eMount) {}
+    return el;
+  }
+
   function openSubmodal(id) {
-    var el = document.getElementById(id);
+    var el = mountOverlay(document.getElementById(id));
     if (!el) return;
     el.hidden = false;
+    el.removeAttribute('hidden');
     el.setAttribute('aria-hidden', 'false');
   }
 
@@ -175,6 +187,7 @@
     var el = document.getElementById(id);
     if (!el) return;
     el.hidden = true;
+    el.setAttribute('hidden', '');
     el.setAttribute('aria-hidden', 'true');
   }
 
@@ -1218,9 +1231,18 @@
   }
 
   function openAddSourceModal() {
+    var overlay = mountOverlay(document.getElementById('camAddSourceModal'));
+    if (!overlay) {
+      try {
+        console.warn('[AssetsManager] camAddSourceModal missing');
+      } catch (eMiss) {}
+      return;
+    }
     var phoneBtn = document.getElementById('cam-addsrc-phone');
     if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
-    openSubmodal('camAddSourceModal');
+    overlay.hidden = false;
+    overlay.removeAttribute('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
   }
 
   function closeAddSourceModal() {
@@ -1741,9 +1763,60 @@
     return true;
   };
 
+  function bindAddFileUi() {
+    var addFileBtn = document.getElementById('cam-btn-add-file');
+    if (addFileBtn && !addFileBtn._camAddFileBound) {
+      addFileBtn._camAddFileBound = true;
+      addFileBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openAddSourceModal();
+      });
+    }
+    var addSrcOverlay = document.getElementById('camAddSourceModal');
+    if (addSrcOverlay && !addSrcOverlay._camAddSrcBound) {
+      addSrcOverlay._camAddSrcBound = true;
+      addSrcOverlay.addEventListener('mousedown', function (ev) {
+        if (ev.target && ev.target.id === 'camAddSourceModal') closeAddSourceModal();
+      });
+    }
+    var addSrcCancel = document.getElementById('cam-addsrc-cancel');
+    if (addSrcCancel && !addSrcCancel._camBound) {
+      addSrcCancel._camBound = true;
+      addSrcCancel.addEventListener('click', closeAddSourceModal);
+    }
+    var addSrcDevice = document.getElementById('cam-addsrc-device');
+    if (addSrcDevice && !addSrcDevice._camBound) {
+      addSrcDevice._camBound = true;
+      addSrcDevice.addEventListener('click', function () {
+        closeAddSourceModal();
+        var input = document.getElementById('cam-file-input');
+        if (input) input.click();
+      });
+    }
+    var addSrcPhone = document.getElementById('cam-addsrc-phone');
+    if (addSrcPhone && !addSrcPhone._camBound) {
+      addSrcPhone._camBound = true;
+      addSrcPhone.addEventListener('click', function () {
+        closeAddSourceModal();
+        if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
+          window.CreatorPhoneUploadModal.open({ purpose: 'assets-manager' });
+        }
+      });
+    }
+    var addSrcLink = document.getElementById('cam-addsrc-link');
+    if (addSrcLink && !addSrcLink._camBound) {
+      addSrcLink._camBound = true;
+      addSrcLink.addEventListener('click', openLinkModal);
+    }
+  }
+
   function bindUi() {
     root = document.getElementById('creatorAssetsManagerModal');
-    if (!root || root._camBound) return;
+    if (!root) return;
+    // Always (re)ensure Add File / source-picker wiring — overlays may mount after first bind.
+    bindAddFileUi();
+    if (root._camBound) return;
     root._camBound = true;
 
     var closeBtn = $('#cam-btn-close');
@@ -1792,33 +1865,6 @@
         openFolderSettings('create', { parentId: parentId });
       });
     }
-
-    var addFileBtn = $('#cam-btn-add-file');
-    if (addFileBtn) {
-      addFileBtn.addEventListener('click', function () {
-        openAddSourceModal();
-      });
-    }
-    var addSrcCancel = document.getElementById('cam-addsrc-cancel');
-    if (addSrcCancel) addSrcCancel.addEventListener('click', closeAddSourceModal);
-    var addSrcDevice = document.getElementById('cam-addsrc-device');
-    if (addSrcDevice) {
-      addSrcDevice.addEventListener('click', function () {
-        closeAddSourceModal();
-        var input = document.getElementById('cam-file-input');
-        if (input) input.click();
-      });
-    }
-    var addSrcPhone = document.getElementById('cam-addsrc-phone');
-    if (addSrcPhone) {
-      addSrcPhone.addEventListener('click', function () {
-        if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
-          window.CreatorPhoneUploadModal.open({ purpose: 'assets-manager' });
-        }
-      });
-    }
-    var addSrcLink = document.getElementById('cam-addsrc-link');
-    if (addSrcLink) addSrcLink.addEventListener('click', openLinkModal);
 
     var fileInput = document.getElementById('cam-file-input');
     if (fileInput) {
@@ -2016,11 +2062,26 @@
     document.addEventListener('keydown', function (ev) {
       if (ev.key !== 'Escape') return;
       if (!root || root.hidden) return;
+      var linkFs = document.getElementById('cam-link-fs');
+      var linkModal = document.getElementById('camLinkModal');
+      var addSrc = document.getElementById('camAddSourceModal');
       var settings = document.getElementById('cam-folder-settings');
       var folderRemove = document.getElementById('cam-confirm-folder-remove');
       var permanent = document.getElementById('cam-confirm-assets-permanent');
       var assetConfirm = document.getElementById('cam-confirm-asset-action');
       var moveModal = document.getElementById('cam-move-modal');
+      if (linkFs && !linkFs.hidden) {
+        closeSubmodal('cam-link-fs');
+        return;
+      }
+      if (linkModal && !linkModal.hidden) {
+        closeLinkModal();
+        return;
+      }
+      if (addSrc && !addSrc.hidden) {
+        closeAddSourceModal();
+        return;
+      }
       if (settings && !settings.hidden) {
         closeSubmodal('cam-folder-settings');
         return;
