@@ -1394,7 +1394,22 @@
     return out.toDataURL('image/png');
   }
 
-  async function requestRemoveObject(asset, maskDataUrl, quality) {
+  function captureRemoveObjectFrameDataUrl() {
+    if (!video || video.hidden || !video.videoWidth || !video.videoHeight) return null;
+    try {
+      var c = document.createElement('canvas');
+      c.width = video.videoWidth;
+      c.height = video.videoHeight;
+      var ctx = c.getContext('2d');
+      ctx.drawImage(video, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.92);
+    } catch (e) {
+      console.warn('[VideoStudio] frame capture failed', e);
+      return null;
+    }
+  }
+
+  async function startRemoveObjectJob(asset, maskDataUrl, frameDataUrl, quality) {
     var mod = Mod();
     var res = await fetch(mod.apiUrl('video-studio-remove-object'), {
       method: 'POST',
@@ -1404,20 +1419,64 @@
         asset_id: asset.id,
         quality: quality || 'standard',
         mask_png_base64: maskDataUrl,
+        frame_png_base64: frameDataUrl || null,
       }),
     });
-    if (!res.ok) {
-      var errJson = null;
-      try {
-        errJson = await res.json();
-      } catch (e) {}
-      var err = new Error((errJson && (errJson.message || errJson.error)) || 'remove_object_failed');
-      err.code = errJson && errJson.error;
+    var data = null;
+    try {
+      data = await res.json();
+    } catch (e) {}
+    if (!res.ok || !data || !data.ok || !data.job_id) {
+      var err = new Error((data && (data.message || data.error)) || 'remove_object_failed');
+      err.code = data && data.error;
       err.status = res.status;
-      err.payload = errJson;
+      err.payload = data;
       throw err;
     }
-    return res.blob();
+    return data;
+  }
+
+  async function pollRemoveObjectJob(jobId, assetId) {
+    var mod = Mod();
+    var attempts = 0;
+    var maxAttempts = 120; // up to ~10 min at 5s
+    while (attempts < maxAttempts) {
+      if (!isViewingAssetTool(assetId, 'remove-object')) {
+        var abortErr = new Error('aborted');
+        abortErr.code = 'aborted';
+        throw abortErr;
+      }
+      var res = await fetch(
+        mod.apiUrl('video-studio-remove-object-status') + '&job_id=' + encodeURIComponent(jobId),
+        { credentials: 'include' }
+      );
+      var data = null;
+      try {
+        data = await res.json();
+      } catch (e) {}
+      if (!data) {
+        throw new Error('remove_object_status_failed');
+      }
+      if (data.status === 'ready' && data.result_url) {
+        return data;
+      }
+      if (data.status === 'failed' || data.ok === false && data.error && data.error !== 'status_failed') {
+        var fail = new Error(data.message || data.error || 'remove_object_failed');
+        fail.code = data.error;
+        fail.payload = data;
+        throw fail;
+      }
+      if (data.message) setToolStatus('remove-object', data.message);
+      await new Promise(function (r) {
+        setTimeout(r, 5000);
+      });
+      attempts++;
+    }
+    var timeoutErr = new Error(
+      t('remove_object_timeout', 'Removal is taking too long. Please try again in a moment.')
+    );
+    timeoutErr.code = 'timeout';
+    throw timeoutErr;
   }
 
   async function removeObjectPreview() {
@@ -1426,26 +1485,34 @@
       setToolStatus('remove-object', t('remove_object_video_only', 'This tool works on video assets only.'));
       return;
     }
+    if (video) video.pause();
     syncRemoveObjectMaskSize();
     var maskDataUrl = exportRemoveObjectMaskPngDataUrl();
     if (!maskDataUrl) {
       setToolStatus(
         'remove-object',
-        t('remove_object_paint_first', 'Paint over the object or watermark to remove, then try again.')
+        t('remove_object_paint_first', 'Paint over the logo, text, or watermark area, then try again.')
       );
       return;
     }
+    var frameDataUrl = captureRemoveObjectFrameDataUrl();
     var qEl = document.querySelector('input[name="cvs-remove-object-quality"]:checked');
     var quality = (qEl && qEl.value) || removeObjectQuality || 'standard';
     setToolStatus(
       'remove-object',
-      quality === 'high'
-        ? t('remove_object_processing_hq', 'Removing with high quality (BRIA)… this can take a minute.')
-        : t('remove_object_processing', 'Removing with standard quality (ProPainter)…')
+      t(
+        'remove_object_processing',
+        'Detecting logos/text in your painted area, then cleaning the full video…'
+      )
     );
     try {
-      var blob = await requestRemoveObject(asset, maskDataUrl, quality);
+      var started = await startRemoveObjectJob(asset, maskDataUrl, frameDataUrl, quality);
+      if (started.message) setToolStatus('remove-object', started.message);
+      var done = await pollRemoveObjectJob(started.job_id, asset.id);
       if (!isViewingAssetTool(asset.id, 'remove-object')) return;
+      var videoRes = await fetch(done.result_url, { credentials: 'omit' });
+      if (!videoRes.ok) throw new Error('result_fetch_failed');
+      var blob = await videoRes.blob();
       var url = blobToObjectUrl(blob);
       addPreviewItem(asset.id, 'remove-object', {
         url: url,
@@ -1460,17 +1527,23 @@
         t('remove_object_ready', 'Preview ready — play it, then save as a new asset.')
       );
     } catch (e) {
+      if (e && e.code === 'aborted') return;
       console.warn('[VideoStudio] remove-object failed', e);
-      var msg = t('remove_object_failed', 'Could not remove the object. Try again or use Standard quality.');
+      var msg = t(
+        'remove_object_failed',
+        'Could not clean this video. Paint a bit larger over the logo/text, then try Standard again.'
+      );
       if (e && e.code === 'high_quality_too_long') {
         msg = t(
           'remove_object_hq_too_long',
-          'High quality supports clips up to 5 seconds. Trim first, or use Standard quality.'
+          'High quality supports clips up to 5 seconds. Trim first, or use Standard for the full video.'
         );
       } else if (e && e.code === 'ai_not_configured') {
         msg = t('remove_object_not_configured', 'AI remove isn’t configured on this server yet.');
       } else if (e && e.code === 'INSUFFICIENT_EAZ') {
         msg = t('remove_object_no_eaz', 'Not enough EAZ for this action.');
+      } else if (e && e.code === 'timeout') {
+        msg = e.message;
       } else if (e && e.message && e.message !== 'remove_object_failed') {
         msg = e.message;
       }

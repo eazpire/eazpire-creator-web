@@ -236,11 +236,11 @@
               <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
             </button>
             <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="remove-object" hidden>
-              <p class="cvs-tool-hint">Pause the video, paint over the watermark or object to remove, then generate a cleaned preview. Standard uses ProPainter; High quality uses BRIA (clips up to 5 seconds).</p>
+              <p class="cvs-tool-hint">Pause the video and paint over logos, text, or watermarks. That area is used for the full video: we detect logo/text/watermark inside it and clean every frame (like generative fill for video). Standard works on any length; High quality is limited to 5 seconds.</p>
               <div class="cvs-remove-object-quality" role="radiogroup" aria-label="Quality">
                 <label class="cvs-remove-object-quality__opt">
                   <input type="radio" name="cvs-remove-object-quality" id="cvs-remove-object-quality-standard" value="standard" checked>
-                  <span>Standard</span>
+                  <span>Standard (full video)</span>
                 </label>
                 <label class="cvs-remove-object-quality__opt">
                   <input type="radio" name="cvs-remove-object-quality" id="cvs-remove-object-quality-high" value="high">

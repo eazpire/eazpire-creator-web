@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "cam-link-bulk-fix-20260803c";
+  var PORTAL_ASSET_V = "cam-link-bulk-play-20260803e";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -105,7 +105,7 @@
   async function injectPartial(name, hostEl) {
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
-    // Portal serves /partials with max-age=7d ó bump PORTAL_ASSET_V when markup changes.
+    // Portal serves /partials with max-age=7d ù bump PORTAL_ASSET_V when markup changes.
     var url = withAssetV("/partials/" + name);
     var existing = host.querySelector('[data-partial="' + name + '"]');
     if (existing) {
@@ -414,7 +414,7 @@
 
       applyMarketingDeepLink();
 
-      // Leaf UIs (video studio) ó optional so missing vendor files do not block expand.
+      // Leaf UIs (video studio) ù optional so missing vendor files do not block expand.
       await loadScriptsSequentialOptional([
         asset("creator-video-studio-timeline.js"),
         asset("creator-video-studio-modal.js"),
@@ -448,7 +448,7 @@
         await injectPartial("creator-mobile-automations.html", host);
       }
 
-      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas / paste‚Üíinfluence)
+      // Ref-source modals (Public Designs / Quick Inspirations / phone / my designs / canvas / paste?influence)
       await injectPartial("reference-influence-modal.html");
       await injectPartial("creator-inspiration-modal.html");
       await injectPartial("quick-inspirations-modal.html");
@@ -495,7 +495,7 @@
         injectPartial("creator-level-celebration-overlay.html"),
       ]);
 
-      // Level tab lives inside Journey ó must load with dashboard, not only Settings.
+      // Level tab lives inside Journey ù must load with dashboard, not only Settings.
       await loadScript(asset("creator-level-panel.js"));
       await loadScriptsParallel([
         asset("sales-modal.js"),
@@ -512,7 +512,7 @@
         badge_ready_aria: "Level badge ready",
       };
 
-      // Settings modal is large ‚Äî load on first open only (not on dashboard boot).
+      // Settings modal is large ó load on first open only (not on dashboard boot).
     })();
 
     try {

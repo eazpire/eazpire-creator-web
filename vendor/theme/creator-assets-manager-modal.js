@@ -1197,6 +1197,8 @@
   var linkBulkAll = [];
   var linkBulkMeta = null;
   var linkBulkSelected = Object.create(null);
+  var linkBulkTypeFilter = { image: true, video: true, reel: true };
+  var linkBulkAvailableTypes = { image: false, video: false, reel: false };
   var camUploading = false;
 
   function isDesktopViewport() {
@@ -1259,12 +1261,138 @@
     else modal.classList.remove('cam-submodal--fullscreen');
   }
 
+  function setLinkSidebarVisible(on) {
+    var wrap = document.getElementById('cam-link-sidebar-wrapper');
+    var toggle = document.getElementById('cam-link-sidebar-toggle');
+    if (!wrap) return;
+    wrap.hidden = !on;
+    if (on) {
+      // Start expanded so bulk options are discoverable
+      wrap.classList.remove('is-collapsed');
+      if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    } else {
+      wrap.classList.add('is-collapsed');
+      if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    }
+  }
+
   function setBulkUiVisible(on) {
     var bulk = document.getElementById('cam-link-bulk');
     var controls = document.getElementById('cam-link-bulk-controls');
     if (bulk) bulk.hidden = !on;
     if (controls) controls.hidden = !on;
+    setLinkSidebarVisible(!!on);
     setLinkModalBulkFullscreen(!!on);
+  }
+
+  function classifyClientBulkAssetType(candidate) {
+    var existing = String((candidate && candidate.asset_type) || '').toLowerCase();
+    if (existing === 'image' || existing === 'video' || existing === 'reel') return existing;
+    var kind = String((candidate && candidate.kind) || '').toLowerCase();
+    var url = String((candidate && candidate.url) || '').toLowerCase();
+    if (kind === 'image' || kind === 'photo' || kind === 'photo_image') return 'image';
+    if (kind === 'reel' || kind === 'shorts' || /\/reel\//i.test(url) || /\/share\/r\//i.test(url)) {
+      return 'reel';
+    }
+    if (kind === 'watch' || kind === 'video' || kind === 'videos' || /\/watch/i.test(url) || /\/videos\//i.test(url)) {
+      return 'video';
+    }
+    return 'video';
+  }
+
+  function syncBulkAssetTypeControls() {
+    var available = { image: false, video: false, reel: false };
+    (linkBulkAll || []).forEach(function (c) {
+      var t = classifyClientBulkAssetType(c);
+      if (available[t] != null) available[t] = true;
+      c.asset_type = t;
+    });
+    linkBulkAvailableTypes = available;
+    // Default: all available types checked
+    linkBulkTypeFilter = {
+      image: !!available.image,
+      video: !!available.video,
+      reel: !!available.reel,
+    };
+    ['image', 'video', 'reel'].forEach(function (type) {
+      var input = document.getElementById('cam-link-type-' + type);
+      var label = document.querySelector('.cam-link-asset-types__option[data-cam-link-type="' + type + '"]');
+      if (input) {
+        input.checked = !!linkBulkTypeFilter[type];
+        input.disabled = !available[type];
+      }
+      if (label) label.classList.toggle('is-unavailable', !available[type]);
+    });
+    updateBulkAssetTypeSummary();
+  }
+
+  function readBulkAssetTypeFilterFromDom() {
+    ['image', 'video', 'reel'].forEach(function (type) {
+      var input = document.getElementById('cam-link-type-' + type);
+      if (!input || input.disabled) {
+        linkBulkTypeFilter[type] = false;
+        return;
+      }
+      linkBulkTypeFilter[type] = !!input.checked;
+    });
+    // Keep at least one available type checked
+    var anyOn = ['image', 'video', 'reel'].some(function (t) {
+      return linkBulkAvailableTypes[t] && linkBulkTypeFilter[t];
+    });
+    if (!anyOn) {
+      ['image', 'video', 'reel'].forEach(function (t) {
+        if (linkBulkAvailableTypes[t]) {
+          linkBulkTypeFilter[t] = true;
+          var input = document.getElementById('cam-link-type-' + t);
+          if (input) input.checked = true;
+        }
+      });
+    }
+    updateBulkAssetTypeSummary();
+  }
+
+  function updateBulkAssetTypeSummary() {
+    var el = document.getElementById('cam-link-asset-types-summary');
+    if (!el) return;
+    var labels = {
+      image: i18n('link_asset_type_image', 'Image'),
+      video: i18n('link_asset_type_video', 'Video'),
+      reel: i18n('link_asset_type_reel', 'Reel'),
+    };
+    var selected = ['image', 'video', 'reel'].filter(function (t) {
+      return linkBulkAvailableTypes[t] && linkBulkTypeFilter[t];
+    });
+    var availableCount = ['image', 'video', 'reel'].filter(function (t) {
+      return linkBulkAvailableTypes[t];
+    }).length;
+    if (!selected.length || selected.length === availableCount) {
+      el.textContent = i18n('link_asset_types_all', 'All');
+      return;
+    }
+    el.textContent = selected.map(function (t) {
+      return labels[t];
+    }).join(', ');
+  }
+
+  function setAssetTypesPanelOpen(open) {
+    var panel = document.getElementById('cam-link-asset-types-panel');
+    var toggle = document.getElementById('cam-link-asset-types-toggle');
+    if (panel) panel.hidden = !open;
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function setLinkPhoneWidgetOpen(open) {
+    var widget = document.getElementById('cam-link-phone');
+    var btn = document.getElementById('cam-link-phone-btn');
+    if (!widget) return;
+    if (open && !isDesktopViewport()) open = false;
+    widget.hidden = !open;
+    if (btn) {
+      btn.classList.toggle('is-active', !!open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    if (open) startLinkPhoneBridge();
+    else stopLinkPhoneBridge();
   }
 
   function resetLinkModal() {
@@ -1273,6 +1401,10 @@
     linkBulkAll = [];
     linkBulkMeta = null;
     linkBulkSelected = Object.create(null);
+    linkBulkTypeFilter = { image: true, video: true, reel: true };
+    linkBulkAvailableTypes = { image: false, video: false, reel: false };
+    setAssetTypesPanelOpen(false);
+    setLinkPhoneWidgetOpen(false);
     var summary = document.getElementById('cam-link-summary');
     var statusEl = document.getElementById('cam-link-status');
     var single = document.getElementById('cam-link-single-preview');
@@ -1403,7 +1535,7 @@
     var box = document.getElementById('cam-link-phone');
     var qrImg = document.getElementById('cam-link-qr-img');
     var phoneStatus = document.getElementById('cam-link-phone-status');
-    if (!box || !isDesktopViewport()) return;
+    if (!box || box.hidden || !isDesktopViewport()) return;
     stopLinkPhoneBridge();
     if (qrImg) {
       qrImg.removeAttribute('src');
@@ -1472,12 +1604,14 @@
     var input = document.getElementById('cam-link-url');
     if (input) input.value = '';
     updateExtractButtonLabel();
+    var phoneBtn = document.getElementById('cam-link-phone-btn');
+    if (phoneBtn) phoneBtn.hidden = !isDesktopViewport();
     openSubmodal('camLinkModal');
-    if (isDesktopViewport()) startLinkPhoneBridge();
     if (input) input.focus();
   }
 
   function closeLinkModal() {
+    setLinkPhoneWidgetOpen(false);
     stopLinkPhoneBridge();
     closeSubmodal('camLinkModal');
     closeSubmodal('cam-link-fs');
@@ -1631,22 +1765,41 @@
     var sortSelect = document.getElementById('cam-link-bulk-sort');
     var submit = document.getElementById('cam-link-submit');
     if (!grid) return;
-    var maxShow = Math.min(80, Math.max(1, linkBulkAll.length || 1));
+    readBulkAssetTypeFilterFromDom();
+    var filtered = (linkBulkAll || []).filter(function (c) {
+      var t = classifyClientBulkAssetType(c);
+      c.asset_type = t;
+      return !!linkBulkTypeFilter[t];
+    });
+    var maxShow = Math.min(80, Math.max(1, filtered.length || 1));
     var count = Math.max(1, Math.min(maxShow, Number(countInput && countInput.value) || 12));
+    if (countInput) {
+      countInput.max = String(Math.min(80, Math.max(1, filtered.length || 1)));
+      if (Number(countInput.value) > filtered.length) {
+        countInput.value = String(Math.min(24, filtered.length || 1));
+        count = Math.max(1, Math.min(maxShow, Number(countInput.value) || 12));
+      }
+    }
     var sort = sortSelect ? sortSelect.value : 'newest';
-    var sorted = sortBulkCandidates(linkBulkAll, sort).slice(0, count);
+    var sorted = sortBulkCandidates(filtered, sort).slice(0, count);
     linkBulkSelected = Object.create(null);
     sorted.forEach(function (c) {
       linkBulkSelected[c.url] = true;
     });
+    var typeLabels = {
+      image: i18n('link_asset_type_image', 'Image'),
+      video: i18n('link_asset_type_video', 'Video'),
+      reel: i18n('link_asset_type_reel', 'Reel'),
+    };
     grid.innerHTML = sorted
       .map(function (c) {
+        var typeKey = classifyClientBulkAssetType(c);
         var mediaInner = c.thumb_url
           ? '<img class="cam-link-bulk-card__thumb" src="' +
             escapeHtml(c.thumb_url) +
             '" alt="" loading="lazy">'
           : '<div class="cam-link-bulk-card__placeholder" aria-hidden="true">' +
-            escapeHtml(i18n('video', 'Video')) +
+            escapeHtml(typeLabels[typeKey] || i18n('video', 'Video')) +
             '</div>';
         var views =
           c.views != null
@@ -1655,6 +1808,8 @@
         return (
           '<div class="cam-link-bulk-card is-selected" role="option" aria-selected="true" data-cam-bulk-url="' +
           escapeHtml(c.url) +
+          '" data-cam-bulk-type="' +
+          escapeHtml(typeKey) +
           '">' +
           '<input type="checkbox" class="cam-link-bulk-card__check" checked aria-label="' +
           escapeHtml(i18n('select_asset', 'Select asset')) +
@@ -1668,6 +1823,8 @@
           '</button>' +
           '<div class="cam-link-bulk-card__meta"><div>#' +
           escapeHtml(String(c.id || '').slice(-8)) +
+          '</div><div>' +
+          escapeHtml(typeLabels[typeKey] || typeKey) +
           '</div>' +
           views +
           '</div></div>'
@@ -1685,10 +1842,12 @@
   var bulkThumbInflight = Object.create(null);
   var bulkThumbQueue = [];
   var bulkThumbActive = 0;
-  var BULK_THUMB_CONCURRENCY = 3;
+  // Keep low: each resolve hits Facebook; flooding causes false "blocked" failures.
+  var BULK_THUMB_CONCURRENCY = 1;
+  var BULK_THUMB_WARM_MAX = 6;
 
   function enqueueBulkThumbResolve(list) {
-    (list || []).forEach(function (c) {
+    (list || []).slice(0, BULK_THUMB_WARM_MAX).forEach(function (c) {
       if (!c || !c.url || bulkThumbInflight[c.url]) return;
       bulkThumbInflight[c.url] = 'queued';
       bulkThumbQueue.push(c);
@@ -1712,6 +1871,7 @@
     if (!url) return;
     bulkThumbInflight[url] = true;
     try {
+      // Same extract API / URL as single mode — caches playable media + poster.
       var data = await apiPost('video-studio-link-extract', { url: url, format: 'mp4' });
       if (!data || !data.ok) return;
       if (data.thumb_url) {
@@ -1719,11 +1879,10 @@
         updateBulkCardThumb(url, data.thumb_url);
       }
       if (data.preview_url) {
-        // Cache playable URL for instant click-to-play
         candidate.preview_url = data.preview_url;
       }
     } catch (e) {
-      /* best-effort */
+      /* best-effort — never surface as bulk analyze error */
     } finally {
       delete bulkThumbInflight[url];
     }
@@ -1739,16 +1898,30 @@
       statusEl.className = 'cam-link-status is-info';
     }
     try {
+      // Always use the same single-extract path for playability (fresh if uncached).
       var data =
         cached && cached.preview_url
           ? { ok: true, preview_url: cached.preview_url, thumb_url: cached.thumb_url || null }
           : await apiPost('video-studio-link-extract', { url: url, format: 'mp4' });
       if (!data.ok || !data.preview_url) {
         if (statusEl) {
-          statusEl.textContent = i18n(
-            'link_bulk_preview_failed',
-            'Could not preview this reel (private or blocked). You can still Download selected items.'
+          var serverMsg = data && data.message ? String(data.message) : '';
+          var errCode = String((data && (data.error_code || data.error)) || '');
+          // Only claim private/blocked when the server text clearly says so —
+          // wrong URL / empty resolve must not use that misleading copy.
+          var looksPrivate = /private|login wall|login_wall|not\s*public|access denied/i.test(
+            serverMsg + ' ' + errCode
           );
+          statusEl.textContent = looksPrivate
+            ? i18n(
+                'link_bulk_preview_failed',
+                'Could not preview this reel (private or blocked). You can still Download selected items.'
+              )
+            : serverMsg ||
+              i18n(
+                'link_bulk_preview_failed_generic',
+                'Preview failed for this item. Try Extract with the same link, or Download selected items.'
+              );
           statusEl.className = 'cam-link-status is-error';
         }
         return;
@@ -1787,8 +1960,8 @@
     } catch (e) {
       if (statusEl) {
         statusEl.textContent = i18n(
-          'link_bulk_preview_failed',
-          'Could not preview this reel (private or blocked). You can still Download selected items.'
+          'link_bulk_preview_failed_generic',
+          'Preview failed for this item. Try Extract with the same link, or Download selected items.'
         );
         statusEl.className = 'cam-link-status is-error';
       }
@@ -1863,6 +2036,7 @@
         setBulkUiVisible(true);
         var singlePreview = document.getElementById('cam-link-single-preview');
         if (singlePreview) singlePreview.hidden = true;
+        syncBulkAssetTypeControls();
         var countInput = document.getElementById('cam-link-bulk-count');
         if (countInput) {
           countInput.max = String(Math.min(80, Math.max(1, linkBulkAll.length || 1)));
@@ -2215,6 +2389,42 @@
     }
     var bulkApply = document.getElementById('cam-link-bulk-apply');
     if (bulkApply) bulkApply.addEventListener('click', renderBulkGrid);
+    var linkSideToggle = document.getElementById('cam-link-sidebar-toggle');
+    if (linkSideToggle) {
+      linkSideToggle.addEventListener('click', function () {
+        var wrap = document.getElementById('cam-link-sidebar-wrapper');
+        if (!wrap || wrap.hidden) return;
+        var collapsed = wrap.classList.toggle('is-collapsed');
+        linkSideToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      });
+    }
+    var assetTypesToggle = document.getElementById('cam-link-asset-types-toggle');
+    if (assetTypesToggle) {
+      assetTypesToggle.addEventListener('click', function () {
+        var panel = document.getElementById('cam-link-asset-types-panel');
+        setAssetTypesPanelOpen(!!(panel && panel.hidden));
+      });
+    }
+    ['image', 'video', 'reel'].forEach(function (type) {
+      var input = document.getElementById('cam-link-type-' + type);
+      if (!input) return;
+      input.addEventListener('change', function () {
+        renderBulkGrid();
+      });
+    });
+    var phoneBtn = document.getElementById('cam-link-phone-btn');
+    if (phoneBtn) {
+      phoneBtn.addEventListener('click', function () {
+        var widget = document.getElementById('cam-link-phone');
+        setLinkPhoneWidgetOpen(!(widget && !widget.hidden));
+      });
+    }
+    var phoneClose = document.getElementById('cam-link-phone-close');
+    if (phoneClose) {
+      phoneClose.addEventListener('click', function () {
+        setLinkPhoneWidgetOpen(false);
+      });
+    }
     var bulkGrid = document.getElementById('cam-link-bulk-grid');
     if (bulkGrid) {
       function syncBulkSelectionFromCard(card) {

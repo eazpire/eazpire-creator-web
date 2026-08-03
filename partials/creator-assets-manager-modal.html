@@ -144,23 +144,46 @@
     <div class="cam-submodal__panel cam-submodal__panel--wide cam-link-box">
       <div class="cam-link-top">
         <h3 id="cam-link-title" class="cam-submodal__title" data-t="creator.assets_manager.link_title">Add from link</h3>
-        <div class="cam-link-body">
-          <div class="cam-link-main">
-            <label class="cam-field">
-              <span data-t="creator.assets_manager.link_url_label">Media URL</span>
-              <div class="cam-link-url-row">
-                <input type="url" id="cam-link-url" placeholder="https://…" autocomplete="off">
-                <button type="button" class="cam-btn" id="cam-link-extract" data-t="creator.assets_manager.link_extract">Extract</button>
-              </div>
-            </label>
-            <p class="cam-link-summary" id="cam-link-summary" hidden role="status"></p>
-            <p class="cam-link-status" id="cam-link-status" role="status"></p>
+        <label class="cam-field cam-link-url-field">
+          <span data-t="creator.assets_manager.link_url_label">Media URL</span>
+          <div class="cam-link-url-row">
+            <input type="url" id="cam-link-url" placeholder="https://…" autocomplete="off">
+            <button type="button" class="cam-btn" id="cam-link-extract" data-t="creator.assets_manager.link_extract">Extract</button>
+            <button
+              type="button"
+              class="cam-btn cam-btn--icon cam-link-phone-btn"
+              id="cam-link-phone-btn"
+              data-desktop-only="1"
+              aria-label="Scan with phone"
+              aria-expanded="false"
+              aria-controls="cam-link-phone"
+              title="Scan with phone"
+            >
+              <span class="cam-link-phone-btn__icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="7" y="2" width="10" height="20" rx="2"></rect>
+                  <line x1="11" y1="18" x2="13" y2="18"></line>
+                </svg>
+              </span>
+            </button>
+          </div>
+        </label>
+        <p class="cam-link-summary" id="cam-link-summary" hidden role="status"></p>
+        <p class="cam-link-status" id="cam-link-status" role="status"></p>
+      </div>
+
+      <div class="cam-link-shell">
+        <div class="cam-link-sidebar-wrapper is-collapsed" id="cam-link-sidebar-wrapper" hidden>
+          <aside class="cam-link-sidebar" id="cam-link-sidebar" aria-label="Options">
+            <div class="cam-link-sidebar__header">
+              <span class="cam-link-sidebar__title" data-t="creator.assets_manager.link_options">Options</span>
+            </div>
             <div class="cam-link-bulk-controls" id="cam-link-bulk-controls" hidden>
-              <label class="cam-field cam-field--inline">
+              <label class="cam-field">
                 <span data-t="creator.assets_manager.link_bulk_count">Number of assets</span>
                 <input type="number" id="cam-link-bulk-count" min="1" max="80" value="24">
               </label>
-              <label class="cam-field cam-field--inline">
+              <label class="cam-field">
                 <span data-t="creator.assets_manager.link_bulk_sort">Sort</span>
                 <select id="cam-link-bulk-sort">
                   <option value="newest" data-t="creator.assets_manager.link_sort_newest">Newest first</option>
@@ -168,31 +191,72 @@
                   <option value="most_views" data-t="creator.assets_manager.link_sort_views">Most views</option>
                 </select>
               </label>
+              <div class="cam-field cam-link-asset-types" id="cam-link-asset-types">
+                <span data-t="creator.assets_manager.link_asset_types">Asset types</span>
+                <button
+                  type="button"
+                  class="cam-link-asset-types__toggle"
+                  id="cam-link-asset-types-toggle"
+                  aria-expanded="false"
+                  aria-controls="cam-link-asset-types-panel"
+                >
+                  <span class="cam-link-asset-types__summary" id="cam-link-asset-types-summary" data-t="creator.assets_manager.link_asset_types_all">All</span>
+                  <span class="cam-link-asset-types__caret" aria-hidden="true">▾</span>
+                </button>
+                <div class="cam-link-asset-types__panel" id="cam-link-asset-types-panel" hidden role="group" aria-label="Asset types">
+                  <label class="cam-link-asset-types__option" data-cam-link-type="image">
+                    <input type="checkbox" id="cam-link-type-image" value="image" checked>
+                    <span data-t="creator.assets_manager.link_asset_type_image">Image</span>
+                  </label>
+                  <label class="cam-link-asset-types__option" data-cam-link-type="video">
+                    <input type="checkbox" id="cam-link-type-video" value="video" checked>
+                    <span data-t="creator.assets_manager.link_asset_type_video">Video</span>
+                  </label>
+                  <label class="cam-link-asset-types__option" data-cam-link-type="reel">
+                    <input type="checkbox" id="cam-link-type-reel" value="reel" checked>
+                    <span data-t="creator.assets_manager.link_asset_type_reel">Reel</span>
+                  </label>
+                </div>
+              </div>
               <div class="cam-link-bulk-controls__action">
                 <button type="button" class="cam-btn" id="cam-link-bulk-apply" data-t="creator.assets_manager.link_bulk_apply">Update preview</button>
               </div>
             </div>
-          </div>
-
-          <div class="cam-link-phone" id="cam-link-phone" data-desktop-only="1">
-            <p class="cam-link-phone__title" data-t="creator.assets_manager.link_phone_title">Or scan with your phone</p>
-            <div class="cam-link-phone__qr-wrap">
-              <img id="cam-link-qr-img" class="cam-link-phone__qr" alt="" width="120" height="120" loading="lazy">
-            </div>
-            <p class="cam-link-phone__hint" data-t="creator.assets_manager.link_phone_hint">Scan, choose Browser or App, paste the link, tap Extract — it runs here automatically.</p>
-            <p class="cam-link-phone__status" id="cam-link-phone-status" role="status"></p>
-          </div>
+          </aside>
+          <button
+            type="button"
+            class="cam-filter-rail cam-link-filter-rail"
+            id="cam-link-sidebar-toggle"
+            aria-label="Toggle options"
+            aria-expanded="false"
+            aria-controls="cam-link-sidebar"
+            title="Options"
+          >
+            <span class="cam-filter-rail__arrow-zone" aria-hidden="true">
+              <svg class="cam-filter-rail__arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+            </span>
+            <span class="cam-filter-rail__icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6"></line>
+                <line x1="8" y1="12" x2="20" y2="12"></line>
+                <line x1="12" y1="18" x2="20" y2="18"></line>
+              </svg>
+            </span>
+            <span class="cam-filter-rail__label" data-t="creator.assets_manager.link_options">Options</span>
+          </button>
         </div>
-      </div>
 
-      <div class="cam-link-content">
-        <div class="cam-link-single-preview" id="cam-link-single-preview" hidden>
-          <video id="cam-link-preview-video" class="cam-link-preview__media" controls playsinline hidden></video>
-          <audio id="cam-link-preview-audio" class="cam-link-preview__media" controls hidden></audio>
-          <img id="cam-link-preview-image" class="cam-link-preview__media" alt="" hidden>
-        </div>
-        <div class="cam-link-bulk" id="cam-link-bulk" hidden>
-          <div class="cam-link-bulk-grid" id="cam-link-bulk-grid" role="listbox" aria-multiselectable="true"></div>
+        <div class="cam-link-content">
+          <div class="cam-link-single-preview" id="cam-link-single-preview" hidden>
+            <video id="cam-link-preview-video" class="cam-link-preview__media" controls playsinline hidden></video>
+            <audio id="cam-link-preview-audio" class="cam-link-preview__media" controls hidden></audio>
+            <img id="cam-link-preview-image" class="cam-link-preview__media" alt="" hidden>
+          </div>
+          <div class="cam-link-bulk" id="cam-link-bulk" hidden>
+            <div class="cam-link-bulk-grid" id="cam-link-bulk-grid" role="listbox" aria-multiselectable="true"></div>
+          </div>
         </div>
       </div>
 
@@ -200,6 +264,25 @@
         <button type="button" class="cam-btn" id="cam-link-cancel" data-t="creator.assets_manager.cancel">Cancel</button>
         <button type="button" class="cam-btn cam-btn--primary" id="cam-link-submit" disabled data-t="creator.assets_manager.link_download">Download</button>
       </div>
+    </div>
+
+    <div class="cam-link-phone-widget" id="cam-link-phone" hidden data-desktop-only="1" role="dialog" aria-label="Or scan with your phone">
+      <div class="cam-link-phone-widget__header">
+        <p class="cam-link-phone__title" data-t="creator.assets_manager.link_phone_title">Or scan with your phone</p>
+        <button
+          type="button"
+          class="cam-btn cam-btn--icon cam-link-phone-widget__close"
+          id="cam-link-phone-close"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="cam-link-phone__qr-wrap">
+        <img id="cam-link-qr-img" class="cam-link-phone__qr" alt="" width="140" height="140" loading="lazy">
+      </div>
+      <p class="cam-link-phone__hint" data-t="creator.assets_manager.link_phone_hint">Scan, choose Browser or App, paste the link, tap Extract — it runs here automatically.</p>
+      <p class="cam-link-phone__status" id="cam-link-phone-status" role="status"></p>
     </div>
   </div>
 
