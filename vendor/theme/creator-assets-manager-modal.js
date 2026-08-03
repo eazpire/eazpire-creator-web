@@ -261,18 +261,35 @@
     return !!(folder && !folder.is_system && folder.parent_id && !folder._local);
   }
 
+  function walkFolderTree(nodes, visit, parents) {
+    var list = Array.isArray(nodes) ? nodes : [];
+    var chain = Array.isArray(parents) ? parents : [];
+    list.forEach(function (node) {
+      if (!node) return;
+      visit(node, chain);
+      walkFolderTree(node.children || [], visit, chain.concat([node]));
+    });
+  }
+
   function collectUserChildFolders() {
     var out = [];
-    ensureSystemFoldersInTree(foldersTree).forEach(function (parent) {
-      (parent.children || []).forEach(function (child) {
-        if (isUserChildFolder(child) || (!child.is_system && child.parent_id)) {
-          out.push({
-            id: child.id,
-            title: child.title || '',
-            parent_id: parent.id,
-            parent_title: systemFolderTitle(parent) || parent.title || ''
-          });
-        }
+    walkFolderTree(ensureSystemFoldersInTree(foldersTree), function (node, parents) {
+      if (!(isUserChildFolder(node) || (!node.is_system && node.parent_id))) return;
+      var root = parents[0] || null;
+      var parent = parents[parents.length - 1] || root;
+      var pathTitles = parents
+        .concat([node])
+        .filter(function (p) {
+          return p && !p.is_system;
+        })
+        .map(function (p) {
+          return p.title || '';
+        });
+      out.push({
+        id: node.id,
+        title: pathTitles.length > 1 ? pathTitles.join(' / ') : node.title || '',
+        parent_id: parent ? parent.id : node.parent_id,
+        parent_title: systemFolderTitle(root) || (root && root.title) || ''
       });
     });
     return out;
@@ -280,10 +297,13 @@
 
   function ensureParentExpandedForCurrent() {
     if (!currentFolder || currentFolder === 'all' || currentFolder === 'hidden') return;
-    var folder = findFolderById(currentFolder);
-    if (folder && folder.parent_id) {
-      expandedParents[folder.parent_id] = true;
-    }
+    walkFolderTree(foldersTree, function (node, parents) {
+      if (node.id !== currentFolder) return;
+      parents.forEach(function (p) {
+        if (p && p.id) expandedParents[p.id] = true;
+      });
+      if (node.parent_id) expandedParents[node.parent_id] = true;
+    });
   }
 
   function renderFolderTree() {
@@ -361,26 +381,7 @@
 
       if (hasChildren) {
         html += '<div class="cam-folder-children">';
-        children.forEach(function (child) {
-          var cActive = currentFolder === child.id ? ' is-active' : '';
-          html +=
-            '<div class="cam-folder-row" data-cam-folder-id="' +
-            escapeHtml(child.id) +
-            '" data-cam-drop="1">' +
-            '<button type="button" class="cam-sidebar__item cam-sidebar__item--child' +
-            cActive +
-            '" data-cam-folder="' +
-            escapeHtml(child.id) +
-            '">' +
-            '<span class="cam-sidebar__item-label">' +
-            escapeHtml(child.title) +
-            '</span>' +
-            '<span class="cam-sidebar__count">' +
-            String(child.asset_count || 0) +
-            '</span>' +
-            '</button>' +
-            '</div>';
-        });
+        html += renderNestedFolderRows(children, 1);
         html += '</div>';
       }
       html += '</div>';
@@ -490,6 +491,140 @@
     } catch (e) {}
   }
 
+  function formatCount(n) {
+    var v = Number(n);
+    if (!Number.isFinite(v) || v < 0) return '';
+    if (v >= 1000000) return (v / 1000000).toFixed(v >= 10000000 ? 0 : 1).replace(/\.0$/, '') + 'M';
+    if (v >= 1000) return (v / 1000).toFixed(v >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'K';
+    return String(Math.round(v));
+  }
+
+  function socialMetaOf(asset) {
+    return asset && asset.social_meta && typeof asset.social_meta === 'object'
+      ? asset.social_meta
+      : null;
+  }
+
+  function socialTooltipText(asset) {
+    var m = socialMetaOf(asset);
+    if (!m) return '';
+    var parts = [];
+    if (m.author && m.author.name) parts.push(String(m.author.name));
+    if (m.description) {
+      var d = String(m.description).replace(/\s+/g, ' ').trim();
+      if (d.length > 140) d = d.slice(0, 137) + '…';
+      if (d) parts.push(d);
+    }
+    var counts = [];
+    if (m.view_count != null) counts.push(formatCount(m.view_count) + ' views');
+    if (m.like_count != null) counts.push(formatCount(m.like_count) + ' likes');
+    if (m.comment_count != null) counts.push(formatCount(m.comment_count) + ' comments');
+    if (m.share_count != null) counts.push(formatCount(m.share_count) + ' shares');
+    if (counts.length) parts.push(counts.join(' · '));
+    if (m.post_url) parts.push(String(m.post_url));
+    return parts.join(' · ');
+  }
+
+  function socialSnippetHtml(asset) {
+    var m = socialMetaOf(asset);
+    if (!m) return '';
+    var bits = [];
+    if (m.author && m.author.name) bits.push(escapeHtml(String(m.author.name)));
+    if (m.view_count != null) bits.push(escapeHtml(formatCount(m.view_count)) + ' views');
+    else if (m.like_count != null) bits.push(escapeHtml(formatCount(m.like_count)) + ' likes');
+    if (!bits.length && m.description) {
+      var snip = String(m.description).replace(/\s+/g, ' ').trim();
+      if (snip.length > 48) snip = snip.slice(0, 45) + '…';
+      bits.push(escapeHtml(snip));
+    }
+    if (!bits.length) return '';
+    return '<div class="cam-card__social">' + bits.join(' · ') + '</div>';
+  }
+
+  function closeSocialDetail() {
+    var modal = $('#cam-social-detail');
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function openSocialDetail(asset) {
+    var modal = $('#cam-social-detail');
+    var body = $('#cam-social-detail-body');
+    var openLink = $('#cam-social-detail-open');
+    if (!modal || !body) return;
+    var m = socialMetaOf(asset);
+    if (!m) {
+      body.innerHTML =
+        '<p class="cam-social-detail__empty">' +
+        escapeHtml(i18n('social_no_meta', 'No social details available for this asset.')) +
+        '</p>';
+      if (openLink) openLink.hidden = true;
+      modal.hidden = false;
+      modal.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    var rows = [];
+    function addRow(label, valueHtml) {
+      if (!valueHtml) return;
+      rows.push(
+        '<div class="cam-social-detail__row"><dt>' +
+          escapeHtml(label) +
+          '</dt><dd>' +
+          valueHtml +
+          '</dd></div>'
+      );
+    }
+    if (m.platform) addRow(i18n('social_platform', 'Platform'), escapeHtml(String(m.platform)));
+    if (m.author && m.author.name) {
+      var authorHtml = escapeHtml(String(m.author.name));
+      if (m.author.url) {
+        authorHtml =
+          '<a href="' +
+          escapeHtml(String(m.author.url)) +
+          '" target="_blank" rel="noopener noreferrer">' +
+          authorHtml +
+          '</a>';
+      }
+      addRow(i18n('social_author', 'Author'), authorHtml);
+    }
+    if (m.description) {
+      addRow(
+        i18n('social_description', 'Description'),
+        '<span class="cam-social-detail__desc">' + escapeHtml(String(m.description)) + '</span>'
+      );
+    }
+    if (m.view_count != null) addRow(i18n('social_views', 'Views'), escapeHtml(formatCount(m.view_count)));
+    if (m.like_count != null) addRow(i18n('social_likes', 'Likes'), escapeHtml(formatCount(m.like_count)));
+    if (m.comment_count != null)
+      addRow(i18n('social_comments', 'Comments'), escapeHtml(formatCount(m.comment_count)));
+    if (m.share_count != null)
+      addRow(i18n('social_shares', 'Shares'), escapeHtml(formatCount(m.share_count)));
+    if (m.published_at) {
+      try {
+        addRow(
+          i18n('social_published', 'Published'),
+          escapeHtml(new Date(Number(m.published_at)).toLocaleString())
+        );
+      } catch (e) {}
+    }
+    body.innerHTML = rows.length
+      ? '<dl class="cam-social-detail__dl">' + rows.join('') + '</dl>'
+      : '<p class="cam-social-detail__empty">' +
+        escapeHtml(i18n('social_no_meta', 'No social details available for this asset.')) +
+        '</p>';
+    if (openLink) {
+      if (m.post_url) {
+        openLink.href = String(m.post_url);
+        openLink.hidden = false;
+      } else {
+        openLink.hidden = true;
+      }
+    }
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
   function renderAssets() {
     var grid = $('#cam-asset-grid');
     var empty = $('#cam-empty');
@@ -509,11 +644,15 @@
         var playClass =
           a.media_kind === 'video' || a.media_kind === 'audio' ? ' cam-card--playable' : '';
         var playingClass = playingKey === key ? ' is-playing' : '';
+        var tip = socialTooltipText(a);
+        var hasSocial = !!socialMetaOf(a);
+        var titleAttr = tip ? ' title="' + escapeHtml(tip) + '"' : '';
         return (
           '<article class="cam-card' +
           selClass +
           playClass +
           playingClass +
+          (hasSocial ? ' cam-card--social' : '') +
           '" draggable="true" data-cam-asset-key="' +
           escapeHtml(key) +
           '" data-asset-type="' +
@@ -524,12 +663,19 @@
           escapeHtml(a.media_kind || '') +
           '" data-folder-id="' +
           escapeHtml(a.folder_id || '') +
-          '">' +
+          '"' +
+          titleAttr +
+          '>' +
           '<input type="checkbox" class="cam-card__check" data-cam-select' +
           checked +
           ' aria-label="' +
           escapeHtml(i18n('select_asset', 'Select asset')) +
           '">' +
+          (hasSocial
+            ? '<button type="button" class="cam-card__social-btn" data-cam-social-detail aria-label="' +
+              escapeHtml(i18n('social_view_details', 'View social details')) +
+              '">i</button>'
+            : '') +
           mediaPreviewHtml(a) +
           '<div class="cam-card__meta">' +
           '<div class="cam-card__title">' +
@@ -538,6 +684,7 @@
           '<div class="cam-card__type">' +
           escapeHtml(a.asset_type || '') +
           '</div>' +
+          socialSnippetHtml(a) +
           '</div>' +
           '</article>'
         );
@@ -702,17 +849,65 @@
     await refreshAll();
   }
 
-  function findFolderById(id) {
-    var i;
-    var j;
-    for (i = 0; i < foldersTree.length; i++) {
-      if (foldersTree[i].id === id) return foldersTree[i];
-      var kids = foldersTree[i].children || [];
-      for (j = 0; j < kids.length; j++) {
-        if (kids[j].id === id) return kids[j];
+  function renderNestedFolderRows(nodes, depth) {
+    var html = '';
+    var level = Math.max(1, Number(depth) || 1);
+    (nodes || []).forEach(function (child) {
+      if (!child) return;
+      var cActive = currentFolder === child.id ? ' is-active' : '';
+      var grand = child.children || [];
+      var hasGrand = grand.length > 0;
+      var childExpanded =
+        hasGrand &&
+        (expandedParents[child.id] == null ? true : !!expandedParents[child.id]);
+      if (hasGrand && expandedParents[child.id] == null) {
+        expandedParents[child.id] = true;
       }
-    }
-    return null;
+      html +=
+        '<div class="cam-folder-row cam-folder-row--nested" data-cam-folder-id="' +
+        escapeHtml(child.id) +
+        '" data-cam-drop="1" data-cam-depth="' +
+        String(level) +
+        '" style="padding-left:' +
+        String(8 + level * 12) +
+        'px">' +
+        (hasGrand
+          ? '<button type="button" class="cam-folder-expand" data-cam-expand="' +
+            escapeHtml(child.id) +
+            '" aria-expanded="' +
+            (childExpanded ? 'true' : 'false') +
+            '">' +
+            (childExpanded ? '▾' : '▸') +
+            '</button>'
+          : '<span class="cam-folder-expand-spacer" aria-hidden="true"></span>') +
+        '<button type="button" class="cam-sidebar__item cam-sidebar__item--child' +
+        cActive +
+        '" data-cam-folder="' +
+        escapeHtml(child.id) +
+        '">' +
+        '<span class="cam-sidebar__item-label">' +
+        escapeHtml(child.title) +
+        '</span>' +
+        '<span class="cam-sidebar__count">' +
+        String(child.asset_count || 0) +
+        '</span>' +
+        '</button>' +
+        '</div>';
+      if (hasGrand && childExpanded) {
+        html += '<div class="cam-folder-children">';
+        html += renderNestedFolderRows(grand, level + 1);
+        html += '</div>';
+      }
+    });
+    return html;
+  }
+
+  function findFolderById(id) {
+    var found = null;
+    walkFolderTree(foldersTree, function (node) {
+      if (node && node.id === id) found = node;
+    });
+    return found;
   }
 
   function openFolderRemoveConfirm(folderId) {
@@ -1079,6 +1274,21 @@
       return;
     }
 
+    var socialBtn = t.closest('[data-cam-social-detail]');
+    if (socialBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var socialCard = socialBtn.closest('[data-cam-asset-key]');
+      if (socialCard) {
+        var socialKey = socialCard.getAttribute('data-cam-asset-key');
+        var socialAsset = assets.find(function (a) {
+          return assetKey(a) === socialKey;
+        });
+        if (socialAsset) openSocialDetail(socialAsset);
+      }
+      return;
+    }
+
     var check = t.closest('[data-cam-select]');
     if (check) {
       var card = check.closest('[data-cam-asset-key]');
@@ -1092,7 +1302,12 @@
     }
 
     var playCard = t.closest('.cam-card--playable');
-    if (playCard && root.contains(playCard) && !t.closest('[data-cam-select]')) {
+    if (
+      playCard &&
+      root.contains(playCard) &&
+      !t.closest('[data-cam-select]') &&
+      !t.closest('[data-cam-social-detail]')
+    ) {
       e.preventDefault();
       toggleCardPlayback(playCard);
       return;
@@ -2114,15 +2329,29 @@
     }
   }
 
-  async function pollLinkIngestStatus(assetId, statusEl, progressLabel) {
+  async function pollLinkIngestStatus(assetId, statusEl, progressLabel, folderId) {
     for (var attempt = 0; attempt < 120; attempt++) {
       if (statusEl && attempt > 0 && attempt % 3 === 0) {
         statusEl.textContent =
           progressLabel || i18n('link_processing', 'Downloading media in the background…');
       }
       try {
-        var data = await apiGet('video-studio-link-ingest-status', { asset_id: assetId });
-        if (data && data.status === 'ready') return { ok: true, asset: data.asset };
+        var params = { asset_id: assetId };
+        if (folderId) params.folder_id = folderId;
+        var data = await apiGet('video-studio-link-ingest-status', params);
+        if (data && data.status === 'ready') {
+          // Require folder membership when a target folder was requested.
+          if (folderId && data.in_folder === false) {
+            var moved = await ensureAssetInFolder(assetId, data.asset, folderId);
+            if (!moved) {
+              return {
+                ok: false,
+                data: { error: 'membership_failed', message: 'Saved but not in target folder.' }
+              };
+            }
+          }
+          return { ok: true, asset: data.asset, asset_id: assetId, in_folder: true };
+        }
         if (data && data.status === 'failed') return { ok: false, data: data };
       } catch (pollErr) {
         /* transient — keep polling */
@@ -2132,6 +2361,31 @@
     return { ok: false, data: { error: 'timeout' } };
   }
 
+  function studioKindToAssetTypeClient(kind) {
+    var k = String(kind || '').toLowerCase();
+    if (k === 'video') return 'studio_video';
+    if (k === 'audio') return 'studio_audio';
+    return 'studio_media';
+  }
+
+  async function ensureAssetInFolder(assetId, assetRow, folderId) {
+    if (!assetId || !folderId) return false;
+    var assetType =
+      (assetRow && assetRow.asset_type) ||
+      studioKindToAssetTypeClient(assetRow && assetRow.kind) ||
+      'studio_video';
+    try {
+      var moved = await apiPost('marketing-assets-move', {
+        items: [{ asset_type: assetType, asset_id: assetId }],
+        folder_id: folderId
+      });
+      return !!(moved && moved.ok);
+    } catch (eMove) {
+      console.warn('[AssetsManager] ensure membership failed', assetId, eMove);
+      return false;
+    }
+  }
+
   function stopBulkThumbWarmup() {
     bulkThumbQueue = [];
     Object.keys(bulkThumbInflight || {}).forEach(function (k) {
@@ -2139,6 +2393,99 @@
     });
   }
 
+  function formatLocalDateTimeFolderTitle(date) {
+    var d = date instanceof Date ? date : new Date();
+    var pad = function (n) {
+      return String(n).padStart(2, '0');
+    };
+    return (
+      d.getFullYear() +
+      '-' +
+      pad(d.getMonth() + 1) +
+      '-' +
+      pad(d.getDate()) +
+      ' ' +
+      pad(d.getHours()) +
+      ':' +
+      pad(d.getMinutes())
+    );
+  }
+
+  function platformLabelFromUrlClient(rawUrl) {
+    try {
+      var host = new URL(String(rawUrl || '').trim()).hostname
+        .replace(/^www\./i, '')
+        .toLowerCase();
+      if (host.indexOf('facebook.com') !== -1 || host === 'fb.watch') return 'Facebook';
+      if (host.indexOf('instagram.com') !== -1) return 'Instagram';
+      if (host.indexOf('tiktok.com') !== -1) return 'TikTok';
+      if (host.indexOf('youtube.com') !== -1 || host === 'youtu.be') return 'YouTube';
+      if (host.indexOf('snapchat.com') !== -1) return 'Snapchat';
+    } catch (ePlat) {}
+    return 'Web';
+  }
+
+  function personNameFromLinkMeta(meta, sourceUrl) {
+    if (meta && meta.profile_name) return String(meta.profile_name).trim();
+    try {
+      var u = new URL(String(sourceUrl || '').trim());
+      var id = u.searchParams.get('id');
+      if (id) return 'Profile ' + id;
+      var slug = (u.pathname || '/').replace(/^\/+|\/+$/g, '').split('/')[0] || '';
+      if (slug && slug !== 'profile.php') {
+        try {
+          return decodeURIComponent(slug).replace(/[-_]+/g, ' ').trim() || slug;
+        } catch (eSlug) {
+          return slug;
+        }
+      }
+    } catch (eUrl) {}
+    return 'Profile';
+  }
+
+  async function ensureSocialDownloadFolder(opts) {
+    var sourceUrl = (opts && opts.sourceUrl) || '';
+    var bulk = !!(opts && opts.bulk);
+    var platform =
+      (opts && opts.platform) ||
+      (linkBulkMeta && linkBulkMeta.platform) ||
+      platformLabelFromUrlClient(sourceUrl);
+    var person =
+      (opts && opts.profileName) ||
+      personNameFromLinkMeta(linkBulkMeta || opts || {}, sourceUrl);
+    var datetimeTitle = bulk ? formatLocalDateTimeFolderTitle(new Date()) : null;
+    var data = await apiPost('marketing-asset-link-bulk-ingest', {
+      urls: [],
+      create_folder_only: true,
+      bulk: bulk,
+      format: 'mp4',
+      source_url: sourceUrl,
+      platform: platform,
+      profile_name: person,
+      datetime_title: datetimeTitle || undefined,
+      parent_system_key: 'motion_videos'
+    });
+    if (!data || !data.ok || !data.folder || !data.folder.id) {
+      return {
+        ok: false,
+        message: (data && data.message) || null,
+        error: (data && data.error) || 'folder_create_failed'
+      };
+    }
+    return {
+      ok: true,
+      folder: data.folder,
+      folders: data.folders || [data.folder],
+      platform: platform,
+      profileName: person,
+      datetimeTitle: datetimeTitle
+    };
+  }
+
+  /**
+   * Ingest one URL into folderId. Success ONLY when asset reaches ready AND is in the folder.
+   * Does not count mere enqueue (202/queued) as success.
+   */
   async function ingestOneLinkWithFolder(url, folderId, statusEl, progressLabel) {
     var data = await apiPost('video-studio-link-ingest', {
       url: url,
@@ -2168,8 +2515,13 @@
         message: (data && data.message) || null
       };
     }
-    if (data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
-      var polled = await pollLinkIngestStatus(data.asset_id, statusEl, progressLabel);
+    if (!data.asset_id) {
+      return { ok: false, error: 'missing_asset_id', message: 'No asset id returned.' };
+    }
+
+    var status = String(data.status || '').toLowerCase();
+    if (status === 'queued' || status === 'processing' || status === 'pending') {
+      var polled = await pollLinkIngestStatus(data.asset_id, statusEl, progressLabel, folderId);
       if (!polled.ok) {
         return {
           ok: false,
@@ -2178,14 +2530,58 @@
           message: (polled.data && polled.data.message) || null
         };
       }
-      return { ok: true, asset_id: data.asset_id, status: 'ready' };
+      return { ok: true, asset_id: data.asset_id, status: 'ready', in_folder: true };
     }
+
+    if (status === 'ready' || data.cached) {
+      var inFolder = await ensureAssetInFolder(data.asset_id, data.asset, folderId);
+      if (!inFolder) {
+        // Status endpoint can re-confirm membership
+        try {
+          var st = await apiGet('video-studio-link-ingest-status', {
+            asset_id: data.asset_id,
+            folder_id: folderId
+          });
+          inFolder = !!(st && st.status === 'ready' && st.in_folder);
+        } catch (eSt) {
+          inFolder = false;
+        }
+      }
+      if (!inFolder) {
+        return {
+          ok: false,
+          asset_id: data.asset_id,
+          error: 'membership_failed',
+          message: 'Saved but not in target folder.'
+        };
+      }
+      return {
+        ok: true,
+        asset_id: data.asset_id,
+        status: 'ready',
+        cached: !!data.cached,
+        in_folder: true
+      };
+    }
+
+    // Unknown non-terminal status — do not count as success.
     return {
-      ok: true,
-      asset_id: data.asset_id || null,
-      status: data.status || 'ready',
-      cached: !!data.cached
+      ok: false,
+      asset_id: data.asset_id,
+      error: 'unexpected_status',
+      message: 'Unexpected ingest status: ' + status
     };
+  }
+
+  async function countAssetsInFolder(folderId) {
+    if (!folderId) return 0;
+    try {
+      var listed = await apiGet('marketing-assets-list', { folder_id: folderId });
+      if (!listed || !listed.ok || !Array.isArray(listed.assets)) return 0;
+      return listed.assets.length;
+    } catch (eList) {
+      return 0;
+    }
   }
 
   async function submitLinkDownload() {
@@ -2199,36 +2595,55 @@
         statusEl.className = 'cam-link-status is-info';
       }
       try {
-        var data = await apiPost('video-studio-link-ingest', {
-          url: linkSingle.url,
-          format: 'mp4'
+        var sourceInputSingle = document.getElementById('cam-link-url');
+        var sourceUrlSingle = sourceInputSingle
+          ? String(sourceInputSingle.value || '').trim()
+          : linkSingle.url;
+        var singleFolder = await ensureSocialDownloadFolder({
+          sourceUrl: sourceUrlSingle || linkSingle.url,
+          bulk: false,
+          platform: platformLabelFromUrlClient(sourceUrlSingle || linkSingle.url),
+          profileName: personNameFromLinkMeta(
+            { profile_name: linkSingle.profile_name },
+            sourceUrlSingle || linkSingle.url
+          )
         });
-        if (!data.ok && !data.asset_id) {
+        if (!singleFolder.ok || !singleFolder.folder) {
           if (statusEl) {
             statusEl.textContent =
-              data.message || i18n('link_error_generic', 'Could not add media from that link.');
+              singleFolder.message ||
+              i18n('link_error_generic', 'Could not add media from that link.');
             statusEl.className = 'cam-link-status is-error';
           }
           if (submit) submit.disabled = false;
           return;
         }
-        if (data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
-          var polled = await pollLinkIngestStatus(data.asset_id, statusEl);
-          if (!polled.ok) {
-            if (statusEl) {
-              statusEl.textContent =
-                (polled.data && polled.data.message) ||
-                i18n('link_error_generic', 'Could not add media from that link.');
-              statusEl.className = 'cam-link-status is-error';
-            }
-            if (submit) submit.disabled = false;
-            return;
+        var single = await ingestOneLinkWithFolder(
+          linkSingle.url,
+          singleFolder.folder.id,
+          statusEl,
+          i18n('link_downloading', 'Downloading…')
+        );
+        if (!single || !single.ok) {
+          if (statusEl) {
+            statusEl.textContent =
+              (single && single.message) ||
+              i18n('link_error_generic', 'Could not add media from that link.');
+            statusEl.className = 'cam-link-status is-error';
           }
+          if (submit) submit.disabled = false;
+          return;
         }
         if (statusEl) {
-          statusEl.textContent = i18n('link_download_done', 'Saved to Unsorted.');
+          statusEl.textContent = i18n(
+            'link_download_done_folder',
+            'Saved under Downloads → {platform} → {person}.'
+          )
+            .replace('{platform}', singleFolder.platform || 'Web')
+            .replace('{person}', singleFolder.profileName || 'Profile');
           statusEl.className = 'cam-link-status is-success';
         }
+        currentFolder = singleFolder.folder.id;
         closeLinkModal();
         await refreshAll();
       } catch (e) {
@@ -2252,8 +2667,9 @@
         var match = (linkBulkAll || []).find(function (c) {
           return String(c.id || '') === key || String(c.url || '') === key;
         });
-        var url = match && match.url ? String(match.url).trim() : key;
-        if (!url || seenUrl[url]) return;
+        var url = match && match.url ? String(match.url).trim() : '';
+        // Never fall back to bare numeric ids — they are not ingestable URLs.
+        if (!url || !/^https?:\/\//i.test(url) || seenUrl[url]) return;
         seenUrl[url] = true;
         urls.push(url);
       });
@@ -2274,29 +2690,25 @@
       try {
         var sourceInput = document.getElementById('cam-link-url');
         var sourceUrl = sourceInput ? String(sourceInput.value || '').trim() : '';
-        // Create folder only — then ingest each URL via the same op as single Download
-        // (sequential, continue on per-item 422/fail, apply folder_id every time).
-        var bulk = await apiPost('marketing-asset-link-bulk-ingest', {
-          urls: [],
-          create_folder_only: true,
-          format: 'mp4',
-          source_url: sourceUrl,
-          folder_title: (linkBulkMeta && linkBulkMeta.folder_title_suggestion) || undefined,
-          folder_description:
-            (linkBulkMeta && linkBulkMeta.folder_description_suggestion) || undefined,
-          parent_system_key: 'motion_videos'
+        // Nested path: Motion Videos → Downloads → Platform → Person → YYYY-MM-DD HH:mm
+        var folderSetup = await ensureSocialDownloadFolder({
+          sourceUrl: sourceUrl,
+          bulk: true,
+          platform: (linkBulkMeta && linkBulkMeta.platform) || undefined,
+          profileName: personNameFromLinkMeta(linkBulkMeta, sourceUrl)
         });
-        if (!bulk.ok || !bulk.folder || !bulk.folder.id) {
+        if (!folderSetup.ok || !folderSetup.folder || !folderSetup.folder.id) {
           if (statusEl) {
             statusEl.textContent =
-              bulk.message || i18n('link_error_generic', 'Could not add media from that link.');
+              folderSetup.message ||
+              i18n('link_error_generic', 'Could not add media from that link.');
             statusEl.className = 'cam-link-status is-error';
           }
           if (submit) submit.disabled = false;
           return;
         }
-        var folderId = bulk.folder.id;
-        var okCount = 0;
+        var folderId = folderSetup.folder.id;
+        var okAssetIds = Object.create(null);
         var failCount = 0;
         var total = urls.length;
         for (var i = 0; i < urls.length; i++) {
@@ -2312,8 +2724,12 @@
           }
           try {
             var one = await ingestOneLinkWithFolder(urls[i], folderId, statusEl, progressLabel);
-            if (one && one.ok) okCount += 1;
-            else failCount += 1;
+            if (one && one.ok && one.asset_id) {
+              // Deduplicate: same cached asset_id must not inflate the success count.
+              okAssetIds[String(one.asset_id)] = true;
+            } else {
+              failCount += 1;
+            }
           } catch (itemErr) {
             console.warn('[AssetsManager] bulk item failed', urls[i], itemErr);
             failCount += 1;
@@ -2321,8 +2737,20 @@
           // Small gap between items — avoid parallel Facebook/Cobalt flooding.
           if (i < urls.length - 1) await sleep(400);
         }
+        // Honest count = distinct ready assets that are members of the target folder.
+        var folderCount = await countAssetsInFolder(folderId);
+        var uniqueOk = Object.keys(okAssetIds).length;
+        var okCount = Math.min(folderCount, uniqueOk) || folderCount || uniqueOk;
+        if (folderCount > 0 && folderCount !== uniqueOk) {
+          console.warn(
+            '[AssetsManager] bulk count mismatch',
+            { uniqueOk: uniqueOk, folderCount: folderCount, failCount: failCount, total: total }
+          );
+          okCount = folderCount;
+          failCount = Math.max(0, total - okCount);
+        }
         var resultMsg;
-        if (okCount === total) {
+        if (okCount >= total && failCount === 0) {
           resultMsg = i18n('link_bulk_done_all', 'Downloaded {ok}/{total}.')
             .replace('{ok}', String(okCount))
             .replace('{total}', String(total));
@@ -2649,6 +3077,17 @@
 
     var assetOk = $('#cam-confirm-asset-ok');
     if (assetOk) assetOk.addEventListener('click', confirmAssetAction);
+
+    var socialClose = $('#cam-social-detail-close');
+    var socialDone = $('#cam-social-detail-done');
+    if (socialClose) socialClose.addEventListener('click', closeSocialDetail);
+    if (socialDone) socialDone.addEventListener('click', closeSocialDetail);
+    var socialModal = $('#cam-social-detail');
+    if (socialModal) {
+      socialModal.addEventListener('click', function (ev) {
+        if (ev.target === socialModal) closeSocialDetail();
+      });
+    }
 
     var selectToggle = $('#cam-btn-select-toggle');
     if (selectToggle) {

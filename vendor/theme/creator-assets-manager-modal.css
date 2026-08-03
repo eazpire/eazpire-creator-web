@@ -1042,6 +1042,36 @@ body.cam-modal-open {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.cam-card__social {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.62);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cam-card__social-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.cam-card__social-btn:hover {
+  border-color: rgba(249, 115, 22, 0.8);
+  color: #fdba74;
+}
 .cam-card__check {
   position: absolute;
   top: 8px;
@@ -1051,6 +1081,48 @@ body.cam-modal-open {
   accent-color: #f97316;
   cursor: pointer;
   z-index: 2;
+}
+.cam-social-detail-panel {
+  max-width: 420px;
+  width: min(92vw, 420px);
+}
+.cam-social-detail__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cam-social-detail__dl {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.cam-social-detail__row {
+  display: grid;
+  gap: 2px;
+}
+.cam-social-detail__row dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.5);
+}
+.cam-social-detail__row dd {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.92);
+  word-break: break-word;
+}
+.cam-social-detail__desc {
+  white-space: pre-wrap;
+}
+.cam-social-detail__empty {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+}
+.cam-social-detail__row a {
+  color: #fdba74;
 }
 .cam-empty {
   padding: 40px 16px;

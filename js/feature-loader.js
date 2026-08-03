@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "cam-link-bulk-multi-20260803f";
+  var PORTAL_ASSET_V = "cam-dl-hierarchy-meta-20260803a";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -512,7 +512,7 @@
         badge_ready_aria: "Level badge ready",
       };
 
-      // Settings modal is large ó load on first open only (not on dashboard boot).
+      // Settings modal is large ù load on first open only (not on dashboard boot).
     })();
 
     try {
