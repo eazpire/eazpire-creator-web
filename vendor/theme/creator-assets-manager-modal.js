@@ -1784,7 +1784,9 @@
     var sorted = sortBulkCandidates(filtered, sort).slice(0, count);
     linkBulkSelected = Object.create(null);
     sorted.forEach(function (c) {
-      linkBulkSelected[c.url] = true;
+      // Key by reel/video id when present so duplicate/empty URLs cannot collapse N→1.
+      var selKey = String(c.id || c.url || '').trim();
+      if (selKey) linkBulkSelected[selKey] = true;
     });
     var typeLabels = {
       image: i18n('link_asset_type_image', 'Image'),
@@ -1794,6 +1796,7 @@
     grid.innerHTML = sorted
       .map(function (c) {
         var typeKey = classifyClientBulkAssetType(c);
+        var selKey = String(c.id || c.url || '').trim();
         var mediaInner = c.thumb_url
           ? '<img class="cam-link-bulk-card__thumb" src="' +
             escapeHtml(c.thumb_url) +
@@ -1806,7 +1809,9 @@
             ? '<div>' + escapeHtml(String(c.views)) + ' views</div>'
             : '';
         return (
-          '<div class="cam-link-bulk-card is-selected" role="option" aria-selected="true" data-cam-bulk-url="' +
+          '<div class="cam-link-bulk-card is-selected" role="option" aria-selected="true" data-cam-bulk-key="' +
+          escapeHtml(selKey) +
+          '" data-cam-bulk-url="' +
           escapeHtml(c.url) +
           '" data-cam-bulk-type="' +
           escapeHtml(typeKey) +
@@ -2109,17 +2114,78 @@
     }
   }
 
-  async function pollLinkIngestStatus(assetId, statusEl) {
+  async function pollLinkIngestStatus(assetId, statusEl, progressLabel) {
     for (var attempt = 0; attempt < 120; attempt++) {
       if (statusEl && attempt > 0 && attempt % 3 === 0) {
-        statusEl.textContent = i18n('link_processing', 'Downloading media in the background…');
+        statusEl.textContent =
+          progressLabel || i18n('link_processing', 'Downloading media in the background…');
       }
-      var data = await apiGet('video-studio-link-ingest-status', { asset_id: assetId });
-      if (data.status === 'ready') return { ok: true, asset: data.asset };
-      if (data.status === 'failed') return { ok: false, data: data };
+      try {
+        var data = await apiGet('video-studio-link-ingest-status', { asset_id: assetId });
+        if (data && data.status === 'ready') return { ok: true, asset: data.asset };
+        if (data && data.status === 'failed') return { ok: false, data: data };
+      } catch (pollErr) {
+        /* transient — keep polling */
+      }
       await sleep(2000);
     }
     return { ok: false, data: { error: 'timeout' } };
+  }
+
+  function stopBulkThumbWarmup() {
+    bulkThumbQueue = [];
+    Object.keys(bulkThumbInflight || {}).forEach(function (k) {
+      delete bulkThumbInflight[k];
+    });
+  }
+
+  async function ingestOneLinkWithFolder(url, folderId, statusEl, progressLabel) {
+    var data = await apiPost('video-studio-link-ingest', {
+      url: url,
+      format: 'mp4',
+      folder_id: folderId
+    });
+    // Rate limit: brief wait + one retry (do not abort the rest of the bulk).
+    if (
+      data &&
+      !data.ok &&
+      !data.asset_id &&
+      (data.error === 'rate_limit_minute' ||
+        data.error === 'rate_limit_day' ||
+        data.error === 'rate_limit')
+    ) {
+      await sleep(1500);
+      data = await apiPost('video-studio-link-ingest', {
+        url: url,
+        format: 'mp4',
+        folder_id: folderId
+      });
+    }
+    if (!data || (!data.ok && !data.asset_id)) {
+      return {
+        ok: false,
+        error: (data && (data.error || data.error_code)) || 'ingest_failed',
+        message: (data && data.message) || null
+      };
+    }
+    if (data.asset_id && (data.status === 'queued' || data.status === 'processing')) {
+      var polled = await pollLinkIngestStatus(data.asset_id, statusEl, progressLabel);
+      if (!polled.ok) {
+        return {
+          ok: false,
+          asset_id: data.asset_id,
+          error: (polled.data && (polled.data.error || polled.data.error_code)) || 'failed',
+          message: (polled.data && polled.data.message) || null
+        };
+      }
+      return { ok: true, asset_id: data.asset_id, status: 'ready' };
+    }
+    return {
+      ok: true,
+      asset_id: data.asset_id || null,
+      status: data.status || 'ready',
+      cached: !!data.cached
+    };
   }
 
   async function submitLinkDownload() {
@@ -2176,8 +2242,20 @@
     }
 
     if (linkMode === 'bulk') {
-      var urls = Object.keys(linkBulkSelected).filter(function (u) {
-        return linkBulkSelected[u];
+      // Selection keys are candidate ids (fallback: url). Resolve to canonical URLs.
+      var urls = [];
+      var seenUrl = Object.create(null);
+      Object.keys(linkBulkSelected).forEach(function (selKey) {
+        if (!linkBulkSelected[selKey]) return;
+        var key = String(selKey || '').trim();
+        if (!key) return;
+        var match = (linkBulkAll || []).find(function (c) {
+          return String(c.id || '') === key || String(c.url || '') === key;
+        });
+        var url = match && match.url ? String(match.url).trim() : key;
+        if (!url || seenUrl[url]) return;
+        seenUrl[url] = true;
+        urls.push(url);
       });
       if (!urls.length) {
         if (statusEl) {
@@ -2187,6 +2265,8 @@
         if (submit) submit.disabled = false;
         return;
       }
+      // Stop lazy thumb extracts — they return HTTP 422 and flood Facebook while we download.
+      stopBulkThumbWarmup();
       if (statusEl) {
         statusEl.textContent = i18n('link_bulk_downloading', 'Creating folder and downloading…');
         statusEl.className = 'cam-link-status is-info';
@@ -2194,8 +2274,11 @@
       try {
         var sourceInput = document.getElementById('cam-link-url');
         var sourceUrl = sourceInput ? String(sourceInput.value || '').trim() : '';
+        // Create folder only — then ingest each URL via the same op as single Download
+        // (sequential, continue on per-item 422/fail, apply folder_id every time).
         var bulk = await apiPost('marketing-asset-link-bulk-ingest', {
-          urls: urls,
+          urls: [],
+          create_folder_only: true,
           format: 'mp4',
           source_url: sourceUrl,
           folder_title: (linkBulkMeta && linkBulkMeta.folder_title_suggestion) || undefined,
@@ -2203,7 +2286,7 @@
             (linkBulkMeta && linkBulkMeta.folder_description_suggestion) || undefined,
           parent_system_key: 'motion_videos'
         });
-        if (!bulk.ok) {
+        if (!bulk.ok || !bulk.folder || !bulk.folder.id) {
           if (statusEl) {
             statusEl.textContent =
               bulk.message || i18n('link_error_generic', 'Could not add media from that link.');
@@ -2212,23 +2295,63 @@
           if (submit) submit.disabled = false;
           return;
         }
-        var jobs = Array.isArray(bulk.jobs) ? bulk.jobs : [];
-        for (var i = 0; i < jobs.length; i++) {
-          var job = jobs[i];
-          if (job.asset_id && (job.status === 'queued' || job.status === 'processing')) {
-            await pollLinkIngestStatus(job.asset_id, statusEl);
+        var folderId = bulk.folder.id;
+        var okCount = 0;
+        var failCount = 0;
+        var total = urls.length;
+        for (var i = 0; i < urls.length; i++) {
+          var progressLabel = i18n(
+            'link_bulk_progress',
+            'Downloading {current}/{total}…'
+          )
+            .replace('{current}', String(i + 1))
+            .replace('{total}', String(total));
+          if (statusEl) {
+            statusEl.textContent = progressLabel;
+            statusEl.className = 'cam-link-status is-info';
           }
+          try {
+            var one = await ingestOneLinkWithFolder(urls[i], folderId, statusEl, progressLabel);
+            if (one && one.ok) okCount += 1;
+            else failCount += 1;
+          } catch (itemErr) {
+            console.warn('[AssetsManager] bulk item failed', urls[i], itemErr);
+            failCount += 1;
+          }
+          // Small gap between items — avoid parallel Facebook/Cobalt flooding.
+          if (i < urls.length - 1) await sleep(400);
+        }
+        var resultMsg;
+        if (okCount === total) {
+          resultMsg = i18n('link_bulk_done_all', 'Downloaded {ok}/{total}.')
+            .replace('{ok}', String(okCount))
+            .replace('{total}', String(total));
+        } else if (okCount > 0) {
+          resultMsg = i18n(
+            'link_bulk_done_partial',
+            'Downloaded {ok}/{total} ({failed} failed).'
+          )
+            .replace('{ok}', String(okCount))
+            .replace('{total}', String(total))
+            .replace('{failed}', String(failCount));
+        } else {
+          resultMsg = i18n(
+            'link_bulk_done_none',
+            'Could not download the selected items. Try again or use Device upload.'
+          );
         }
         if (statusEl) {
-          statusEl.textContent = i18n('link_bulk_done', 'Download started. Assets will appear in the new folder.')
-            .replace('{folder}', (bulk.folder && bulk.folder.title) || '');
-          statusEl.className = 'cam-link-status is-success';
+          statusEl.textContent = resultMsg;
+          statusEl.className =
+            'cam-link-status ' + (okCount > 0 ? 'is-success' : 'is-error');
         }
-        if (bulk.folder && bulk.folder.id) {
-          currentFolder = bulk.folder.id;
+        if (okCount > 0) {
+          currentFolder = folderId;
+          closeLinkModal();
+          await refreshAll();
+        } else if (submit) {
+          submit.disabled = false;
         }
-        closeLinkModal();
-        await refreshAll();
       } catch (e) {
         console.warn('[AssetsManager] bulk ingest failed', e);
         if (statusEl) {
@@ -2429,10 +2552,11 @@
     if (bulkGrid) {
       function syncBulkSelectionFromCard(card) {
         if (!card) return;
-        var url = card.getAttribute('data-cam-bulk-url');
+        var selKey =
+          card.getAttribute('data-cam-bulk-key') || card.getAttribute('data-cam-bulk-url');
         var check = card.querySelector('.cam-link-bulk-card__check');
         var next = !!(check && check.checked);
-        linkBulkSelected[url] = next;
+        if (selKey) linkBulkSelected[selKey] = next;
         card.classList.toggle('is-selected', next);
         card.setAttribute('aria-selected', next ? 'true' : 'false');
         var submitBtn = document.getElementById('cam-link-submit');
@@ -2447,7 +2571,7 @@
         if (!t || !t.closest) return;
         // Selection only via checkbox — never toggle from media/meta clicks
         if (t.classList && t.classList.contains('cam-link-bulk-card__check')) {
-          syncBulkSelectionFromCard(t.closest('[data-cam-bulk-url]'));
+          syncBulkSelectionFromCard(t.closest('[data-cam-bulk-key], [data-cam-bulk-url]'));
           return;
         }
         var playBtn = t.closest('[data-cam-bulk-play]');
@@ -2460,7 +2584,7 @@
       bulkGrid.addEventListener('change', function (e) {
         var t = e.target;
         if (!t || !t.classList || !t.classList.contains('cam-link-bulk-card__check')) return;
-        syncBulkSelectionFromCard(t.closest('[data-cam-bulk-url]'));
+        syncBulkSelectionFromCard(t.closest('[data-cam-bulk-key], [data-cam-bulk-url]'));
       });
     }
     var fsClose = document.getElementById('cam-link-fs-close');

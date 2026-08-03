@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "cam-link-bulk-play-20260803e";
+  var PORTAL_ASSET_V = "cam-link-bulk-multi-20260803f";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
