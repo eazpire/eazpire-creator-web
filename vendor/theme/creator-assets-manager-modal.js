@@ -213,7 +213,8 @@
     { system_key: 'unsorted', titleKey: 'folder_unsorted', title: 'Unsorted' },
     { system_key: 'hero_images', titleKey: 'folder_hero_images', title: 'Hero Images' },
     { system_key: 'character_images', titleKey: 'folder_character_images', title: 'Character Images' },
-    { system_key: 'motion_videos', titleKey: 'folder_motion_videos', title: 'Motion Videos' }
+    { system_key: 'motion_videos', titleKey: 'folder_motion_videos', title: 'Motion Videos' },
+    { system_key: 'downloads', titleKey: 'folder_downloads', title: 'Downloads' }
   ];
 
   function systemFolderTitle(folder) {
@@ -2824,7 +2825,7 @@
       platform: platform,
       profile_name: person,
       datetime_title: datetimeTitle || undefined,
-      parent_system_key: 'motion_videos'
+      parent_system_key: 'downloads'
     });
     if (!data || !data.ok || !data.folder || !data.folder.id) {
       return {
