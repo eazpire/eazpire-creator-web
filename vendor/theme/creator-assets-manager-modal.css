@@ -379,6 +379,8 @@ body.cam-modal-open {
 .cam-link-bulk {
   min-height: 0;
 }
+/* Author display:block overrides UA [hidden] — without this, audio+video both show controls */
+.cam-link-preview__media[hidden],
 .cam-link-bulk[hidden],
 .cam-link-single-preview[hidden] {
   display: none !important;

@@ -1293,9 +1293,28 @@
     if (submit) submit.disabled = true;
     [video, audio, image].forEach(function (el) {
       if (!el) return;
+      try {
+        if (el.pause) el.pause();
+      } catch (ePause) {}
       el.removeAttribute('src');
+      if (el.load) {
+        try {
+          el.load();
+        } catch (eLoad) {}
+      }
       el.hidden = true;
     });
+    var fsVideo = document.getElementById('cam-link-fs-video');
+    if (fsVideo) {
+      try {
+        fsVideo.pause();
+      } catch (eFs) {}
+      fsVideo.removeAttribute('src');
+      try {
+        fsVideo.load();
+      } catch (eFsLoad) {}
+    }
+    closeSubmodal('cam-link-fs');
     var grid = document.getElementById('cam-link-bulk-grid');
     if (grid) grid.innerHTML = '';
   }
@@ -1584,13 +1603,36 @@
     return arr;
   }
 
+  function updateBulkCardThumb(url, thumbUrl) {
+    if (!url || !thumbUrl) return;
+    var cards = document.querySelectorAll('.cam-link-bulk-card[data-cam-bulk-url]');
+    var card = null;
+    for (var i = 0; i < cards.length; i++) {
+      if (cards[i].getAttribute('data-cam-bulk-url') === url) {
+        card = cards[i];
+        break;
+      }
+    }
+    if (!card) return;
+    var mediaBtn = card.querySelector('.cam-link-bulk-card__media');
+    if (!mediaBtn) return;
+    var existing = mediaBtn.querySelector('img.cam-link-bulk-card__thumb');
+    if (existing) {
+      existing.src = thumbUrl;
+      return;
+    }
+    mediaBtn.innerHTML =
+      '<img class="cam-link-bulk-card__thumb" src="' + escapeHtml(thumbUrl) + '" alt="" loading="lazy">';
+  }
+
   function renderBulkGrid() {
     var grid = document.getElementById('cam-link-bulk-grid');
     var countInput = document.getElementById('cam-link-bulk-count');
     var sortSelect = document.getElementById('cam-link-bulk-sort');
     var submit = document.getElementById('cam-link-submit');
     if (!grid) return;
-    var count = Math.max(1, Math.min(40, Number(countInput && countInput.value) || 12));
+    var maxShow = Math.min(80, Math.max(1, linkBulkAll.length || 1));
+    var count = Math.max(1, Math.min(maxShow, Number(countInput && countInput.value) || 12));
     var sort = sortSelect ? sortSelect.value : 'newest';
     var sorted = sortBulkCandidates(linkBulkAll, sort).slice(0, count);
     linkBulkSelected = Object.create(null);
@@ -1633,39 +1675,121 @@
       })
       .join('');
     if (submit) submit.disabled = !sorted.length;
+    // Lazy-resolve missing posters (queued; does not ingest to R2)
+    var missing = sorted.filter(function (c) {
+      return c && c.url && !c.thumb_url && !c.preview_url;
+    });
+    enqueueBulkThumbResolve(missing);
+  }
+
+  var bulkThumbInflight = Object.create(null);
+  var bulkThumbQueue = [];
+  var bulkThumbActive = 0;
+  var BULK_THUMB_CONCURRENCY = 3;
+
+  function enqueueBulkThumbResolve(list) {
+    (list || []).forEach(function (c) {
+      if (!c || !c.url || bulkThumbInflight[c.url]) return;
+      bulkThumbInflight[c.url] = 'queued';
+      bulkThumbQueue.push(c);
+    });
+    drainBulkThumbQueue();
+  }
+
+  function drainBulkThumbQueue() {
+    while (bulkThumbActive < BULK_THUMB_CONCURRENCY && bulkThumbQueue.length) {
+      var candidate = bulkThumbQueue.shift();
+      bulkThumbActive += 1;
+      resolveBulkThumbLazy(candidate).finally(function () {
+        bulkThumbActive -= 1;
+        drainBulkThumbQueue();
+      });
+    }
+  }
+
+  async function resolveBulkThumbLazy(candidate) {
+    var url = candidate && candidate.url;
+    if (!url) return;
+    bulkThumbInflight[url] = true;
+    try {
+      var data = await apiPost('video-studio-link-extract', { url: url, format: 'mp4' });
+      if (!data || !data.ok) return;
+      if (data.thumb_url) {
+        candidate.thumb_url = data.thumb_url;
+        updateBulkCardThumb(url, data.thumb_url);
+      }
+      if (data.preview_url) {
+        // Cache playable URL for instant click-to-play
+        candidate.preview_url = data.preview_url;
+      }
+    } catch (e) {
+      /* best-effort */
+    } finally {
+      delete bulkThumbInflight[url];
+    }
   }
 
   async function playBulkCandidate(url) {
     var statusEl = document.getElementById('cam-link-status');
+    var cached = (linkBulkAll || []).find(function (c) {
+      return c && c.url === url;
+    });
     if (statusEl) {
-      statusEl.textContent = i18n('link_extracting', 'Extracting preview…');
+      statusEl.textContent = i18n('link_bulk_previewing', 'Loading preview…');
       statusEl.className = 'cam-link-status is-info';
     }
     try {
-      var data = await apiPost('video-studio-link-extract', { url: url, format: 'mp4' });
+      var data =
+        cached && cached.preview_url
+          ? { ok: true, preview_url: cached.preview_url, thumb_url: cached.thumb_url || null }
+          : await apiPost('video-studio-link-extract', { url: url, format: 'mp4' });
       if (!data.ok || !data.preview_url) {
         if (statusEl) {
-          statusEl.textContent = data.message || i18n('link_error_generic', 'Could not add media from that link.');
+          statusEl.textContent = i18n(
+            'link_bulk_preview_failed',
+            'Could not preview this reel (private or blocked). You can still Download selected items.'
+          );
           statusEl.className = 'cam-link-status is-error';
         }
         return;
       }
-      var fs = document.getElementById('cam-link-fs');
+      if (cached) {
+        cached.preview_url = data.preview_url;
+        if (data.thumb_url) {
+          cached.thumb_url = data.thumb_url;
+          updateBulkCardThumb(url, data.thumb_url);
+        }
+      }
+      // Ensure single-preview players stay cleared — only fullscreen player for bulk
+      var singleVideo = document.getElementById('cam-link-preview-video');
+      var singleAudio = document.getElementById('cam-link-preview-audio');
+      [singleVideo, singleAudio].forEach(function (el) {
+        if (!el) return;
+        try {
+          if (el.pause) el.pause();
+        } catch (e1) {}
+        el.removeAttribute('src');
+        el.hidden = true;
+      });
       var video = document.getElementById('cam-link-fs-video');
       if (video) {
         video.src = data.preview_url;
+        if (data.thumb_url) video.setAttribute('poster', data.thumb_url);
         try {
           video.play();
         } catch (e) {}
       }
       openSubmodal('cam-link-fs');
       if (statusEl) {
-        statusEl.textContent = '';
-        statusEl.className = 'cam-link-status';
+        statusEl.textContent = i18n('link_bulk_ready', 'Select assets and click Download.');
+        statusEl.className = 'cam-link-status is-success';
       }
     } catch (e) {
       if (statusEl) {
-        statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+        statusEl.textContent = i18n(
+          'link_bulk_preview_failed',
+          'Could not preview this reel (private or blocked). You can still Download selected items.'
+        );
         statusEl.className = 'cam-link-status is-error';
       }
     }
@@ -1701,14 +1825,24 @@
       var data = await apiPost('marketing-asset-link-analyze', {
         url: url,
         format: 'mp4',
-        limit: 40,
+        limit: 200,
         sort: 'newest'
       });
       if (!data.ok) {
         setLinkModalBulkFullscreen(false);
         if (statusEl) {
-          statusEl.textContent =
-            data.message || i18n('link_error_generic', 'Could not add media from that link.');
+          // Bulk failures use bulk messaging — never imply single-video extract failed
+          if (data.mode === 'bulk' || looksBulk) {
+            statusEl.textContent =
+              data.message ||
+              i18n(
+                'link_bulk_empty',
+                'No public reels/videos were found on that Facebook tab. The page may be private or blocked for automated access.'
+              );
+          } else {
+            statusEl.textContent =
+              data.message || i18n('link_error_generic', 'Could not add media from that link.');
+          }
           statusEl.className = 'cam-link-status is-error';
         }
         return;
@@ -1717,6 +1851,7 @@
         linkMode = 'bulk';
         linkBulkAll = Array.isArray(data.candidates) ? data.candidates : [];
         linkBulkMeta = data;
+        // Never surface single-extract Facebook errors during successful bulk analyze
         if (summary) {
           var typeLabel = (data.summary && data.summary.type) || 'video';
           var count = (data.summary && data.summary.count) || linkBulkAll.length;
@@ -1726,10 +1861,12 @@
             .replace('{type}', String(typeLabel));
         }
         setBulkUiVisible(true);
+        var singlePreview = document.getElementById('cam-link-single-preview');
+        if (singlePreview) singlePreview.hidden = true;
         var countInput = document.getElementById('cam-link-bulk-count');
         if (countInput) {
-          countInput.max = String(Math.min(40, Math.max(1, linkBulkAll.length || 1)));
-          countInput.value = String(Math.min(12, linkBulkAll.length || 1));
+          countInput.max = String(Math.min(80, Math.max(1, linkBulkAll.length || 1)));
+          countInput.value = String(Math.min(24, linkBulkAll.length || 1));
         }
         renderBulkGrid();
         if (statusEl) {
@@ -1741,9 +1878,10 @@
         return;
       }
 
-      // single
+      // single — exactly one media element visible (CSS also hides [hidden] media)
       linkMode = 'single';
       setBulkUiVisible(false);
+      closeSubmodal('cam-link-fs');
       linkSingle = {
         url: data.normalized_url || url,
         kind: data.kind || 'video',
@@ -1762,7 +1900,18 @@
       var image = document.getElementById('cam-link-preview-image');
       if (single) single.hidden = false;
       [video, audio, image].forEach(function (el) {
-        if (el) el.hidden = true;
+        if (!el) return;
+        try {
+          if (el.pause) el.pause();
+        } catch (eP) {}
+        el.removeAttribute('src');
+        if (el.removeAttribute) el.removeAttribute('poster');
+        if (el.load) {
+          try {
+            el.load();
+          } catch (eL) {}
+        }
+        el.hidden = true;
       });
       var target = data.kind === 'audio' ? audio : data.kind === 'image' ? image : video;
       if (target && data.preview_url) {
