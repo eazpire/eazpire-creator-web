@@ -859,8 +859,27 @@ body.cam-modal-open {
   gap: 4px;
   margin-bottom: 2px;
 }
+.cam-folder-row.is-deleting {
+  pointer-events: none;
+  opacity: 0.55;
+}
 .cam-folder-row .cam-sidebar__item {
   flex: 1 1 auto;
+}
+.cam-deleting-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fdba74;
+  border-radius: 50%;
+  animation: cam-spin 0.7s linear infinite;
+  flex: 0 0 14px;
+}
+@keyframes cam-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .cam-folder-row.is-drop-target .cam-sidebar__item {
   outline: 1px dashed rgba(249, 115, 22, 0.55);
@@ -955,6 +974,65 @@ body.cam-modal-open {
 }
 .cam-card.is-dragging {
   opacity: 0.55;
+}
+.cam-card.is-deleting {
+  pointer-events: none;
+  opacity: 0.55;
+  cursor: default;
+}
+.cam-card__deleting {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+.cam-card__deleting .cam-deleting-spinner {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+  border-width: 3px;
+}
+.cam-card--pending {
+  cursor: default;
+  pointer-events: none;
+  border-style: dashed;
+  border-color: rgba(249, 115, 22, 0.35);
+  background: rgba(249, 115, 22, 0.06);
+}
+.cam-card--pending.is-failed {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(248, 113, 113, 0.08);
+}
+.cam-card__pending {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.28);
+}
+.cam-card__pending .cam-deleting-spinner {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+  border-width: 3px;
+}
+.cam-card__pending-fail {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(248, 113, 113, 0.25);
+  color: #fecaca;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
 }
 .cam-card--playable {
   cursor: pointer;

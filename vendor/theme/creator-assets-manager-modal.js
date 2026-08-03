@@ -35,6 +35,10 @@
   var dragExpandFolderId = null;
   var linkPhoneSessionId = null;
   var linkPhonePollTimer = null;
+  var deletingFolderIds = Object.create(null); // folderId -> true
+  var deletingAssetKeys = Object.create(null); // assetKey -> true
+  var folderRemoveBusy = false;
+  var assetActionBusy = false;
   var PHONE_UPLOAD_WORKER_FALLBACK = 'https://creator-engine.eazpire.workers.dev';
 
   function isBadTranslationString(s) {
@@ -74,6 +78,17 @@
 
   function $(sel, el) {
     return (el || root).querySelector(sel);
+  }
+
+  /** Prefer document lookup — confirm overlays are reparented to body via mountOverlay. */
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function closeAllConfirmModals() {
+    closeSubmodal('cam-confirm-folder-remove');
+    closeSubmodal('cam-confirm-assets-permanent');
+    closeSubmodal('cam-confirm-asset-action');
   }
 
   function escapeHtml(s) {
@@ -336,23 +351,30 @@
         isExpanded = !!expandedParents[parent.id];
       }
 
+      var parentDeleting = !!deletingFolderIds[parent.id];
       html +=
         '<div class="cam-folder-group' +
         (isExpanded ? ' is-expanded' : '') +
         '" data-cam-folder-group="' +
         escapeHtml(parent.id) +
         '">' +
-        '<div class="cam-folder-row" data-cam-folder-id="' +
+        '<div class="cam-folder-row' +
+        (parentDeleting ? ' is-deleting' : '') +
+        '" data-cam-folder-id="' +
         escapeHtml(parent.id) +
         '" data-system-key="' +
         escapeHtml(parent.system_key || '') +
-        '" data-cam-drop="0">' +
+        '" data-cam-drop="0"' +
+        (parentDeleting ? ' aria-busy="true"' : '') +
+        '>' +
         (hasChildren
           ? '<button type="button" class="cam-folder-expand" data-cam-expand="' +
             escapeHtml(parent.id) +
             '" aria-expanded="' +
             (isExpanded ? 'true' : 'false') +
-            '">' +
+            '"' +
+            (parentDeleting ? ' disabled' : '') +
+            '>' +
             (isExpanded ? '▾' : '▸') +
             '</button>'
           : '') +
@@ -360,15 +382,19 @@
         active +
         '" data-cam-folder="' +
         escapeHtml(parent.id) +
-        '">' +
+        '"' +
+        (parentDeleting ? ' disabled' : '') +
+        '>' +
         '<span class="cam-sidebar__item-label">' +
         escapeHtml(label) +
         '</span>' +
-        '<span class="cam-sidebar__count">' +
-        String(parent.asset_count || 0) +
-        '</span>' +
+        (parentDeleting
+          ? '<span class="cam-deleting-spinner" aria-hidden="true"></span>'
+          : '<span class="cam-sidebar__count">' +
+            String(parent.asset_count || 0) +
+            '</span>') +
         '</button>' +
-        (canAddChild
+        (canAddChild && !parentDeleting
           ? '<button type="button" class="cam-folder-add-child" data-cam-add-child="' +
             escapeHtml(parent.id) +
             '" title="' +
@@ -625,18 +651,72 @@
     modal.setAttribute('aria-hidden', 'false');
   }
 
+  function getActiveLinkDownloadPlaceholders() {
+    if (!linkDownloadJob || !Array.isArray(linkDownloadJob.items)) return [];
+    if (String(linkDownloadJob.folderId) !== String(currentFolder)) return [];
+    return linkDownloadJob.items.filter(function (item) {
+      if (!item) return false;
+      if (item.status === 'ready' && item.asset_id) {
+        return !assets.some(function (a) {
+          return String(a.id) === String(item.asset_id);
+        });
+      }
+      return (
+        item.status === 'pending' ||
+        item.status === 'downloading' ||
+        item.status === 'failed'
+      );
+    });
+  }
+
+  function renderPendingDownloadCard(item) {
+    var st = String((item && item.status) || 'pending');
+    var label =
+      st === 'failed'
+        ? i18n('link_download_card_failed', 'Failed')
+        : st === 'downloading'
+          ? i18n('link_download_card_downloading', 'Downloading…')
+          : i18n('link_download_card_pending', 'Queued…');
+    var failClass = st === 'failed' ? ' is-failed' : '';
+    var busy = st === 'failed' ? '' : ' aria-busy="true"';
+    return (
+      '<article class="cam-card cam-card--pending' +
+      failClass +
+      '" data-cam-pending-id="' +
+      escapeHtml(item.localId || '') +
+      '" draggable="false"' +
+      busy +
+      '>' +
+      '<div class="cam-card__pending" aria-hidden="true">' +
+      (st === 'failed'
+        ? '<span class="cam-card__pending-fail">!</span>'
+        : '<span class="cam-deleting-spinner"></span>') +
+      '</div>' +
+      '<div class="cam-card__meta">' +
+      '<div class="cam-card__title">' +
+      escapeHtml(label) +
+      '</div>' +
+      '<div class="cam-card__type">' +
+      escapeHtml(i18n('link_download_card_type', 'Link download')) +
+      '</div>' +
+      '</div>' +
+      '</article>'
+    );
+  }
+
   function renderAssets() {
     var grid = $('#cam-asset-grid');
     var empty = $('#cam-empty');
     if (!grid) return;
-    if (!assets.length) {
+    var placeholders = getActiveLinkDownloadPlaceholders();
+    if (!assets.length && !placeholders.length) {
       grid.innerHTML = '';
       if (empty) empty.hidden = false;
       updateFloatBar();
       return;
     }
     if (empty) empty.hidden = true;
-    grid.innerHTML = assets
+    var realHtml = assets
       .map(function (a) {
         var key = assetKey(a);
         var checked = selected[key] ? ' checked' : '';
@@ -647,13 +727,17 @@
         var tip = socialTooltipText(a);
         var hasSocial = !!socialMetaOf(a);
         var titleAttr = tip ? ' title="' + escapeHtml(tip) + '"' : '';
+        var isDeleting = !!deletingAssetKeys[key];
         return (
           '<article class="cam-card' +
           selClass +
           playClass +
           playingClass +
           (hasSocial ? ' cam-card--social' : '') +
-          '" draggable="true" data-cam-asset-key="' +
+          (isDeleting ? ' is-deleting' : '') +
+          '" draggable="' +
+          (isDeleting ? 'false' : 'true') +
+          '" data-cam-asset-key="' +
           escapeHtml(key) +
           '" data-asset-type="' +
           escapeHtml(a.asset_type) +
@@ -664,17 +748,24 @@
           '" data-folder-id="' +
           escapeHtml(a.folder_id || '') +
           '"' +
+          (isDeleting ? ' aria-busy="true"' : '') +
           titleAttr +
           '>' +
+          (isDeleting
+            ? '<div class="cam-card__deleting" aria-hidden="true"><span class="cam-deleting-spinner"></span></div>'
+            : '') +
           '<input type="checkbox" class="cam-card__check" data-cam-select' +
           checked +
+          (isDeleting ? ' disabled' : '') +
           ' aria-label="' +
           escapeHtml(i18n('select_asset', 'Select asset')) +
           '">' +
           (hasSocial
             ? '<button type="button" class="cam-card__social-btn" data-cam-social-detail aria-label="' +
               escapeHtml(i18n('social_view_details', 'View social details')) +
-              '">i</button>'
+              '"' +
+              (isDeleting ? ' disabled' : '') +
+              '>i</button>'
             : '') +
           mediaPreviewHtml(a) +
           '<div class="cam-card__meta">' +
@@ -690,6 +781,8 @@
         );
       })
       .join('');
+    var pendingHtml = placeholders.map(renderPendingDownloadCard).join('');
+    grid.innerHTML = pendingHtml + realHtml;
     updateFloatBar();
   }
 
@@ -717,8 +810,9 @@
     }
   }
 
-  async function loadAssets() {
-    setStatus(i18n('loading', 'Loading…'), false);
+  async function loadAssets(opts) {
+    opts = opts || {};
+    if (!opts.silent) setStatus(i18n('loading', 'Loading…'), false);
     var params = {
       folder_id: currentFolder,
       type: currentType || undefined,
@@ -727,12 +821,12 @@
     // Exclude search when browsing Hidden is fine; API excludes Hidden from search for non-hidden views.
     var data = await apiGet('marketing-assets-list', params);
     if (!data || !data.ok) {
-      setStatus(i18n('error_load_assets', 'Could not load assets.'), true);
+      if (!opts.silent) setStatus(i18n('error_load_assets', 'Could not load assets.'), true);
       assets = [];
       renderAssets();
       return;
     }
-    setStatus('', false);
+    if (!opts.silent) setStatus('', false);
     assets = data.assets || [];
     // Drop selections that are no longer visible
     Object.keys(selected).forEach(function (k) {
@@ -740,12 +834,25 @@
         delete selected[k];
       }
     });
+    // Keep in-flight deleting markers until local remove finishes
     renderAssets();
   }
 
   async function refreshAll() {
     await loadFolders();
     await loadAssets();
+  }
+
+  /** Background sync after optimistic local remove — no blocking status line. */
+  function softRefreshAfterMutation() {
+    Promise.resolve()
+      .then(function () {
+        return loadFolders();
+      })
+      .then(function () {
+        return loadAssets({ silent: true });
+      })
+      .catch(function () {});
   }
 
   function openFolderSettings(mode, opts) {
@@ -863,20 +970,27 @@
       if (hasGrand && expandedParents[child.id] == null) {
         expandedParents[child.id] = true;
       }
+      var childDeleting = !!deletingFolderIds[child.id];
       html +=
-        '<div class="cam-folder-row cam-folder-row--nested" data-cam-folder-id="' +
+        '<div class="cam-folder-row cam-folder-row--nested' +
+        (childDeleting ? ' is-deleting' : '') +
+        '" data-cam-folder-id="' +
         escapeHtml(child.id) +
         '" data-cam-drop="1" data-cam-depth="' +
         String(level) +
         '" style="padding-left:' +
         String(8 + level * 12) +
-        'px">' +
+        'px"' +
+        (childDeleting ? ' aria-busy="true"' : '') +
+        '>' +
         (hasGrand
           ? '<button type="button" class="cam-folder-expand" data-cam-expand="' +
             escapeHtml(child.id) +
             '" aria-expanded="' +
             (childExpanded ? 'true' : 'false') +
-            '">' +
+            '"' +
+            (childDeleting ? ' disabled' : '') +
+            '>' +
             (childExpanded ? '▾' : '▸') +
             '</button>'
           : '<span class="cam-folder-expand-spacer" aria-hidden="true"></span>') +
@@ -884,13 +998,17 @@
         cActive +
         '" data-cam-folder="' +
         escapeHtml(child.id) +
-        '">' +
+        '"' +
+        (childDeleting ? ' disabled' : '') +
+        '>' +
         '<span class="cam-sidebar__item-label">' +
         escapeHtml(child.title) +
         '</span>' +
-        '<span class="cam-sidebar__count">' +
-        String(child.asset_count || 0) +
-        '</span>' +
+        (childDeleting
+          ? '<span class="cam-deleting-spinner" aria-hidden="true"></span>'
+          : '<span class="cam-sidebar__count">' +
+            String(child.asset_count || 0) +
+            '</span>') +
         '</button>' +
         '</div>';
       if (hasGrand && childExpanded) {
@@ -910,41 +1028,90 @@
     return found;
   }
 
+  function isFolderUnderRoot(rootId, targetId) {
+    if (!rootId || !targetId) return false;
+    if (String(rootId) === String(targetId)) return true;
+    var rootNode = findFolderById(rootId);
+    if (!rootNode) return false;
+    var hit = false;
+    walkFolderTree([rootNode], function (node) {
+      if (node && String(node.id) === String(targetId)) hit = true;
+    });
+    return hit;
+  }
+
+  function removeFolderSubtreeFromTree(folderId) {
+    function filterNodes(nodes) {
+      var out = [];
+      (nodes || []).forEach(function (n) {
+        if (!n || String(n.id) === String(folderId)) return;
+        var copy = Object.assign({}, n);
+        if (copy.children) copy.children = filterNodes(copy.children);
+        out.push(copy);
+      });
+      return out;
+    }
+    foldersTree = filterNodes(foldersTree);
+  }
+
   function openFolderRemoveConfirm(folderId) {
     pendingFolderRemoveId = folderId;
     removeAssetsConfirmed = false;
-    var check = $('#cam-remove-assets-check');
+    var check = byId('cam-remove-assets-check');
     if (check) check.checked = false;
     openSubmodal('cam-confirm-folder-remove');
   }
 
   async function confirmFolderRemove() {
-    var check = $('#cam-remove-assets-check');
-    var removeAssets = !!(check && check.checked);
+    if (folderRemoveBusy) return;
+    var check = byId('cam-remove-assets-check');
+    var removeAssets = !!(check && check.checked) || !!removeAssetsConfirmed;
     if (removeAssets && !removeAssetsConfirmed) {
       openSubmodal('cam-confirm-assets-permanent');
       return;
     }
-    var data = await apiPost('marketing-asset-folder-delete', {
-      folder_id: pendingFolderRemoveId,
-      remove_assets: removeAssets
-    });
-    closeSubmodal('cam-confirm-folder-remove');
-    closeSubmodal('cam-confirm-assets-permanent');
+    var folderId = pendingFolderRemoveId;
+    if (!folderId) return;
+
+    folderRemoveBusy = true;
+    // Close confirm dialogs immediately; keep the main Assets Manager open.
+    closeAllConfirmModals();
     pendingFolderRemoveId = null;
     removeAssetsConfirmed = false;
-    if (!data || !data.ok) {
+    if (check) check.checked = false;
+
+    deletingFolderIds[folderId] = true;
+    renderFolderTree();
+
+    try {
+      var data = await apiPost('marketing-asset-folder-delete', {
+        folder_id: folderId,
+        remove_assets: removeAssets
+      });
+      if (!data || !data.ok) {
+        delete deletingFolderIds[folderId];
+        renderFolderTree();
+        setStatus(i18n('error_remove_folder', 'Could not remove folder.'), true);
+        return;
+      }
+      if (isFolderUnderRoot(folderId, currentFolder)) currentFolder = 'all';
+      removeFolderSubtreeFromTree(folderId);
+      delete deletingFolderIds[folderId];
+      renderFolderTree();
+      softRefreshAfterMutation();
+    } catch (err) {
+      delete deletingFolderIds[folderId];
+      renderFolderTree();
       setStatus(i18n('error_remove_folder', 'Could not remove folder.'), true);
-      return;
+    } finally {
+      folderRemoveBusy = false;
     }
-    if (currentFolder === data.folder_id) currentFolder = 'all';
-    await refreshAll();
   }
 
   function openAssetActionConfirm(action, items) {
     pendingAssetAction = { action: action, items: items };
-    var title = $('#cam-confirm-asset-title');
-    var body = $('#cam-confirm-asset-body');
+    var title = byId('cam-confirm-asset-title');
+    var body = byId('cam-confirm-asset-body');
     if (action === 'hide') {
       if (title) title.textContent = i18n('confirm_hide_title', 'Hide assets?');
       if (body) {
@@ -966,28 +1133,73 @@
   }
 
   async function confirmAssetAction() {
-    if (!pendingAssetAction) return;
+    if (assetActionBusy || !pendingAssetAction) return;
     var action = pendingAssetAction.action;
     var items = pendingAssetAction.items || [];
-    var data;
-    if (action === 'hide') {
-      data = await apiPost('marketing-assets-move', { items: items, target: 'hidden' });
-    } else {
-      data = await apiPost('marketing-assets-delete', { items: items });
+    if (!items.length) {
+      pendingAssetAction = null;
+      closeSubmodal('cam-confirm-asset-action');
+      return;
     }
-    closeSubmodal('cam-confirm-asset-action');
+
+    assetActionBusy = true;
     pendingAssetAction = null;
-    selected = Object.create(null);
-    if (!data || !data.ok) {
+    // Close confirm immediately; keep the main Assets Manager open.
+    closeSubmodal('cam-confirm-asset-action');
+
+    var keys = items.map(function (it) {
+      return String(it.asset_type) + ':' + String(it.asset_id);
+    });
+    keys.forEach(function (k) {
+      deletingAssetKeys[k] = true;
+      delete selected[k];
+    });
+    renderAssets();
+
+    try {
+      var data;
+      if (action === 'hide') {
+        data = await apiPost('marketing-assets-move', { items: items, target: 'hidden' });
+      } else {
+        data = await apiPost('marketing-assets-delete', { items: items });
+      }
+      if (!data || !data.ok) {
+        keys.forEach(function (k) {
+          delete deletingAssetKeys[k];
+        });
+        renderAssets();
+        setStatus(
+          action === 'hide'
+            ? i18n('error_hide', 'Could not hide assets.')
+            : i18n('error_remove_assets', 'Could not remove assets.'),
+          true
+        );
+        return;
+      }
+      var removeSet = Object.create(null);
+      keys.forEach(function (k) {
+        removeSet[k] = true;
+        delete deletingAssetKeys[k];
+      });
+      assets = assets.filter(function (a) {
+        return !removeSet[assetKey(a)];
+      });
+      renderAssets();
+      softRefreshAfterMutation();
+    } catch (err) {
+      keys.forEach(function (k) {
+        delete deletingAssetKeys[k];
+      });
+      renderAssets();
       setStatus(
         action === 'hide'
           ? i18n('error_hide', 'Could not hide assets.')
           : i18n('error_remove_assets', 'Could not remove assets.'),
         true
       );
-      return;
+    } finally {
+      assetActionBusy = false;
     }
-    await refreshAll();
   }
 
   function itemsForMoveFromKeys(keys) {
@@ -1350,21 +1562,32 @@
       return;
     }
 
+    handleConfirmCancelClick(t);
+  }
+
+  function handleConfirmCancelClick(t) {
+    if (!t || !t.closest) return false;
     var cancel = t.closest('[data-cam-confirm-cancel]');
-    if (cancel) {
-      var which = cancel.getAttribute('data-cam-confirm-cancel');
-      if (which === 'folder-remove') closeSubmodal('cam-confirm-folder-remove');
-      if (which === 'assets-permanent') {
-        closeSubmodal('cam-confirm-assets-permanent');
-        var checkBox = $('#cam-remove-assets-check');
-        if (checkBox) checkBox.checked = false;
-        removeAssetsConfirmed = false;
-      }
-      if (which === 'asset-action') {
-        closeSubmodal('cam-confirm-asset-action');
-        pendingAssetAction = null;
-      }
+    if (!cancel) return false;
+    var which = cancel.getAttribute('data-cam-confirm-cancel');
+    if (which === 'folder-remove') {
+      closeSubmodal('cam-confirm-folder-remove');
+      pendingFolderRemoveId = null;
+      removeAssetsConfirmed = false;
+      var checkReset = byId('cam-remove-assets-check');
+      if (checkReset) checkReset.checked = false;
     }
+    if (which === 'assets-permanent') {
+      closeSubmodal('cam-confirm-assets-permanent');
+      var checkBox = byId('cam-remove-assets-check');
+      if (checkBox) checkBox.checked = false;
+      removeAssetsConfirmed = false;
+    }
+    if (which === 'asset-action') {
+      closeSubmodal('cam-confirm-asset-action');
+      pendingAssetAction = null;
+    }
+    return true;
   }
 
   function onRootContextMenu(e) {
@@ -1415,6 +1638,8 @@
   var linkBulkTypeFilter = { image: true, video: true, reel: true };
   var linkBulkAvailableTypes = { image: false, video: false, reel: false };
   var camUploading = false;
+  /** CAM-scoped background link download (survives Add-from-link close). */
+  var linkDownloadJob = null;
 
   function isDesktopViewport() {
     return !(window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
@@ -2331,6 +2556,7 @@
 
   async function pollLinkIngestStatus(assetId, statusEl, progressLabel, folderId) {
     for (var attempt = 0; attempt < 120; attempt++) {
+      // Progress UI lives on CAM status / placeholders — link modal may already be closed.
       if (statusEl && attempt > 0 && attempt % 3 === 0) {
         statusEl.textContent =
           progressLabel || i18n('link_processing', 'Downloading media in the background…');
@@ -2384,6 +2610,141 @@
       console.warn('[AssetsManager] ensure membership failed', assetId, eMove);
       return false;
     }
+  }
+
+  function isRateLimitError(data) {
+    var err = data && (data.error || data.error_code);
+    return (
+      err === 'rate_limit_minute' ||
+      err === 'rate_limit_day' ||
+      err === 'rate_limit'
+    );
+  }
+
+  function updateLinkDownloadCamStatus() {
+    if (!linkDownloadJob) return;
+    var job = linkDownloadJob;
+    var done = 0;
+    var failed = 0;
+    var active = 0;
+    job.items.forEach(function (it) {
+      if (it.status === 'ready') done += 1;
+      else if (it.status === 'failed') failed += 1;
+      else active += 1;
+    });
+    if (job.running) {
+      setStatus(
+        i18n('link_download_progress_cam', 'Downloading {done}/{total}…')
+          .replace('{done}', String(done))
+          .replace('{total}', String(job.total)),
+        false
+      );
+      return;
+    }
+    if (done >= job.total && failed === 0) {
+      setStatus(
+        i18n('link_bulk_done_all', 'Downloaded {ok}/{total}.')
+          .replace('{ok}', String(done))
+          .replace('{total}', String(job.total)),
+        false
+      );
+    } else if (done > 0) {
+      setStatus(
+        i18n('link_bulk_done_partial', 'Downloaded {ok}/{total} ({failed} failed).')
+          .replace('{ok}', String(done))
+          .replace('{total}', String(job.total))
+          .replace('{failed}', String(failed)),
+        failed > 0
+      );
+    } else {
+      setStatus(
+        i18n(
+          'link_bulk_done_none',
+          'Could not download the selected items. Try again or use Device upload.'
+        ),
+        true
+      );
+    }
+  }
+
+  function pruneFinishedLinkDownloadJobSoon() {
+    if (!linkDownloadJob || linkDownloadJob.running) return;
+    var jobId = linkDownloadJob.id;
+    setTimeout(function () {
+      if (!linkDownloadJob || linkDownloadJob.id !== jobId || linkDownloadJob.running) return;
+      // Drop failed placeholders; ready ones should already be real assets.
+      linkDownloadJob.items = linkDownloadJob.items.filter(function (it) {
+        return it.status !== 'failed' && !(it.status === 'ready' && it.asset_id);
+      });
+      if (!linkDownloadJob.items.length) linkDownloadJob = null;
+      renderAssets();
+    }, 4500);
+  }
+
+  /**
+   * Sequential CAM-scoped runner. Closing Add-from-link must NOT cancel this.
+   */
+  async function runLinkDownloadJob(job) {
+    if (!job || !job.folderId || !job.items || !job.items.length) return;
+    job.running = true;
+    linkDownloadJob = job;
+    updateLinkDownloadCamStatus();
+    renderAssets();
+
+    var okAssetIds = Object.create(null);
+    for (var i = 0; i < job.items.length; i++) {
+      // Job may be replaced only if cleared; abort if id changed.
+      if (!linkDownloadJob || linkDownloadJob.id !== job.id) return;
+      var item = job.items[i];
+      item.status = 'downloading';
+      updateLinkDownloadCamStatus();
+      renderAssets();
+      try {
+        var one = await ingestOneLinkWithFolder(item.url, job.folderId, null, null);
+        if (one && one.ok && one.asset_id) {
+          item.status = 'ready';
+          item.asset_id = String(one.asset_id);
+          okAssetIds[String(one.asset_id)] = true;
+        } else {
+          item.status = 'failed';
+          item.error = (one && (one.error || one.message)) || 'failed';
+        }
+      } catch (itemErr) {
+        console.warn('[AssetsManager] background item failed', item.url, itemErr);
+        item.status = 'failed';
+        item.error = (itemErr && itemErr.message) || 'failed';
+      }
+      updateLinkDownloadCamStatus();
+      renderAssets();
+      // Incremental folder refresh so ready cards replace skeletons without waiting for all.
+      if (String(currentFolder) === String(job.folderId)) {
+        try {
+          await loadAssets({ silent: true });
+        } catch (eRefresh) {}
+      }
+      if (i < job.items.length - 1) await sleep(500);
+    }
+
+    // Honest count vs folder membership (dedupe cached asset_ids).
+    var folderCount = await countAssetsInFolder(job.folderId);
+    var uniqueOk = Object.keys(okAssetIds).length;
+    if (folderCount > 0 && folderCount !== uniqueOk) {
+      console.warn('[AssetsManager] bulk count mismatch', {
+        uniqueOk: uniqueOk,
+        folderCount: folderCount,
+        total: job.total
+      });
+    }
+    job.running = false;
+    updateLinkDownloadCamStatus();
+    try {
+      await loadFolders();
+      if (String(currentFolder) === String(job.folderId)) {
+        await loadAssets({ silent: true });
+      }
+    } catch (eFinal) {}
+    renderAssets();
+    pruneFinishedLinkDownloadJobSoon();
   }
 
   function stopBulkThumbWarmup() {
@@ -2485,28 +2846,34 @@
   /**
    * Ingest one URL into folderId. Success ONLY when asset reaches ready AND is in the folder.
    * Does not count mere enqueue (202/queued) as success.
+   * statusEl is optional (background job passes null — progress lives on CAM).
    */
   async function ingestOneLinkWithFolder(url, folderId, statusEl, progressLabel) {
-    var data = await apiPost('video-studio-link-ingest', {
-      url: url,
-      format: 'mp4',
-      folder_id: folderId
-    });
-    // Rate limit: brief wait + one retry (do not abort the rest of the bulk).
-    if (
-      data &&
-      !data.ok &&
-      !data.asset_id &&
-      (data.error === 'rate_limit_minute' ||
-        data.error === 'rate_limit_day' ||
-        data.error === 'rate_limit')
-    ) {
-      await sleep(1500);
-      data = await apiPost('video-studio-link-ingest', {
-        url: url,
-        format: 'mp4',
-        folder_id: folderId
-      });
+    var data = null;
+    var rateAttempt = 0;
+    var rateWaits = [2000, 5000, 10000, 15000];
+    while (rateAttempt <= rateWaits.length) {
+      try {
+        data = await apiPost('video-studio-link-ingest', {
+          url: url,
+          format: 'mp4',
+          folder_id: folderId
+        });
+      } catch (postErr) {
+        return {
+          ok: false,
+          error: 'network_error',
+          message: (postErr && postErr.message) || 'Network error'
+        };
+      }
+      if (data && (data.ok || data.asset_id)) break;
+      if (data && isRateLimitError(data) && rateAttempt < rateWaits.length) {
+        // Minute bucket is 60s — wait longer than a single short retry.
+        await sleep(rateWaits[rateAttempt]);
+        rateAttempt += 1;
+        continue;
+      }
+      break;
     }
     if (!data || (!data.ok && !data.asset_id)) {
       return {
@@ -2520,7 +2887,13 @@
     }
 
     var status = String(data.status || '').toLowerCase();
-    if (status === 'queued' || status === 'processing' || status === 'pending') {
+    // Empty/unknown but we have an id — poll until ready (do not treat enqueue as done).
+    if (
+      !status ||
+      status === 'queued' ||
+      status === 'processing' ||
+      status === 'pending'
+    ) {
       var polled = await pollLinkIngestStatus(data.asset_id, statusEl, progressLabel, folderId);
       if (!polled.ok) {
         return {
@@ -2534,18 +2907,35 @@
     }
 
     if (status === 'ready' || data.cached) {
-      var inFolder = await ensureAssetInFolder(data.asset_id, data.asset, folderId);
-      if (!inFolder) {
-        // Status endpoint can re-confirm membership
+      var inFolder = false;
+      if (folderId) {
+        // Prefer status endpoint (re-upserts membership server-side).
         try {
           var st = await apiGet('video-studio-link-ingest-status', {
             asset_id: data.asset_id,
             folder_id: folderId
           });
-          inFolder = !!(st && st.status === 'ready' && st.in_folder);
+          if (st && st.status === 'ready' && st.in_folder) {
+            inFolder = true;
+          } else if (st && st.status === 'ready' && st.in_folder === false) {
+            inFolder = await ensureAssetInFolder(data.asset_id, st.asset || data.asset, folderId);
+            if (inFolder) {
+              try {
+                var st2 = await apiGet('video-studio-link-ingest-status', {
+                  asset_id: data.asset_id,
+                  folder_id: folderId
+                });
+                inFolder = !!(st2 && st2.status === 'ready' && st2.in_folder);
+              } catch (eSt2) {
+                /* keep move result */
+              }
+            }
+          }
         } catch (eSt) {
-          inFolder = false;
+          inFolder = await ensureAssetInFolder(data.asset_id, data.asset, folderId);
         }
+      } else {
+        inFolder = true;
       }
       if (!inFolder) {
         return {
@@ -2564,10 +2954,32 @@
       };
     }
 
-    // Unknown non-terminal status — do not count as success.
+    // Unknown non-terminal status — poll rather than false success.
+    if (data.asset_id) {
+      var polledUnknown = await pollLinkIngestStatus(
+        data.asset_id,
+        statusEl,
+        progressLabel,
+        folderId
+      );
+      if (polledUnknown.ok) {
+        return { ok: true, asset_id: data.asset_id, status: 'ready', in_folder: true };
+      }
+      return {
+        ok: false,
+        asset_id: data.asset_id,
+        error:
+          (polledUnknown.data &&
+            (polledUnknown.data.error || polledUnknown.data.error_code)) ||
+          'unexpected_status',
+        message:
+          (polledUnknown.data && polledUnknown.data.message) ||
+          'Unexpected ingest status: ' + status
+      };
+    }
+
     return {
       ok: false,
-      asset_id: data.asset_id,
       error: 'unexpected_status',
       message: 'Unexpected ingest status: ' + status
     };
@@ -2584,95 +2996,61 @@
     }
   }
 
+  function collectSelectedBulkUrls() {
+    var urls = [];
+    var seenUrl = Object.create(null);
+    Object.keys(linkBulkSelected).forEach(function (selKey) {
+      if (!linkBulkSelected[selKey]) return;
+      var key = String(selKey || '').trim();
+      if (!key) return;
+      var match = (linkBulkAll || []).find(function (c) {
+        return String(c.id || '') === key || String(c.url || '') === key;
+      });
+      var url = match && match.url ? String(match.url).trim() : '';
+      // Never fall back to bare numeric ids — they are not ingestable URLs.
+      if (!url || !/^https?:\/\//i.test(url) || seenUrl[url]) return;
+      seenUrl[url] = true;
+      urls.push(url);
+    });
+    return urls;
+  }
+
+  /**
+   * Download click: create folder → navigate CAM → seed skeletons → close link modal →
+   * run sequential ingest on CAM scope (closing Add-from-link must not abort).
+   */
   async function submitLinkDownload() {
     var statusEl = document.getElementById('cam-link-status');
     var submit = document.getElementById('cam-link-submit');
     if (submit) submit.disabled = true;
 
-    if (linkMode === 'single' && linkSingle) {
+    if (linkDownloadJob && linkDownloadJob.running) {
       if (statusEl) {
-        statusEl.textContent = i18n('link_downloading', 'Downloading…');
-        statusEl.className = 'cam-link-status is-info';
-      }
-      try {
-        var sourceInputSingle = document.getElementById('cam-link-url');
-        var sourceUrlSingle = sourceInputSingle
-          ? String(sourceInputSingle.value || '').trim()
-          : linkSingle.url;
-        var singleFolder = await ensureSocialDownloadFolder({
-          sourceUrl: sourceUrlSingle || linkSingle.url,
-          bulk: false,
-          platform: platformLabelFromUrlClient(sourceUrlSingle || linkSingle.url),
-          profileName: personNameFromLinkMeta(
-            { profile_name: linkSingle.profile_name },
-            sourceUrlSingle || linkSingle.url
-          )
-        });
-        if (!singleFolder.ok || !singleFolder.folder) {
-          if (statusEl) {
-            statusEl.textContent =
-              singleFolder.message ||
-              i18n('link_error_generic', 'Could not add media from that link.');
-            statusEl.className = 'cam-link-status is-error';
-          }
-          if (submit) submit.disabled = false;
-          return;
-        }
-        var single = await ingestOneLinkWithFolder(
-          linkSingle.url,
-          singleFolder.folder.id,
-          statusEl,
-          i18n('link_downloading', 'Downloading…')
+        statusEl.textContent = i18n(
+          'link_download_busy',
+          'A download is already running. Wait for it to finish.'
         );
-        if (!single || !single.ok) {
-          if (statusEl) {
-            statusEl.textContent =
-              (single && single.message) ||
-              i18n('link_error_generic', 'Could not add media from that link.');
-            statusEl.className = 'cam-link-status is-error';
-          }
-          if (submit) submit.disabled = false;
-          return;
-        }
-        if (statusEl) {
-          statusEl.textContent = i18n(
-            'link_download_done_folder',
-            'Saved under Downloads → {platform} → {person}.'
-          )
-            .replace('{platform}', singleFolder.platform || 'Web')
-            .replace('{person}', singleFolder.profileName || 'Profile');
-          statusEl.className = 'cam-link-status is-success';
-        }
-        currentFolder = singleFolder.folder.id;
-        closeLinkModal();
-        await refreshAll();
-      } catch (e) {
-        if (statusEl) {
-          statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
-          statusEl.className = 'cam-link-status is-error';
-        }
-        if (submit) submit.disabled = false;
+        statusEl.className = 'cam-link-status is-error';
       }
+      if (submit) submit.disabled = false;
       return;
     }
 
-    if (linkMode === 'bulk') {
-      // Selection keys are candidate ids (fallback: url). Resolve to canonical URLs.
-      var urls = [];
-      var seenUrl = Object.create(null);
-      Object.keys(linkBulkSelected).forEach(function (selKey) {
-        if (!linkBulkSelected[selKey]) return;
-        var key = String(selKey || '').trim();
-        if (!key) return;
-        var match = (linkBulkAll || []).find(function (c) {
-          return String(c.id || '') === key || String(c.url || '') === key;
-        });
-        var url = match && match.url ? String(match.url).trim() : '';
-        // Never fall back to bare numeric ids — they are not ingestable URLs.
-        if (!url || !/^https?:\/\//i.test(url) || seenUrl[url]) return;
-        seenUrl[url] = true;
-        urls.push(url);
-      });
+    var mode = linkMode;
+    var capturedSingle = linkSingle ? Object.assign({}, linkSingle) : null;
+    var capturedBulkMeta = linkBulkMeta ? Object.assign({}, linkBulkMeta) : null;
+    var sourceInput = document.getElementById('cam-link-url');
+    var sourceUrl = sourceInput ? String(sourceInput.value || '').trim() : '';
+    var urls = [];
+    var bulk = false;
+
+    if (mode === 'single' && capturedSingle && capturedSingle.url) {
+      urls = [String(capturedSingle.url).trim()];
+      bulk = false;
+      if (!sourceUrl) sourceUrl = capturedSingle.url;
+    } else if (mode === 'bulk') {
+      urls = collectSelectedBulkUrls();
+      bulk = true;
       if (!urls.length) {
         if (statusEl) {
           statusEl.textContent = i18n('link_bulk_none_selected', 'Select at least one asset.');
@@ -2681,113 +3059,108 @@
         if (submit) submit.disabled = false;
         return;
       }
-      // Stop lazy thumb extracts — they return HTTP 422 and flood Facebook while we download.
       stopBulkThumbWarmup();
-      if (statusEl) {
-        statusEl.textContent = i18n('link_bulk_downloading', 'Creating folder and downloading…');
-        statusEl.className = 'cam-link-status is-info';
-      }
-      try {
-        var sourceInput = document.getElementById('cam-link-url');
-        var sourceUrl = sourceInput ? String(sourceInput.value || '').trim() : '';
-        // Nested path: Motion Videos → Downloads → Platform → Person → YYYY-MM-DD HH:mm
-        var folderSetup = await ensureSocialDownloadFolder({
-          sourceUrl: sourceUrl,
-          bulk: true,
-          platform: (linkBulkMeta && linkBulkMeta.platform) || undefined,
-          profileName: personNameFromLinkMeta(linkBulkMeta, sourceUrl)
-        });
-        if (!folderSetup.ok || !folderSetup.folder || !folderSetup.folder.id) {
-          if (statusEl) {
-            statusEl.textContent =
-              folderSetup.message ||
-              i18n('link_error_generic', 'Could not add media from that link.');
-            statusEl.className = 'cam-link-status is-error';
-          }
-          if (submit) submit.disabled = false;
-          return;
-        }
-        var folderId = folderSetup.folder.id;
-        var okAssetIds = Object.create(null);
-        var failCount = 0;
-        var total = urls.length;
-        for (var i = 0; i < urls.length; i++) {
-          var progressLabel = i18n(
-            'link_bulk_progress',
-            'Downloading {current}/{total}…'
-          )
-            .replace('{current}', String(i + 1))
-            .replace('{total}', String(total));
-          if (statusEl) {
-            statusEl.textContent = progressLabel;
-            statusEl.className = 'cam-link-status is-info';
-          }
-          try {
-            var one = await ingestOneLinkWithFolder(urls[i], folderId, statusEl, progressLabel);
-            if (one && one.ok && one.asset_id) {
-              // Deduplicate: same cached asset_id must not inflate the success count.
-              okAssetIds[String(one.asset_id)] = true;
-            } else {
-              failCount += 1;
-            }
-          } catch (itemErr) {
-            console.warn('[AssetsManager] bulk item failed', urls[i], itemErr);
-            failCount += 1;
-          }
-          // Small gap between items — avoid parallel Facebook/Cobalt flooding.
-          if (i < urls.length - 1) await sleep(400);
-        }
-        // Honest count = distinct ready assets that are members of the target folder.
-        var folderCount = await countAssetsInFolder(folderId);
-        var uniqueOk = Object.keys(okAssetIds).length;
-        var okCount = Math.min(folderCount, uniqueOk) || folderCount || uniqueOk;
-        if (folderCount > 0 && folderCount !== uniqueOk) {
-          console.warn(
-            '[AssetsManager] bulk count mismatch',
-            { uniqueOk: uniqueOk, folderCount: folderCount, failCount: failCount, total: total }
-          );
-          okCount = folderCount;
-          failCount = Math.max(0, total - okCount);
-        }
-        var resultMsg;
-        if (okCount >= total && failCount === 0) {
-          resultMsg = i18n('link_bulk_done_all', 'Downloaded {ok}/{total}.')
-            .replace('{ok}', String(okCount))
-            .replace('{total}', String(total));
-        } else if (okCount > 0) {
-          resultMsg = i18n(
-            'link_bulk_done_partial',
-            'Downloaded {ok}/{total} ({failed} failed).'
-          )
-            .replace('{ok}', String(okCount))
-            .replace('{total}', String(total))
-            .replace('{failed}', String(failCount));
-        } else {
-          resultMsg = i18n(
-            'link_bulk_done_none',
-            'Could not download the selected items. Try again or use Device upload.'
-          );
-        }
+    } else {
+      if (submit) submit.disabled = false;
+      return;
+    }
+
+    if (statusEl) {
+      statusEl.textContent = i18n(
+        'link_download_preparing',
+        'Creating folder…'
+      );
+      statusEl.className = 'cam-link-status is-info';
+    }
+
+    try {
+      var folderSetup = await ensureSocialDownloadFolder({
+        sourceUrl: sourceUrl,
+        bulk: bulk,
+        platform:
+          (capturedBulkMeta && capturedBulkMeta.platform) ||
+          platformLabelFromUrlClient(sourceUrl || (urls[0] || '')),
+        profileName: personNameFromLinkMeta(
+          bulk
+            ? capturedBulkMeta
+            : { profile_name: capturedSingle && capturedSingle.profile_name },
+          sourceUrl || (urls[0] || '')
+        )
+      });
+      if (!folderSetup.ok || !folderSetup.folder || !folderSetup.folder.id) {
         if (statusEl) {
-          statusEl.textContent = resultMsg;
-          statusEl.className =
-            'cam-link-status ' + (okCount > 0 ? 'is-success' : 'is-error');
-        }
-        if (okCount > 0) {
-          currentFolder = folderId;
-          closeLinkModal();
-          await refreshAll();
-        } else if (submit) {
-          submit.disabled = false;
-        }
-      } catch (e) {
-        console.warn('[AssetsManager] bulk ingest failed', e);
-        if (statusEl) {
-          statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+          statusEl.textContent =
+            folderSetup.message ||
+            i18n('link_error_generic', 'Could not add media from that link.');
           statusEl.className = 'cam-link-status is-error';
         }
         if (submit) submit.disabled = false;
+        return;
       }
+
+      var folderId = folderSetup.folder.id;
+      var job = {
+        id:
+          'camdl_' +
+          Date.now().toString(36) +
+          '_' +
+          Math.random().toString(36).slice(2, 8),
+        folderId: folderId,
+        total: urls.length,
+        running: true,
+        platform: folderSetup.platform || 'Web',
+        profileName: folderSetup.profileName || 'Profile',
+        items: urls.map(function (u, idx) {
+          return {
+            localId: 'p' + idx + '_' + Math.random().toString(36).slice(2, 7),
+            url: u,
+            status: 'pending',
+            asset_id: null,
+            error: null
+          };
+        })
+      };
+
+      // Navigate CAM to the new folder and show skeletons before closing link modal.
+      currentFolder = folderId;
+      linkDownloadJob = job;
+      closeLinkModal();
+      setStatus(
+        i18n('link_download_progress_cam', 'Downloading {done}/{total}…')
+          .replace('{done}', '0')
+          .replace('{total}', String(job.total)),
+        false
+      );
+      try {
+        await loadFolders();
+        await loadAssets({ silent: true });
+      } catch (eNav) {
+        renderAssets();
+      }
+      renderAssets();
+
+      // Fire-and-forget — must not depend on Add-from-link being open.
+      runLinkDownloadJob(job).catch(function (eJob) {
+        console.warn('[AssetsManager] background download job failed', eJob);
+        if (linkDownloadJob && linkDownloadJob.id === job.id) {
+          linkDownloadJob.running = false;
+          linkDownloadJob.items.forEach(function (it) {
+            if (it.status === 'pending' || it.status === 'downloading') {
+              it.status = 'failed';
+            }
+          });
+          updateLinkDownloadCamStatus();
+          renderAssets();
+          pruneFinishedLinkDownloadJobSoon();
+        }
+      });
+    } catch (e) {
+      console.warn('[AssetsManager] download prepare failed', e);
+      if (statusEl) {
+        statusEl.textContent = i18n('link_error_generic', 'Could not add media from that link.');
+        statusEl.className = 'cam-link-status is-error';
+      }
+      if (submit) submit.disabled = false;
     }
   }
 
@@ -3049,7 +3422,7 @@
     var settingsSave = $('#cam-folder-settings-save');
     if (settingsSave) settingsSave.addEventListener('click', saveFolderSettings);
 
-    var removeAssetsCheck = $('#cam-remove-assets-check');
+    var removeAssetsCheck = byId('cam-remove-assets-check');
     if (removeAssetsCheck) {
       removeAssetsCheck.addEventListener('change', function () {
         if (removeAssetsCheck.checked && !removeAssetsConfirmed) {
@@ -3062,20 +3435,22 @@
       });
     }
 
-    var folderRemoveOk = $('#cam-confirm-folder-remove-ok');
+    var folderRemoveOk = byId('cam-confirm-folder-remove-ok');
     if (folderRemoveOk) folderRemoveOk.addEventListener('click', confirmFolderRemove);
 
-    var permanentOk = $('#cam-confirm-assets-permanent-ok');
+    var permanentOk = byId('cam-confirm-assets-permanent-ok');
     if (permanentOk) {
       permanentOk.addEventListener('click', function () {
+        // Confirm permanent delete and run folder remove immediately —
+        // do not leave "Remove folder?" visible again (felt like a reopen).
         removeAssetsConfirmed = true;
-        var check = $('#cam-remove-assets-check');
+        var check = byId('cam-remove-assets-check');
         if (check) check.checked = true;
-        closeSubmodal('cam-confirm-assets-permanent');
+        confirmFolderRemove();
       });
     }
 
-    var assetOk = $('#cam-confirm-asset-ok');
+    var assetOk = byId('cam-confirm-asset-ok');
     if (assetOk) assetOk.addEventListener('click', confirmAssetAction);
 
     var socialClose = $('#cam-social-detail-close');
@@ -3155,6 +3530,8 @@
 
     document.addEventListener('click', function (ev) {
       if (!root || root.hidden) return;
+      // Confirm overlays live on document.body — handle Cancel outside root bubbling.
+      if (handleConfirmCancelClick(ev.target)) return;
       var menu1 = document.getElementById('cam-folder-menu');
       var menu2 = document.getElementById('cam-asset-menu');
       if (menu1 && !menu1.hidden && !menu1.contains(ev.target)) menu1.hidden = true;
