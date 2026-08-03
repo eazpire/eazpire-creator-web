@@ -680,6 +680,10 @@
           : i18n('link_download_card_pending', 'Queued…');
     var failClass = st === 'failed' ? ' is-failed' : '';
     var busy = st === 'failed' ? '' : ' aria-busy="true"';
+    var errDetail =
+      st === 'failed' && item && (item.message || item.error)
+        ? String(item.message || item.error).slice(0, 160)
+        : '';
     return (
       '<article class="cam-card cam-card--pending' +
       failClass +
@@ -687,6 +691,7 @@
       escapeHtml(item.localId || '') +
       '" draggable="false"' +
       busy +
+      (errDetail ? ' title="' + escapeHtml(errDetail) + '"' : '') +
       '>' +
       '<div class="cam-card__pending" aria-hidden="true">' +
       (st === 'failed'
@@ -698,7 +703,9 @@
       escapeHtml(label) +
       '</div>' +
       '<div class="cam-card__type">' +
-      escapeHtml(i18n('link_download_card_type', 'Link download')) +
+      escapeHtml(
+        errDetail || i18n('link_download_card_type', 'Link download')
+      ) +
       '</div>' +
       '</div>' +
       '</article>'
@@ -2556,6 +2563,7 @@
   }
 
   async function pollLinkIngestStatus(assetId, statusEl, progressLabel, folderId) {
+    var membershipTries = 0;
     for (var attempt = 0; attempt < 120; attempt++) {
       // Progress UI lives on CAM status / placeholders — link modal may already be closed.
       if (statusEl && attempt > 0 && attempt % 3 === 0) {
@@ -2567,15 +2575,23 @@
         if (folderId) params.folder_id = folderId;
         var data = await apiGet('video-studio-link-ingest-status', params);
         if (data && data.status === 'ready') {
-          // Require folder membership when a target folder was requested.
+          // Keep retrying membership — never treat a ready asset as a hard fail
+          // just because the first folder upsert raced.
           if (folderId && data.in_folder === false) {
+            membershipTries += 1;
             var moved = await ensureAssetInFolder(assetId, data.asset, folderId);
-            if (!moved) {
-              return {
-                ok: false,
-                data: { error: 'membership_failed', message: 'Saved but not in target folder.' }
-              };
+            if (!moved && membershipTries < 6) {
+              await sleep(500);
+              continue;
             }
+            // Asset is saved; count success even if membership is still catching up.
+            return {
+              ok: true,
+              asset: data.asset,
+              asset_id: assetId,
+              in_folder: !!moved,
+              membership_pending: !moved
+            };
           }
           return { ok: true, asset: data.asset, asset_id: assetId, in_folder: true };
         }
@@ -2585,7 +2601,7 @@
       }
       await sleep(2000);
     }
-    return { ok: false, data: { error: 'timeout' } };
+    return { ok: false, data: { error: 'timeout', message: 'Import timed out. Try again in a moment.' } };
   }
 
   function studioKindToAssetTypeClient(kind) {
@@ -2702,18 +2718,37 @@
       renderAssets();
       try {
         var one = await ingestOneLinkWithFolder(item.url, job.folderId, null, null);
+        // One automatic retry for transient resolve/CDN/rate-limit failures.
+        if (
+          (!one || !one.ok) &&
+          one &&
+          (isRateLimitError(one) ||
+            one.error === 'facebook_failed' ||
+            one.error === 'facebook_no_media' ||
+            one.error === 'fetch_failed' ||
+            one.error === 'cobalt_failed' ||
+            one.error === 'timeout' ||
+            one.error === 'network_error')
+        ) {
+          await sleep(2000);
+          one = await ingestOneLinkWithFolder(item.url, job.folderId, null, null);
+        }
         if (one && one.ok && one.asset_id) {
           item.status = 'ready';
           item.asset_id = String(one.asset_id);
+          item.error = null;
+          item.message = null;
           okAssetIds[String(one.asset_id)] = true;
         } else {
           item.status = 'failed';
-          item.error = (one && (one.error || one.message)) || 'failed';
+          item.error = (one && (one.error || one.error_code)) || 'failed';
+          item.message = (one && one.message) || item.error;
         }
       } catch (itemErr) {
         console.warn('[AssetsManager] background item failed', item.url, itemErr);
         item.status = 'failed';
         item.error = (itemErr && itemErr.message) || 'failed';
+        item.message = item.error;
       }
       updateLinkDownloadCamStatus();
       renderAssets();
@@ -2723,7 +2758,8 @@
           await loadAssets({ silent: true });
         } catch (eRefresh) {}
       }
-      if (i < job.items.length - 1) await sleep(500);
+      // Stagger bulk Facebook resolves — too-fast sequential hits get blocked.
+      if (i < job.items.length - 1) await sleep(1600);
     }
 
     // Honest count vs folder membership (dedupe cached asset_ids).
@@ -2789,18 +2825,35 @@
 
   function personNameFromLinkMeta(meta, sourceUrl) {
     if (meta && meta.profile_name) return String(meta.profile_name).trim();
+    var author =
+      (meta && meta.social_meta && meta.social_meta.author && meta.social_meta.author.name) ||
+      (meta && meta.author && meta.author.name) ||
+      '';
+    if (author) return String(author).trim();
+    // Bulk analyze often puts the display name on the first enriched candidate.
+    if (meta && Array.isArray(meta.candidates) && meta.candidates.length) {
+      for (var ci = 0; ci < meta.candidates.length; ci++) {
+        var cAuth =
+          meta.candidates[ci] &&
+          meta.candidates[ci].social_meta &&
+          meta.candidates[ci].social_meta.author &&
+          meta.candidates[ci].social_meta.author.name;
+        if (cAuth) return String(cAuth).trim();
+      }
+    }
     try {
       var u = new URL(String(sourceUrl || '').trim());
       var id = u.searchParams.get('id');
-      if (id) return 'Profile ' + id;
+      if (id) return 'Profile/' + id;
       var slug = (u.pathname || '/').replace(/^\/+|\/+$/g, '').split('/')[0] || '';
-      if (slug && slug !== 'profile.php') {
+      if (slug && slug !== 'profile.php' && slug !== 'watch' && slug !== 'reel' && slug !== 'reels') {
         try {
           return decodeURIComponent(slug).replace(/[-_]+/g, ' ').trim() || slug;
         } catch (eSlug) {
           return slug;
         }
       }
+      if (id) return 'Profile/' + id;
     } catch (eUrl) {}
     return 'Profile';
   }
@@ -2814,8 +2867,25 @@
       platformLabelFromUrlClient(sourceUrl);
     var person =
       (opts && opts.profileName) ||
-      personNameFromLinkMeta(linkBulkMeta || opts || {}, sourceUrl);
+      personNameFromLinkMeta(linkBulkMeta || opts || {}, sourceUrl) ||
+      'Profile';
     var datetimeTitle = bulk ? formatLocalDateTimeFolderTitle(new Date()) : null;
+    // Explicit path segments — never rely on legacy flat "title only" create.
+    var folderPath = [
+      { title: platform, description: platform + ' imports', tags: ['downloads', String(platform).toLowerCase()] },
+      {
+        title: person,
+        description: sourceUrl ? 'Imports from ' + sourceUrl : person + ' on ' + platform,
+        tags: ['downloads', String(platform).toLowerCase(), 'profile']
+      }
+    ];
+    if (bulk && datetimeTitle) {
+      folderPath.push({
+        title: datetimeTitle,
+        description: 'Bulk download ' + datetimeTitle,
+        tags: ['downloads', String(platform).toLowerCase(), 'bulk']
+      });
+    }
     var data = await apiPost('marketing-asset-link-bulk-ingest', {
       urls: [],
       create_folder_only: true,
@@ -2825,6 +2895,7 @@
       platform: platform,
       profile_name: person,
       datetime_title: datetimeTitle || undefined,
+      folder_path: folderPath,
       parent_system_key: 'downloads'
     });
     if (!data || !data.ok || !data.folder || !data.folder.id) {
@@ -2938,13 +3009,9 @@
       } else {
         inFolder = true;
       }
-      if (!inFolder) {
-        return {
-          ok: false,
-          asset_id: data.asset_id,
-          error: 'membership_failed',
-          message: 'Saved but not in target folder.'
-        };
+      // Ready assets count as success; membership is best-effort with retries above.
+      if (!inFolder && folderId) {
+        await ensureAssetInFolder(data.asset_id, data.asset, folderId);
       }
       return {
         ok: true,
@@ -3117,12 +3184,13 @@
             url: u,
             status: 'pending',
             asset_id: null,
-            error: null
+            error: null,
+            message: null
           };
         })
       };
 
-      // Navigate CAM to the new folder and show skeletons before closing link modal.
+      // Navigate CAM to the leaf folder (Platform → Person → [DateTime]) and expand ancestors.
       currentFolder = folderId;
       linkDownloadJob = job;
       closeLinkModal();
@@ -3134,6 +3202,13 @@
       );
       try {
         await loadFolders();
+        // Expand every ancestor so Downloads → Facebook → Person → DateTime is visible.
+        (folderSetup.folders || []).forEach(function (f) {
+          if (f && f.id) expandedParents[f.id] = true;
+          if (f && f.parent_id) expandedParents[f.parent_id] = true;
+        });
+        ensureParentExpandedForCurrent();
+        renderFolderTree();
         await loadAssets({ silent: true });
       } catch (eNav) {
         renderAssets();
