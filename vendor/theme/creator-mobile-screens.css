@@ -1095,6 +1095,14 @@
 .creator-creations-card--upload-pending {
   border-color: rgba(249, 115, 22, 0.45);
 }
+.creator-creations-card--publishing {
+  border-color: rgba(245, 158, 11, 0.55);
+  pointer-events: none;
+  cursor: wait;
+}
+.creator-creations-card--publishing .creator-creations-saving-overlay__label {
+  color: #fcd34d;
+}
 .creator-creations-card-library-btn--status,
 .creator-creations-list-item-library-btn--status {
   pointer-events: none;

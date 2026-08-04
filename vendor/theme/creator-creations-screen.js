@@ -183,8 +183,13 @@
     return jid !== '';
   }
 
+  function isDesignPublishActive(d) {
+    return !!(d && (d.publish_active || d.publish_session_id));
+  }
+
   function isBulkSelectableDesign(d) {
     if (d && (d.upload_pending || d._pendingUploadKey)) return false;
+    if (isDesignPublishActive(d)) return false;
     if (designsActivityFilter === 'active') return bulkEligibleSavedDesign(d);
     return bulkEligibleInactiveSavedLibrary(d) || bulkEligibleInactiveUnsavedGenerated(d);
   }
@@ -1696,7 +1701,7 @@
       return true;
     }
     return designs.some(function (d) {
-      return d && d.saving_to_library;
+      return d && (d.saving_to_library || isDesignPublishActive(d));
     });
   }
 
@@ -1716,7 +1721,8 @@
   function appendSavingToLibraryOverlay(container, design) {
     if (!container || !design) return;
     var uploadPending = !!design.upload_pending;
-    if (!uploadPending && !design.saving_to_library) return;
+    var publishActive = isDesignPublishActive(design);
+    if (!uploadPending && !design.saving_to_library && !publishActive) return;
     var overlay = document.createElement('div');
     overlay.className = 'creator-creations-saving-overlay';
     overlay.setAttribute('aria-hidden', 'true');
@@ -1725,7 +1731,10 @@
     overlay.appendChild(spinner);
     var label = document.createElement('span');
     label.className = 'creator-creations-saving-overlay__label';
-    if (uploadPending) {
+    if (publishActive) {
+      label.textContent =
+        (window.CreatorMobileI18n && window.CreatorMobileI18n.creationsPublishing) || 'Publishing…';
+    } else if (uploadPending) {
       label.textContent = resolveUploadStatusLabel(design.upload_status);
     } else {
       label.textContent =
@@ -1736,6 +1745,7 @@
     if (container.classList) {
       container.classList.add('creator-creations-card--saving');
       if (uploadPending) container.classList.add('creator-creations-card--upload-pending');
+      if (publishActive) container.classList.add('creator-creations-card--publishing');
     }
   }
 
@@ -2104,6 +2114,7 @@
 
   function openCreationsDesignDetailModal(design) {
     if (design && design.upload_pending) return;
+    if (isDesignPublishActive(design)) return;
     if (isInactiveLibraryDesign(design)) {
       console.info('[CreationsScreen] Inactive (unsaved generated) → job preview modal', {
         job_id: design.job_id || null
@@ -2192,6 +2203,11 @@
 
     var idStr = design.id != null ? String(design.id).trim() : '';
     var uploadPending = !!design.upload_pending;
+    var publishActive = isDesignPublishActive(design);
+    if (publishActive) {
+      card.classList.add('creator-creations-card--publishing');
+      card.setAttribute('aria-busy', 'true');
+    }
     if (uploadPending) {
       var statusBtn = document.createElement('button');
       statusBtn.type = 'button';
@@ -2201,7 +2217,7 @@
       statusBtn.disabled = true;
       card.appendChild(statusBtn);
       card.classList.add('creator-creations-card--upload-pending');
-    } else if (idStr) {
+    } else if (idStr && !publishActive) {
       var badgeBtn = document.createElement('button');
       badgeBtn.type = 'button';
       badgeBtn.className = 'creator-creations-card-products-badge';
@@ -3771,6 +3787,7 @@
 
       var design = resolveDesignFromEvent(e);
       if (!design) return;
+      if (isDesignPublishActive(design) || design.upload_pending) return;
       if (e && e.type === 'click') {
         // Delay single-click action so double-click can override it.
         if (pendingClickTimer) clearTimeout(pendingClickTimer);
