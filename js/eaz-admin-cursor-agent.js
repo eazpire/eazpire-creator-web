@@ -46,15 +46,21 @@
   };
 
   var CONSOLE_MAX = 200;
+  /** Prefer recent useful lines when attaching to a prompt (size-safe for Cursor API). */
+  var CONSOLE_DUMP_MAX_LINES = 80;
+  var CONSOLE_DUMP_MAX_CHARS = 20 * 1024;
+  var CONSOLE_NOISE_RE =
+    /Tracking Prevention|ERR_BLOCKED_BY_CLIENT|net::ERR_BLOCKED|Failed to load resource: net::ERR_BLOCKED|preload.*was preloaded but not used|was preloaded using link preload but not used|Access to (XMLHttpRequest|fetch).*has been blocked by CORS policy.*monorail|privacy-banner|connect\.facebook\.net|google-analytics\.com|googletagmanager\.com|doubleclick\.net|merchant.?center/i;
 
   function ensureConsoleStore() {
     var store = global.__EAZ_CA_CONSOLE__;
     if (!store || typeof store !== "object") {
-      store = { buf: [], max: CONSOLE_MAX, hooked: false, installedAt: null };
+      store = { buf: [], max: CONSOLE_MAX, hooked: false, installedAt: null, noiseOmitted: 0 };
       global.__EAZ_CA_CONSOLE__ = store;
     }
     if (!Array.isArray(store.buf)) store.buf = [];
     store.max = store.max || CONSOLE_MAX;
+    if (typeof store.noiseOmitted !== "number") store.noiseOmitted = 0;
     return store;
   }
 
@@ -72,14 +78,30 @@
     }
   }
 
+  function isConsoleNoise(level, message) {
+    var msg = String(message || "");
+    if (!msg) return false;
+    // Keep our own capture markers even if they match loosely.
+    if (msg.indexOf("[eaz-ca]") !== -1) return false;
+    if (CONSOLE_NOISE_RE.test(msg)) return true;
+    // Edge "Tracking Prevention blocked access to storage for …" often arrives as info/log.
+    if (/blocked access to (storage|script|xhr|fetch)/i.test(msg)) return true;
+    return false;
+  }
+
   function pushConsole(level, args) {
     var store = ensureConsoleStore();
     var parts = [];
     for (var i = 0; i < args.length; i++) parts.push(serializeConsoleArg(args[i]));
+    var message = parts.join(" ").slice(0, 4000);
+    if (isConsoleNoise(level, message)) {
+      store.noiseOmitted = (store.noiseOmitted || 0) + 1;
+      return;
+    }
     store.buf.push({
       t: new Date().toISOString(),
       level: level,
-      message: parts.join(" ").slice(0, 4000),
+      message: message,
       href: location.href || "",
     });
     while (store.buf.length > store.max) store.buf.shift();
@@ -148,6 +170,7 @@
     var buf = store.buf || [];
     var pageUrl = location.href || "";
     var installedAt = store.installedAt || "(unknown)";
+    var noiseOmitted = store.noiseOmitted || 0;
     var header =
       "Page URL: " +
       pageUrl +
@@ -158,6 +181,11 @@
       " (max " +
       (store.max || CONSOLE_MAX) +
       ")\n";
+    if (noiseOmitted > 0) {
+      header +=
+        noiseOmitted +
+        " tracking/analytics noise lines omitted (Tracking Prevention, adblock, pixels).\n";
+    }
     if (!buf.length) {
       return (
         header +
@@ -166,11 +194,37 @@
         formatResourceFailures()
       );
     }
-    var lines = buf.map(function (e) {
+
+    // Prefer warn/error/exception; fill remaining slots with recent info/log.
+    var priority = [];
+    var rest = [];
+    for (var i = 0; i < buf.length; i++) {
+      var lv = String(buf[i].level || "").toLowerCase();
+      if (lv === "error" || lv === "warn" || lv === "exception") priority.push(buf[i]);
+      else rest.push(buf[i]);
+    }
+    var selected = priority.concat(rest);
+    if (selected.length > CONSOLE_DUMP_MAX_LINES) {
+      selected = selected.slice(selected.length - CONSOLE_DUMP_MAX_LINES);
+    }
+
+    var lines = selected.map(function (e) {
       var hrefNote = e.href && e.href !== pageUrl ? " {" + e.href + "}" : "";
       return "[" + e.t + "] " + String(e.level || "?").toUpperCase() + ": " + e.message + hrefNote;
     });
-    return header + "\n" + lines.join("\n") + formatResourceFailures();
+    var body = lines.join("\n");
+    if (body.length > CONSOLE_DUMP_MAX_CHARS) {
+      body =
+        body.slice(body.length - CONSOLE_DUMP_MAX_CHARS) +
+        "\n…[console dump truncated to last " +
+        CONSOLE_DUMP_MAX_CHARS +
+        " chars]";
+    }
+    var note =
+      selected.length < buf.length
+        ? "\n(Showing " + selected.length + " of " + buf.length + " buffered lines; prefer warn/error.)\n"
+        : "\n";
+    return header + note + body + formatResourceFailures();
   }
 
   function buildConsolePromptBlock() {
@@ -245,6 +299,40 @@
     return u.toString();
   }
 
+  function formatApiError(err, fallback) {
+    var data = (err && err.data) || {};
+    var detail = data.detail;
+    var detailMsg = "";
+    if (detail && typeof detail === "object") {
+      if (detail.error && typeof detail.error === "object") {
+        detailMsg = detail.error.message || detail.error.code || "";
+      } else if (typeof detail.message === "string") {
+        detailMsg = detail.message;
+      } else if (typeof detail.error === "string") {
+        detailMsg = detail.error;
+      }
+    } else if (typeof detail === "string") {
+      detailMsg = detail;
+    }
+    var parts = [];
+    if (data.message) parts.push(String(data.message));
+    else if (detailMsg) parts.push(String(detailMsg));
+    else if (err && err.message) parts.push(String(err.message));
+    else if (data.error) parts.push(String(data.error));
+    else parts.push(fallback || "Request failed");
+    var status = err && err.status ? err.status : data.status;
+    if (status && String(parts[0]).indexOf(String(status)) === -1) {
+      parts[0] = "[" + status + "] " + parts[0];
+    }
+    if (data.error && parts[0].indexOf(String(data.error)) === -1 && data.error !== "cursor_send_failed") {
+      parts.push("(" + data.error + ")");
+    }
+    if (detailMsg && parts[0].indexOf(detailMsg) === -1) {
+      parts.push(detailMsg);
+    }
+    return parts.filter(Boolean).join(" — ").slice(0, 500);
+  }
+
   async function api(op, opts) {
     opts = opts || {};
     var method = opts.method || "GET";
@@ -263,9 +351,10 @@
       return {};
     });
     if (!res.ok || data.ok === false) {
-      var err = new Error(data.error || data.message || "http_" + res.status);
+      var err = new Error(data.message || data.error || "http_" + res.status);
       err.status = res.status;
       err.data = data;
+      err.displayMessage = formatApiError(err, "http_" + res.status);
       throw err;
     }
     return data;
@@ -1087,7 +1176,7 @@
         await followRun(e.data.chat_id, e.data.run_id || "");
         return;
       }
-      setStatus(e.message || "Send failed");
+      setStatus((e && e.displayMessage) || formatApiError(e, "Send failed"));
       state.assets = sentAssets.concat(state.assets).slice(0, 5);
       renderAssets();
     }
