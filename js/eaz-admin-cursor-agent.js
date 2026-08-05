@@ -38,9 +38,76 @@
     assets: [],
     streaming: false,
     attachOpen: false,
+    functionsOpen: false,
+    optScreenshot: false,
+    optConsole: false,
     recognition: null,
     listening: false,
   };
+
+  var CONSOLE_MAX = 120;
+  var consoleBuf = [];
+  var consoleHooked = false;
+
+  function serializeConsoleArg(a) {
+    try {
+      if (a instanceof Error) return a.stack || a.message || String(a);
+      if (typeof a === "string") return a;
+      return JSON.stringify(a);
+    } catch (e) {
+      try {
+        return String(a);
+      } catch (e2) {
+        return "[unserializable]";
+      }
+    }
+  }
+
+  function pushConsole(level, args) {
+    var parts = [];
+    for (var i = 0; i < args.length; i++) parts.push(serializeConsoleArg(args[i]));
+    consoleBuf.push({
+      t: new Date().toISOString(),
+      level: level,
+      message: parts.join(" ").slice(0, 4000),
+    });
+    if (consoleBuf.length > CONSOLE_MAX) consoleBuf.shift();
+  }
+
+  function installConsoleCapture() {
+    if (consoleHooked) return;
+    consoleHooked = true;
+    var levels = ["log", "info", "warn", "error", "debug"];
+    levels.forEach(function (level) {
+      var orig = console[level] ? console[level].bind(console) : null;
+      console[level] = function () {
+        try {
+          pushConsole(level, arguments);
+        } catch (e) {}
+        if (orig) return orig.apply(console, arguments);
+      };
+    });
+    global.addEventListener("error", function (ev) {
+      pushConsole("error", [
+        (ev.message || "Error") +
+          (ev.filename ? " @" + ev.filename + ":" + (ev.lineno || "?") : ""),
+      ]);
+    });
+    global.addEventListener("unhandledrejection", function (ev) {
+      pushConsole("error", ["UnhandledRejection:", ev.reason]);
+    });
+  }
+
+  installConsoleCapture();
+
+  function formatConsoleDump() {
+    if (!consoleBuf.length) return "(no console entries captured yet)";
+    return consoleBuf
+      .map(function (e) {
+        return "[" + e.t + "] " + e.level.toUpperCase() + ": " + e.message;
+      })
+      .join("\n");
+  }
 
   var els = {};
 
@@ -392,6 +459,25 @@
     await captureDisplay(false);
   }
 
+  /** Hide agent UI so the request screenshot shows the page underneath. */
+  async function capturePageForRequest() {
+    var rootWasHidden = els.root ? els.root.hidden : true;
+    var fabWasHidden = els.fab ? els.fab.hidden : true;
+    try {
+      if (els.root) els.root.hidden = true;
+      if (els.fab) els.fab.hidden = true;
+      await new Promise(function (r) {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(r);
+        });
+      });
+      await captureViewport();
+    } finally {
+      if (els.root) els.root.hidden = rootWasHidden;
+      if (els.fab) els.fab.hidden = fabWasHidden;
+    }
+  }
+
   async function captureDisplay(withCrop) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
       setStatus("Screen capture not supported in this browser");
@@ -663,13 +749,46 @@
     }
   }
 
+  function syncFunctionsUi() {
+    if (els.optScreenshot) els.optScreenshot.checked = !!state.optScreenshot;
+    if (els.optConsole) els.optConsole.checked = !!state.optConsole;
+    if (els.functionsBtn) {
+      els.functionsBtn.classList.toggle(
+        "is-active",
+        !!(state.optScreenshot || state.optConsole || state.functionsOpen)
+      );
+    }
+  }
+
   async function sendPrompt() {
     if (state.streaming) return;
     var text = (els.input && els.input.value.trim()) || "";
-    if (!text && !state.assets.length) {
-      setStatus("Enter a prompt or attach an image");
+    var needCapture = state.optScreenshot || state.optConsole;
+    if (!text && !state.assets.length && !needCapture) {
+      setStatus("Enter a prompt or enable Functions (screenshot / console)");
       return;
     }
+
+    state.functionsOpen = false;
+    if (els.functionsMenu) els.functionsMenu.classList.remove("is-open");
+
+    if (state.optScreenshot) {
+      setStatus("Capturing screenshot for request…");
+      try {
+        await capturePageForRequest();
+      } catch (eCap) {
+        setStatus("Screenshot failed: " + (eCap.message || eCap));
+      }
+    }
+
+    if (state.optConsole) {
+      text =
+        (text ? text + "\n\n" : "") +
+        "## Browser console (auto-captured)\n```\n" +
+        formatConsoleDump() +
+        "\n```";
+    }
+
     var images = state.assets.map(function (a) {
       return { url: a.url };
     });
@@ -755,7 +874,15 @@
       '<button type="button" class="eaz-ca-icon-btn" data-ca="mic" title="Voice">🎤</button>' +
       '<button type="button" class="eaz-ca-icon-btn" data-ca="attach" title="Attach">📎</button>' +
       '<textarea data-ca="input" rows="2" placeholder="Ask Cursor to change this page…"></textarea>' +
-      '<div class="eaz-ca-compose-actions"><button type="button" class="eaz-ca-btn eaz-ca-btn-primary" data-ca="send">Send</button></div>' +
+      '<div class="eaz-ca-compose-actions">' +
+      '<button type="button" class="eaz-ca-btn" data-ca="functions" title="Functions">Functions</button>' +
+      '<button type="button" class="eaz-ca-btn eaz-ca-btn-primary" data-ca="send">Send</button>' +
+      "</div>" +
+      "</div>" +
+      '<div class="eaz-ca-functions-menu" data-ca="functions-menu">' +
+      '<label class="eaz-ca-check"><input type="checkbox" data-ca="opt-screenshot" /> Take screenshot with request</label>' +
+      '<label class="eaz-ca-check"><input type="checkbox" data-ca="opt-console" /> Include browser console</label>' +
+      '<p class="eaz-ca-functions-hint">Checked options are applied when you press Send.</p>' +
       "</div>" +
       '<div class="eaz-ca-status" data-ca="status"></div>' +
       '<input type="file" accept="image/*" hidden data-ca="file" />' +
@@ -788,12 +915,17 @@
       modeSelect: root.querySelector('[data-ca="mode"]'),
       contextChip: root.querySelector('[data-ca="context"]'),
       attachMenu: root.querySelector('[data-ca="attach-menu"]'),
+      functionsMenu: root.querySelector('[data-ca="functions-menu"]'),
+      functionsBtn: root.querySelector('[data-ca="functions"]'),
+      optScreenshot: root.querySelector('[data-ca="opt-screenshot"]'),
+      optConsole: root.querySelector('[data-ca="opt-console"]'),
       file: root.querySelector('[data-ca="file"]'),
       sendBtn: root.querySelector('[data-ca="send"]'),
       micBtn: root.querySelector('[data-ca="mic"]'),
       tabChat: root.querySelector('[data-ca="tab-chat"]'),
       tabViewer: root.querySelector('[data-ca="tab-viewer"]'),
     };
+    syncFunctionsUi();
 
     fab.addEventListener("click", function () {
       openShell();
@@ -846,9 +978,27 @@
       }
     });
     els.micBtn.addEventListener("click", toggleVoice);
+    els.functionsBtn.addEventListener("click", function () {
+      state.functionsOpen = !state.functionsOpen;
+      state.attachOpen = false;
+      if (els.attachMenu) els.attachMenu.classList.remove("is-open");
+      els.functionsMenu.classList.toggle("is-open", state.functionsOpen);
+      syncFunctionsUi();
+    });
+    els.optScreenshot.addEventListener("change", function () {
+      state.optScreenshot = !!els.optScreenshot.checked;
+      syncFunctionsUi();
+    });
+    els.optConsole.addEventListener("change", function () {
+      state.optConsole = !!els.optConsole.checked;
+      syncFunctionsUi();
+    });
     root.querySelector('[data-ca="attach"]').addEventListener("click", function () {
       state.attachOpen = !state.attachOpen;
+      state.functionsOpen = false;
+      if (els.functionsMenu) els.functionsMenu.classList.remove("is-open");
       els.attachMenu.classList.toggle("is-open", state.attachOpen);
+      syncFunctionsUi();
     });
     root.querySelector('[data-ca="cap-full"]').addEventListener("click", function () {
       state.attachOpen = false;
@@ -900,7 +1050,10 @@
     state.open = false;
     els.root.hidden = true;
     state.attachOpen = false;
+    state.functionsOpen = false;
     if (els.attachMenu) els.attachMenu.classList.remove("is-open");
+    if (els.functionsMenu) els.functionsMenu.classList.remove("is-open");
+    syncFunctionsUi();
   }
 
   async function tryBootOnce() {
