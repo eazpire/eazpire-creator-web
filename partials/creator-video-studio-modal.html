@@ -244,7 +244,7 @@
                 </label>
                 <label class="cvs-remove-object-quality__opt">
                   <input type="radio" name="cvs-remove-object-quality" id="cvs-remove-object-quality-high" value="high">
-                  <span>High quality (≤5s)</span>
+                  <span>High quality (â‰¤5s)</span>
                 </label>
               </div>
               <label class="cvs-remove-object-brush-label" for="cvs-remove-object-brush">
@@ -266,7 +266,7 @@
               <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
             </button>
             <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="audio-remove" hidden>
-              <p class="cvs-tool-hint">Removes all audio from this video. Saving overwrites the original asset — this cannot be undone.</p>
+              <p class="cvs-tool-hint">Removes all audio from this video. Saving overwrites the original asset â€” this cannot be undone.</p>
               <div class="cvs-tool-footer">
                 <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-audio-remove-btn-preview">Preview silent video</button>
                 <button type="button" class="cvs-btn cvs-btn--danger" id="cvs-audio-remove-btn-save" disabled>Save (overwrite original)</button>
@@ -281,7 +281,7 @@
               <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
             </button>
             <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="export-audio" hidden>
-              <p class="cvs-tool-hint">Extracts the full audio track as a new audio asset (WAV — lossless and playable everywhere). Each click generates a new preview below.</p>
+              <p class="cvs-tool-hint">Extracts the full audio track as a new audio asset (WAV â€” lossless and playable everywhere). Each click generates a new preview below.</p>
               <div class="cvs-tool-footer">
                 <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-export-audio-btn-preview">Generate audio preview</button>
               </div>
@@ -296,7 +296,7 @@
               <span class="cvs-accordion-header__chevron" aria-hidden="true">&#9662;</span>
             </button>
             <div class="cvs-accordion-body cvs-tool-panel" data-tool-panel="export-vocals" hidden>
-              <p class="cvs-tool-hint">Uses AI source separation (Demucs) to isolate vocals from the instrumental — much cleaner than simple EQ. Falls back to a basic center-channel method if AI separation is unavailable for this file.</p>
+              <p class="cvs-tool-hint">Uses AI source separation (Demucs) to isolate vocals from the instrumental â€” much cleaner than simple EQ. Falls back to a basic center-channel method if AI separation is unavailable for this file.</p>
               <div class="cvs-tool-footer">
                 <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-export-vocals-btn-preview">Generate vocals</button>
               </div>
@@ -389,7 +389,7 @@
     </label>
     <label class="cvs-meta-field">
       <span>Description</span>
-      <textarea id="cvs-meta-description" maxlength="500" rows="3" placeholder="Optional notes about this project…"></textarea>
+      <textarea id="cvs-meta-description" maxlength="500" rows="3" placeholder="Optional notes about this projectâ€¦"></textarea>
     </label>
     <div class="cvs-confirm-actions">
       <button type="button" class="cvs-btn cvs-btn--ghost" id="cvs-meta-cancel">Cancel</button>
@@ -490,7 +490,7 @@
         <label class="cvs-meta-field">
           <span>Media URL</span>
           <div class="cvs-link-url-row">
-            <input type="url" id="cvs-link-url" placeholder="https://…">
+            <input type="url" id="cvs-link-url" placeholder="https://â€¦">
             <button type="button" class="cvs-btn cvs-btn--ghost cvs-link-extract-btn" id="cvs-link-extract">
               Extract
             </button>
@@ -519,7 +519,7 @@
         <div class="cvs-link-phone__qr-wrap">
           <img id="cvs-link-qr-img" class="cvs-link-phone__qr" alt="" width="120" height="120" loading="lazy">
         </div>
-        <p class="cvs-link-phone__hint">Scan, choose Browser or App, paste the link, tap Extract — it runs here automatically.</p>
+        <p class="cvs-link-phone__hint">Scan, choose Browser or App, paste the link, tap Extract â€” it runs here automatically.</p>
         <p class="cvs-link-phone__status" id="cvs-link-phone-status" role="status"></p>
       </div>
     </div>
