@@ -382,7 +382,8 @@
     renderChatList();
   }
 
-  async function openChat(id) {
+  async function openChat(id, opts) {
+    opts = opts || {};
     state.chatId = id;
     var data = await api("admin-cursor-chat-get", { query: { chat_id: id } });
     state.messages = data.messages || [];
@@ -390,6 +391,10 @@
     renderChatList();
     renderMessages();
     if (els.modelSelect && state.modelId) els.modelSelect.value = state.modelId;
+    // Resume a stuck/active run when opening the chat (poll + optional stream).
+    if (!opts.skipResume && !state.streaming && data.chat && data.chat.status === "running") {
+      followRun(id, data.chat.active_run_id || "");
+    }
   }
 
   async function newChat() {
@@ -661,91 +666,232 @@
     rec.start();
   }
 
-  async function streamRun(chatId, runId) {
+  function applyLiveText(liveEls, text) {
+    if (!liveEls || !liveEls.body || text == null) return;
+    var next = String(text);
+    if (!next) return;
+    // Prefer growing delta append; if server sends full snapshot, replace when longer.
+    if (next.indexOf(liveEls.body.textContent) === 0) {
+      liveEls.body.textContent = next;
+    } else if (liveEls.body.textContent.indexOf(next) === 0) {
+      /* ignore older/shorter snapshot */
+    } else if (next.length >= liveEls.body.textContent.length) {
+      liveEls.body.textContent = next;
+    } else {
+      liveEls.body.textContent += next;
+    }
+    els.transcript.scrollTop = els.transcript.scrollHeight;
+  }
+
+  async function pollRunOnce(chatId, runId) {
+    return api("admin-cursor-run-get", {
+      query: { chat_id: chatId, run_id: runId || "" },
+    });
+  }
+
+  /**
+   * Follow a Cursor run: poll for reliable completion + optional SSE for live text.
+   * Cloudflare Workers often stall long SSE; polling is the source of truth.
+   */
+  async function followRun(chatId, runId) {
+    if (state.streaming) return;
     state.streaming = true;
     if (els.sendBtn) els.sendBtn.disabled = true;
     setStatus("Agent running…");
+
     var live = document.createElement("div");
-    live.className = "eaz-ca-msg assistant";
-    live.textContent = "";
+    live.className = "eaz-ca-msg assistant eaz-ca-live";
+    live.innerHTML = '<div class="eaz-ca-live-meta"></div><div class="eaz-ca-live-body"></div>';
+    var liveEls = {
+      root: live,
+      meta: live.querySelector(".eaz-ca-live-meta"),
+      body: live.querySelector(".eaz-ca-live-body"),
+    };
+    liveEls.meta.textContent = "Starting…";
     els.transcript.appendChild(live);
 
-    var url = apiUrl("admin-cursor-stream", { chat_id: chatId, run_id: runId || "" });
-    try {
-      var res = await fetch(url, {
-        credentials: "include",
-        headers: { Accept: "text/event-stream" },
-      });
-      if (!res.ok || !res.body) {
-        var errData = await res.json().catch(function () {
-          return {};
-        });
-        throw new Error(errData.error || "stream_failed");
+    var finished = false;
+    var abortStream = null;
+    var pollTimer = null;
+    var streamFailed = false;
+
+    function finishUi(statusMsg) {
+      if (finished) return;
+      finished = true;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
       }
-      var reader = res.body.getReader();
-      var decoder = new TextDecoder();
-      var buf = "";
-      var eventType = "message";
-      while (true) {
-        var chunk = await reader.read();
-        if (chunk.done) break;
-        buf += decoder.decode(chunk.value, { stream: true });
-        var lines = buf.split("\n");
-        buf = lines.pop() || "";
-        for (var i = 0; i < lines.length; i++) {
-          var line = lines[i];
-          if (line.indexOf("event:") === 0) {
-            eventType = line.slice(6).trim();
-          } else if (line.indexOf("data:") === 0) {
-            var raw = line.slice(5).trim();
-            if (!raw) continue;
-            try {
-              var parsed = JSON.parse(raw);
-              var t =
-                parsed.text ||
-                (parsed.message &&
-                  parsed.message.content &&
-                  parsed.message.content
-                    .filter(function (b) {
-                      return b.type === "text";
-                    })
-                    .map(function (b) {
-                      return b.text;
-                    })
-                    .join("")) ||
-                "";
-              if ((eventType === "assistant" || parsed.type === "assistant") && t) {
-                live.textContent += t;
-                els.transcript.scrollTop = els.transcript.scrollHeight;
-              }
-              if (eventType === "result" || eventType === "done" || parsed.type === "result") {
-                if (parsed.result && !live.textContent) live.textContent = String(parsed.result);
-                setStatus("Done — refreshing live view…");
-                refreshViewer(true);
-              }
-              if (eventType === "error" || parsed.type === "error") {
-                setStatus(parsed.message || "Agent error");
-              }
-            } catch (eParse) {}
-            eventType = "message";
-          } else if (!line) {
-            eventType = "message";
-          }
-        }
+      if (abortStream) {
+        try {
+          abortStream.abort();
+        } catch (eAbort) {}
+        abortStream = null;
       }
-    } catch (e) {
-      setStatus(e.message || "Stream failed");
-      if (!live.textContent) live.textContent = String(e.message || e);
-    } finally {
-      state.streaming = false;
-      if (els.sendBtn) els.sendBtn.disabled = false;
+      setStatus(statusMsg || "Ready");
+    }
+
+    async function onTerminal(poll) {
+      var text = (poll && poll.text) || liveEls.body.textContent || "";
+      if (text) applyLiveText(liveEls, text);
+      else if (!liveEls.body.textContent) {
+        liveEls.body.textContent =
+          poll && poll.status ? "Run ended (" + poll.status + ")." : "Run finished (no text).";
+      }
+      liveEls.meta.textContent = (poll && poll.status) || "FINISHED";
+      finishUi(
+        poll && poll.status === "FINISHED"
+          ? "Done — refreshing live view…"
+          : "Ended: " + ((poll && poll.status) || "unknown")
+      );
+      if (poll && poll.status === "FINISHED") refreshViewer(true);
       await loadChats();
       if (state.chatId) {
         try {
-          await openChat(state.chatId);
-        } catch (e2) {}
+          await openChat(state.chatId, { skipResume: true });
+        } catch (eOpen) {}
       }
-      if (!els.status.textContent) setStatus("Ready");
+    }
+
+    async function tickPoll() {
+      if (finished) return;
+      try {
+        var poll = await pollRunOnce(chatId, runId);
+        if (poll.run_id && !runId) runId = poll.run_id;
+        if (poll.status) {
+          liveEls.meta.textContent = "Status: " + poll.status;
+          setStatus("Agent " + String(poll.status).toLowerCase() + "…");
+        }
+        if (poll.text) applyLiveText(liveEls, poll.text);
+        if (poll.terminal) {
+          await onTerminal(poll);
+        }
+      } catch (ePoll) {
+        // Keep trying; stream may still deliver. Surface after stream also fails.
+        if (streamFailed) {
+          liveEls.meta.textContent = ePoll.message || "poll_failed";
+        }
+      }
+    }
+
+    // Poll immediately, then every 2.5s (primary completion path).
+    await tickPoll();
+    pollTimer = setInterval(function () {
+      tickPoll();
+    }, 2500);
+
+    // Best-effort SSE for live assistant deltas (may stall on Worker).
+    try {
+      abortStream = typeof AbortController !== "undefined" ? new AbortController() : null;
+      var url = apiUrl("admin-cursor-stream", { chat_id: chatId, run_id: runId || "" });
+      var res = await fetch(url, {
+        credentials: "include",
+        headers: { Accept: "text/event-stream" },
+        signal: abortStream ? abortStream.signal : undefined,
+      });
+      if (!res.ok || !res.body) {
+        streamFailed = true;
+        var errData = await res.json().catch(function () {
+          return {};
+        });
+        liveEls.meta.textContent = "Live stream unavailable — polling…";
+        if (errData.error) setStatus("Polling (stream: " + errData.error + ")");
+      } else {
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        var buf = "";
+        var eventType = "message";
+        while (!finished) {
+          var chunk = await reader.read();
+          if (chunk.done) break;
+          buf += decoder.decode(chunk.value, { stream: true });
+          var lines = buf.split("\n");
+          buf = lines.pop() || "";
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            if (line.indexOf("event:") === 0) {
+              eventType = line.slice(6).trim();
+            } else if (line.indexOf("data:") === 0) {
+              var raw = line.slice(5).trim();
+              if (!raw) continue;
+              try {
+                var parsed = JSON.parse(raw);
+                if (eventType === "status" || parsed.status) {
+                  var st = parsed.status || "";
+                  if (st) {
+                    liveEls.meta.textContent = "Status: " + st;
+                    setStatus("Agent " + String(st).toLowerCase() + "…");
+                  }
+                }
+                if (eventType === "tool_call" || parsed.callId) {
+                  var toolName = parsed.name || "tool";
+                  var toolSt = parsed.status || "";
+                  liveEls.meta.textContent = "Tool: " + toolName + (toolSt ? " (" + toolSt + ")" : "");
+                }
+                var t =
+                  parsed.text ||
+                  (parsed.message &&
+                    parsed.message.content &&
+                    parsed.message.content
+                      .filter(function (b) {
+                        return b.type === "text";
+                      })
+                      .map(function (b) {
+                        return b.text;
+                      })
+                      .join("")) ||
+                  "";
+                if ((eventType === "assistant" || parsed.type === "assistant") && t) {
+                  // Deltas: append
+                  liveEls.body.textContent += t;
+                  els.transcript.scrollTop = els.transcript.scrollHeight;
+                }
+                if (eventType === "result" || parsed.type === "result") {
+                  var finalText = parsed.text || parsed.result || "";
+                  if (finalText) applyLiveText(liveEls, finalText);
+                  liveEls.meta.textContent = parsed.status || "FINISHED";
+                  // Let poll persist + finalize (Worker may also persist from stream).
+                  await tickPoll();
+                }
+                if (eventType === "error" || parsed.type === "error") {
+                  setStatus(parsed.message || parsed.code || "Agent error");
+                  liveEls.meta.textContent = parsed.message || "error";
+                }
+              } catch (eParse) {}
+              eventType = "message";
+            } else if (!line) {
+              eventType = "message";
+            }
+          }
+        }
+      }
+    } catch (eStream) {
+      if (!finished && (!eStream || eStream.name !== "AbortError")) {
+        streamFailed = true;
+        liveEls.meta.textContent = "Live stream closed — polling…";
+      }
+    }
+
+    // If stream ended but poll has not finished yet, wait up to ~10 min via poll.
+    var waitStart = Date.now();
+    while (!finished && Date.now() - waitStart < 10 * 60 * 1000) {
+      await tickPoll();
+      if (finished) break;
+      await new Promise(function (r) {
+        setTimeout(r, 2500);
+      });
+    }
+
+    if (!finished) {
+      finishUi("Still running — reopen chat to resume");
+      liveEls.meta.textContent = "Timeout waiting for result — reopen chat to resume";
+    }
+
+    state.streaming = false;
+    if (els.sendBtn) els.sendBtn.disabled = false;
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
     }
   }
 
@@ -814,12 +960,14 @@
       });
       state.chatId = data.chat_id;
       await loadChats();
-      if (data.run_id) await streamRun(data.chat_id, data.run_id);
-      else {
-        setStatus("Sent (no run id)");
-        await openChat(data.chat_id);
-      }
+      await followRun(data.chat_id, data.run_id || "");
     } catch (e) {
+      if (e && e.data && e.data.error === "agent_busy" && e.data.chat_id) {
+        state.chatId = e.data.chat_id;
+        setStatus("Agent already busy — resuming live updates…");
+        await followRun(e.data.chat_id, e.data.run_id || "");
+        return;
+      }
       setStatus(e.message || "Send failed");
       state.assets = sentAssets.concat(state.assets).slice(0, 5);
       renderAssets();

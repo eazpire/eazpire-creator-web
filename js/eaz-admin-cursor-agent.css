@@ -32,22 +32,23 @@
   inset: 0;
   z-index: 2147482600;
   display: flex;
-  background: rgba(10, 12, 18, 0.55);
-  backdrop-filter: blur(2px);
+  justify-content: flex-start;
+  align-items: stretch;
+  background: #070b14;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
   color: #e5e7eb;
 }
 
 .eaz-ca-panel {
   display: flex;
-  width: min(1180px, calc(100vw - 24px));
-  height: min(820px, calc(100vh - 24px));
-  margin: auto;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   background: #0b1220;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  border: none;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  box-shadow: none;
 }
 
 .eaz-ca-sidebar {
@@ -449,12 +450,21 @@
   pointer-events: none;
 }
 
+.eaz-ca-msg.eaz-ca-live .eaz-ca-live-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.eaz-ca-msg.eaz-ca-live .eaz-ca-live-meta {
+  margin-bottom: 8px;
+  font: 500 11px/1.35 inherit;
+  color: #93c5fd;
+  opacity: 0.95;
+}
+
 @media (max-width: 860px) {
   .eaz-ca-panel {
-    width: 100vw;
-    height: 100vh;
-    margin: 0;
-    border-radius: 0;
+    width: 100%;
+    height: 100%;
   }
   .eaz-ca-sidebar {
     width: 200px;
