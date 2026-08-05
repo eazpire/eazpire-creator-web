@@ -45,9 +45,18 @@
     listening: false,
   };
 
-  var CONSOLE_MAX = 120;
-  var consoleBuf = [];
-  var consoleHooked = false;
+  var CONSOLE_MAX = 200;
+
+  function ensureConsoleStore() {
+    var store = global.__EAZ_CA_CONSOLE__;
+    if (!store || typeof store !== "object") {
+      store = { buf: [], max: CONSOLE_MAX, hooked: false, installedAt: null };
+      global.__EAZ_CA_CONSOLE__ = store;
+    }
+    if (!Array.isArray(store.buf)) store.buf = [];
+    store.max = store.max || CONSOLE_MAX;
+    return store;
+  }
 
   function serializeConsoleArg(a) {
     try {
@@ -64,19 +73,27 @@
   }
 
   function pushConsole(level, args) {
+    var store = ensureConsoleStore();
     var parts = [];
     for (var i = 0; i < args.length; i++) parts.push(serializeConsoleArg(args[i]));
-    consoleBuf.push({
+    store.buf.push({
       t: new Date().toISOString(),
       level: level,
       message: parts.join(" ").slice(0, 4000),
+      href: location.href || "",
     });
-    if (consoleBuf.length > CONSOLE_MAX) consoleBuf.shift();
+    while (store.buf.length > store.max) store.buf.shift();
   }
 
+  /**
+   * Install console hooks ASAP (top of shell parse). Prefer early sniffer
+   * (console-early.js / head inject) — this is a fallback if that was missing.
+   */
   function installConsoleCapture() {
-    if (consoleHooked) return;
-    consoleHooked = true;
+    var store = ensureConsoleStore();
+    if (store.hooked) return;
+    store.hooked = true;
+    store.installedAt = store.installedAt || new Date().toISOString();
     var levels = ["log", "info", "warn", "error", "debug"];
     levels.forEach(function (level) {
       var orig = console[level] ? console[level].bind(console) : null;
@@ -96,17 +113,78 @@
     global.addEventListener("unhandledrejection", function (ev) {
       pushConsole("error", ["UnhandledRejection:", ev.reason]);
     });
+    pushConsole("info", ["[eaz-ca] browser console capture started (shell fallback)"]);
   }
 
+  // Run immediately when this file is evaluated (even with defer — before boot()).
   installConsoleCapture();
 
+  function formatResourceFailures() {
+    try {
+      if (!global.performance || !performance.getEntriesByType) return "";
+      var entries = performance.getEntriesByType("resource") || [];
+      var bad = [];
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        var status = typeof e.responseStatus === "number" ? e.responseStatus : 0;
+        if (status >= 400) {
+          bad.push(status + " " + (e.initiatorType || "resource") + " " + e.name);
+        }
+      }
+      if (!bad.length) return "";
+      return (
+        "\n## Failed / HTTP-error resources (performance timeline, last " +
+        Math.min(bad.length, 25) +
+        ")\n" +
+        bad.slice(-25).join("\n")
+      );
+    } catch (err) {
+      return "";
+    }
+  }
+
   function formatConsoleDump() {
-    if (!consoleBuf.length) return "(no console entries captured yet)";
-    return consoleBuf
-      .map(function (e) {
-        return "[" + e.t + "] " + e.level.toUpperCase() + ": " + e.message;
-      })
-      .join("\n");
+    var store = ensureConsoleStore();
+    var buf = store.buf || [];
+    var pageUrl = location.href || "";
+    var installedAt = store.installedAt || "(unknown)";
+    var header =
+      "Page URL: " +
+      pageUrl +
+      "\nCapture installed at: " +
+      installedAt +
+      "\nEntries in buffer: " +
+      buf.length +
+      " (max " +
+      (store.max || CONSOLE_MAX) +
+      ")\n";
+    if (!buf.length) {
+      return (
+        header +
+        "\n(no console entries captured since hook install — buffer empty)\n" +
+        "Note: only console/error events AFTER capture install are available." +
+        formatResourceFailures()
+      );
+    }
+    var lines = buf.map(function (e) {
+      var hrefNote = e.href && e.href !== pageUrl ? " {" + e.href + "}" : "";
+      return "[" + e.t + "] " + String(e.level || "?").toUpperCase() + ": " + e.message + hrefNote;
+    });
+    return header + "\n" + lines.join("\n") + formatResourceFailures();
+  }
+
+  function buildConsolePromptBlock() {
+    return (
+      "## Browser console logs (LIVE dump from admin browser — analyze these)\n" +
+      "IMPORTANT:\n" +
+      "- These ARE the real browser console entries from the admin's current shop/portal page.\n" +
+      "- Do NOT open Playwright, a browser, or Cloudflare dashboards to \"get logs\".\n" +
+      "- Do NOT claim you lack access to the browser console — the dump below is attached for you.\n" +
+      "- If the buffer is empty, say so and ask the admin to reproduce the issue with Functions → Include browser console enabled.\n" +
+      "```\n" +
+      formatConsoleDump() +
+      "\n```"
+    );
   }
 
   var els = {};
@@ -136,6 +214,7 @@
   }
 
   function pageContext() {
+    var store = ensureConsoleStore();
     return {
       portal: portalId(),
       href: location.href,
@@ -144,6 +223,11 @@
       title: document.title || "",
       viewport: { w: window.innerWidth, h: window.innerHeight },
       started_at: new Date().toISOString(),
+      console_capture: {
+        installed_at: store.installedAt || null,
+        entry_count: (store.buf && store.buf.length) || 0,
+        hooked: !!store.hooked,
+      },
     };
   }
 
@@ -392,8 +476,8 @@
     renderMessages();
     if (els.modelSelect && state.modelId) els.modelSelect.value = state.modelId;
     // Resume a stuck/active run when opening the chat (poll + optional stream).
-    if (!opts.skipResume && !state.streaming && data.chat && data.chat.status === "running") {
-      followRun(id, data.chat.active_run_id || "");
+    if (!opts.skipResume && data.chat && data.chat.status === "running") {
+      followRun(id, data.chat.active_run_id || "", { force: true });
     }
   }
 
@@ -693,8 +777,13 @@
    * Follow a Cursor run: poll for reliable completion + optional SSE for live text.
    * Cloudflare Workers often stall long SSE; polling is the source of truth.
    */
-  async function followRun(chatId, runId) {
-    if (state.streaming) return;
+  async function followRun(chatId, runId, opts) {
+    opts = opts || {};
+    if (state.streaming && !opts.force) return;
+    // Force-resume: tear down a stuck follow loop marker so UI can recover.
+    if (opts.force && state.streaming) {
+      state.streaming = false;
+    }
     state.streaming = true;
     if (els.sendBtn) els.sendBtn.disabled = true;
     setStatus("Agent running…");
@@ -708,12 +797,16 @@
       body: live.querySelector(".eaz-ca-live-body"),
     };
     liveEls.meta.textContent = "Starting…";
+    if (!liveEls.body.textContent) {
+      liveEls.body.textContent = "Waiting for agent status / tools / reply…";
+    }
     els.transcript.appendChild(live);
 
     var finished = false;
     var abortStream = null;
     var pollTimer = null;
     var streamFailed = false;
+    var lastToolLabel = "";
 
     function finishUi(statusMsg) {
       if (finished) return;
@@ -728,17 +821,24 @@
         } catch (eAbort) {}
         abortStream = null;
       }
+      state.streaming = false;
+      if (els.sendBtn) els.sendBtn.disabled = false;
       setStatus(statusMsg || "Ready");
     }
 
     async function onTerminal(poll) {
-      var text = (poll && poll.text) || liveEls.body.textContent || "";
+      var text = (poll && poll.text) || "";
+      // Prefer server result text; drop the placeholder waiting line.
       if (text) applyLiveText(liveEls, text);
-      else if (!liveEls.body.textContent) {
+      else if (
+        !liveEls.body.textContent ||
+        liveEls.body.textContent.indexOf("Waiting for agent") === 0
+      ) {
         liveEls.body.textContent =
           poll && poll.status ? "Run ended (" + poll.status + ")." : "Run finished (no text).";
       }
       liveEls.meta.textContent = (poll && poll.status) || "FINISHED";
+      // Clear "Agent running…" immediately when poll reports FINISHED + result.
       finishUi(
         poll && poll.status === "FINISHED"
           ? "Done — refreshing live view…"
@@ -759,10 +859,29 @@
         var poll = await pollRunOnce(chatId, runId);
         if (poll.run_id && !runId) runId = poll.run_id;
         if (poll.status) {
-          liveEls.meta.textContent = "Status: " + poll.status;
-          setStatus("Agent " + String(poll.status).toLowerCase() + "…");
+          var meta = "Status: " + poll.status;
+          if (lastToolLabel) meta += " · " + lastToolLabel;
+          liveEls.meta.textContent = meta;
+          setStatus(
+            poll.terminal
+              ? poll.status === "FINISHED"
+                ? "Done"
+                : "Ended: " + poll.status
+              : "Agent " + String(poll.status).toLowerCase() + "…"
+          );
         }
-        if (poll.text) applyLiveText(liveEls, poll.text);
+        if (poll.text) {
+          applyLiveText(liveEls, poll.text);
+          if (
+            !poll.terminal &&
+            liveEls.body.textContent &&
+            liveEls.body.textContent.indexOf("Waiting for agent") !== 0
+          ) {
+            // Partial result arrived via Get A Run — show progress before final.
+            liveEls.meta.textContent =
+              "Status: " + (poll.status || "RUNNING") + " · partial result";
+          }
+        }
         if (poll.terminal) {
           await onTerminal(poll);
         }
@@ -774,11 +893,11 @@
       }
     }
 
-    // Poll immediately, then every 2.5s (primary completion path).
+    // Poll immediately, then every 1.5s (primary completion path; SSE often stalls).
     await tickPoll();
     pollTimer = setInterval(function () {
       tickPoll();
-    }, 2500);
+    }, 1500);
 
     // Best-effort SSE for live assistant deltas (may stall on Worker).
     try {
@@ -823,10 +942,12 @@
                     setStatus("Agent " + String(st).toLowerCase() + "…");
                   }
                 }
-                if (eventType === "tool_call" || parsed.callId) {
-                  var toolName = parsed.name || "tool";
+                if (eventType === "tool_call" || parsed.type === "tool_call" || parsed.callId) {
+                  var toolName = parsed.name || parsed.toolName || "tool";
                   var toolSt = parsed.status || "";
-                  liveEls.meta.textContent = "Tool: " + toolName + (toolSt ? " (" + toolSt + ")" : "");
+                  lastToolLabel = "Tool: " + toolName + (toolSt ? " (" + toolSt + ")" : "");
+                  liveEls.meta.textContent = lastToolLabel;
+                  setStatus(lastToolLabel);
                 }
                 var t =
                   parsed.text ||
@@ -887,11 +1008,13 @@
       liveEls.meta.textContent = "Timeout waiting for result — reopen chat to resume";
     }
 
-    state.streaming = false;
-    if (els.sendBtn) els.sendBtn.disabled = false;
     if (pollTimer) {
       clearInterval(pollTimer);
       pollTimer = null;
+    }
+    if (state.streaming) {
+      state.streaming = false;
+      if (els.sendBtn) els.sendBtn.disabled = false;
     }
   }
 
@@ -928,11 +1051,7 @@
     }
 
     if (state.optConsole) {
-      text =
-        (text ? text + "\n\n" : "") +
-        "## Browser console (auto-captured)\n```\n" +
-        formatConsoleDump() +
-        "\n```";
+      text = (text ? text + "\n\n" : "") + buildConsolePromptBlock();
     }
 
     var images = state.assets.map(function (a) {
@@ -1030,7 +1149,7 @@
       '<div class="eaz-ca-functions-menu" data-ca="functions-menu">' +
       '<label class="eaz-ca-check"><input type="checkbox" data-ca="opt-screenshot" /> Take screenshot with request</label>' +
       '<label class="eaz-ca-check"><input type="checkbox" data-ca="opt-console" /> Include browser console</label>' +
-      '<p class="eaz-ca-functions-hint">Checked options are applied when you press Send.</p>' +
+      '<p class="eaz-ca-functions-hint">Checked options apply on Send. Console dump = live page logs (not Cloudflare).</p>' +
       "</div>" +
       '<div class="eaz-ca-status" data-ca="status"></div>' +
       '<input type="file" accept="image/*" hidden data-ca="file" />' +
