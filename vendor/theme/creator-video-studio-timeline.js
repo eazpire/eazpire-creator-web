@@ -8,8 +8,10 @@
   var MAX_TIMELINE_MS = 3 * 60 * 1000;
   var MAX_TRACKS = 12;
   var SEEK_THRESHOLD_PLAYING = 0.35;
-  var SEEK_THRESHOLD_PAUSED = 0.03;
+  var SEEK_THRESHOLD_PAUSED = 0.04;
   var SEEK_THRESHOLD_START = 0.15;
+  /** Preview canvas long-edge cap — full project resolution is used only for export/render. */
+  var PREVIEW_MAX_EDGE = 720;
 
   function uid(prefix) {
     return (prefix || 'id') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
@@ -70,18 +72,31 @@
       playing: false,
       _raf: 0,
       _lastTs: 0,
+      /** When true, preview canvas uses full api.width×height (export / render encode). */
+      _exportMode: false,
       onChange: opts.onChange || function () {},
+      onTick: opts.onTick || function () {},
+      onPlayhead: opts.onPlayhead || function () {},
       onSelect: opts.onSelect || function () {},
       onClipContextMenu: opts.onClipContextMenu || function () {},
     };
 
     var canvas = opts.canvas;
-    var ctx = canvas ? canvas.getContext('2d', { alpha: false }) : null;
+    var ctx = null;
+    if (canvas) {
+      try {
+        ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+      } catch (eCtx) {
+        ctx = canvas.getContext('2d', { alpha: false });
+      }
+    }
     var tracksEl = opts.tracksEl;
     var rulerEl = opts.rulerEl;
     var playheadEl = opts.playheadEl;
     var scrollEl = opts.scrollEl;
     var labels = opts.labels || {};
+    /** Last successfully painted visual frame (avoids black flashes while seeking). */
+    var lastGoodFrame = null;
 
     function timelineWidthPx() {
       var secs = Math.max(api.durationMs / 1000, 10);
@@ -254,7 +269,6 @@
           if (!moved) {
             // Plain click (no drag): seek the playhead to this clip's start.
             api.setPlayhead(clip.timelineStart || 0);
-            api.onChange();
           }
         });
       });
@@ -426,6 +440,44 @@
       });
     }
 
+    function applySeek(media, targetSec) {
+      try {
+        if (typeof media.fastSeek === 'function') media.fastSeek(targetSec);
+        else media.currentTime = targetSec;
+      } catch (e) {
+        try {
+          media.currentTime = targetSec;
+        } catch (e2) {}
+      }
+    }
+
+    function seekMediaWhenReady(media, targetSec) {
+      if (!media || media.tagName === 'IMG') return;
+      // Coalesce seeks: while a seek is in flight, only keep the latest target.
+      if (media._cvsSeeking) {
+        media._cvsQueuedSeek = targetSec;
+        return;
+      }
+      var cur = media.currentTime || 0;
+      if (Math.abs(cur - targetSec) <= SEEK_THRESHOLD_PAUSED) return;
+      media._cvsSeeking = true;
+      media._cvsQueuedSeek = null;
+      var onSeeked = function () {
+        media.removeEventListener('seeked', onSeeked);
+        media._cvsSeeking = false;
+        var queued = media._cvsQueuedSeek;
+        media._cvsQueuedSeek = null;
+        if (queued != null && Math.abs((media.currentTime || 0) - queued) > SEEK_THRESHOLD_PAUSED) {
+          seekMediaWhenReady(media, queued);
+          return;
+        }
+        // Paint the decoded frame after scrub seek completes (no black wait).
+        if (!api.playing) drawFrame(api.playheadMs);
+      };
+      media.addEventListener('seeked', onSeeked);
+      applySeek(media, targetSec);
+    }
+
     // Keeps <video>/<audio> elements playing smoothly during playback instead
     // of scrubbing (seeking) every RAF tick, which is what caused choppy
     // preview. While playing we only correct drift once it becomes large;
@@ -435,22 +487,44 @@
       var targetSec = Math.max(0, localMs / 1000);
       try {
         if (playing) {
+          media._cvsQueuedSeek = null;
           if (media.paused) {
             if (Math.abs((media.currentTime || 0) - targetSec) > SEEK_THRESHOLD_START) {
-              media.currentTime = targetSec;
+              applySeek(media, targetSec);
             }
             var p = media.play();
             if (p && p.catch) p.catch(function () {});
           } else if (Math.abs((media.currentTime || 0) - targetSec) > SEEK_THRESHOLD_PLAYING) {
-            media.currentTime = targetSec;
+            applySeek(media, targetSec);
           }
         } else {
           if (!media.paused) media.pause();
-          if (Math.abs((media.currentTime || 0) - targetSec) > SEEK_THRESHOLD_PAUSED) {
-            media.currentTime = targetSec;
-          }
+          seekMediaWhenReady(media, targetSec);
         }
       } catch (e) {}
+    }
+
+    function previewBitmapSize() {
+      var w = api.width || 1920;
+      var h = api.height || 1080;
+      if (api._exportMode) {
+        return { w: w, h: h, scale: 1 };
+      }
+      var longEdge = Math.max(w, h) || 1;
+      var scale = longEdge > PREVIEW_MAX_EDGE ? PREVIEW_MAX_EDGE / longEdge : 1;
+      // Even dimensions help some GPU paths; keep at least 2px.
+      var cw = Math.max(2, Math.round((w * scale) / 2) * 2);
+      var ch = Math.max(2, Math.round((h * scale) / 2) * 2);
+      return { w: cw, h: ch, scale: cw / w };
+    }
+
+    function ensureLastGoodFrame(bw, bh) {
+      if (!lastGoodFrame || lastGoodFrame.width !== bw || lastGoodFrame.height !== bh) {
+        lastGoodFrame = document.createElement('canvas');
+        lastGoodFrame.width = bw;
+        lastGoodFrame.height = bh;
+      }
+      return lastGoodFrame;
     }
 
     function clipAudioMix(track, clip) {
@@ -476,13 +550,20 @@
 
     function drawFrame(ms) {
       if (!ctx || !canvas) return;
-      if (canvas.width !== api.width) canvas.width = api.width;
-      if (canvas.height !== api.height) canvas.height = api.height;
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, api.width, api.height);
+      var bmp = previewBitmapSize();
+      if (canvas.width !== bmp.w) canvas.width = bmp.w;
+      if (canvas.height !== bmp.h) canvas.height = bmp.h;
+      var ps = bmp.scale || 1;
 
       var actives = activeClipsAt(ms);
       var activeAssetIds = Object.create(null);
+      var paintedVisual = false;
+      var expectsVisual = false;
+
+      // Draw in logical project space; canvas bitmap may be downscaled for preview.
+      ctx.setTransform(ps, 0, 0, ps, 0, 0);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, api.width, api.height);
 
       actives.forEach(function (item) {
         var asset = api.assetsById[item.clip.assetId];
@@ -500,11 +581,17 @@
 
         // Audio-only assets never paint on the canvas (any track).
         if (asset.kind === 'audio') return;
+        expectsVisual = true;
+
+        // HAVE_METADATA (1) is not enough; during seek keep last good frame instead of black.
         if (asset.kind === 'video' && media.readyState < 2) return;
+        if (asset.kind === 'image' && !media.complete) return;
 
         var crop = item.clip.crop || { x: 0, y: 0, w: 1, h: 1 };
         var transform = item.clip.transform || { x: 0, y: 0, scale: 1 };
-        var scale = Number(transform.scale) || 1;
+        var scale = Number(transform.scale);
+        if (!Number.isFinite(scale) || scale <= 0) scale = 1;
+        scale = clamp(scale, 0.05, 4);
         var ox = Number(transform.x) || 0;
         var oy = Number(transform.y) || 0;
 
@@ -526,9 +613,27 @@
 
         try {
           ctx.drawImage(media, sx, sy, sw, sh, dx, dy, dw, dh);
+          paintedVisual = true;
         } catch (err) {}
       });
 
+      // If active video is still seeking/decoding, restore the last good frame
+      // so scrubbing/playback never flashes solid black.
+      if (expectsVisual && !paintedVisual && lastGoodFrame) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        try {
+          ctx.drawImage(lastGoodFrame, 0, 0, bmp.w, bmp.h);
+        } catch (eRestore) {}
+      } else if (paintedVisual || !expectsVisual) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        try {
+          var hold = ensureLastGoodFrame(bmp.w, bmp.h);
+          var hctx = hold.getContext('2d');
+          hctx.drawImage(canvas, 0, 0);
+        } catch (eHold) {}
+      }
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       pauseInactiveMedia(activeAssetIds);
     }
 
@@ -550,13 +655,15 @@
         api.playing = false;
         api._raf = 0;
         api._lastTs = 0;
-        api.onChange();
+        // Persist playhead once when playback ends — never every RAF tick
+        // (that used to push undo history + autosave ~60×/s and caused lag).
+        api.onPlayhead();
         renderAll();
         return;
       }
       drawFrame(api.playheadMs);
       if (playheadEl) playheadEl.style.left = msToX(api.playheadMs) + 'px';
-      api.onChange();
+      api.onTick();
       api._raf = requestAnimationFrame(tick);
     }
 
@@ -604,10 +711,12 @@
       renderAll();
     };
 
-    api.setPlayhead = function (ms) {
+    api.setPlayhead = function (ms, opts) {
+      opts = opts || {};
       api.playheadMs = clamp(ms, 0, MAX_TIMELINE_MS);
       drawFrame(api.playheadMs);
       if (playheadEl) playheadEl.style.left = msToX(api.playheadMs) + 'px';
+      if (!opts.silent) api.onPlayhead();
     };
 
     api.togglePlay = function () {
@@ -623,6 +732,7 @@
         // Explicitly pause any media that kept playing under the old
         // playhead position now that playback has stopped.
         drawFrame(api.playheadMs);
+        api.onPlayhead();
       }
       return api.playing;
     };
@@ -818,7 +928,6 @@
     api.restartToStart = function () {
       if (api.playing) api.togglePlay();
       api.setPlayhead(0);
-      api.onChange();
     };
 
     api.seekToNextAudioClip = function () {
@@ -827,7 +936,6 @@
       for (var i = 0; i < starts.length; i++) {
         if (starts[i] > cur + 1) {
           api.setPlayhead(starts[i]);
-          api.onChange();
           return true;
         }
       }
@@ -845,7 +953,6 @@
         }
       }
       api.setPlayhead(prev);
-      api.onChange();
       return true;
     };
 
@@ -868,7 +975,9 @@
       var natural = mediaNaturalSize(found.clip, asset);
       var crop = found.clip.crop || { x: 0, y: 0, w: 1, h: 1 };
       var transform = found.clip.transform || { x: 0, y: 0, scale: 1 };
-      var scale = Number(transform.scale) || 1;
+      var scale = Number(transform.scale);
+      if (!Number.isFinite(scale) || scale <= 0) scale = 1;
+      scale = clamp(scale, 0.05, 4);
       var ox = Number(transform.x) || 0;
       var oy = Number(transform.y) || 0;
       var sw = Math.max(1, crop.w * natural.w);
@@ -878,7 +987,16 @@
       var dh = sh * fit * scale;
       var dx = (api.width - dw) / 2 + ox;
       var dy = (api.height - dh) / 2 + oy;
-      return { x: dx, y: dy, w: dw, h: dh, baseW: sw * fit, baseH: sh * fit };
+      // Overlay math uses canvas bitmap pixels (preview may be downscaled).
+      var ps = previewBitmapSize().scale || 1;
+      return {
+        x: dx * ps,
+        y: dy * ps,
+        w: dw * ps,
+        h: dh * ps,
+        baseW: sw * fit * ps,
+        baseH: sh * fit * ps,
+      };
     };
 
     // Draws the full, uncropped, untransformed source media letterboxed
@@ -892,8 +1010,11 @@
       var asset = api.assetsById[found.clip.assetId];
       if (!asset) return null;
       var natural = mediaNaturalSize(found.clip, asset);
-      if (canvas.width !== api.width) canvas.width = api.width;
-      if (canvas.height !== api.height) canvas.height = api.height;
+      var bmp = previewBitmapSize();
+      if (canvas.width !== bmp.w) canvas.width = bmp.w;
+      if (canvas.height !== bmp.h) canvas.height = bmp.h;
+      var ps = bmp.scale || 1;
+      ctx.setTransform(ps, 0, 0, ps, 0, 0);
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, api.width, api.height);
       var fit = Math.min(api.width / natural.w, api.height / natural.h);
@@ -906,19 +1027,41 @@
           ctx.drawImage(natural.media, 0, 0, natural.w, natural.h, dx, dy, dw, dh);
         } catch (e) {}
       }
-      return { x: dx, y: dy, w: dw, h: dh };
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      return { x: dx * ps, y: dy * ps, w: dw * ps, h: dh * ps };
     };
 
     api.render = renderAll;
     api.drawFrame = drawFrame;
 
     if (scrollEl && playheadEl) {
-      scrollEl.addEventListener('click', function (e) {
+      // Click + drag scrub on empty timeline (not on clips).
+      scrollEl.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return;
         if (e.target.closest && e.target.closest('.cvs-clip')) return;
-        var rect = scrollEl.getBoundingClientRect();
-        var x = e.clientX - rect.left + scrollEl.scrollLeft;
-        api.setPlayhead(xToMs(x));
-        api.onChange();
+        if (e.target.closest && e.target.closest('.cvs-track__label')) return;
+        e.preventDefault();
+        var scrubbing = true;
+        function seekFromEvent(ev) {
+          var rect = scrollEl.getBoundingClientRect();
+          var x = ev.clientX - rect.left + scrollEl.scrollLeft;
+          api.setPlayhead(xToMs(x), { silent: true });
+          if (playheadEl) playheadEl.style.left = msToX(api.playheadMs) + 'px';
+          api.onTick();
+        }
+        seekFromEvent(e);
+        function onMove(ev) {
+          if (!scrubbing) return;
+          seekFromEvent(ev);
+        }
+        function onUp() {
+          scrubbing = false;
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          api.onPlayhead();
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
       });
     }
 

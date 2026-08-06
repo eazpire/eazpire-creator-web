@@ -10,6 +10,7 @@
 .cvs-modal-root[hidden] { display: none !important; }
 
 .cvs-modal__shell {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -106,7 +107,48 @@
   font-size: 22px;
   line-height: 1;
 }
+.cvs-btn__render-icon {
+  display: inline-block;
+  font-size: 14px;
+  line-height: 1;
+  transform: translateX(1px);
+}
 .cvs-btn--block { width: 100%; }
+
+/* Fullscreen composed preview (Render button) */
+.cvs-render-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.94);
+  padding: 12px 16px 20px;
+  gap: 10px;
+}
+.cvs-render-overlay[hidden] {
+  display: none !important;
+}
+.cvs-render-overlay__chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.cvs-render-overlay__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+.cvs-render-overlay__video {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  background: #000;
+  border-radius: 10px;
+}
 .cvs-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .cvs-btn--danger {
   background: #ef4444;

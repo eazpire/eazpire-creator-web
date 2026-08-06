@@ -73,6 +73,15 @@
         >&#8635;</button>
         <button
           type="button"
+          class="cvs-btn cvs-btn--ghost cvs-btn--icon"
+          id="cvs-btn-render"
+          aria-label="Render"
+          title="Render"
+        >
+          <span class="cvs-btn__render-icon" aria-hidden="true">▶</span>
+        </button>
+        <button
+          type="button"
           class="cvs-btn cvs-btn--primary cvs-btn--icon"
           id="cvs-btn-export"
           aria-label="Export"
@@ -162,6 +171,23 @@
           </div>
         </section>
       </div>
+    </div>
+
+    
+    <div id="cvs-render-overlay" class="cvs-render-overlay" hidden>
+      <div class="cvs-render-overlay__chrome">
+        <span class="cvs-render-overlay__title" data-t="creator.video_studio.render_preview_title">Render preview</span>
+        <button
+          type="button"
+          class="cvs-btn cvs-btn--icon"
+          id="cvs-render-close"
+          aria-label="Close preview"
+          title="Close preview"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <video id="cvs-render-video" class="cvs-render-overlay__video" controls playsinline></video>
     </div>
   </div>
 </div>

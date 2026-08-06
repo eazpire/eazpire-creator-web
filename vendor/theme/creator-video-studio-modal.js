@@ -358,6 +358,13 @@
     scheduleSave();
   }
 
+  /** Playhead-only updates: no undo snapshots (were flooding history during play/scrub). */
+  function onEnginePlayhead() {
+    updateTimeUi();
+    isDirty = true;
+    scheduleSave();
+  }
+
   function updateProjectPickerLabel() {
     var el = document.getElementById('cvs-project-picker-name');
     if (el) el.textContent = (project && project.title) || i18n('untitled', 'Untitled');
@@ -2297,7 +2304,9 @@
   async function exportProject() {
     if (!engine) return;
     var btn = document.getElementById('cvs-btn-export');
+    var renderBtn = document.getElementById('cvs-btn-render');
     if (btn) btn.disabled = true;
+    if (renderBtn) renderBtn.disabled = true;
     setStatus(i18n('exporting', 'Exporting…'));
     try {
       // Persist timeline before export; promote unsaved drafts so the export
@@ -2351,6 +2360,69 @@
       setStatus(i18n('export_failed', 'Export failed'));
     } finally {
       if (btn) btn.disabled = false;
+      if (renderBtn) renderBtn.disabled = false;
+    }
+  }
+
+  var renderPreviewUrl = null;
+
+  function closeRenderPreview() {
+    var overlay = document.getElementById('cvs-render-overlay');
+    var video = document.getElementById('cvs-render-video');
+    if (video) {
+      try {
+        video.pause();
+      } catch (e) {}
+      video.removeAttribute('src');
+      video.load();
+    }
+    if (overlay) overlay.hidden = true;
+    if (renderPreviewUrl) {
+      URL.revokeObjectURL(renderPreviewUrl);
+      renderPreviewUrl = null;
+    }
+  }
+
+  function openRenderPreview(blob) {
+    var overlay = document.getElementById('cvs-render-overlay');
+    var video = document.getElementById('cvs-render-video');
+    if (!overlay || !video || !blob) return;
+    closeRenderPreview();
+    renderPreviewUrl = URL.createObjectURL(blob);
+    video.src = renderPreviewUrl;
+    overlay.hidden = false;
+    var playPromise = video.play();
+    if (playPromise && playPromise.catch) playPromise.catch(function () {});
+  }
+
+  async function renderProjectPreview() {
+    if (!engine) return;
+    if (!engine.durationMs) {
+      setStatus(i18n('render_empty', 'Add clips to the timeline before rendering'));
+      return;
+    }
+    var btn = document.getElementById('cvs-btn-render');
+    var exportBtn = document.getElementById('cvs-btn-export');
+    if (btn) btn.disabled = true;
+    if (exportBtn) exportBtn.disabled = true;
+    if (engine.playing) {
+      engine.togglePlay();
+      var playBtn = document.getElementById('cvs-btn-play');
+      if (playBtn) playBtn.textContent = '▶';
+    }
+    setStatus(i18n('rendering', 'Rendering…'));
+    try {
+      var a = currentAspect();
+      var blob = await renderExportBlob(a.width, a.height);
+      if (!blob) throw new Error('encode_failed');
+      openRenderPreview(blob);
+      setStatus(i18n('render_done', 'Render ready — playing fullscreen preview'));
+    } catch (err) {
+      console.warn('[VideoStudio] render failed', err);
+      setStatus(i18n('render_failed', 'Render failed'));
+    } finally {
+      if (btn) btn.disabled = false;
+      if (exportBtn) exportBtn.disabled = false;
     }
   }
 
@@ -2408,17 +2480,32 @@
 
       var origW = engine.width;
       var origH = engine.height;
+      var origPlayhead = engine.playheadMs;
+      var origExportMode = !!engine._exportMode;
       var origCanvas = document.getElementById('cvs-preview-canvas');
       engine.width = width;
       engine.height = height;
+      engine._exportMode = true;
       var start = performance.now();
       var duration = engine.durationMs;
       recorder.start(200);
 
+      function finishEncode(ok) {
+        engine._exportMode = origExportMode;
+        engine.width = origW;
+        engine.height = origH;
+        engine.playheadMs = origPlayhead;
+        try {
+          engine.render();
+        } catch (e) {}
+        if (ok) recorder.stop();
+        else resolve(null);
+      }
+
       function frame(now) {
         var t = Math.min(duration, now - start);
         engine.playheadMs = t;
-        // draw onto export canvas via engine by temporarily swapping context target
+        // Full-res draw onto preview canvas, then blit to encode canvas.
         if (origCanvas) {
           engine.drawFrame(t);
           var xctx = canvas.getContext('2d');
@@ -2427,11 +2514,7 @@
           xctx.drawImage(origCanvas, 0, 0, width, height);
         }
         if (t >= duration) {
-          recorder.stop();
-          engine.width = origW;
-          engine.height = origH;
-          engine.playheadMs = 0;
-          engine.render();
+          finishEncode(true);
           return;
         }
         requestAnimationFrame(frame);
@@ -2569,6 +2652,8 @@
       playheadEl: document.getElementById('cvs-timeline-playhead'),
       scrollEl: document.getElementById('cvs-timeline-scroll'),
       onChange: onEngineChange,
+      onTick: updateTimeUi,
+      onPlayhead: onEnginePlayhead,
       onSelect: onSelectClip,
       onClipContextMenu: openClipContextMenu,
       labels: {
@@ -2590,7 +2675,12 @@
     }
     on('cvs-btn-close', 'click', close);
     on('cvs-btn-save', 'click', onSaveButtonClick);
+    on('cvs-btn-render', 'click', renderProjectPreview);
     on('cvs-btn-export', 'click', exportProject);
+    on('cvs-render-close', 'click', closeRenderPreview);
+    on('cvs-render-overlay', 'mousedown', function (e) {
+      if (e.target && e.target.id === 'cvs-render-overlay') closeRenderPreview();
+    });
     on('cvs-project-picker', 'click', openProjectsModal);
     on('cvs-btn-new-project', 'click', createNewProject);
     on('cvs-projects-btn-new', 'click', createNewProject);
@@ -2750,6 +2840,14 @@
         var el = document.getElementById(id);
         if (el) el.click();
       }
+      if (e.key === 'Escape') {
+        var renderOverlay = document.getElementById('cvs-render-overlay');
+        if (renderOverlay && !renderOverlay.hidden) {
+          e.preventDefault();
+          closeRenderPreview();
+          return;
+        }
+      }
       if (e.key === ' ' && e.target === document.body) {
         e.preventDefault();
         clickId('cvs-btn-play');
@@ -2786,6 +2884,7 @@
   function close() {
     if (!root) return;
     if (engine && engine.playing) engine.togglePlay();
+    closeRenderPreview();
     root.hidden = true;
     root.setAttribute('aria-hidden', 'true');
     isOpen = false;
