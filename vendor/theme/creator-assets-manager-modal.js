@@ -213,7 +213,10 @@
     { system_key: 'unsorted', titleKey: 'folder_unsorted', title: 'Unsorted' },
     { system_key: 'hero_images', titleKey: 'folder_hero_images', title: 'Hero Images' },
     { system_key: 'character_images', titleKey: 'folder_character_images', title: 'Character Images' },
-    { system_key: 'motion_videos', titleKey: 'folder_motion_videos', title: 'Motion Videos' },
+    { system_key: 'videos', titleKey: 'folder_videos', title: 'Videos' },
+    { system_key: 'motion_videos', titleKey: 'folder_motion_videos', title: 'Motion Videos', parent_system_key: 'videos' },
+    { system_key: 'transition_videos', titleKey: 'folder_transition_videos', title: 'Transition Videos', parent_system_key: 'videos' },
+    { system_key: 'transition_clips', titleKey: 'folder_transition_clips', title: 'Transition Clips', parent_system_key: 'videos' },
     { system_key: 'downloads', titleKey: 'folder_downloads', title: 'Downloads' }
   ];
 
@@ -228,11 +231,28 @@
 
   function ensureSystemFoldersInTree(tree) {
     var list = Array.isArray(tree) ? tree.slice() : [];
-    SYSTEM_FOLDER_DEFS.forEach(function (def) {
+    var rootDefs = SYSTEM_FOLDER_DEFS.filter(function (d) {
+      return !d.parent_system_key;
+    });
+    rootDefs.forEach(function (def) {
       var found = list.some(function (f) {
         return f && f.system_key === def.system_key;
       });
       if (!found) {
+        var children = SYSTEM_FOLDER_DEFS.filter(function (c) {
+          return c.parent_system_key === def.system_key;
+        }).map(function (c) {
+          return {
+            id: c.system_key,
+            system_key: c.system_key,
+            title: c.title,
+            is_system: true,
+            parent_id: def.system_key,
+            asset_count: 0,
+            children: [],
+            _local: true
+          };
+        });
         list.push({
           id: def.system_key,
           system_key: def.system_key,
@@ -240,17 +260,17 @@
           is_system: true,
           parent_id: null,
           asset_count: 0,
-          children: [],
+          children: children,
           _local: true
         });
       }
     });
-    // Keep system folders in fixed order, then any extras
+    // Keep root system folders in fixed order, then any extras
     list.sort(function (a, b) {
-      var ai = SYSTEM_FOLDER_DEFS.findIndex(function (d) {
+      var ai = rootDefs.findIndex(function (d) {
         return d.system_key === a.system_key;
       });
-      var bi = SYSTEM_FOLDER_DEFS.findIndex(function (d) {
+      var bi = rootDefs.findIndex(function (d) {
         return d.system_key === b.system_key;
       });
       if (ai === -1 && bi === -1) return 0;
@@ -434,6 +454,11 @@
         (thumb && thumb !== url ? ' poster="' + escapeHtml(thumb) + '"' : '') +
         ' muted playsinline preload="metadata"></video>' +
         '<span class="cam-card__play" aria-hidden="true">▶</span>' +
+        '<button type="button" class="cam-card__fs" data-cam-fullscreen aria-label="' +
+        escapeHtml(i18n('video_fullscreen', 'Fullscreen')) +
+        '" title="' +
+        escapeHtml(i18n('video_fullscreen', 'Fullscreen')) +
+        '">⛶</button>' +
         '</div>'
       );
     }
@@ -477,6 +502,41 @@
       }
     });
     playingKey = null;
+  }
+
+  function closeVideoFullscreen() {
+    var overlay = document.getElementById('cam-asset-fs');
+    var video = document.getElementById('cam-asset-fs-video');
+    if (video) {
+      try {
+        video.pause();
+      } catch (e) {}
+      video.removeAttribute('src');
+      try {
+        video.load();
+      } catch (e2) {}
+    }
+    if (overlay) {
+      overlay.hidden = true;
+      overlay.setAttribute('hidden', '');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function openVideoFullscreen(asset) {
+    if (!asset || !asset.url) return;
+    stopAllPlayback();
+    var overlay = document.getElementById('cam-asset-fs');
+    var video = document.getElementById('cam-asset-fs-video');
+    if (!overlay || !video) return;
+    video.src = asset.url;
+    overlay.hidden = false;
+    overlay.removeAttribute('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    try {
+      var p = video.play();
+      if (p && typeof p.catch === 'function') p.catch(function () {});
+    } catch (e) {}
   }
 
   function toggleCardPlayback(card) {
@@ -1521,12 +1581,28 @@
       return;
     }
 
+    var fsBtn = t.closest('[data-cam-fullscreen]');
+    if (fsBtn && root.contains(fsBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      var fsCard = fsBtn.closest('[data-cam-asset-key]');
+      if (fsCard) {
+        var fsKey = fsCard.getAttribute('data-cam-asset-key');
+        var fsAsset = assets.find(function (a) {
+          return assetKey(a) === fsKey;
+        });
+        if (fsAsset && fsAsset.url) openVideoFullscreen(fsAsset);
+      }
+      return;
+    }
+
     var playCard = t.closest('.cam-card--playable');
     if (
       playCard &&
       root.contains(playCard) &&
       !t.closest('[data-cam-select]') &&
-      !t.closest('[data-cam-social-detail]')
+      !t.closest('[data-cam-social-detail]') &&
+      !t.closest('[data-cam-fullscreen]')
     ) {
       e.preventDefault();
       toggleCardPlayback(playCard);
@@ -3475,6 +3551,14 @@
           video.removeAttribute('src');
         }
         closeSubmodal('cam-link-fs');
+      });
+    }
+    var assetFsClose = document.getElementById('cam-asset-fs-close');
+    if (assetFsClose) assetFsClose.addEventListener('click', closeVideoFullscreen);
+    var assetFs = document.getElementById('cam-asset-fs');
+    if (assetFs) {
+      assetFs.addEventListener('click', function (e) {
+        if (e.target === assetFs) closeVideoFullscreen();
       });
     }
 

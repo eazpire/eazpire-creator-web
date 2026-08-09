@@ -128,6 +128,11 @@
       '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_generator', 'Video Generator')) + '</span>' +
       '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_generator_desc', 'Generate videos with Motion Control and more AI tools.')) + '</span>' +
       '</button>' +
+      '<button type="button" class="creator-video-tool-card" data-creator-video-transition-open>' +
+      '<span class="creator-video-tool-card__icon" aria-hidden="true">🔀</span>' +
+      '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_transition', 'Video Transition')) + '</span>' +
+      '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_transition_desc', 'Chain clips with cinematic transitions, voiceover, and subtitles.')) + '</span>' +
+      '</button>' +
       '</div>';
   }
 
@@ -1706,6 +1711,15 @@
         e.preventDefault();
         if (window.CreatorVideoGeneratorModal && typeof window.CreatorVideoGeneratorModal.open === 'function') {
           window.CreatorVideoGeneratorModal.open();
+        }
+      });
+    });
+
+    ctx.container.querySelectorAll('[data-creator-video-transition-open]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (window.CreatorVideoTransitionModal && typeof window.CreatorVideoTransitionModal.open === 'function') {
+          window.CreatorVideoTransitionModal.open();
         }
       });
     });
