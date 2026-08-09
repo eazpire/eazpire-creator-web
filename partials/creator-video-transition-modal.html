@@ -9,20 +9,9 @@
 >
   <div class="cvt-modal__shell">
     <header class="cvt-modal__header">
-      <div class="cvt-modal__header-left">
-        <button
-          type="button"
-          class="cvt-btn cvt-btn--icon cvt-btn--menu"
-          id="cvt-btn-menu"
-          aria-label="Open menu"
-          title="Open menu"
-        >
-          <span aria-hidden="true">☰</span>
-        </button>
-        <div class="cvt-modal__titles">
-          <h2 id="cvt-modal-title" class="cvt-modal__title" data-t="creator.video_transition.title">Video Transition</h2>
-          <p class="cvt-modal__subtitle" data-t="creator.video_transition.subtitle">Chain clips with cinematic transitions, voiceover, and burn-in subtitles.</p>
-        </div>
+      <div class="cvt-modal__titles">
+        <h2 id="cvt-modal-title" class="cvt-modal__title" data-t="creator.video_transition.title">Video Transition</h2>
+        <p class="cvt-modal__subtitle" id="cvt-status-pill" data-t="creator.video_transition.ready">Ready</p>
       </div>
       <button
         type="button"
@@ -37,20 +26,29 @@
     <div class="cvt-body">
       <aside class="cvt-sidebar" id="cvt-sidebar" aria-label="Menu">
         <nav class="cvt-sidebar__nav" id="cvt-sidebar-nav">
-          <button type="button" class="cvt-sidebar__item is-active" data-cvt-panel="project">
-            Project
+          <button type="button" class="cvt-sidebar__item is-active" data-cvt-page="project">
+            Project Details
           </button>
-          <button type="button" class="cvt-sidebar__item" data-cvt-panel="clips">
+          <button type="button" class="cvt-sidebar__item" data-cvt-page="templates">
+            Templates
+          </button>
+          <button type="button" class="cvt-sidebar__item" data-cvt-page="video_settings">
+            Video Settings
+          </button>
+          <button type="button" class="cvt-sidebar__item" data-cvt-page="global_settings">
+            Global Settings
+          </button>
+          <button type="button" class="cvt-sidebar__item" data-cvt-page="clips">
             Clips
           </button>
-          <button type="button" class="cvt-sidebar__item" data-cvt-panel="globals">
-            Defaults
-          </button>
-          <button type="button" class="cvt-sidebar__item" data-cvt-panel="voiceover">
+          <button type="button" class="cvt-sidebar__item" data-cvt-page="voiceover">
             Voiceover
           </button>
-          <button type="button" class="cvt-sidebar__item" data-cvt-panel="render">
-            Render
+          <button type="button" class="cvt-sidebar__item" data-cvt-page="results">
+            Transition Videos
+          </button>
+          <button type="button" class="cvt-sidebar__item" data-cvt-page="assets">
+            Assets
           </button>
         </nav>
         <button
@@ -63,63 +61,310 @@
           ‹
         </button>
       </aside>
-      <div class="cvt-drawer-scrim" id="cvt-drawer-scrim" hidden></div>
 
       <main class="cvt-main" id="cvt-main">
-        <div class="cvt-stage" id="cvt-stage">
-          <div class="cvt-hero-card">
-            <div class="cvt-hero-card__glow" aria-hidden="true"></div>
-            <h3 data-t="creator.video_transition.hero_title">Build a seamless clip chain</h3>
-            <p data-t="creator.video_transition.hero_body">Start → transitions → optional end. Results save to Assets → Videos → Transition Videos. Source clips go to Transition Clips without duplicates.</p>
-            <div class="cvt-hero-card__actions">
-              <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-btn-open-lab" data-cvt-panel-jump="clips">
-                Start editing
-              </button>
-              <button type="button" class="cvt-btn cvt-btn--ghost" id="cvt-btn-bulk" data-cvt-panel-jump="clips">
-                Bulk upload clips
-              </button>
-            </div>
-          </div>
+        
+        <section class="cvt-page is-active" data-cvt-page-panel="project">
+          <h3 class="cvt-page__title">Project Details</h3>
+          <p class="cvt-page__hint">Optional. Empty fields can be filled by AI after render.</p>
+          <label class="cvt-field">
+            <span>Title</span>
+            <input type="text" id="cvt-project-title" maxlength="160" autocomplete="off">
+          </label>
+          <label class="cvt-field">
+            <span>Description</span>
+            <textarea id="cvt-project-description" rows="4" maxlength="2000"></textarea>
+          </label>
+          <label class="cvt-field">
+            <span>Tags</span>
+            <input type="text" id="cvt-project-tags" maxlength="240" placeholder="tag1, tag2" autocomplete="off">
+          </label>
+        </section>
 
-          <div class="cvt-workspace" id="cvt-workspace" hidden>
-            <div class="cvt-workspace__toolbar">
-              <span class="cvt-pill" id="cvt-status-pill">Ready</span>
-              <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-btn-render" disabled>
-                Render chain
-              </button>
+        
+        <section class="cvt-page" data-cvt-page-panel="templates" hidden>
+          <h3 class="cvt-page__title">Templates</h3>
+          <div class="cvt-template-grid" id="cvt-template-grid"></div>
+          <p class="cvt-empty" id="cvt-templates-empty">No templates yet. Use Save Template in the footer.</p>
+        </section>
+
+        
+        <section class="cvt-page" data-cvt-page-panel="video_settings" hidden>
+          <h3 class="cvt-page__title">Video Settings</h3>
+          <label class="cvt-field">
+            <span>Ratio & output</span>
+            <select id="cvt-ratio-mode">
+              <option value="matchStart">Match Start</option>
+              <option value="matchClip">Match Clip</option>
+              <option value="preset">Social preset</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <label class="cvt-field" id="cvt-ratio-preset-wrap" hidden>
+            <span>Preset</span>
+            <select id="cvt-ratio-preset">
+              <option value="yt-landscape">YouTube 16:9</option>
+              <option value="shorts">Shorts / Reels 9:16</option>
+              <option value="square">Square 1:1</option>
+              <option value="ig-portrait">IG Portrait 4:5</option>
+            </select>
+          </label>
+          <div class="cvt-field-row" id="cvt-ratio-custom-wrap" hidden>
+            <label class="cvt-field">
+              <span>W</span>
+              <input type="number" id="cvt-ratio-w" min="128" max="3840" value="1080">
+            </label>
+            <label class="cvt-field">
+              <span>H</span>
+              <input type="number" id="cvt-ratio-h" min="128" max="3840" value="1920">
+            </label>
+          </div>
+          <label class="cvt-field">
+            <span>Max side (px)</span>
+            <input type="number" id="cvt-ratio-max" min="320" max="3840" value="1280">
+          </label>
+        </section>
+
+        
+        <section class="cvt-page" data-cvt-page-panel="global_settings" hidden>
+          <h3 class="cvt-page__title">Global Settings</h3>
+          <div class="cvt-card">
+            <h4>Transitions</h4>
+            <label class="cvt-field">
+              <span>Transition</span>
+              <select id="cvt-global-shader"></select>
+            </label>
+            <label class="cvt-field">
+              <span>Transition duration (s)</span>
+              <input type="number" id="cvt-global-xfade" min="0.1" max="5" step="0.05" value="0.75">
+            </label>
+          </div>
+          <div class="cvt-card">
+            <h4>Video defaults</h4>
+            <label class="cvt-field">
+              <span>Clip length (s)</span>
+              <input type="number" id="cvt-global-clip-len" min="0.5" max="60" step="0.1" value="3">
+            </label>
+            <label class="cvt-field">
+              <span>Audio</span>
+              <select id="cvt-global-audio-mode">
+                <option value="original">Original</option>
+                <option value="mute">Mute</option>
+                <option value="custom">Custom file</option>
+              </select>
+            </label>
+            <label class="cvt-field">
+              <span>Volume</span>
+              <input type="range" id="cvt-global-volume" min="0" max="100" value="100">
+            </label>
+            <label class="cvt-field" id="cvt-global-audio-file-wrap" hidden>
+              <span>Global audio file</span>
+              <input type="file" id="cvt-global-audio-file" accept="audio/*">
+            </label>
+          </div>
+        </section>
+
+        
+        <section class="cvt-page cvt-page--clips" data-cvt-page-panel="clips" hidden>
+          <aside class="cvt-clip-sidebar" id="cvt-clip-sidebar">
+            <button type="button" class="cvt-clip-rail" id="cvt-clip-sidebar-toggle" aria-expanded="true">‹</button>
+            <nav class="cvt-clip-sidebar__nav" id="cvt-clip-nav">
+              <div class="cvt-clip-group">
+                <strong>Start Video</strong>
+                <button type="button" class="cvt-clip-item is-active" data-cvt-clip="start">Start</button>
+              </div>
+              <div class="cvt-clip-group">
+                <strong>Transition Videos</strong>
+                <div id="cvt-clip-transition-list"></div>
+                <button type="button" class="cvt-btn cvt-btn--ghost cvt-btn--sm" id="cvt-add-transition">+ Transition</button>
+              </div>
+              <div class="cvt-clip-group">
+                <strong>End Video</strong>
+                <button type="button" class="cvt-clip-item" data-cvt-clip="end">End (optional)</button>
+              </div>
+            </nav>
+          </aside>
+          <div class="cvt-clip-editor" id="cvt-clip-editor">
+            <div class="cvt-switch-row">
+              <span>Settings</span>
+              <label class="cvt-switch">
+                <input type="radio" name="cvt-clip-mode" value="global" checked>
+                <span>Use global settings</span>
+              </label>
+              <label class="cvt-switch">
+                <input type="radio" name="cvt-clip-mode" value="own">
+                <span>Individual settings</span>
+              </label>
             </div>
-            <div class="cvt-workspace__frame" id="cvt-lab-host">
-              
-              <iframe
-                id="cvt-lab-frame"
-                class="cvt-lab-frame"
-                title="Video Transition"
-                src="about:blank"
-                allow="autoplay; clipboard-read; clipboard-write"
-              ></iframe>
+            <label class="cvt-field">
+              <span>Video file</span>
+              <input type="file" id="cvt-clip-file" accept="video/*">
+            </label>
+            <video id="cvt-clip-preview" class="cvt-clip-preview" controls playsinline hidden></video>
+            <div id="cvt-clip-individual" class="cvt-individual" hidden>
+              <label class="cvt-field cvt-field--with-global">
+                <span>Clip length (s)</span>
+                <input type="number" id="cvt-clip-len" min="0.5" max="60" step="0.1" value="3">
+                <label class="cvt-mini"><input type="checkbox" id="cvt-clip-len-global" checked> Global source</label>
+              </label>
+              <label class="cvt-field cvt-field--with-global">
+                <span>Audio</span>
+                <select id="cvt-clip-audio-mode">
+                  <option value="original">Original</option>
+                  <option value="mute">Mute</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <label class="cvt-mini"><input type="checkbox" id="cvt-clip-audio-global" checked> Global source</label>
+              </label>
+              <label class="cvt-field cvt-field--with-global">
+                <span>Volume</span>
+                <input type="range" id="cvt-clip-volume" min="0" max="100" value="100">
+                <label class="cvt-mini"><input type="checkbox" id="cvt-clip-volume-global" checked> Global source</label>
+              </label>
             </div>
           </div>
-        </div>
+        </section>
+
+        
+        <section class="cvt-page" data-cvt-page-panel="voiceover" hidden>
+          <h3 class="cvt-page__title">Voiceover</h3>
+          <label class="cvt-switch">
+            <input type="checkbox" id="cvt-vo-enabled">
+            <span>Enable voiceover</span>
+          </label>
+          <label class="cvt-field">
+            <span>Script</span>
+            <textarea id="cvt-vo-text" rows="4"></textarea>
+          </label>
+          <label class="cvt-field">
+            <span>Voiceover audio</span>
+            <input type="file" id="cvt-vo-file" accept="audio/*">
+          </label>
+          <label class="cvt-field">
+            <span>Start time (s)</span>
+            <input type="number" id="cvt-vo-start" min="0" step="0.1" value="0">
+          </label>
+          <div class="cvt-row">
+            <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-vo-transcribe">
+              Speech to text → subtitles
+            </button>
+          </div>
+          <div class="cvt-vo-preview" id="cvt-vo-preview">
+            <div class="cvt-vo-preview__stage" id="cvt-vo-preview-stage">
+              <p class="cvt-vo-preview__cue" id="cvt-vo-preview-cue"></p>
+            </div>
+            <audio id="cvt-vo-preview-audio" controls></audio>
+          </div>
+          <textarea id="cvt-vo-cues-json" class="cvt-hidden" hidden></textarea>
+        </section>
+
+        
+        <section class="cvt-page" data-cvt-page-panel="results" hidden>
+          <h3 class="cvt-page__title">Transition Videos</h3>
+          <div class="cvt-results-grid" id="cvt-results-grid"></div>
+          <p class="cvt-empty" id="cvt-results-empty">No rendered videos yet.</p>
+        </section>
+
+        
+        <section class="cvt-page" data-cvt-page-panel="assets" hidden>
+          <h3 class="cvt-page__title">Assets</h3>
+          <div class="cvt-assets-toolbar">
+            <input type="file" id="cvt-assets-upload" accept="video/*,audio/*" multiple>
+            <button type="button" class="cvt-btn" id="cvt-assets-refresh">Refresh</button>
+          </div>
+          <div class="cvt-assets-sections" id="cvt-assets-sections"></div>
+          <p class="cvt-empty" id="cvt-assets-empty">No assets yet. Upload clips or audio.</p>
+        </section>
       </main>
+    </div>
+
+    <footer class="cvt-footer" id="cvt-footer">
+      <button type="button" class="cvt-btn" id="cvt-btn-save-template">
+        Save Template
+      </button>
+      <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-btn-render">
+        Render chain
+      </button>
+    </footer>
+  </div>
+
+  
+  <iframe
+    id="cvt-lab-frame"
+    class="cvt-lab-frame cvt-lab-frame--hidden"
+    title="Video Transition"
+    src="about:blank"
+    allow="autoplay; clipboard-read; clipboard-write"
+  ></iframe>
+
+  
+  <div id="cvt-template-save" class="cvt-submodal" hidden>
+    <div class="cvt-submodal__panel">
+      <h3>Save Template</h3>
+      <label class="cvt-field"><span>Title</span><input type="text" id="cvt-tpl-save-title"></label>
+      <label class="cvt-field"><span>Description</span><textarea id="cvt-tpl-save-description" rows="3"></textarea></label>
+      <label class="cvt-field"><span>Tags</span><input type="text" id="cvt-tpl-save-tags"></label>
+      <div class="cvt-submodal__footer">
+        <button type="button" class="cvt-btn" id="cvt-tpl-save-cancel">Cancel</button>
+        <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-tpl-save-confirm">Save</button>
+      </div>
     </div>
   </div>
 
   
+  <div id="cvt-template-apply" class="cvt-submodal" hidden>
+    <div class="cvt-submodal__panel cvt-submodal__panel--wide">
+      <h3>Apply Template</h3>
+      <p class="cvt-page__hint">Choose what to import from this template.</p>
+      <div id="cvt-tpl-apply-checks" class="cvt-check-groups"></div>
+      <div class="cvt-submodal__footer">
+        <button type="button" class="cvt-btn" id="cvt-tpl-apply-cancel">Cancel</button>
+        <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-tpl-apply-confirm">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="cvt-render-confirm" class="cvt-submodal" hidden>
+    <div class="cvt-submodal__panel">
+      <h3>Start render?</h3>
+      <p>This encodes the full clip chain. Results appear in the floating viewer and Transition Videos.</p>
+      <div class="cvt-submodal__footer">
+        <button type="button" class="cvt-btn" id="cvt-render-cancel">Cancel</button>
+        <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-render-confirm-btn">Render chain</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="cvt-assets-float" id="cvt-assets-float" hidden>
+    <select id="cvt-assets-fill-mode">
+      <option value="selection">Selection order</option>
+      <option value="newest">Newest</option>
+      <option value="oldest">Oldest</option>
+      <option value="random">Random</option>
+    </select>
+    <label>
+      <span>Transitions</span>
+      <input type="number" id="cvt-assets-t-count" min="1" max="10" value="3">
+    </label>
+    <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-assets-add">Add</button>
+  </div>
+
+  
   <div class="cvt-float" id="cvt-float" data-minimized="1" hidden>
-    <button
-      type="button"
-      class="cvt-float__fab"
-      id="cvt-float-fab"
-      aria-label="Results"
-      title="Results"
-    >
+    <button type="button" class="cvt-float__fab" id="cvt-float-fab" aria-label="Results">
       <span class="cvt-float__fab-icon" aria-hidden="true">▶</span>
       <span class="cvt-float__fab-count" id="cvt-float-count" hidden>0</span>
     </button>
     <div class="cvt-float__panel" id="cvt-float-panel" hidden>
       <div class="cvt-float__panel-head">
-        <strong data-t="creator.video_transition.results">Results</strong>
-        <button type="button" class="cvt-btn cvt-btn--icon" id="cvt-float-minimize" aria-label="Minimize">–</button>
+        <strong>Results</strong>
+        <button type="button" class="cvt-btn cvt-btn--icon" id="cvt-float-minimize">–</button>
+      </div>
+      <div class="cvt-float__loading" id="cvt-float-loading" hidden>
+        <div class="cvt-spinner"></div>
+        <p>Rendering…</p>
       </div>
       <div class="cvt-float__carousel" id="cvt-float-carousel" role="list"></div>
     </div>
