@@ -293,7 +293,8 @@
 .cpz-type-overlay {
   position: fixed;
   inset: 0;
-  z-index: 10050;
+  /* Above Design Preview Modal (100000) and Activate shell so Set Element is not hidden behind */
+  z-index: 100110;
   display: flex;
   align-items: center;
   justify-content: center;
