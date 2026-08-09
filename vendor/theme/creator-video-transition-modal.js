@@ -207,9 +207,33 @@
     });
   }
 
+  function hideLabFrameDom() {
+    var host = (root && root.querySelector('.cvt-lab-host')) || document.querySelector('#creatorVideoTransitionModal .cvt-lab-host');
+    var frame = $('#cvt-lab-frame');
+    // Do not use HTML hidden/display:none on the host — iframe must still load & encode.
+    if (host) {
+      host.setAttribute('aria-hidden', 'true');
+      host.style.cssText =
+        'position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;' +
+        'opacity:0!important;visibility:hidden!important;pointer-events:none!important;' +
+        'clip:rect(0,0,0,0)!important;flex:0 0 0!important;z-index:-1!important;';
+    }
+    if (!frame) return;
+    frame.setAttribute('aria-hidden', 'true');
+    frame.setAttribute('tabindex', '-1');
+    frame.setAttribute('inert', '');
+    // Inline fallback if Hub CSS load order / global iframe rules fight the stylesheet
+    frame.style.cssText =
+      'position:fixed!important;width:0!important;height:0!important;max-width:0!important;' +
+      'max-height:0!important;opacity:0!important;visibility:hidden!important;' +
+      'pointer-events:none!important;border:0!important;left:-10000px!important;top:0!important;' +
+      'overflow:hidden!important;clip:rect(0,0,0,0)!important;z-index:-1!important;';
+  }
+
   function loadLabFrame() {
     var frame = $('#cvt-lab-frame');
     if (!frame) return;
+    hideLabFrameDom();
     var url = labUrl();
     if (!url) {
       setStatusPill(i18n('lab_missing', 'Lab URL not configured'));
@@ -222,6 +246,7 @@
     frame.setAttribute('data-cvt-src', url);
     frame.src = url;
     setStatusPill(i18n('lab_loading', 'Loading editor…'));
+    hideLabFrameDom();
   }
 
   function postLab(msg) {
@@ -1341,6 +1366,7 @@
     if (!root) return;
     populateShaders();
     bindOnce();
+    hideLabFrameDom();
     root.hidden = false;
     root.removeAttribute('hidden');
     root.setAttribute('aria-hidden', 'false');
@@ -1350,6 +1376,7 @@
     writeProjectToForm();
     showPage(state.page || 'project');
     loadLabFrame();
+    hideLabFrameDom();
     renderFloatCarousel();
   }
 

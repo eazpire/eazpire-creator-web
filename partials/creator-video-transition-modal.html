@@ -289,13 +289,17 @@
   </div>
 
   
-  <iframe
-    id="cvt-lab-frame"
-    class="cvt-lab-frame cvt-lab-frame--hidden"
-    title="Video Transition"
-    src="about:blank"
-    allow="autoplay; clipboard-read; clipboard-write"
-  ></iframe>
+  <div class="cvt-lab-host" aria-hidden="true">
+    <iframe
+      id="cvt-lab-frame"
+      class="cvt-lab-frame cvt-lab-frame--hidden"
+      title=""
+      src="about:blank"
+      tabindex="-1"
+      inert
+      allow="autoplay; clipboard-read; clipboard-write"
+    ></iframe>
+  </div>
 
   
   <div id="cvt-template-save" class="cvt-submodal" hidden>
