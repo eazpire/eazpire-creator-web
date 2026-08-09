@@ -1,0 +1,127 @@
+<div
+  id="creatorVideoTransitionModal"
+  class="cvt-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cvt-modal-title"
+>
+  <div class="cvt-modal__shell">
+    <header class="cvt-modal__header">
+      <div class="cvt-modal__header-left">
+        <button
+          type="button"
+          class="cvt-btn cvt-btn--icon cvt-btn--menu"
+          id="cvt-btn-menu"
+          aria-label="Open menu"
+          title="Open menu"
+        >
+          <span aria-hidden="true">☰</span>
+        </button>
+        <div class="cvt-modal__titles">
+          <h2 id="cvt-modal-title" class="cvt-modal__title" data-t="creator.video_transition.title">Video Transition</h2>
+          <p class="cvt-modal__subtitle" data-t="creator.video_transition.subtitle">Chain clips with cinematic transitions, voiceover, and burn-in subtitles.</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="cvt-btn cvt-btn--icon"
+        id="cvt-btn-close"
+        aria-label="Close"
+      >
+        ×
+      </button>
+    </header>
+
+    <div class="cvt-body">
+      <aside class="cvt-sidebar" id="cvt-sidebar" aria-label="Menu">
+        <nav class="cvt-sidebar__nav" id="cvt-sidebar-nav">
+          <button type="button" class="cvt-sidebar__item is-active" data-cvt-panel="project">
+            Project
+          </button>
+          <button type="button" class="cvt-sidebar__item" data-cvt-panel="clips">
+            Clips
+          </button>
+          <button type="button" class="cvt-sidebar__item" data-cvt-panel="globals">
+            Defaults
+          </button>
+          <button type="button" class="cvt-sidebar__item" data-cvt-panel="voiceover">
+            Voiceover
+          </button>
+          <button type="button" class="cvt-sidebar__item" data-cvt-panel="render">
+            Render
+          </button>
+        </nav>
+        <button
+          type="button"
+          class="cvt-rail"
+          id="cvt-sidebar-toggle"
+          aria-label="Toggle sidebar"
+          aria-expanded="true"
+        >
+          ‹
+        </button>
+      </aside>
+      <div class="cvt-drawer-scrim" id="cvt-drawer-scrim" hidden></div>
+
+      <main class="cvt-main" id="cvt-main">
+        <div class="cvt-stage" id="cvt-stage">
+          <div class="cvt-hero-card">
+            <div class="cvt-hero-card__glow" aria-hidden="true"></div>
+            <h3 data-t="creator.video_transition.hero_title">Build a seamless clip chain</h3>
+            <p data-t="creator.video_transition.hero_body">Start → transitions → optional end. Results save to Assets → Videos → Transition Videos. Source clips go to Transition Clips without duplicates.</p>
+            <div class="cvt-hero-card__actions">
+              <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-btn-open-lab" data-cvt-panel-jump="clips">
+                Start editing
+              </button>
+              <button type="button" class="cvt-btn cvt-btn--ghost" id="cvt-btn-bulk" data-cvt-panel-jump="clips">
+                Bulk upload clips
+              </button>
+            </div>
+          </div>
+
+          <div class="cvt-workspace" id="cvt-workspace" hidden>
+            <div class="cvt-workspace__toolbar">
+              <span class="cvt-pill" id="cvt-status-pill">Ready</span>
+              <button type="button" class="cvt-btn cvt-btn--primary" id="cvt-btn-render" disabled>
+                Render chain
+              </button>
+            </div>
+            <div class="cvt-workspace__frame" id="cvt-lab-host">
+              
+              <iframe
+                id="cvt-lab-frame"
+                class="cvt-lab-frame"
+                title="Video Transition"
+                src="about:blank"
+                allow="autoplay; clipboard-read; clipboard-write"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  
+  <div class="cvt-float" id="cvt-float" data-minimized="1" hidden>
+    <button
+      type="button"
+      class="cvt-float__fab"
+      id="cvt-float-fab"
+      aria-label="Results"
+      title="Results"
+    >
+      <span class="cvt-float__fab-icon" aria-hidden="true">▶</span>
+      <span class="cvt-float__fab-count" id="cvt-float-count" hidden>0</span>
+    </button>
+    <div class="cvt-float__panel" id="cvt-float-panel" hidden>
+      <div class="cvt-float__panel-head">
+        <strong data-t="creator.video_transition.results">Results</strong>
+        <button type="button" class="cvt-btn cvt-btn--icon" id="cvt-float-minimize" aria-label="Minimize">–</button>
+      </div>
+      <div class="cvt-float__carousel" id="cvt-float-carousel" role="list"></div>
+    </div>
+  </div>
+</div>

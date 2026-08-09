@@ -1716,11 +1716,15 @@
     });
 
     ctx.container.querySelectorAll('[data-creator-video-transition-open]').forEach(function (btn) {
+      if (btn._cvtContentBound) return;
+      btn._cvtContentBound = true;
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         if (window.CreatorVideoTransitionModal && typeof window.CreatorVideoTransitionModal.open === 'function') {
           window.CreatorVideoTransitionModal.open();
+          return;
         }
+        console.warn('[ContentCreationVideo] CreatorVideoTransitionModal not loaded yet');
       });
     });
   }

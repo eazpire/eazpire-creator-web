@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "cam-dl-fix-abc-20260804a";
+  var PORTAL_ASSET_V = "cvt-modal-20260809a";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -105,7 +105,7 @@
   async function injectPartial(name, hostEl) {
     var host = hostEl || document.getElementById(partialsHostId);
     if (!host) return;
-    // Portal serves /partials with max-age=7d ù bump PORTAL_ASSET_V when markup changes.
+    // Portal serves /partials with max-age=7d ? bump PORTAL_ASSET_V when markup changes.
     var url = withAssetV("/partials/" + name);
     var existing = host.querySelector('[data-partial="' + name + '"]');
     if (existing) {
@@ -364,6 +364,8 @@
       loadCss(asset("creator-video-studio-modal.css"));
       await injectPartial("creator-video-generator-modal.html");
       loadCss(asset("creator-video-generator-modal.css"));
+      await injectPartial("creator-video-transition-modal.html");
+      loadCss(asset("creator-video-transition-modal.css"));
       await injectPartial("creator-social-media-manager-modal.html");
       loadCss(asset("creator-social-media-manager-modal.css"));
       await injectPartial("creator-assets-manager-modal.html");
@@ -414,12 +416,13 @@
 
       applyMarketingDeepLink();
 
-      // Leaf UIs (video studio) ù optional so missing vendor files do not block expand.
+      // Leaf UIs (video studio) ? optional so missing vendor files do not block expand.
       await loadScriptsSequentialOptional([
         asset("creator-video-studio-timeline.js"),
         asset("creator-video-studio-modal.js"),
         asset("creator-video-studio-asset-tools.js"),
         asset("creator-video-generator-modal.js"),
+        asset("creator-video-transition-modal.js"),
       ]);
     })();
 
@@ -495,7 +498,7 @@
         injectPartial("creator-level-celebration-overlay.html"),
       ]);
 
-      // Level tab lives inside Journey ù must load with dashboard, not only Settings.
+      // Level tab lives inside Journey ? must load with dashboard, not only Settings.
       await loadScript(asset("creator-level-panel.js"));
       await loadScriptsParallel([
         asset("sales-modal.js"),
@@ -512,7 +515,7 @@
         badge_ready_aria: "Level badge ready",
       };
 
-      // Settings modal is large ù load on first open only (not on dashboard boot).
+      // Settings modal is large ? load on first open only (not on dashboard boot).
     })();
 
     try {
