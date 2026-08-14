@@ -240,34 +240,46 @@
 
 .qi-modal__filter-toggle,
 .qi-modal__upload-btn,
-.qi-modal__research-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 2px solid #f59e0b;
-  background: #000;
-  color: #f59e0b;
+.qi-modal__research-btn,
+#quick-inspirations-modal button.qi-modal__filter-toggle,
+#quick-inspirations-modal button.qi-modal__upload-btn,
+#quick-inspirations-modal button.qi-modal__research-btn {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  border: 2px solid #f59e0b !important;
+  background: #000 !important;
+  background-color: #000 !important;
+  color: #f59e0b !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  padding: 0;
+  padding: 0 !important;
   position: relative;
+  box-shadow: none !important;
   transition: background 0.15s ease, transform 0.12s ease, opacity 0.15s ease, width 0.15s ease;
 }
 
 .qi-modal__filter-toggle:hover,
 .qi-modal__upload-btn:hover,
-.qi-modal__research-btn:hover:not(:disabled) {
-  background: #1a1a1a;
+.qi-modal__research-btn:hover:not(:disabled),
+#quick-inspirations-modal button.qi-modal__filter-toggle:hover,
+#quick-inspirations-modal button.qi-modal__upload-btn:hover,
+#quick-inspirations-modal button.qi-modal__research-btn:hover:not(:disabled) {
+  background: #1a1a1a !important;
+  background-color: #1a1a1a !important;
   transform: translateY(-1px);
 }
 
-.qi-modal__research-btn.is-used {
-  width: auto;
+.qi-modal__research-btn.is-used,
+#quick-inspirations-modal button.qi-modal__research-btn.is-used {
+  width: auto !important;
   min-width: 44px;
-  padding: 0 10px 0 8px;
+  padding: 0 10px 0 8px !important;
   gap: 6px;
 }
 
@@ -915,6 +927,27 @@
   background: #0b1220;
 }
 
+.qi-card__source-label {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  z-index: 2;
+  max-width: calc(100% - 16px);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.82);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  text-align: center;
+}
+
 .qi-card__trend-badge {
   position: absolute;
   left: 8px;
@@ -1248,6 +1281,17 @@
 .qi-delete-confirm__btn--cancel:hover {
   border-color: #64748b;
   background: #374151;
+}
+
+.qi-delete-confirm__btn--ok {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #111827;
+}
+
+.qi-delete-confirm__btn--ok:hover {
+  background: #fbbf24;
+  border-color: #fbbf24;
 }
 
 .qi-delete-confirm__btn--danger {

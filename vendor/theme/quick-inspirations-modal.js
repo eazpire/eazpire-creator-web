@@ -16,6 +16,8 @@
   var sourceModal = null;
   var deleteConfirmModal = null;
   var deleteConfirmResolver = null;
+  var researchConfirmModal = null;
+  var researchConfirmResolver = null;
   var sectionId = null;
   var selectedId = null;
   var previewItem = null;
@@ -186,6 +188,7 @@
     uploadModal = document.getElementById('qi-upload-modal');
     sourceModal = document.getElementById('qi-upload-source-modal');
     deleteConfirmModal = document.getElementById('qi-delete-confirm-modal');
+    researchConfirmModal = document.getElementById('qi-research-confirm-modal');
     editorModal = document.getElementById('qi-editor-modal');
     segmentConfigModal = document.getElementById('qi-segment-config-modal');
     return !!modal;
@@ -288,6 +291,43 @@
     if (typeof resolve === 'function') resolve(!!result);
   }
 
+  function askResearchConfirm(query) {
+    return new Promise(function (resolve) {
+      if (!researchConfirmModal) researchConfirmModal = document.getElementById('qi-research-confirm-modal');
+      if (!researchConfirmModal) {
+        resolve(false);
+        return;
+      }
+      var q = String(query || '').trim();
+      var left = document.getElementById('qi-research-confirm-left');
+      var action = document.getElementById('qi-research-confirm-action');
+      if (left) {
+        left.textContent = t('creator.quick_inspirations.research_confirm_left', 'You have {count} analyses left today.')
+          .replace('{count}', String(Math.max(0, researchRemaining)));
+      }
+      if (action) {
+        action.textContent = q
+          ? t('creator.quick_inspirations.research_confirm_search', 'Run search analysis for “{query}”?').replace('{query}', q)
+          : t('creator.quick_inspirations.research_confirm_random', 'The search field is empty. Run a random analysis?');
+      }
+      if (researchConfirmResolver) {
+        try {
+          researchConfirmResolver(false);
+        } catch (_e) {}
+        researchConfirmResolver = null;
+      }
+      researchConfirmResolver = resolve;
+      showDialog(researchConfirmModal);
+    });
+  }
+
+  function closeResearchConfirm(result) {
+    var resolve = researchConfirmResolver;
+    researchConfirmResolver = null;
+    hideDialog(researchConfirmModal);
+    if (typeof resolve === 'function') resolve(!!result);
+  }
+
   function setActiveTab(tab) {
     activeTab = tab === 'yours' ? 'yours' : 'public';
     if (!modal) return;
@@ -306,6 +346,8 @@
       ['qi-preview-cancel', 'creator.common.cancel', 'Cancel'],
       ['qi-preview-apply', 'creator.common.apply', 'Apply'],
       ['qi-delete-confirm-cancel', 'creator.common.cancel', 'Cancel'],
+      ['qi-research-confirm-cancel', 'creator.common.cancel', 'Cancel'],
+      ['qi-research-confirm-ok', 'creator.quick_inspirations.research_confirm_start', 'Start analysis'],
       ['qi-upload-cancel', 'creator.common.cancel', 'Cancel'],
     ];
     pairs.forEach(function (row) {
@@ -563,6 +605,29 @@
       );
       return false;
     }
+  }
+
+  function sourceKindForItem(item) {
+    if (!item) return 'upload';
+    if (item.source_kind) return String(item.source_kind);
+    var origin = String(item.origin || 'user');
+    var tags = item.tags || [];
+    if (origin === 'research') {
+      for (var i = 0; i < tags.length; i++) {
+        if (String(tags[i]).toLowerCase() === 'random') return 'random';
+      }
+      return 'search';
+    }
+    if (origin === 'trend_radar') return 'trend';
+    return 'upload';
+  }
+
+  function sourceLabelForItem(item) {
+    var kind = sourceKindForItem(item);
+    if (kind === 'random') return t('creator.quick_inspirations.label_random_analyse', 'Random analysis');
+    if (kind === 'search') return t('creator.quick_inspirations.label_search_analyse', 'Search analysis');
+    if (kind === 'upload') return t('creator.quick_inspirations.label_upload', 'Upload');
+    return '';
   }
 
   function isOwnedItem(item) {
@@ -1622,19 +1687,25 @@
       card.appendChild(img);
       enqueueGridImage(img, gridThumbSrc(item), card);
 
-      if (item.automatic || item.origin === 'trend_radar' || item.origin === 'research') {
+      if (item.automatic || item.origin === 'trend_radar') {
         var badge = document.createElement('span');
         badge.className = 'qi-card__trend-badge';
         var demand = item.demand_label || 'new';
-        var badgeLabel =
-          item.origin === 'research'
-            ? t('creator.quick_inspirations.badge_research', 'Research')
-            : t('creator.quick_inspirations.badge_trend', 'Trend');
         badge.textContent =
-          badgeLabel +
+          t('creator.quick_inspirations.badge_trend', 'Trend') +
           (item.niche_key ? ' · ' + item.niche_key : '') +
-          (item.origin === 'research' ? '' : demand ? ' · ' + demand : '');
+          (demand ? ' · ' + demand : '');
         card.appendChild(badge);
+      }
+
+      if (activeTab === 'yours') {
+        var sourceLabel = sourceLabelForItem(item);
+        if (sourceLabel) {
+          var sourceEl = document.createElement('span');
+          sourceEl.className = 'qi-card__source-label';
+          sourceEl.textContent = sourceLabel;
+          card.appendChild(sourceEl);
+        }
       }
 
       if (isProcessing) {
@@ -1896,7 +1967,7 @@
 
   function hostDialogs(host) {
     if (!host) return;
-    [sourceModal, uploadModal, deleteConfirmModal].forEach(function (dlg) {
+    [sourceModal, uploadModal, deleteConfirmModal, researchConfirmModal].forEach(function (dlg) {
       if (dlg && dlg.parentElement !== host) {
         try {
           host.appendChild(dlg);
@@ -1985,6 +2056,7 @@
     setSidebarOpen(false);
     setEazyTipOpen(false);
     closeDeleteConfirm(false);
+    closeResearchConfirm(false);
     closeSourcePicker();
     closeUpload();
     closeEditor(true);
@@ -2162,14 +2234,9 @@
     }
     var search = document.getElementById('qi-search');
     var q = String((search && search.value) || searchQuery || '').trim();
-    if (!q) {
-      showResearchStatus(
-        t('creator.quick_inspirations.research_empty', 'Type a niche in the search field first, for example cat.'),
-        'error'
-      );
-      if (search) search.focus();
-      return;
-    }
+    var confirmed = await askResearchConfirm(q);
+    if (!confirmed) return;
+    var mode = q ? 'search' : 'random';
     setResearchBusy(true, researchRemaining);
     setResearchOverlay(true);
     try {
@@ -2179,7 +2246,7 @@
         method: 'POST',
         credentials: 'omit',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: q }),
+        body: JSON.stringify({ q: q, mode: mode }),
         signal: ctrl ? ctrl.signal : undefined,
       });
       if (timer) clearTimeout(timer);
@@ -3419,6 +3486,11 @@
         closeDeleteConfirm(false);
         return;
       }
+      if (researchConfirmModal && researchConfirmModal.open) {
+        e.preventDefault();
+        closeResearchConfirm(false);
+        return;
+      }
       if (!modal || !(modal.open || modal.classList.contains('creator-modal--open'))) return;
       if (document.getElementById('qi-eazy-tip') && document.getElementById('qi-eazy-tip').classList.contains('is-visible')) {
         e.preventDefault();
@@ -3507,6 +3579,22 @@
       deleteConfirmModal.addEventListener('cancel', function (e) {
         e.preventDefault();
         closeDeleteConfirm(false);
+      });
+    }
+
+    var researchClose = document.getElementById('qi-research-confirm-close');
+    var researchCancel = document.getElementById('qi-research-confirm-cancel');
+    var researchOk = document.getElementById('qi-research-confirm-ok');
+    if (researchClose) researchClose.addEventListener('click', function () { closeResearchConfirm(false); });
+    if (researchCancel) researchCancel.addEventListener('click', function () { closeResearchConfirm(false); });
+    if (researchOk) researchOk.addEventListener('click', function () { closeResearchConfirm(true); });
+    if (researchConfirmModal) {
+      researchConfirmModal.addEventListener('click', function (e) {
+        if (e.target === researchConfirmModal) closeResearchConfirm(false);
+      });
+      researchConfirmModal.addEventListener('cancel', function (e) {
+        e.preventDefault();
+        closeResearchConfirm(false);
       });
     }
 
