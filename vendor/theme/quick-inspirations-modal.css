@@ -809,6 +809,23 @@
   background: #0b1220;
 }
 
+.qi-card__trend-badge {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 2;
+  max-width: calc(100% - 16px);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.78);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .qi-card__delete {
   position: absolute;
   top: 6px;

@@ -22,6 +22,8 @@
   var items = [];
   var searchQuery = '';
   var activeProduct = '';
+  var activeOrigin = '';
+  var activeNiche = '';
   var activeContentType = '';
   var activeLanguage = '';
   var activeTag = '';
@@ -435,6 +437,30 @@
         return {};
       });
       if (!data || !data.ok) return;
+      renderFilterChips(
+        'qi-filter-origins',
+        data.origins || [],
+        activeOrigin,
+        function (v) {
+          activeOrigin = v;
+          loadItems();
+          loadFilterTags();
+        },
+        function (name) {
+          if (name === 'trend_radar') return t('creator.quick_inspirations.origin_trend', 'Automatic trends');
+          return t('creator.quick_inspirations.origin_user', 'Community');
+        }
+      );
+      renderFilterChips(
+        'qi-filter-niches',
+        data.niches || [],
+        activeNiche,
+        function (v) {
+          activeNiche = v;
+          loadItems();
+          loadFilterTags();
+        }
+      );
       renderFilterChips(
         'qi-filter-products',
         data.products || [],
@@ -1592,6 +1618,16 @@
       card.appendChild(img);
       enqueueGridImage(img, gridThumbSrc(item), card);
 
+      if (item.automatic || item.origin === 'trend_radar') {
+        var badge = document.createElement('span');
+        badge.className = 'qi-card__trend-badge';
+        var demand = item.demand_label || 'new';
+        badge.textContent = t('creator.quick_inspirations.badge_trend', 'Trend') +
+          (item.niche_key ? ' · ' + item.niche_key : '') +
+          (demand ? ' · ' + demand : '');
+        card.appendChild(badge);
+      }
+
       if (isProcessing) {
         var overlay = document.createElement('div');
         overlay.className = 'qi-card__processing';
@@ -1668,6 +1704,8 @@
         u.searchParams.set('exclude_mine', '1');
       }
       if (searchQuery) u.searchParams.set('search', searchQuery);
+      if (activeOrigin) u.searchParams.set('origin', activeOrigin);
+      if (activeNiche) u.searchParams.set('niche', activeNiche);
       if (activeProduct) u.searchParams.set('product', activeProduct);
       if (activeContentType) u.searchParams.set('content_type', activeContentType);
       if (activeLanguage) u.searchParams.set('language', activeLanguage);
@@ -3261,6 +3299,8 @@
     if (reset) {
       reset.addEventListener('click', function () {
         activeProduct = '';
+        activeOrigin = '';
+        activeNiche = '';
         activeContentType = '';
         activeLanguage = '';
         activeTag = '';
