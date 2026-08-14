@@ -82,7 +82,13 @@
         aria-label="Research"
         title="Research"
       >
-        <span data-t="creator.quick_inspirations.research">Research</span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6"/>
+          <path d="M15 15l5.5 5.5" stroke-linecap="round"/>
+          <path d="M18.5 4.2v3.2M16.9 5.8h3.2" stroke-linecap="round"/>
+        </svg>
+        <span class="qi-modal__research-badge" id="qi-research-count">1</span>
+        <span class="qi-modal__research-countdown" id="qi-research-countdown" hidden>00:00:00</span>
       </button>
       <button
         type="button"
@@ -246,6 +252,12 @@
         <div id="qi-loading" class="qi-modal__loading" style="display:none;" data-t="creator.quick_inspirations.loading">Loadingâ€¦</div>
         <div id="qi-empty" class="qi-modal__empty" style="display:none;" data-t="creator.quick_inspirations.empty">No quick inspirations yet. Be the first to upload!</div>
         <div id="qi-grid" class="qi-modal__grid"></div>
+      </div>
+      <div id="qi-research-loading" class="qi-modal__research-overlay" hidden>
+        <div class="qi-modal__research-overlay-card">
+          <span class="qi-modal__research-spinner" aria-hidden="true"></span>
+          <p data-t="creator.quick_inspirations.research_running">Researching niches and products…</p>
+        </div>
       </div>
     </div>
     </div>

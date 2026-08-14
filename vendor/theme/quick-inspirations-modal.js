@@ -43,6 +43,8 @@
   var pasteBinder = null;
   var uploading = false;
   var researching = false;
+  var researchRemaining = 1;
+  var researchCountdownTimer = null;
   /** 'public' | 'yours' — default Public Inspirations */
   var activeTab = 'public';
   /** Cap concurrent grid image downloads (full-size R2 files are ~100–300KB each). */
@@ -2005,6 +2007,9 @@
       }, 0);
     }
     selectionInProgress = false;
+    researching = false;
+    stopResearchCountdown();
+    setResearchOverlay(false);
   }
 
   function showUploadStatus(msg, kind) {
@@ -2029,28 +2034,99 @@
     el.textContent = msg;
   }
 
-  function setResearchBusy(isBusy, usedToday) {
-    researching = !!isBusy;
+  function nextUtcResetMs() {
+    var now = new Date();
+    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0);
+  }
+
+  function formatResearchCountdown(ms) {
+    var total = Math.max(0, Math.floor(Number(ms) / 1000));
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var s = total % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function stopResearchCountdown() {
+    if (researchCountdownTimer) {
+      clearInterval(researchCountdownTimer);
+      researchCountdownTimer = null;
+    }
+  }
+
+  function setResearchOverlay(isOn) {
+    var overlay = document.getElementById('qi-research-loading');
+    if (!overlay) return;
+    overlay.hidden = !isOn;
+  }
+
+  function renderResearchButton() {
     var btn = document.getElementById('qi-research-run');
+    var badge = document.getElementById('qi-research-count');
+    var countdown = document.getElementById('qi-research-countdown');
     if (!btn) return;
-    var label = btn.querySelector('span') || btn;
-    if (isBusy) {
-      btn.disabled = true;
-      label.textContent = t('creator.quick_inspirations.research_running', 'Researching…');
+    var remaining = Math.max(0, Number(researchRemaining) || 0);
+    var usedToday = remaining <= 0;
+    btn.classList.toggle('is-busy', researching);
+    btn.classList.toggle('is-used', !researching && usedToday);
+    btn.disabled = researching || usedToday;
+    if (badge) badge.textContent = String(remaining);
+    if (researching) {
+      if (countdown) countdown.hidden = true;
+      btn.title = t('creator.quick_inspirations.research_running', 'Researching…');
+      btn.setAttribute('aria-label', t('creator.quick_inspirations.research_running', 'Researching…'));
       return;
     }
-    label.textContent = t('creator.quick_inspirations.research', 'Research');
-    btn.disabled = !!usedToday;
-    btn.title = usedToday
-      ? t('creator.quick_inspirations.research_limit', 'You can run Research once per day.')
-      : t('creator.quick_inspirations.research', 'Research');
+    if (usedToday) {
+      var timeLeft = formatResearchCountdown(nextUtcResetMs() - Date.now());
+      if (countdown) {
+        countdown.hidden = false;
+        countdown.textContent = timeLeft;
+      }
+      var waitLabel = t('creator.quick_inspirations.research_countdown', 'Available again in {time}').replace('{time}', timeLeft);
+      btn.title = waitLabel;
+      btn.setAttribute('aria-label', waitLabel);
+      return;
+    }
+    if (countdown) countdown.hidden = true;
+    var readyLabel = t('creator.quick_inspirations.research', 'Research') + ' · ' + remaining;
+    btn.title = readyLabel;
+    btn.setAttribute('aria-label', readyLabel);
+  }
+
+  function startResearchCountdown() {
+    stopResearchCountdown();
+    renderResearchButton();
+    if (researchRemaining > 0 || researching) return;
+    researchCountdownTimer = setInterval(function () {
+      if (nextUtcResetMs() - Date.now() <= 0) {
+        stopResearchCountdown();
+        researchRemaining = 1;
+        renderResearchButton();
+        refreshResearchButton();
+        return;
+      }
+      renderResearchButton();
+    }, 1000);
+  }
+
+  function setResearchBusy(isBusy, remaining) {
+    researching = !!isBusy;
+    if (typeof remaining === 'number' && !isNaN(remaining)) {
+      researchRemaining = Math.max(0, remaining);
+    }
+    if (researching) showResearchStatus('', '');
+    renderResearchButton();
+    if (!researching && researchRemaining <= 0) startResearchCountdown();
+    else if (researchRemaining > 0) stopResearchCountdown();
   }
 
   function refreshResearchButton() {
     var btn = document.getElementById('qi-research-run');
     if (!btn || researching) return;
     if (!getOwnerId()) {
-      setResearchBusy(false, false);
+      researchRemaining = 1;
+      renderResearchButton();
       return;
     }
     fetch(apiUrl('quick-inspiration-upload-status').toString(), { credentials: 'omit' })
@@ -2060,16 +2136,28 @@
         });
       })
       .then(function (data) {
-        var daily = (data && data.daily) || data || {};
-        setResearchBusy(false, daily.research_allowed === false);
+        var daily = (data && data.daily) || {};
+        if (typeof daily.research_remaining === 'number') {
+          researchRemaining = Math.max(0, daily.research_remaining);
+        } else {
+          researchRemaining = daily.research_allowed === false ? 0 : 1;
+        }
+        setResearchBusy(false, researchRemaining);
       })
-      .catch(function () {});
+      .catch(function () {
+        renderResearchButton();
+      });
   }
 
   async function runResearch() {
     if (researching) return;
     if (!getOwnerId()) {
       showResearchStatus(t('creator.quick_inspirations.research_login', 'Please sign in to run Research.'), 'error');
+      return;
+    }
+    if (researchRemaining <= 0) {
+      showResearchStatus(t('creator.quick_inspirations.research_limit', 'You can run Research once per day.'), 'error');
+      startResearchCountdown();
       return;
     }
     var search = document.getElementById('qi-search');
@@ -2082,8 +2170,8 @@
       if (search) search.focus();
       return;
     }
-    setResearchBusy(true, false);
-    showResearchStatus(t('creator.quick_inspirations.research_running', 'Researching…'), '');
+    setResearchBusy(true, researchRemaining);
+    setResearchOverlay(true);
     try {
       var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
       var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 90000) : null;
@@ -2099,16 +2187,19 @@
         return {};
       });
       if (res.status === 429 || (data && data.error === 'research_limit')) {
-        setResearchBusy(false, true);
+        setResearchBusy(false, 0);
         showResearchStatus(t('creator.quick_inspirations.research_limit', 'You can run Research once per day.'), 'error');
         return;
       }
       if (!res.ok || !data || data.ok === false) {
-        setResearchBusy(false, false);
+        setResearchBusy(false, researchRemaining);
         showResearchStatus(t('creator.quick_inspirations.research_failed', 'Research failed. Please try again tomorrow or later.'), 'error');
         return;
       }
-      setResearchBusy(false, true);
+      var after = data.daily && typeof data.daily.research_remaining === 'number'
+        ? data.daily.research_remaining
+        : 0;
+      setResearchBusy(false, after);
       var count = Number(data.created) || 0;
       if (!count) {
         showResearchStatus(
@@ -2124,8 +2215,10 @@
       setActiveTab('yours');
       await loadItems();
     } catch (_e) {
-      setResearchBusy(false, false);
+      setResearchBusy(false, researchRemaining);
       showResearchStatus(t('creator.quick_inspirations.research_failed', 'Research failed. Please try again tomorrow or later.'), 'error');
+    } finally {
+      setResearchOverlay(false);
     }
   }
 
