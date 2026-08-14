@@ -42,6 +42,7 @@
   var screenshotBinder = null;
   var pasteBinder = null;
   var uploading = false;
+  var researching = false;
   /** 'public' | 'yours' — default Public Inspirations */
   var activeTab = 'public';
   /** Cap concurrent grid image downloads (full-size R2 files are ~100–300KB each). */
@@ -448,6 +449,7 @@
         },
         function (name) {
           if (name === 'trend_radar') return t('creator.quick_inspirations.origin_trend', 'Automatic trends');
+          if (name === 'research') return t('creator.quick_inspirations.origin_research', 'Research');
           return t('creator.quick_inspirations.origin_user', 'Community');
         }
       );
@@ -1618,13 +1620,18 @@
       card.appendChild(img);
       enqueueGridImage(img, gridThumbSrc(item), card);
 
-      if (item.automatic || item.origin === 'trend_radar') {
+      if (item.automatic || item.origin === 'trend_radar' || item.origin === 'research') {
         var badge = document.createElement('span');
         badge.className = 'qi-card__trend-badge';
         var demand = item.demand_label || 'new';
-        badge.textContent = t('creator.quick_inspirations.badge_trend', 'Trend') +
+        var badgeLabel =
+          item.origin === 'research'
+            ? t('creator.quick_inspirations.badge_research', 'Research')
+            : t('creator.quick_inspirations.badge_trend', 'Trend');
+        badge.textContent =
+          badgeLabel +
           (item.niche_key ? ' · ' + item.niche_key : '') +
-          (demand ? ' · ' + demand : '');
+          (item.origin === 'research' ? '' : demand ? ' · ' + demand : '');
         card.appendChild(badge);
       }
 
@@ -1932,6 +1939,7 @@
       modal.setAttribute('open', '');
     }
     hardenCommonLabels();
+    refreshResearchButton();
     setActiveTab(opts.tab === 'yours' || opts.focusYours ? 'yours' : 'public');
     loadFilterTags();
     loadItems().then(function () {
@@ -2005,6 +2013,120 @@
     el.style.display = msg ? 'block' : 'none';
     el.className = 'qi-upload__status' + (kind ? ' is-' + kind : '');
     el.textContent = msg || '';
+  }
+
+  function showResearchStatus(msg, kind) {
+    var el = document.getElementById('qi-research-status');
+    if (!el) return;
+    if (!msg) {
+      el.hidden = true;
+      el.textContent = '';
+      el.className = 'qi-modal__research-status';
+      return;
+    }
+    el.hidden = false;
+    el.className = 'qi-modal__research-status' + (kind ? ' is-' + kind : '');
+    el.textContent = msg;
+  }
+
+  function setResearchBusy(isBusy, usedToday) {
+    researching = !!isBusy;
+    var btn = document.getElementById('qi-research-run');
+    if (!btn) return;
+    var label = btn.querySelector('span') || btn;
+    if (isBusy) {
+      btn.disabled = true;
+      label.textContent = t('creator.quick_inspirations.research_running', 'Researching…');
+      return;
+    }
+    label.textContent = t('creator.quick_inspirations.research', 'Research');
+    btn.disabled = !!usedToday;
+    btn.title = usedToday
+      ? t('creator.quick_inspirations.research_limit', 'You can run Research once per day.')
+      : t('creator.quick_inspirations.research', 'Research');
+  }
+
+  function refreshResearchButton() {
+    var btn = document.getElementById('qi-research-run');
+    if (!btn || researching) return;
+    if (!getOwnerId()) {
+      setResearchBusy(false, false);
+      return;
+    }
+    fetch(apiUrl('quick-inspiration-upload-status').toString(), { credentials: 'omit' })
+      .then(function (res) {
+        return res.json().catch(function () {
+          return {};
+        });
+      })
+      .then(function (data) {
+        var daily = (data && data.daily) || data || {};
+        setResearchBusy(false, daily.research_allowed === false);
+      })
+      .catch(function () {});
+  }
+
+  async function runResearch() {
+    if (researching) return;
+    if (!getOwnerId()) {
+      showResearchStatus(t('creator.quick_inspirations.research_login', 'Please sign in to run Research.'), 'error');
+      return;
+    }
+    var search = document.getElementById('qi-search');
+    var q = String((search && search.value) || searchQuery || '').trim();
+    if (!q) {
+      showResearchStatus(
+        t('creator.quick_inspirations.research_empty', 'Type a niche in the search field first, for example cat.'),
+        'error'
+      );
+      if (search) search.focus();
+      return;
+    }
+    setResearchBusy(true, false);
+    showResearchStatus(t('creator.quick_inspirations.research_running', 'Researching…'), '');
+    try {
+      var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 90000) : null;
+      var res = await fetch(apiUrl('research-quick-inspirations').toString(), {
+        method: 'POST',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: q }),
+        signal: ctrl ? ctrl.signal : undefined,
+      });
+      if (timer) clearTimeout(timer);
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (res.status === 429 || (data && data.error === 'research_limit')) {
+        setResearchBusy(false, true);
+        showResearchStatus(t('creator.quick_inspirations.research_limit', 'You can run Research once per day.'), 'error');
+        return;
+      }
+      if (!res.ok || !data || data.ok === false) {
+        setResearchBusy(false, false);
+        showResearchStatus(t('creator.quick_inspirations.research_failed', 'Research failed. Please try again tomorrow or later.'), 'error');
+        return;
+      }
+      setResearchBusy(false, true);
+      var count = Number(data.created) || 0;
+      if (!count) {
+        showResearchStatus(
+          t('creator.quick_inspirations.research_none', 'No matching products found for this niche today.'),
+          'error'
+        );
+      } else {
+        showResearchStatus(
+          t('creator.quick_inspirations.research_done', 'Research saved to Your Inspirations.') + ' (' + count + ')',
+          'ok'
+        );
+      }
+      setActiveTab('yours');
+      await loadItems();
+    } catch (_e) {
+      setResearchBusy(false, false);
+      showResearchStatus(t('creator.quick_inspirations.research_failed', 'Research failed. Please try again tomorrow or later.'), 'error');
+    }
   }
 
   /**
@@ -3319,6 +3441,9 @@
         searchTimer = setTimeout(loadItems, 280);
       });
     }
+
+    var researchRun = document.getElementById('qi-research-run');
+    if (researchRun) researchRun.addEventListener('click', runResearch);
 
     var uploadOpen = document.getElementById('qi-upload-open');
     if (uploadOpen) uploadOpen.addEventListener('click', openUploadFlow);

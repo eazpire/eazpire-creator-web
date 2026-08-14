@@ -71,10 +71,19 @@
         type="search"
         id="qi-search"
         class="qi-modal__search"
-        placeholder="Search inspirationsâ€¦"
+        placeholder="Search inspirations…"
         autocomplete="off"
         aria-label="Search inspirations"
       >
+      <button
+        type="button"
+        class="qi-modal__research-btn"
+        id="qi-research-run"
+        aria-label="Research"
+        title="Research"
+      >
+        <span data-t="creator.quick_inspirations.research">Research</span>
+      </button>
       <button
         type="button"
         class="qi-modal__upload-btn"
@@ -88,6 +97,7 @@
         </svg>
       </button>
     </div>
+    <p id="qi-research-status" class="qi-modal__research-status" hidden></p>
 
     <div class="qi-modal__body">
       <div class="qi-modal__sidebar-wrapper" id="qi-sidebar-wrapper">
