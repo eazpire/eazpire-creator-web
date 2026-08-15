@@ -250,7 +250,7 @@
     if (editable) {
       var hint = document.createElement('p');
       hint.className = 'cpz-panel__hint';
-      hint.textContent = Mi().zonesHint || 'Place frames on the design to mark where customers can add text or images.';
+      hint.textContent = Mi().zonesHint || 'Place frames on the design to mark where customers can add text or images. Name each element and mark required fields. Unused optional fields are filled by AI in the same style.';
       root.appendChild(hint);
 
       layout = document.createElement('div');
