@@ -2203,6 +2203,15 @@ html.creator-design-products-modal-open {
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+.cdp-modal__products-zones .cpz-panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.cdp-modal__products-zones .cpz-list__items {
+  max-height: min(480px, 65vh);
+}
 .cdp-modal__products-zones-actions {
   display: flex;
   justify-content: flex-end;

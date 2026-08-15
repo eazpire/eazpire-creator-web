@@ -88,6 +88,12 @@
       : M.zonesTypeText || 'Text';
   }
 
+  function zoneTitle(zone) {
+    var label = String((zone && zone.label) || '').trim();
+    if (label) return label;
+    return typeLabel(zone && zone.type) + ' ' + String((zone && zone.n) || '');
+  }
+
   function openTypePicker(onPick) {
     var M = Mi();
     var overlay = document.createElement('div');
@@ -158,6 +164,13 @@
     num.className = 'cpz-frame__num';
     num.textContent = String(zone.n);
     el.appendChild(num);
+
+    if (zone.label) {
+      var nameCap = document.createElement('span');
+      nameCap.className = 'cpz-frame__name';
+      nameCap.textContent = zone.label;
+      el.appendChild(nameCap);
+    }
 
     if (editable) {
       var lockBtn = document.createElement('button');
@@ -245,7 +258,7 @@
       root.appendChild(layout);
 
       viewer = document.createElement('div');
-      viewer.className = 'cpz-viewer';
+      viewer.className = 'cpz-viewer cpz-viewer--edit';
       layout.appendChild(viewer);
     } else {
       viewer = root;
@@ -275,6 +288,17 @@
     listeners.push(function () {
       window.removeEventListener('resize', syncStageBox);
     });
+    if (typeof ResizeObserver === 'function' && viewer) {
+      var ro = new ResizeObserver(function () {
+        syncStageBox();
+      });
+      ro.observe(viewer);
+      listeners.push(function () {
+        try {
+          ro.disconnect();
+        } catch (_) {}
+      });
+    }
 
     if (editable) {
       var toolbar = document.createElement('div');
@@ -366,20 +390,32 @@
 
     function selectZone(id) {
       selectedId = id;
-      render();
+      if (stage) {
+        stage.querySelectorAll('.cpz-frame').forEach(function (el) {
+          el.classList.toggle('is-selected', el.getAttribute('data-zone-id') === id);
+        });
+      }
+      if (listEl) {
+        listEl.querySelectorAll('.cpz-list__item').forEach(function (el) {
+          el.classList.toggle('is-selected', el.getAttribute('data-zone-id') === id);
+        });
+      }
     }
 
     function onPointerDown(e, zoneId, frameEl) {
+      if (e.button != null && e.button !== 0) return;
       var z = findZone(zoneId);
-      if (!z || z.locked) {
-        selectZone(zoneId);
-        return;
-      }
-      var handle = e.target && e.target.getAttribute ? e.target.getAttribute('data-handle') : null;
+      if (!z) return;
       if (e.target && e.target.closest && e.target.closest('.cpz-frame__lock')) return;
 
+      var handleEl = e.target && e.target.closest ? e.target.closest('[data-handle]') : null;
+      var handle = handleEl ? handleEl.getAttribute('data-handle') : null;
+
       e.preventDefault();
+      e.stopPropagation();
       selectZone(zoneId);
+      if (z.locked) return;
+
       syncStageBox();
       var stageRect = stage.getBoundingClientRect();
       if (!stageRect.width || !stageRect.height) return;
@@ -393,6 +429,7 @@
         stageW: stageRect.width,
         stageH: stageRect.height,
         frameEl: frameEl,
+        pointerId: e.pointerId,
       };
 
       try {
@@ -400,7 +437,9 @@
       } catch (_) {}
 
       function onMove(ev) {
-        if (!dragState) return;
+        if (!dragState || dragState.id !== zoneId) return;
+        if (ev.pointerId != null && dragState.pointerId != null && ev.pointerId !== dragState.pointerId) return;
+        ev.preventDefault();
         var dx = (ev.clientX - dragState.startX) / dragState.stageW;
         var dy = (ev.clientY - dragState.startY) / dragState.stageH;
         var o = dragState.origin;
@@ -438,15 +477,37 @@
         applyFrameStyle(dragState.frameEl, zone);
       }
 
-      function onUp() {
+      function onUp(ev) {
+        if (
+          ev &&
+          ev.pointerId != null &&
+          dragState &&
+          dragState.pointerId != null &&
+          ev.pointerId !== dragState.pointerId
+        ) {
+          return;
+        }
+        frameEl.removeEventListener('pointermove', onMove);
+        frameEl.removeEventListener('pointerup', onUp);
+        frameEl.removeEventListener('pointercancel', onUp);
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+        try {
+          if (dragState && dragState.pointerId != null) {
+            frameEl.releasePointerCapture(dragState.pointerId);
+          }
+        } catch (_) {}
         dragState = null;
         emitChange();
       }
 
+      frameEl.addEventListener('pointermove', onMove);
+      frameEl.addEventListener('pointerup', onUp);
+      frameEl.addEventListener('pointercancel', onUp);
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
     }
 
     function renderList() {
@@ -473,6 +534,7 @@
         var row = document.createElement('div');
         row.className = 'cpz-list__item' + (z.id === selectedId ? ' is-selected' : '');
         row.setAttribute('data-type', z.type);
+        row.setAttribute('data-zone-id', z.id);
         row.addEventListener('click', function () {
           selectZone(z.id);
         });
@@ -487,8 +549,13 @@
 
         var typeEl = document.createElement('span');
         typeEl.className = 'cpz-list__label';
-        typeEl.textContent = typeLabel(z.type);
+        typeEl.textContent = zoneTitle(z);
         top.appendChild(typeEl);
+
+        var typeHint = document.createElement('span');
+        typeHint.className = 'cpz-list__type';
+        typeHint.textContent = typeLabel(z.type);
+        top.appendChild(typeHint);
 
         var del = document.createElement('span');
         del.className = 'cpz-list__delete';
@@ -502,20 +569,42 @@
         top.appendChild(del);
         row.appendChild(top);
 
+        var nameField = document.createElement('label');
+        nameField.className = 'cpz-list__name-field';
+        nameField.addEventListener('click', function (e) {
+          e.stopPropagation();
+        });
+        var nameLbl = document.createElement('span');
+        nameLbl.className = 'cpz-list__name-label';
+        nameLbl.textContent = Mi().zonesNameLabel || 'Name';
+        nameField.appendChild(nameLbl);
         var nameInput = document.createElement('input');
         nameInput.type = 'text';
         nameInput.className = 'cpz-list__name';
         nameInput.maxLength = 40;
         nameInput.placeholder = Mi().zonesNamePlaceholder || 'Name (e.g. Birthday, Child 1)';
         nameInput.value = z.label || '';
-        nameInput.addEventListener('click', function (e) {
-          e.stopPropagation();
-        });
         nameInput.addEventListener('input', function () {
           z.label = String(nameInput.value || '').trim();
+          typeEl.textContent = zoneTitle(z);
+          var frame = stage.querySelector('.cpz-frame[data-zone-id="' + z.id + '"]');
+          if (frame) {
+            var cap = frame.querySelector('.cpz-frame__name');
+            if (z.label) {
+              if (!cap) {
+                cap = document.createElement('span');
+                cap.className = 'cpz-frame__name';
+                frame.appendChild(cap);
+              }
+              cap.textContent = z.label;
+            } else if (cap) {
+              cap.remove();
+            }
+          }
           emitChange();
         });
-        row.appendChild(nameInput);
+        nameField.appendChild(nameInput);
+        row.appendChild(nameField);
 
         var reqWrap = document.createElement('label');
         reqWrap.className = 'cpz-list__required';
@@ -655,10 +744,11 @@
 
       var label = document.createElement('label');
       label.className = 'cpz-fill__label';
-      label.textContent =
-        (Mi().zonesFillLabel || 'Element {{n}} ({{type}})')
-          .replace('{{n}}', String(z.n))
-          .replace('{{type}}', typeLabel(z.type));
+      label.textContent = z.label
+        ? z.label + ' (' + typeLabel(z.type) + ')'
+        : (Mi().zonesFillLabel || 'Element {{n}} ({{type}})')
+            .replace('{{n}}', String(z.n))
+            .replace('{{type}}', typeLabel(z.type));
       row.appendChild(label);
 
       if (z.type === 'image') {
