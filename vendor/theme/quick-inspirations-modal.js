@@ -2132,15 +2132,41 @@
     overlay.hidden = !isOn;
   }
 
+  function paintQiIconBtn(btn) {
+    if (!btn) return;
+    btn.style.setProperty('appearance', 'none', 'important');
+    btn.style.setProperty('-webkit-appearance', 'none', 'important');
+    btn.style.setProperty('width', '44px', 'important');
+    btn.style.setProperty('height', '44px', 'important');
+    btn.style.setProperty('min-width', '44px', 'important');
+    btn.style.setProperty('max-width', '44px', 'important');
+    btn.style.setProperty('border-radius', '12px', 'important');
+    btn.style.setProperty('border', '2px solid #f59e0b', 'important');
+    btn.style.setProperty('background', '#000', 'important');
+    btn.style.setProperty('background-color', '#000', 'important');
+    btn.style.setProperty('color', '#f59e0b', 'important');
+    btn.style.setProperty('padding', '0', 'important');
+    btn.style.setProperty('margin', '0', 'important');
+    btn.style.setProperty('display', 'inline-flex', 'important');
+    btn.style.setProperty('align-items', 'center', 'important');
+    btn.style.setProperty('justify-content', 'center', 'important');
+    btn.style.setProperty('box-shadow', 'none', 'important');
+  }
+
   function renderResearchButton() {
     var btn = document.getElementById('qi-research-run');
+    var wrap = document.getElementById('qi-research-wrap');
     var badge = document.getElementById('qi-research-count');
     var countdown = document.getElementById('qi-research-countdown');
     if (!btn) return;
+    paintQiIconBtn(btn);
+    paintQiIconBtn(document.getElementById('qi-upload-open'));
     var remaining = Math.max(0, Number(researchRemaining) || 0);
     var usedToday = remaining <= 0;
-    btn.classList.toggle('is-busy', researching);
-    btn.classList.toggle('is-used', !researching && usedToday);
+    if (wrap) {
+      wrap.classList.toggle('is-busy', researching);
+      wrap.classList.toggle('is-used', !researching && usedToday);
+    }
     btn.disabled = researching || usedToday;
     if (badge) badge.textContent = String(remaining);
     if (researching) {

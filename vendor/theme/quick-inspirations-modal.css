@@ -240,59 +240,62 @@
 
 .qi-modal__filter-toggle,
 .qi-modal__upload-btn,
-.qi-modal__research-btn,
 #quick-inspirations-modal button.qi-modal__filter-toggle,
 #quick-inspirations-modal button.qi-modal__upload-btn,
-#quick-inspirations-modal button.qi-modal__research-btn {
+#qi-research-run {
   appearance: none !important;
   -webkit-appearance: none !important;
   width: 44px !important;
   height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
   border-radius: 12px !important;
   border: 2px solid #f59e0b !important;
   background: #000 !important;
   background-color: #000 !important;
   color: #f59e0b !important;
   cursor: pointer;
-  display: flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   padding: 0 !important;
+  margin: 0 !important;
   position: relative;
   box-shadow: none !important;
-  transition: background 0.15s ease, transform 0.12s ease, opacity 0.15s ease, width 0.15s ease;
+  outline: none;
+  transition: background 0.15s ease, transform 0.12s ease, opacity 0.15s ease;
 }
 
 .qi-modal__filter-toggle:hover,
 .qi-modal__upload-btn:hover,
-.qi-modal__research-btn:hover:not(:disabled),
 #quick-inspirations-modal button.qi-modal__filter-toggle:hover,
 #quick-inspirations-modal button.qi-modal__upload-btn:hover,
-#quick-inspirations-modal button.qi-modal__research-btn:hover:not(:disabled) {
+#qi-research-run:hover:not(:disabled) {
   background: #1a1a1a !important;
   background-color: #1a1a1a !important;
   transform: translateY(-1px);
 }
 
-.qi-modal__research-btn.is-used,
-#quick-inspirations-modal button.qi-modal__research-btn.is-used {
-  width: auto !important;
-  min-width: 44px;
-  padding: 0 10px 0 8px !important;
-  gap: 6px;
-}
-
-.qi-modal__research-btn:disabled {
+#qi-research-run:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
+}
+
+.qi-modal__research-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
 }
 
 .qi-modal__research-badge {
   position: absolute;
   top: -6px;
   right: -6px;
+  z-index: 2;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -303,10 +306,11 @@
   font-weight: 800;
   line-height: 18px;
   text-align: center;
+  pointer-events: none;
 }
 
-.qi-modal__research-btn.is-used .qi-modal__research-badge,
-.qi-modal__research-btn.is-busy .qi-modal__research-badge {
+.qi-modal__research-wrap.is-used .qi-modal__research-badge,
+.qi-modal__research-wrap.is-busy .qi-modal__research-badge {
   display: none;
 }
 
