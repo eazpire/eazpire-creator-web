@@ -236,7 +236,8 @@
 
 .cpz-list__item {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
   text-align: left;
@@ -247,6 +248,27 @@
   padding: 8px 10px;
   cursor: pointer;
   font-size: 12px;
+}
+.cpz-list__item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cpz-list__name {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.cpz-list__required {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .cpz-list__item.is-selected {

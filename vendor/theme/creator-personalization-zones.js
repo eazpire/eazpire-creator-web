@@ -61,6 +61,8 @@
       w: w,
       h: h,
       locked: !!raw.locked,
+      label: String(raw.label || raw.name || '').trim(),
+      required: raw.required !== false,
     };
   }
 
@@ -310,6 +312,8 @@
             w: z.w,
             h: z.h,
             locked: !!z.locked,
+            label: String(z.label || '').trim(),
+            required: z.required !== false,
           };
         }));
       }
@@ -334,6 +338,8 @@
         w: DEFAULT_W,
         h: DEFAULT_H,
         locked: false,
+        label: '',
+        required: true,
       };
       zones.push(zone);
       selectedId = zone.id;
@@ -464,23 +470,25 @@
       var items = document.createElement('div');
       items.className = 'cpz-list__items';
       zones.forEach(function (z) {
-        var row = document.createElement('button');
-        row.type = 'button';
+        var row = document.createElement('div');
         row.className = 'cpz-list__item' + (z.id === selectedId ? ' is-selected' : '');
         row.setAttribute('data-type', z.type);
         row.addEventListener('click', function () {
           selectZone(z.id);
         });
 
+        var top = document.createElement('div');
+        top.className = 'cpz-list__item-top';
+
         var badge = document.createElement('span');
         badge.className = 'cpz-list__badge';
         badge.textContent = String(z.n);
-        row.appendChild(badge);
+        top.appendChild(badge);
 
-        var label = document.createElement('span');
-        label.className = 'cpz-list__label';
-        label.textContent = typeLabel(z.type);
-        row.appendChild(label);
+        var typeEl = document.createElement('span');
+        typeEl.className = 'cpz-list__label';
+        typeEl.textContent = typeLabel(z.type);
+        top.appendChild(typeEl);
 
         var del = document.createElement('span');
         del.className = 'cpz-list__delete';
@@ -491,7 +499,39 @@
           e.stopPropagation();
           removeZone(z.id);
         });
-        row.appendChild(del);
+        top.appendChild(del);
+        row.appendChild(top);
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'cpz-list__name';
+        nameInput.maxLength = 40;
+        nameInput.placeholder = Mi().zonesNamePlaceholder || 'Name (e.g. Birthday, Child 1)';
+        nameInput.value = z.label || '';
+        nameInput.addEventListener('click', function (e) {
+          e.stopPropagation();
+        });
+        nameInput.addEventListener('input', function () {
+          z.label = String(nameInput.value || '').trim();
+          emitChange();
+        });
+        row.appendChild(nameInput);
+
+        var reqWrap = document.createElement('label');
+        reqWrap.className = 'cpz-list__required';
+        reqWrap.addEventListener('click', function (e) {
+          e.stopPropagation();
+        });
+        var req = document.createElement('input');
+        req.type = 'checkbox';
+        req.checked = z.required !== false;
+        req.addEventListener('change', function () {
+          z.required = !!req.checked;
+          emitChange();
+        });
+        reqWrap.appendChild(req);
+        reqWrap.appendChild(document.createTextNode(' ' + (Mi().zonesRequired || 'Required')));
+        row.appendChild(reqWrap);
 
         items.appendChild(row);
       });
