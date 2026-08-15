@@ -592,11 +592,92 @@
       : null;
   }
 
+  function decodeHtmlEntitiesClient(s) {
+    return String(s || '')
+      .replace(/&#x([0-9a-f]+);/gi, function (_, hex) {
+        var n = parseInt(hex, 16);
+        try {
+          return Number.isFinite(n) ? String.fromCodePoint(n) : _;
+        } catch (eHex) {
+          return _;
+        }
+      })
+      .replace(/&#(\d+);/g, function (_, dec) {
+        var n = parseInt(dec, 10);
+        try {
+          return Number.isFinite(n) ? String.fromCodePoint(n) : _;
+        } catch (eDec) {
+          return _;
+        }
+      })
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ');
+  }
+
+  function isPlausibleSocialPageName(raw) {
+    var s = decodeHtmlEntitiesClient(raw).replace(/\s+/g, ' ').trim();
+    if (s.length < 2 || s.length > 80) return false;
+    if (/[|]/.test(s)) return false;
+    if (/\b(views?|reactions?|comments?|likes?|shares?)\b/i.test(s)) return false;
+    if (/^\d/.test(s) && /\b(k|m|views?)\b/i.test(s)) return false;
+    if (/^(watch|log in|facebook|profile)$/i.test(s)) return false;
+    if (s.split(/\s+/).length > 8) return false;
+    return true;
+  }
+
+  function cleanSocialPageName(raw) {
+    var decoded = decodeHtmlEntitiesClient(raw).replace(/\s+/g, ' ').trim();
+    if (!decoded) return '';
+    if (isPlausibleSocialPageName(decoded)) return decoded;
+    var stripped = decoded.replace(/\s*[|\-–—]\s*Facebook\s*$/i, '').trim();
+    if (stripped.indexOf('|') !== -1) {
+      var parts = stripped.split('|').map(function (p) { return p.trim(); }).filter(Boolean);
+      var last = parts[parts.length - 1] || '';
+      return isPlausibleSocialPageName(last) ? last : '';
+    }
+    return isPlausibleSocialPageName(stripped) ? stripped : '';
+  }
+
+  function isFacebookPageOrProfileUrl(raw) {
+    try {
+      var u = new URL(String(raw || '').trim());
+      var host = u.hostname.replace(/^www\./i, '').toLowerCase();
+      if (
+        host !== 'facebook.com' &&
+        host !== 'm.facebook.com' &&
+        host !== 'web.facebook.com' &&
+        host !== 'mbasic.facebook.com'
+      ) {
+        return false;
+      }
+      var pathq = u.pathname + u.search;
+      if (/\/(reel|watch|share)\b/i.test(pathq)) return false;
+      if (/\/videos\/\d+/i.test(pathq)) return false;
+      return true;
+    } catch (eUrl) {
+      return false;
+    }
+  }
+
+  function facebookPageLinkOf(meta) {
+    if (!meta) return '';
+    var author = meta.author || {};
+    if (author.url && isFacebookPageOrProfileUrl(author.url)) return String(author.url).trim();
+    var id = author.id ? String(author.id).trim() : '';
+    if (/^\d{5,}$/.test(id)) return 'https://www.facebook.com/profile.php?id=' + id;
+    return '';
+  }
+
   function socialTooltipText(asset) {
     var m = socialMetaOf(asset);
     if (!m) return '';
     var parts = [];
-    if (m.author && m.author.name) parts.push(String(m.author.name));
+    var tipName = cleanSocialPageName(m.author && m.author.name);
+    if (tipName) parts.push(tipName);
     if (m.description) {
       var d = String(m.description).replace(/\s+/g, ' ').trim();
       if (d.length > 140) d = d.slice(0, 137) + '…';
@@ -616,7 +697,8 @@
     var m = socialMetaOf(asset);
     if (!m) return '';
     var bits = [];
-    if (m.author && m.author.name) bits.push(escapeHtml(String(m.author.name)));
+    var snipName = cleanSocialPageName(m.author && m.author.name);
+    if (snipName) bits.push(escapeHtml(snipName));
     if (m.view_count != null) bits.push(escapeHtml(formatCount(m.view_count)) + ' views');
     else if (m.like_count != null) bits.push(escapeHtml(formatCount(m.like_count)) + ' likes');
     if (!bits.length && m.description) {
@@ -663,17 +745,28 @@
       );
     }
     if (m.platform) addRow(i18n('social_platform', 'Platform'), escapeHtml(String(m.platform)));
-    if (m.author && m.author.name) {
-      var authorHtml = escapeHtml(String(m.author.name));
-      if (m.author.url) {
-        authorHtml =
-          '<a href="' +
-          escapeHtml(String(m.author.url)) +
+    var pageName = cleanSocialPageName(m.author && m.author.name);
+    if (pageName) addRow(i18n('social_page_name', 'Page Name'), escapeHtml(pageName));
+    var pageLink = facebookPageLinkOf(m);
+    if (pageLink) {
+      addRow(
+        i18n('social_page_link', 'Page Link'),
+        '<a href="' +
+          escapeHtml(pageLink) +
           '" target="_blank" rel="noopener noreferrer">' +
-          authorHtml +
-          '</a>';
-      }
-      addRow(i18n('social_author', 'Author'), authorHtml);
+          escapeHtml(pageLink) +
+          '</a>'
+      );
+    }
+    if (m.post_url) {
+      addRow(
+        i18n('social_source_link', 'Source Link'),
+        '<a href="' +
+          escapeHtml(String(m.post_url)) +
+          '" target="_blank" rel="noopener noreferrer">' +
+          escapeHtml(String(m.post_url)) +
+          '</a>'
+      );
     }
     if (m.description) {
       addRow(
@@ -2867,17 +2960,20 @@
     });
   }
 
-  function formatLocalDateTimeFolderTitle(date) {
+  function formatBulkDownloadFolderTitle(platform, date) {
     var d = date instanceof Date ? date : new Date();
     var pad = function (n) {
       return String(n).padStart(2, '0');
     };
+    var plat = String(platform || 'Facebook').trim() || 'Facebook';
     return (
-      d.getFullYear() +
-      '-' +
-      pad(d.getMonth() + 1) +
-      '-' +
+      plat +
+      ' Bulk Download ' +
       pad(d.getDate()) +
+      '.' +
+      pad(d.getMonth() + 1) +
+      '.' +
+      String(d.getFullYear()).slice(-2) +
       ' ' +
       pad(d.getHours()) +
       ':' +
@@ -2900,12 +2996,14 @@
   }
 
   function personNameFromLinkMeta(meta, sourceUrl) {
-    if (meta && meta.profile_name) return String(meta.profile_name).trim();
+    var fromProfile = cleanSocialPageName(meta && meta.profile_name);
+    if (fromProfile) return fromProfile;
     var author =
       (meta && meta.social_meta && meta.social_meta.author && meta.social_meta.author.name) ||
       (meta && meta.author && meta.author.name) ||
       '';
-    if (author) return String(author).trim();
+    var cleanedAuthor = cleanSocialPageName(author);
+    if (cleanedAuthor) return cleanedAuthor;
     // Bulk analyze often puts the display name on the first enriched candidate.
     if (meta && Array.isArray(meta.candidates) && meta.candidates.length) {
       for (var ci = 0; ci < meta.candidates.length; ci++) {
@@ -2914,7 +3012,8 @@
           meta.candidates[ci].social_meta &&
           meta.candidates[ci].social_meta.author &&
           meta.candidates[ci].social_meta.author.name;
-        if (cAuth) return String(cAuth).trim();
+        var cleanedCand = cleanSocialPageName(cAuth);
+        if (cleanedCand) return cleanedCand;
       }
     }
     try {
@@ -2945,7 +3044,7 @@
       (opts && opts.profileName) ||
       personNameFromLinkMeta(linkBulkMeta || opts || {}, sourceUrl) ||
       'Profile';
-    var datetimeTitle = bulk ? formatLocalDateTimeFolderTitle(new Date()) : null;
+    var datetimeTitle = bulk ? formatBulkDownloadFolderTitle(platform, new Date()) : null;
     // Explicit path segments — never rely on legacy flat "title only" create.
     var folderPath = [
       { title: platform, description: platform + ' imports', tags: ['downloads', String(platform).toLowerCase()] },
