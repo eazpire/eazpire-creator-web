@@ -47,6 +47,8 @@
   var researching = false;
   var researchRemaining = 1;
   var researchCountdownTimer = null;
+  var researchConfirmGuardUntil = 0;
+  var researchUiBound = false;
   /** 'public' | 'yours' — default Public Inspirations */
   var activeTab = 'public';
   /** Cap concurrent grid image downloads (full-size R2 files are ~100–300KB each). */
@@ -295,7 +297,8 @@
     return new Promise(function (resolve) {
       if (!researchConfirmModal) researchConfirmModal = document.getElementById('qi-research-confirm-modal');
       if (!researchConfirmModal) {
-        resolve(false);
+        // Missing markup must not silently abort the click.
+        resolve(true);
         return;
       }
       var q = String(query || '').trim();
@@ -317,7 +320,12 @@
         researchConfirmResolver = null;
       }
       researchConfirmResolver = resolve;
-      showDialog(researchConfirmModal);
+      // Open after this click finishes. Same-turn showModal() is dismissed by the
+      // leftover click on the new dialog/backdrop, so the button appears dead.
+      researchConfirmGuardUntil = Date.now() + 500;
+      setTimeout(function () {
+        showDialog(researchConfirmModal);
+      }, 0);
     });
   }
 
@@ -2168,7 +2176,11 @@
       wrap.classList.toggle('is-used', !researching && usedToday);
     }
     btn.disabled = researching || usedToday;
-    if (badge) badge.textContent = String(remaining);
+    if (badge) {
+      badge.textContent = String(remaining);
+      badge.style.setProperty('color', '#ffffff', 'important');
+      badge.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+    }
     if (researching) {
       if (countdown) countdown.hidden = true;
       btn.title = t('creator.quick_inspirations.research_running', 'Researching…');
@@ -2260,6 +2272,11 @@
     }
     var search = document.getElementById('qi-search');
     var q = String((search && search.value) || searchQuery || '').trim();
+    // Yield so the opening click cannot dismiss the confirm dialog.
+    await new Promise(function (resolve) {
+      setTimeout(resolve, 0);
+    });
+    if (researching) return;
     var confirmed = await askResearchConfirm(q);
     if (!confirmed) return;
     var mode = q ? 'search' : 'random';
@@ -3616,7 +3633,9 @@
     if (researchOk) researchOk.addEventListener('click', function () { closeResearchConfirm(true); });
     if (researchConfirmModal) {
       researchConfirmModal.addEventListener('click', function (e) {
-        if (e.target === researchConfirmModal) closeResearchConfirm(false);
+        if (e.target !== researchConfirmModal) return;
+        if (Date.now() < researchConfirmGuardUntil) return;
+        closeResearchConfirm(false);
       });
       researchConfirmModal.addEventListener('cancel', function (e) {
         e.preventDefault();
@@ -3648,9 +3667,6 @@
         searchTimer = setTimeout(loadItems, 280);
       });
     }
-
-    var researchRun = document.getElementById('qi-research-run');
-    if (researchRun) researchRun.addEventListener('click', runResearch);
 
     var uploadOpen = document.getElementById('qi-upload-open');
     if (uploadOpen) uploadOpen.addEventListener('click', openUploadFlow);
@@ -3754,7 +3770,32 @@
     }
   }
 
+  function bindResearchUi() {
+    if (researchUiBound) return;
+    researchUiBound = true;
+    document.addEventListener(
+      'click',
+      function (e) {
+        var el = e.target && e.target.closest ? e.target.closest('#qi-research-run, #qi-research-confirm-ok, #qi-research-confirm-cancel, #qi-research-confirm-close') : null;
+        if (!el) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (el.id === 'qi-research-run') {
+          runResearch();
+          return;
+        }
+        if (el.id === 'qi-research-confirm-ok') {
+          closeResearchConfirm(true);
+          return;
+        }
+        closeResearchConfirm(false);
+      },
+      true
+    );
+  }
+
   function tryBind() {
+    bindResearchUi();
     ensureEls();
     if (modal) bind();
   }
