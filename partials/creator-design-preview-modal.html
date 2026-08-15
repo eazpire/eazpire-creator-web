@@ -790,14 +790,18 @@
   }
 
   .cdp-glow-up {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: 40;
-    display: flex;
+    z-index: 100001;
+    display: none;
     align-items: center;
     justify-content: center;
     background: rgba(2, 6, 23, 0.72);
     padding: 20px;
+    box-sizing: border-box;
+  }
+  .cdp-glow-up.is-open {
+    display: flex !important;
   }
   .cdp-glow-up[hidden] { display: none !important; }
   .cdp-glow-up__card {
@@ -4245,24 +4249,6 @@
     </div>
 
     <div
-      id="cdp-glow-up-design-preview"
-      class="cdp-glow-up"
-      hidden
-      aria-hidden="true"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="cdp-glow-up-title-design-preview"
-    >
-      <div class="cdp-glow-up__card">
-        <div class="cdp-glow-up__header">
-          <h4 id="cdp-glow-up-title-design-preview" data-t="creator.preview_modal.glow_up_styles">Glow Up Styles</h4>
-          <button type="button" class="cdp-glow-up__close" id="cdp-glow-up-close-design-preview" aria-label="Close">✕</button>
-        </div>
-        <div class="cdp-glow-up__grid" id="cdp-glow-up-grid-design-preview"></div>
-      </div>
-    </div>
-
-    <div
       id="cdp-edit-history-modal-design-preview"
       class="cdp-modal__edit-history"
       hidden
@@ -4399,6 +4385,24 @@
     >
       <span class="cdp-modal__crop-toast-icon" aria-hidden="true">&#10003;</span>
       <span class="cdp-modal__crop-toast-text"></span>
+    </div>
+  </div>
+
+  <div
+    id="cdp-glow-up-design-preview"
+    class="cdp-glow-up"
+    hidden
+    aria-hidden="true"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="cdp-glow-up-title-design-preview"
+  >
+    <div class="cdp-glow-up__card">
+      <div class="cdp-glow-up__header">
+        <h4 id="cdp-glow-up-title-design-preview" data-t="creator.preview_modal.glow_up_styles">Glow Up Styles</h4>
+        <button type="button" class="cdp-glow-up__close" id="cdp-glow-up-close-design-preview" aria-label="Close">✕</button>
+      </div>
+      <div class="cdp-glow-up__grid" id="cdp-glow-up-grid-design-preview"></div>
     </div>
   </div>
 </div>

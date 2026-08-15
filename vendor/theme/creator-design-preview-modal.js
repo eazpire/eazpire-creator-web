@@ -281,6 +281,7 @@
   let glowUpGrid = null;
   let glowUpCloseBtn = null;
   let glowUpBadgeEl = null;
+  let glowUpOpen = false;
   let btnTransfer = null;
   let btnDownload = null;
   let btnSave = null;
@@ -2206,6 +2207,10 @@
         closeViewerBgModal();
         return;
       }
+      if (glowUpOpen) {
+        closeGlowUpStyles();
+        return;
+      }
       if (editHistoryOpen) {
         closeEditHistoryModal();
         return;
@@ -2288,17 +2293,7 @@
       btnSimilar.addEventListener('click', handleSimilar);
     }
 
-    if (btnGlowUp) {
-      btnGlowUp.addEventListener('click', handleGlowUp);
-    }
-    if (glowUpCloseBtn) {
-      glowUpCloseBtn.addEventListener('click', closeGlowUpStyles);
-    }
-    if (glowUpOverlay) {
-      glowUpOverlay.addEventListener('click', function (e) {
-        if (e.target === glowUpOverlay) closeGlowUpStyles();
-      });
-    }
+    bindGlowUpDelegation();
 
     if (btnTransfer) {
       btnTransfer.addEventListener('click', handleTransfer);
@@ -2457,6 +2452,8 @@
     closeEditHistoryModal();
     closeDesignColorsModal();
     closeViewerBgModal();
+    closeGlowUpStyles();
+    bindGlowUpDelegation();
     clearColorPreview();
     resetAllViewerZooms();
     resetDeleteButtonState();
@@ -3040,9 +3037,83 @@
     glowUpBadgeEl.hidden = false;
   }
 
+  function refreshGlowUpEls() {
+    btnGlowUp = document.getElementById('cdp-btn-glow-up-' + sectionId);
+    glowUpOverlay = document.getElementById('cdp-glow-up-' + sectionId);
+    glowUpGrid = document.getElementById('cdp-glow-up-grid-' + sectionId);
+    glowUpCloseBtn = document.getElementById('cdp-glow-up-close-' + sectionId);
+    glowUpBadgeEl = document.getElementById('cdp-glow-up-badge-' + sectionId);
+  }
+
+  function ensureGlowUpOverlay() {
+    refreshGlowUpEls();
+    if (glowUpOverlay) return glowUpOverlay;
+    var host = document.getElementById('creatorDesignPreviewModal-' + sectionId) || document.body;
+    var el = document.createElement('div');
+    el.id = 'cdp-glow-up-' + sectionId;
+    el.className = 'cdp-glow-up';
+    el.setAttribute('hidden', '');
+    el.setAttribute('aria-hidden', 'true');
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.innerHTML =
+      '<div class="cdp-glow-up__card">' +
+        '<div class="cdp-glow-up__header">' +
+          '<h4 id="cdp-glow-up-title-' + sectionId + '">' +
+            ((window.CreatorI18n && window.CreatorI18n.glowUpStyles) || 'Glow Up Styles') +
+          '</h4>' +
+          '<button type="button" class="cdp-glow-up__close" id="cdp-glow-up-close-' + sectionId + '" aria-label="Close">✕</button>' +
+        '</div>' +
+        '<div class="cdp-glow-up__grid" id="cdp-glow-up-grid-' + sectionId + '"></div>' +
+      '</div>';
+    host.appendChild(el);
+    refreshGlowUpEls();
+    return glowUpOverlay;
+  }
+
+  function bindGlowUpDelegation() {
+    if (window.__cdpGlowUpDelegated) {
+      window.__cdpHandleGlowUpClick = onGlowUpDelegatedClick;
+      return;
+    }
+    window.__cdpGlowUpDelegated = true;
+    window.__cdpHandleGlowUpClick = onGlowUpDelegatedClick;
+    document.addEventListener('click', function (e) {
+      if (typeof window.__cdpHandleGlowUpClick === 'function') {
+        window.__cdpHandleGlowUpClick(e);
+      }
+    }, true);
+  }
+
+  function onGlowUpDelegatedClick(e) {
+    var target = e && e.target && e.target.closest ? e.target.closest(
+      '#cdp-btn-glow-up-' + sectionId + ', .cdp-modal__btn--glow-up, #cdp-glow-up-close-' + sectionId + ', #cdp-glow-up-' + sectionId
+    ) : null;
+    if (!target) return;
+    if (target.id === 'cdp-btn-glow-up-' + sectionId || target.classList.contains('cdp-modal__btn--glow-up')) {
+      if (target.disabled) return;
+      e.preventDefault();
+      e.stopPropagation();
+      handleGlowUp();
+      return;
+    }
+    if (target.id === 'cdp-glow-up-close-' + sectionId) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeGlowUpStyles();
+      return;
+    }
+    if (target.id === 'cdp-glow-up-' + sectionId && e.target === target) {
+      closeGlowUpStyles();
+    }
+  }
+
   function closeGlowUpStyles() {
+    refreshGlowUpEls();
+    glowUpOpen = false;
     if (!glowUpOverlay) return;
     glowUpOverlay.hidden = true;
+    glowUpOverlay.classList.remove('is-open');
     glowUpOverlay.setAttribute('aria-hidden', 'true');
   }
 
@@ -3070,6 +3141,7 @@
   }
 
   function renderGlowUpStyles(items) {
+    refreshGlowUpEls();
     if (!glowUpGrid) return;
     glowUpGrid.innerHTML = '';
     var list = Array.isArray(items) && items.length ? items : [{ id: 'eazy_amplified', name: 'eazy Amplified' }];
@@ -3090,10 +3162,16 @@
   }
 
   async function openGlowUpStyles() {
-    if (!glowUpOverlay) return;
+    var overlay = ensureGlowUpOverlay();
+    if (!overlay) {
+      console.warn('CreatorDesignPreviewModal: Glow Up overlay missing');
+      return;
+    }
     renderGlowUpStyles([{ id: 'eazy_amplified', name: (window.CreatorI18n && window.CreatorI18n.glowUpStyleEazyAmplified) || 'eazy Amplified' }]);
-    glowUpOverlay.hidden = false;
-    glowUpOverlay.setAttribute('aria-hidden', 'false');
+    overlay.hidden = false;
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden', 'false');
+    glowUpOpen = true;
     try {
       var apiBase = resolveCreatorDispatchBase();
       var res = await fetch(apiBase + '?op=glow-up-styles', { credentials: 'include' });
@@ -3103,9 +3181,9 @@
   }
 
   function handleGlowUp() {
-    if (!currentDesign) return;
-    var designId = currentDesign.id || currentDesign.design_id;
-    if (!designId) return;
+    if (!currentDesign && window.CreatorDesignPreviewModal && typeof window.CreatorDesignPreviewModal.getCurrentDesign === 'function') {
+      currentDesign = window.CreatorDesignPreviewModal.getCurrentDesign();
+    }
     openGlowUpStyles();
   }
 
@@ -7129,6 +7207,7 @@
     closeEditHistoryModal();
     closeDesignColorsModal();
     closeViewerBgModal();
+    closeGlowUpStyles();
     clearColorPreview();
     teardownColorPickInteraction({ clearBusy: true });
     resetEditToolModes();
@@ -7996,6 +8075,7 @@
 
   // Initialize
   function initialize() {
+    bindGlowUpDelegation();
     if (init()) {
       console.log('Creator Design Preview Modal ready');
     } else {
