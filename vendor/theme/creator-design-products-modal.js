@@ -83,6 +83,55 @@
     return JSON.stringify(a) === JSON.stringify(b);
   }
 
+  function isSampleListingRow(row) {
+    if (!row) return false;
+    var intent = String(row.publish_intent || '').trim();
+    var completion = String(row.shopify_completion_status || '').trim();
+    return intent === 'sample_publish' || completion === 'sample_publish';
+  }
+
+  function isOnlineListingRow(row, extras) {
+    extras = extras || {};
+    if (extras.inProgress) return false;
+    if (extras.phase === 'complete') return true;
+    if (!row) return false;
+    var completion = String(row.shopify_completion_status || '').trim();
+    if (completion === 'failed') return false;
+    if (
+      completion === 'complete' ||
+      completion === 'sample_publish' ||
+      completion === 'draft_publish'
+    ) {
+      return true;
+    }
+    return String(row.publish_intent || '').trim() === 'sample_publish';
+  }
+
+  function listingKindForCard(row, designOrMode) {
+    if (isSampleListingRow(row)) return 'sample';
+    var mode = '';
+    if (typeof designOrMode === 'string') {
+      mode = designOrMode;
+    } else if (designOrMode) {
+      var meta = designOrMode.metadata;
+      if (typeof meta === 'string') {
+        try {
+          meta = JSON.parse(meta || '{}') || {};
+        } catch (_) {
+          meta = {};
+        }
+      }
+      if (meta && typeof meta === 'object') {
+        mode = String(meta.library_listing_mode || '');
+      }
+    }
+    return mode === 'personalized_sample' ? 'sample' : 'product';
+  }
+
+  function listingBadgeText(M, camel, underscore, fallback) {
+    return (M && (M[camel] || M[underscore])) || fallback;
+  }
+
   function resolveLibraryStatus(d) {
     if (!d) return 'inactive';
     var ls = d.library_status;
@@ -911,12 +960,11 @@
     var failed =
       !!(testSt && testSt.phase === 'failed') ||
       (pubRow && String(pubRow.shopify_completion_status || '') === 'failed');
-    var completion = pubRow ? String(pubRow.shopify_completion_status || '') : '';
-    var isComplete =
-      completion === 'complete' ||
-      completion === 'sample_publish' ||
-      completion === 'draft_publish' ||
-      (testSt && testSt.phase === 'complete');
+    var isComplete = isOnlineListingRow(pubRow, {
+      inProgress: inProgress,
+      phase: testSt && testSt.phase,
+    });
+    var showKind = !!(isChecked || pubRow || inProgress);
     if (isTest) {
       var tp = document.createElement('span');
       tp.className =
@@ -927,6 +975,28 @@
         (window.CreatorI18n && window.CreatorI18n['creator.creations.test_product']) ||
         'Test Product';
       badges.appendChild(tp);
+    }
+    if (showKind) {
+      var kind = listingKindForCard(pubRow, ctxDesign);
+      var kindEl = document.createElement('span');
+      kindEl.className =
+        'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--kind-' +
+        kind;
+      kindEl.textContent =
+        kind === 'sample'
+          ? listingBadgeText(
+              M,
+              'designProductsBadgeSample',
+              'creations_design_products_badge_sample',
+              'Sample'
+            )
+          : listingBadgeText(
+              M,
+              'designProductsBadgeProduct',
+              'creations_design_products_badge_product',
+              'Product'
+            );
+      badges.appendChild(kindEl);
     }
     if (inProgress) {
       card.classList.add('is-test-publishing');
@@ -961,18 +1031,29 @@
       var fail = document.createElement('span');
       fail.className =
         'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--failed';
-      fail.textContent = M.designProductsBadgeFailed || 'Failed';
+      fail.textContent =
+        listingBadgeText(M, 'designProductsBadgeFailed', 'creations_design_products_badge_failed', 'Failed');
       fail.title = (testSt && testSt.message) || (pubRow && pubRow.publish_status_detail) || '';
       badges.appendChild(fail);
     } else if (isComplete && !inProgress) {
       var on = document.createElement('span');
       on.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--online';
-      on.textContent = M.designProductsBadgeOnline || M.designProductsBadgeActive || 'Active';
+      on.textContent = listingBadgeText(
+        M,
+        'designProductsBadgeOnline',
+        'creations_design_products_badge_online',
+        'Active'
+      );
       badges.appendChild(on);
     } else if (isChecked || inProgress || intent === 'creator_publish') {
       var qu = document.createElement('span');
       qu.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--queue';
-      qu.textContent = M.designProductsBadgeQueue || 'Queue';
+      qu.textContent = listingBadgeText(
+        M,
+        'designProductsBadgeQueue',
+        'creations_design_products_badge_queue',
+        'Queue'
+      );
       badges.appendChild(qu);
     }
     if (badges.childNodes.length) card.appendChild(badges);
@@ -1028,8 +1109,19 @@
     for (var j = 0; j < unlocked.length; j++) {
       var u = unlocked[j];
       var pk = String(u.product_key || '').trim();
-      if (pk && ctxPubRowByKey[pk]) active.push(u);
-      else queue.push(u);
+      var pubRow = pk ? ctxPubRowByKey[pk] : null;
+      var testSt = pk ? ctxTestPublishByKey[pk] : null;
+      if (
+        pk &&
+        isOnlineListingRow(pubRow, {
+          inProgress: !!(testSt && testSt.in_progress),
+          phase: testSt && testSt.phase,
+        })
+      ) {
+        active.push(u);
+      } else {
+        queue.push(u);
+      }
     }
     return { unlocked: unlocked, locked: locked, active: active, queue: queue };
   }

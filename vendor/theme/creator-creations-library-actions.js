@@ -201,6 +201,7 @@
       if (sample) el.removeAttribute('hidden');
       else el.setAttribute('hidden', '');
     });
+    refreshAllActivateCardBadges();
   }
 
   function apiBase() {
@@ -368,6 +369,31 @@
     }
   }
 
+  function isActivateSampleListingRow(row) {
+    if (!row) return false;
+    var intent = String(row.publish_intent || '').trim();
+    var completion = String(row.shopify_completion_status || '').trim();
+    return intent === 'sample_publish' || completion === 'sample_publish';
+  }
+
+  function isActivateOnlineListingRow(row) {
+    if (!row) return false;
+    var completion = String(row.shopify_completion_status || '').trim();
+    if (completion === 'failed') return false;
+    if (
+      completion === 'complete' ||
+      completion === 'sample_publish' ||
+      completion === 'draft_publish'
+    ) {
+      return true;
+    }
+    return String(row.publish_intent || '').trim() === 'sample_publish';
+  }
+
+  function activateListingBadgeText(M, camel, underscore, fallback) {
+    return (M && (M[camel] || M[underscore])) || fallback;
+  }
+
   function refreshActivateCardBadges(card, pk) {
     if (!card || !pk || !activateProdCtx) return;
     var old = card.querySelector('.creator-design-products-modal__card-badges');
@@ -377,15 +403,51 @@
     var Mgrid = Mi();
     var badges = document.createElement('div');
     badges.className = 'creator-design-products-modal__card-badges';
-    if (pubRow) {
+    var showKind = !!(pubRow || isChecked);
+    if (showKind) {
+      var kind =
+        isActivateSampleListingRow(pubRow) || getActivateListingMode() === 'personalized_sample'
+          ? 'sample'
+          : 'product';
+      var kindEl = document.createElement('span');
+      kindEl.className =
+        'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--kind-' +
+        kind;
+      kindEl.textContent =
+        kind === 'sample'
+          ? activateListingBadgeText(
+              Mgrid,
+              'designProductsBadgeSample',
+              'creations_design_products_badge_sample',
+              'Sample'
+            )
+          : activateListingBadgeText(
+              Mgrid,
+              'designProductsBadgeProduct',
+              'creations_design_products_badge_product',
+              'Product'
+            );
+      badges.appendChild(kindEl);
+    }
+    if (isActivateOnlineListingRow(pubRow)) {
       var on = document.createElement('span');
       on.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--online';
-      on.textContent = Mgrid.designProductsBadgeOnline || 'Online';
+      on.textContent = activateListingBadgeText(
+        Mgrid,
+        'designProductsBadgeOnline',
+        'creations_design_products_badge_online',
+        'Active'
+      );
       badges.appendChild(on);
-    } else if (isChecked) {
+    } else if (isChecked || pubRow) {
       var qu = document.createElement('span');
       qu.className = 'creator-design-products-modal__card-badge creator-design-products-modal__card-badge--queue';
-      qu.textContent = Mgrid.designProductsBadgeQueue || 'Queue';
+      qu.textContent = activateListingBadgeText(
+        Mgrid,
+        'designProductsBadgeQueue',
+        'creations_design_products_badge_queue',
+        'Queue'
+      );
       badges.appendChild(qu);
     }
     if (badges.childNodes.length) card.appendChild(badges);

@@ -2181,6 +2181,18 @@ html.creator-design-products-modal-open {
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+.creator-design-products-modal__card-badge--kind-sample {
+  background: rgba(14, 165, 233, 0.92);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.creator-design-products-modal__card-badge--kind-product {
+  background: rgba(71, 85, 105, 0.92);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
 .creator-design-products-modal__card.is-test-publishing {
   position: relative;
 }
