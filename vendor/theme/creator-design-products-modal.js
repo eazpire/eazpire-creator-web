@@ -911,8 +911,11 @@
     var failed =
       !!(testSt && testSt.phase === 'failed') ||
       (pubRow && String(pubRow.shopify_completion_status || '') === 'failed');
+    var completion = pubRow ? String(pubRow.shopify_completion_status || '') : '';
     var isComplete =
-      (pubRow && String(pubRow.shopify_completion_status || '') === 'complete') ||
+      completion === 'complete' ||
+      completion === 'sample_publish' ||
+      completion === 'draft_publish' ||
       (testSt && testSt.phase === 'complete');
     if (isTest) {
       var tp = document.createElement('span');
@@ -1488,9 +1491,17 @@
           return String(x.product_key || '').trim();
         })
         .filter(Boolean);
+      var lockedKeys = products
+        .filter(function (x) {
+          return !isProductUnlocked(x);
+        })
+        .map(function (x) {
+          return String(x.product_key || '').trim();
+        })
+        .filter(Boolean);
 
       var metaExcluded = parseExcludedFromMeta(design.metadata);
-      ctxMetaExcludedSnapshot = metaExcluded.slice();
+      ctxMetaExcludedSnapshot = sortUnique(metaExcluded.concat(lockedKeys));
 
       ctxChecked = {};
       for (var i = 0; i < products.length; i++) {
@@ -1504,7 +1515,9 @@
         ctxChecked[pk] = metaExcluded.indexOf(pk) === -1;
       }
 
-      ctxInitialExcluded = computeExcludedKeys(ctxEligibleKeys, ctxChecked, ctxMetaExcludedSnapshot);
+      ctxInitialExcluded = sortUnique(
+        computeExcludedKeys(ctxEligibleKeys, ctxChecked, ctxMetaExcludedSnapshot).concat(lockedKeys)
+      );
       ctxPublishedRows = pubData.ok && Array.isArray(pubData.rows) ? pubData.rows : [];
       rebuildPublishedRowMap(ctxPublishedRows);
 
@@ -1535,7 +1548,18 @@
     var design = ctxDesign;
     if (!owner || !design || !design.id) return;
 
-    var nextExcluded = computeExcludedKeys(ctxEligibleKeys, ctxChecked, ctxMetaExcludedSnapshot);
+    var nextExcluded = sortUnique(
+      computeExcludedKeys(ctxEligibleKeys, ctxChecked, ctxMetaExcludedSnapshot).concat(
+        (ctxAllProducts || [])
+          .filter(function (x) {
+            return !isProductUnlocked(x);
+          })
+          .map(function (x) {
+            return String(x.product_key || '').trim();
+          })
+          .filter(Boolean)
+      )
+    );
     if (arraysEqualJson(nextExcluded, ctxInitialExcluded)) return;
 
     var shop = window.Shopify && window.Shopify.shop ? window.Shopify.shop : window.__SHOPIFY_SHOP_DOMAIN || null;

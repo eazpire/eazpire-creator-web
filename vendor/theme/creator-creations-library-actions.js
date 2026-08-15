@@ -299,10 +299,12 @@
 
   function getActivateExcludedKeysFromCtx() {
     if (!activateProdCtx) return null;
-    return computeExcludedKeys(
-      activateProdCtx.eligibleKeys,
-      activateProdCtx.checked,
-      activateProdCtx.metaExcludedSnapshot
+    return sortUnique(
+      computeExcludedKeys(
+        activateProdCtx.eligibleKeys,
+        activateProdCtx.checked,
+        activateProdCtx.metaExcludedSnapshot
+      ).concat(activateProdCtx.lockedKeys || [])
     );
   }
 
@@ -462,6 +464,7 @@
         products: [],
         unlockedProducts: [],
         eligibleKeys: [],
+        lockedKeys: [],
         checked: {},
         metaExcludedSnapshot: [],
         initialExcluded: [],
@@ -531,7 +534,16 @@
         checked[pk] = metaExcluded.indexOf(pk) === -1;
       }
 
-      var initialExcluded = computeExcludedKeys(eligibleKeys, checked, metaSnap);
+      var lockedKeys = products
+        .filter(function (x) {
+          return !isProductUnlocked(x);
+        })
+        .map(function (x) {
+          return String(x.product_key || '').trim();
+        })
+        .filter(Boolean);
+
+      var initialExcluded = sortUnique(computeExcludedKeys(eligibleKeys, checked, metaSnap).concat(lockedKeys));
 
       var publishedRows = pubData.ok && Array.isArray(pubData.rows) ? pubData.rows : [];
       var pubKeySet = new Set();
@@ -550,6 +562,7 @@
         products: products,
         unlockedProducts: unlockedProducts,
         eligibleKeys: eligibleKeys,
+        lockedKeys: lockedKeys,
         checked: checked,
         metaExcludedSnapshot: metaSnap,
         initialExcluded: initialExcluded,
@@ -902,6 +915,7 @@
     var M = Mi();
     activateProdCtx = {
       eligibleKeys: bundle.eligibleKeys,
+      lockedKeys: (bundle.lockedKeys || []).slice(),
       checked: Object.assign({}, bundle.checked),
       metaExcludedSnapshot: bundle.metaExcludedSnapshot.slice(),
       initialExcluded: bundle.initialExcluded.slice(),
