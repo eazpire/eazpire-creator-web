@@ -293,8 +293,34 @@
     return null;
   }
 
+  function parseCreationMeta(design) {
+    if (!design) return {};
+    if (design.metadata && typeof design.metadata === 'object') return design.metadata;
+    if (typeof design.metadata === 'string') {
+      try { return JSON.parse(design.metadata) || {}; } catch (_e) { return {}; }
+    }
+    return {};
+  }
+
+  function isGlowUpDesign(design) {
+    var meta = parseCreationMeta(design);
+    if (meta.glow_up === true || meta.glow_up === 1 || meta.glow_up === 'true') return true;
+    var src = String(meta.design_source || design.design_source || design.source || '').toLowerCase();
+    return src === 'glow up' || src === 'glow_up';
+  }
+
+  function glowUpLabel(design) {
+    var meta = parseCreationMeta(design);
+    var base = (window.CreatorI18n && window.CreatorI18n.creationsCategoryGlowUp) ||
+      (window.CreatorI18n && window.CreatorI18n.glowUpBadge) ||
+      'Glow Up';
+    var style = String(meta.glow_up_style_name || '').trim();
+    return style ? (base + ' · ' + style) : base;
+  }
+
   function getCategory(design) {
     var M = window.CreatorMobileI18n || {};
+    if (isGlowUpDesign(design)) return glowUpLabel(design);
     var src = (design.design_source || design.source || design.category || design.type || '').toString();
     var srcLower = src.toLowerCase();
     if (srcLower === 'automation') return M.creationsCategoryAutomation || 'Automation';
@@ -2207,6 +2233,12 @@
     if (publishActive) {
       card.classList.add('creator-creations-card--publishing');
       card.setAttribute('aria-busy', 'true');
+    }
+    if (isGlowUpDesign(design)) {
+      var glowBadge = document.createElement('span');
+      glowBadge.className = 'creator-creations-card-badge creator-creations-card-badge--glow-up';
+      glowBadge.textContent = glowUpLabel(design);
+      card.appendChild(glowBadge);
     }
     if (uploadPending) {
       var statusBtn = document.createElement('button');

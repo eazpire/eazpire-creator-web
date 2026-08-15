@@ -276,6 +276,11 @@
   let modalUserPromptMobile = null;
   let btnRemix = null;
   let btnSimilar = null;
+  let btnGlowUp = null;
+  let glowUpOverlay = null;
+  let glowUpGrid = null;
+  let glowUpCloseBtn = null;
+  let glowUpBadgeEl = null;
   let btnTransfer = null;
   let btnDownload = null;
   let btnSave = null;
@@ -827,6 +832,11 @@
     modalUserPromptMobile = document.getElementById('cdp-user-prompt-mobile-' + sectionId);
     btnRemix = document.getElementById('cdp-btn-remix-' + sectionId);
     btnSimilar = document.getElementById('cdp-btn-similar-' + sectionId);
+    btnGlowUp = document.getElementById('cdp-btn-glow-up-' + sectionId);
+    glowUpOverlay = document.getElementById('cdp-glow-up-' + sectionId);
+    glowUpGrid = document.getElementById('cdp-glow-up-grid-' + sectionId);
+    glowUpCloseBtn = document.getElementById('cdp-glow-up-close-' + sectionId);
+    glowUpBadgeEl = document.getElementById('cdp-glow-up-badge-' + sectionId);
     btnTransfer = document.getElementById('cdp-btn-transfer-' + sectionId);
     btnDownload = document.getElementById('cdp-btn-download-' + sectionId);
     btnSave = document.getElementById('cdp-btn-save-' + sectionId);
@@ -2278,6 +2288,18 @@
       btnSimilar.addEventListener('click', handleSimilar);
     }
 
+    if (btnGlowUp) {
+      btnGlowUp.addEventListener('click', handleGlowUp);
+    }
+    if (glowUpCloseBtn) {
+      glowUpCloseBtn.addEventListener('click', closeGlowUpStyles);
+    }
+    if (glowUpOverlay) {
+      glowUpOverlay.addEventListener('click', function (e) {
+        if (e.target === glowUpOverlay) closeGlowUpStyles();
+      });
+    }
+
     if (btnTransfer) {
       btnTransfer.addEventListener('click', handleTransfer);
     }
@@ -2984,6 +3006,201 @@
     });
   }
 
+  function parseDesignMeta(design) {
+    if (!design) return {};
+    if (design.metadata && typeof design.metadata === 'object') return design.metadata;
+    if (typeof design.metadata === 'string') {
+      try { return JSON.parse(design.metadata) || {}; } catch (_e) { return {}; }
+    }
+    return {};
+  }
+
+  function isGlowUpDesign(design) {
+    var meta = parseDesignMeta(design);
+    if (meta.glow_up === true || meta.glow_up === 1 || meta.glow_up === 'true') return true;
+    var src = String(meta.design_source || design.design_source || design.source || '').toLowerCase();
+    return src === 'glow up' || src === 'glow_up';
+  }
+
+  function glowUpStyleName(design) {
+    var meta = parseDesignMeta(design);
+    return String(meta.glow_up_style_name || '').trim();
+  }
+
+  function updateGlowUpBadge(design) {
+    if (!glowUpBadgeEl) return;
+    if (!isGlowUpDesign(design)) {
+      glowUpBadgeEl.hidden = true;
+      glowUpBadgeEl.textContent = '';
+      return;
+    }
+    var label = (window.CreatorI18n && window.CreatorI18n.glowUpBadge) || 'Glow Up';
+    var style = glowUpStyleName(design);
+    glowUpBadgeEl.textContent = style ? (label + ' · ' + style) : label;
+    glowUpBadgeEl.hidden = false;
+  }
+
+  function closeGlowUpStyles() {
+    if (!glowUpOverlay) return;
+    glowUpOverlay.hidden = true;
+    glowUpOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function getPreviewOwnerId() {
+    if (currentDesign && currentDesign.owner_id) return String(currentDesign.owner_id);
+    if (window.__EAZ_OWNER_ID) return String(window.__EAZ_OWNER_ID);
+    if (window.CreatorWidget && typeof window.CreatorWidget.getOwnerId === 'function') {
+      var oid = window.CreatorWidget.getOwnerId();
+      if (oid) return String(oid);
+    }
+    var urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('logged_in_customer_id') || urlParams.get('owner_id') || '';
+  }
+
+  function formatGlowUpConfirm(price, balance, isFree) {
+    if (isFree) {
+      return (window.CreatorI18n && window.CreatorI18n.confirmGlowUpFree) ||
+        'Create a Glow Up of this design? This creates a new design. Your original stays.\n\nGeneration is currently free.';
+    }
+    var tpl = (window.CreatorI18n && window.CreatorI18n.confirmGlowUp) ||
+      'Create a Glow Up of this design? This creates a new design. Your original stays.\n\nThis costs {{price}} EAZ. Your balance is {{balance}} EAZ.';
+    return String(tpl)
+      .replace(/\{\{\s*price\s*\}\}/g, String(price))
+      .replace(/\{\{\s*balance\s*\}\}/g, String(balance));
+  }
+
+  function renderGlowUpStyles(items) {
+    if (!glowUpGrid) return;
+    glowUpGrid.innerHTML = '';
+    var list = Array.isArray(items) && items.length ? items : [{ id: 'eazy_amplified', name: 'eazy Amplified' }];
+    list.forEach(function (style) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cdp-glow-up__style';
+      btn.dataset.styleId = style.id;
+      var name = document.createElement('span');
+      name.className = 'cdp-glow-up__style-name';
+      name.textContent = style.name || style.id;
+      btn.appendChild(name);
+      btn.addEventListener('click', function () {
+        confirmAndStartGlowUp(style.id, style.name);
+      });
+      glowUpGrid.appendChild(btn);
+    });
+  }
+
+  async function openGlowUpStyles() {
+    if (!glowUpOverlay) return;
+    renderGlowUpStyles([{ id: 'eazy_amplified', name: (window.CreatorI18n && window.CreatorI18n.glowUpStyleEazyAmplified) || 'eazy Amplified' }]);
+    glowUpOverlay.hidden = false;
+    glowUpOverlay.setAttribute('aria-hidden', 'false');
+    try {
+      var apiBase = resolveCreatorDispatchBase();
+      var res = await fetch(apiBase + '?op=glow-up-styles', { credentials: 'include' });
+      var data = await res.json().catch(function () { return {}; });
+      if (data && data.ok && Array.isArray(data.items)) renderGlowUpStyles(data.items);
+    } catch (_e) {}
+  }
+
+  function handleGlowUp() {
+    if (!currentDesign) return;
+    var designId = currentDesign.id || currentDesign.design_id;
+    if (!designId) return;
+    openGlowUpStyles();
+  }
+
+  async function confirmAndStartGlowUp(styleId, styleName) {
+    if (!currentDesign) return;
+    var designId = currentDesign.id || currentDesign.design_id;
+    var ownerId = getPreviewOwnerId();
+    if (!designId || !ownerId) {
+      alert((window.CreatorI18n && window.CreatorI18n.noUserId) || 'Please sign in.');
+      return;
+    }
+
+    var price = 15;
+    var currentBalance = 0;
+    var designGenFree = false;
+    try {
+      var apiBase = resolveCreatorDispatchBase();
+      var balResp = await fetch(apiBase + '?op=get-balance&owner_id=' + encodeURIComponent(ownerId), { credentials: 'include' });
+      if (balResp.ok) {
+        var balData = await balResp.json();
+        if (balData && balData.ok !== false) {
+          currentBalance = Number(balData.balance_total != null ? balData.balance_total : balData.balance_eaz) || 0;
+          var dgRaw = balData.eaz_costs && balData.eaz_costs.design_generate;
+          var inactive = !!(balData.eaz_feature_active && balData.eaz_feature_active.design_generate === false);
+          var dn = dgRaw !== undefined && dgRaw !== null ? Number(dgRaw) : NaN;
+          if (inactive || (Number.isFinite(dn) && dn <= 0)) {
+            designGenFree = true;
+            price = 0;
+          } else if (Number.isFinite(dn)) {
+            price = dn;
+          }
+        }
+      }
+    } catch (_e) {
+      currentBalance = Infinity;
+    }
+
+    if (!designGenFree && Number.isFinite(currentBalance) && currentBalance < price) {
+      alert('Not enough EAZ. You have ' + currentBalance + ' EAZ, need ' + price + ' EAZ.');
+      return;
+    }
+
+    showConfirmModal(formatGlowUpConfirm(price, currentBalance, designGenFree), function () {
+      startGlowUpJob(designId, ownerId, styleId, styleName);
+    });
+  }
+
+  async function startGlowUpJob(designId, ownerId, styleId, styleName) {
+    var meta = parseDesignMeta(currentDesign);
+    var imageUrl = currentDesign.original_url || currentDesign.preview_url || currentDesign.image_url || meta.user_image_url || '';
+    var userPrompt = meta.user_prompt || currentDesign.user_prompt || currentDesign.prompt || '';
+    var designType = (meta.design_type || currentDesign.design_type || 'classic').toString().toLowerCase();
+    var apiBase = resolveCreatorDispatchBase();
+    try {
+      var res = await fetch(apiBase + '?op=accept&owner_id=' + encodeURIComponent(ownerId), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          owner_id: ownerId,
+          prompt: userPrompt,
+          image_url: imageUrl,
+          parent_design_id: designId,
+          glow_up: true,
+          glow_up_style_id: styleId,
+          design_type: designType,
+          target_product: 'tshirt',
+          ratio: 'portrait',
+          content_type: 'design-text',
+          background: { mode: 'transparent' }
+        })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      var jobId = data.jobId || data.job_id;
+      if (!res.ok || !jobId) {
+        throw new Error(data.message || data.error || ((window.CreatorI18n && window.CreatorI18n.glowUpFailed) || 'Glow Up could not be started.'));
+      }
+      closeGlowUpStyles();
+      doCloseModal();
+      try {
+        window.dispatchEvent(new CustomEvent('creatorJobStarted', {
+          detail: { jobId: jobId, type: 'glow-up', ownerId: ownerId, styleId: styleId, styleName: styleName }
+        }));
+      } catch (_e) {}
+      if (window.CreatorChat && typeof window.CreatorChat.refreshActiveJobs === 'function') {
+        window.CreatorChat.refreshActiveJobs();
+      }
+      if (window.CreatorChat && typeof window.CreatorChat.openJobs === 'function') {
+        window.CreatorChat.openJobs({ focusJobId: jobId });
+      }
+    } catch (err) {
+      alert(err && err.message ? err.message : ((window.CreatorI18n && window.CreatorI18n.glowUpFailed) || 'Glow Up could not be started.'));
+    }
+  }
+
   // Update button states based on design type and available data
   function updateButtonStates(design) {
     const isGenerated = isGeneratedDesign(design);
@@ -3171,6 +3388,7 @@
     
     // Update button states based on design type and available data
     updateButtonStates(design);
+    updateGlowUpBadge(design);
     refreshEditPreviewImage();
     if (activeTab === 'edit') {
       loadEditVersions();

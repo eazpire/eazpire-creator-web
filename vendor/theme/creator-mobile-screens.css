@@ -836,6 +836,24 @@
   text-transform: uppercase;
   pointer-events: none;
 }
+.creator-creations-card-badge--glow-up {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 6;
+  max-width: calc(100% - 16px);
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.94);
+  color: #111827;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .creator-creations-card-loading {
   position: absolute;
   inset: 0;

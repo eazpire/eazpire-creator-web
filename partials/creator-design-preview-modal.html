@@ -753,6 +753,7 @@
   /* Accent (Remix + Similar + Transfer) */
   .cdp-modal__btn--remix,
   .cdp-modal__btn--similar,
+  .cdp-modal__btn--glow-up,
   .cdp-modal__btn--transfer {
     border-color: rgba(245,158,11,.35);
     background: linear-gradient(180deg, rgba(245,158,11,.16), rgba(255,255,255,.05));
@@ -760,6 +761,7 @@
 
   .cdp-modal__btn--remix:hover:not(:disabled),
   .cdp-modal__btn--similar:hover:not(:disabled),
+  .cdp-modal__btn--glow-up:hover:not(:disabled),
   .cdp-modal__btn--transfer:hover:not(:disabled) {
     border-color: rgba(245,158,11,.55);
     box-shadow: 0 12px 28px rgba(245,158,11,.12);
@@ -772,6 +774,91 @@
     border-color: rgba(255,255,255,.10);
     color: rgba(255,255,255,.92);
   }
+  .cdp-glow-up-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 10px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(245,158,11,.4);
+    background: rgba(245,158,11,.14);
+    color: #fbbf24;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .02em;
+  }
+
+  .cdp-glow-up {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2, 6, 23, 0.72);
+    padding: 20px;
+  }
+  .cdp-glow-up[hidden] { display: none !important; }
+  .cdp-glow-up__card {
+    width: min(560px, 100%);
+    max-height: min(72vh, 640px);
+    overflow: auto;
+    background: #0f172a;
+    border: 1px solid rgba(245,158,11,.28);
+    border-radius: 16px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    padding: 16px 16px 20px;
+  }
+  .cdp-glow-up__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .cdp-glow-up__header h4 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 18px;
+    font-weight: 650;
+  }
+  .cdp-glow-up__close {
+    border: 0;
+    background: transparent;
+    color: #e2e8f0;
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .cdp-glow-up__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .cdp-glow-up__style {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-height: 88px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(245,158,11,.35);
+    background: linear-gradient(180deg, rgba(245,158,11,.16), rgba(255,255,255,.04));
+    color: #f8fafc;
+    cursor: pointer;
+    text-align: left;
+  }
+  .cdp-glow-up__style:hover {
+    border-color: rgba(245,158,11,.6);
+    box-shadow: 0 10px 24px rgba(245,158,11,.12);
+  }
+  .cdp-glow-up__style-name {
+    font-size: 15px;
+    font-weight: 650;
+  }
+
   .cdp-modal__btn--download:hover:not(:disabled),
   .cdp-modal__btn--save:hover:not(:disabled) {
     background: rgba(255,255,255,.07);
@@ -3487,6 +3574,8 @@
             </button>
           </div>
 
+          <div id="cdp-glow-up-badge-design-preview" class="cdp-glow-up-badge" hidden></div>
+
           <!-- Design Prompt -->
           <div class="cdp-modal__prompt-section">
             <label class="cdp-modal__label" for="cdp-design-prompt-design-preview">Design Prompt:</label>
@@ -4098,6 +4187,13 @@
         <span class="cdp-modal__btn-text">Similar Design</span>
       </button>
 
+      <button type="button" id="cdp-btn-glow-up-design-preview" class="cdp-modal__btn cdp-modal__btn--glow-up" aria-label="Glow Up" title="Glow Up">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="12 2 15 8.5 22 9 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9 9 8.5"/>
+        </svg>
+        <span class="cdp-modal__btn-text">Glow Up</span>
+      </button>
+
       <button type="button" id="cdp-btn-transfer-design-preview" class="cdp-modal__btn cdp-modal__btn--transfer" aria-label="Transfer" title="Transfer">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M7 17L17 7"/>
@@ -4146,6 +4242,24 @@
       <button type="button" id="cdp-btn-activate-confirm-design-preview" class="cdp-modal__btn cdp-modal__btn--activate cdp-modal__btn--activate-confirm" hidden aria-hidden="true" aria-label="Activate" title="Activate">
         <span class="cdp-modal__btn-text" data-t="creator.preview_modal.activate_confirm">Activate</span>
       </button>
+    </div>
+
+    <div
+      id="cdp-glow-up-design-preview"
+      class="cdp-glow-up"
+      hidden
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cdp-glow-up-title-design-preview"
+    >
+      <div class="cdp-glow-up__card">
+        <div class="cdp-glow-up__header">
+          <h4 id="cdp-glow-up-title-design-preview" data-t="creator.preview_modal.glow_up_styles">Glow Up Styles</h4>
+          <button type="button" class="cdp-glow-up__close" id="cdp-glow-up-close-design-preview" aria-label="Close">✕</button>
+        </div>
+        <div class="cdp-glow-up__grid" id="cdp-glow-up-grid-design-preview"></div>
+      </div>
     </div>
 
     <div
