@@ -293,22 +293,25 @@
 
 .qi-modal__research-icon {
   display: block;
-  overflow: visible;
 }
 
-.qi-modal__research-count,
+#qi-research-run .qi-modal__research-count,
 #qi-research-count {
-  fill: currentColor;
-  stroke: none;
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  z-index: 1;
+  color: #fff !important;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: -0.06em;
+  line-height: 1;
+  letter-spacing: -0.03em;
   pointer-events: none;
 }
 
-.qi-modal__research-wrap.is-used .qi-modal__research-count,
-.qi-modal__research-wrap.is-busy .qi-modal__research-count {
+.qi-modal__research-wrap.is-used #qi-research-count,
+.qi-modal__research-wrap.is-busy #qi-research-count {
   display: none;
 }
 
