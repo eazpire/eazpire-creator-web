@@ -1751,6 +1751,120 @@
    * Mount / refresh products UI inside Design Preview products panel.
    * @param {{ host: Element, design: object }} opts
    */
+  function isSampleDesign(design) {
+    if (!design) return false;
+    var meta = design.metadata;
+    if (typeof meta === 'string') {
+      try {
+        meta = JSON.parse(meta || '{}') || {};
+      } catch (_) {
+        meta = {};
+      }
+    }
+    return !!(meta && meta.library_listing_mode === 'personalized_sample');
+  }
+
+  function readZonesFromDesign(design) {
+    var meta = design && design.metadata;
+    if (typeof meta === 'string') {
+      try {
+        meta = JSON.parse(meta || '{}') || {};
+      } catch (_) {
+        meta = {};
+      }
+    }
+    var CPZ = window.CreatorPersonalizationZones;
+    if (CPZ && typeof CPZ.normalizeZones === 'function') {
+      return CPZ.normalizeZones(meta && meta.personalization_zones);
+    }
+    return Array.isArray(meta && meta.personalization_zones) ? meta.personalization_zones : [];
+  }
+
+  var ctxZonesApi = null;
+
+  function mountZonesEditor(root, design) {
+    var old = root.querySelector('[data-cdp-zones-host]');
+    if (old) old.remove();
+    if (ctxZonesApi && typeof ctxZonesApi.destroy === 'function') {
+      try {
+        ctxZonesApi.destroy();
+      } catch (_) {}
+      ctxZonesApi = null;
+    }
+    if (!isSampleDesign(design)) return;
+    var CPZ = window.CreatorPersonalizationZones;
+    if (!CPZ || typeof CPZ.mountEdit !== 'function') return;
+    var host = document.createElement('div');
+    host.setAttribute('data-cdp-zones-host', '1');
+    host.className = 'cdp-modal__products-zones';
+    var head = root.querySelector('.cdp-modal__products-head');
+    if (head && head.nextSibling) root.insertBefore(host, head.nextSibling);
+    else root.insertBefore(host, root.firstChild);
+    ctxZonesApi = CPZ.mountEdit(host, {
+      imageUrl: design.preview_url || design.original_url || design.image_url || '',
+      zones: readZonesFromDesign(design),
+    });
+    var saveRow = document.createElement('div');
+    saveRow.className = 'cdp-modal__products-zones-actions';
+    var saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'cdp-modal__products-zones-save';
+    var Mz = Mi();
+    saveBtn.textContent =
+      Mz.designProductsSaveZones ||
+      Mz.creations_design_products_save_zones ||
+      'Save personalization';
+    saveBtn.addEventListener('click', function () {
+      savePersonalizationZones(design, saveBtn);
+    });
+    saveRow.appendChild(saveBtn);
+    host.appendChild(saveRow);
+  }
+
+  async function savePersonalizationZones(design, btn) {
+    if (!ctxZonesApi || typeof ctxZonesApi.getZones !== 'function' || !design || !design.id) return;
+    var owner = getOwnerId();
+    if (!owner) return;
+    var M = Mi();
+    var shop = window.Shopify && window.Shopify.shop ? window.Shopify.shop : window.__SHOPIFY_SHOP_DOMAIN || null;
+    var updateUrl =
+      apiBase() + '?op=update-design&logged_in_customer_id=' + encodeURIComponent(owner);
+    if (shop) updateUrl += '&shop=' + encodeURIComponent(shop);
+    var prev = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = M.designProductsUpdating || 'Saving…';
+    }
+    try {
+      var zones = ctxZonesApi.getZones();
+      var putRes = await fetch(updateUrl, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          design_id: design.id,
+          metadata: { personalization_zones: zones },
+        }),
+      });
+      var putJson = await putRes.json().catch(function () {
+        return {};
+      });
+      if (!putJson.ok) throw new Error(putJson.error || 'save_failed');
+      if (design.metadata && typeof design.metadata === 'object') {
+        design.metadata.personalization_zones = zones;
+      }
+      if (statusEl) statusEl.textContent = M.designProductsSaved || 'Saved.';
+    } catch (err) {
+      console.warn('[creator-design-products-modal] zones save', err);
+      if (statusEl) statusEl.textContent = M.designProductsSaveError || 'Could not save.';
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = prev || 'Save personalization';
+      }
+    }
+  }
+
   function mountPanel(opts) {
     var root = opts && opts.host;
     var design = opts && opts.design;
@@ -1758,6 +1872,7 @@
     bindHostOnce(root);
     cacheHostRefs(root);
     applyStaticLabels();
+    mountZonesEditor(root, design);
     ctxDesign = design;
     ctxEligibleKeys = [];
     ctxChecked = {};

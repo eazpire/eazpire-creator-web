@@ -1416,6 +1416,8 @@
             p.shopify_completion_status !== 'failed' &&
             !p.printify_product_id),
         published_design_id: p.published_design_id || null,
+        is_sample: !!p.is_sample || p.publish_intent === 'sample_publish',
+        sample_url: p.sample_url || p.storefront_url || null,
         design_ids: Array.isArray(p.design_ids) ? p.design_ids : [],
         studio_card_preview: p.studio_card_preview || null,
         design_image_url: p.design_image_url || null,
@@ -2589,8 +2591,44 @@
    * Open Product Preview Modal for a published Products-tab card.
    * Lazy-loads assets if needed. Never redirects to the shop.
    */
+  function isSampleProduct(prod) {
+    return !!(
+      prod &&
+      (prod.is_sample ||
+        prod.publish_intent === 'sample_publish' ||
+        prod.shopify_completion_status === 'sample_publish')
+    );
+  }
+
+  function findLoadedDesignById(designId) {
+    var n = Number(designId);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    for (var i = 0; i < designs.length; i++) {
+      if (Number(designs[i].id || designs[i].design_id) === n) return designs[i];
+    }
+    return null;
+  }
+
+  function openSampleProduct(prod) {
+    if (!prod) return;
+    var designIds = Array.isArray(prod.design_ids) ? prod.design_ids : [];
+    var design = findLoadedDesignById(designIds.length ? designIds[0] : null);
+    if (design) {
+      openCreationsDesignDetailModal(design);
+      return;
+    }
+    var url = prod.sample_url || prod.storefront_url;
+    if (url) {
+      window.open(url, '_blank', 'noopener');
+    }
+  }
+
   function openPublishedProductPreview(prod) {
     if (!prod) return;
+    if (isSampleProduct(prod)) {
+      openSampleProduct(prod);
+      return;
+    }
     var productKey = prod.product_key || null;
     var productName = prod.title || prod.product_name || productKey || 'Product';
     var imageUrl =
@@ -2681,6 +2719,16 @@
       badge.textContent =
         (window.CreatorI18n && window.CreatorI18n['creator.creations.test_product']) || 'Test Product';
       card.appendChild(badge);
+    } else if (isSampleProduct(prod)) {
+      var sampleBadge = document.createElement('span');
+      sampleBadge.className = 'creator-creations-card-badge creator-creations-card-badge--sample';
+      sampleBadge.textContent =
+        (window.CreatorMobileI18n &&
+          (window.CreatorMobileI18n.designProductsBadgeSample ||
+            window.CreatorMobileI18n.creations_design_products_badge_sample)) ||
+        (window.CreatorI18n && window.CreatorI18n['creator.creations.design_products_badge_sample']) ||
+        'Sample';
+      card.appendChild(sampleBadge);
     }
     appendReviewStatusBadge(card, prod);
     card.appendChild(media);
