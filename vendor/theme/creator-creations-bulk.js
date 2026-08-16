@@ -1,6 +1,6 @@
 /**
  * Creations designs grid — visible selection checkboxes, floating dock,
- * bulk activate / deactivate / delete (saved), bulk save / delete jobs (unsaved).
+ * bulk rate / activate / deactivate / delete (saved), bulk save / delete jobs (unsaved).
  */
 (function () {
   'use strict';
@@ -284,6 +284,7 @@
     var show = {
       activate: false,
       deactivate: false,
+      rate: selectedIds.size > 0,
       delete: false,
       save: false,
     };
@@ -306,9 +307,9 @@
       if (!on) el.disabled = false;
     }
 
+    vis('[data-bulk-act="rate"]', show.rate);
     vis('[data-bulk-act="activate"]', show.activate);
     vis('[data-bulk-act="deactivate"]', show.deactivate);
-    vis('[data-bulk-act="rate"]', selectedIds.size > 0);
     vis('[data-bulk-act="delete"]', show.delete);
     vis('[data-bulk-act="save"]', show.save);
 
@@ -1662,9 +1663,9 @@
       '<button type="button" class="creator-creations-bulk-dock__btn" data-bulk-act="none"></button>' +
       '</div>' +
       '<div class="creator-creations-bulk-dock__actions">' +
+      '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="rate"></button>' +
       '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="activate"></button>' +
       '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="deactivate"></button>' +
-      '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="rate"></button>' +
       '<button type="button" class="creator-creations-bulk-dock__act creator-creations-bulk-dock__act--danger" data-bulk-act="delete"></button>' +
       '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="save"></button>' +
       '</div>' +
