@@ -308,6 +308,7 @@
 
     vis('[data-bulk-act="activate"]', show.activate);
     vis('[data-bulk-act="deactivate"]', show.deactivate);
+    vis('[data-bulk-act="rate"]', selectedIds.size > 0);
     vis('[data-bulk-act="delete"]', show.delete);
     vis('[data-bulk-act="save"]', show.save);
 
@@ -1559,6 +1560,93 @@
     drill.panel.appendChild(foot);
   }
 
+  function execBulkRate() {
+    var designs = getSelectedDesignObjects().filter(function (d) {
+      return (d && d.id && String(d.id).trim()) || (d && d.job_id && String(d.job_id).trim());
+    });
+    if (!designs.length) return;
+    var owner = getOwnerId();
+    var shell = openOverlayShell('creator-creations-bulk-overlay-panel--sheet');
+    var panel = shell.panel;
+    var h = document.createElement('h2');
+    h.className = 'creator-creations-bulk-sheet-title';
+    h.setAttribute('data-t', 'creator.creations.bulk_rate_title');
+    h.textContent = T('bulkRateTitle', 'Rate selected designs');
+    var body = document.createElement('div');
+    body.className = 'creator-creations-bulk-sheet-body';
+    var hint = document.createElement('p');
+    hint.textContent = T('bulkSelectedCountTpl', '%n% selected').split('%n%').join(String(designs.length));
+    body.appendChild(hint);
+    var opts = document.createElement('div');
+    opts.className = 'creator-creations-bulk-rate-opts';
+    var choices = [
+      { key: 'no_go', label: T('ratingNoGo', 'No go') },
+      { key: 'good', label: T('ratingGood', 'Good') },
+      { key: 'awesome', label: T('ratingAwesome', 'Awesome') }
+    ];
+    var busy = false;
+    choices.forEach(function (opt) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'creator-creations-bulk-rate-opt creator-creations-bulk-rate-opt--' + opt.key.replace('_', '-');
+      btn.setAttribute('data-t', 'creator.creations.rating_' + opt.key);
+      btn.textContent = opt.label;
+      btn.addEventListener('click', function () {
+        if (busy) return;
+        busy = true;
+        btn.disabled = true;
+        var items = designs.map(function (d) {
+          return {
+            design_id: d.id ? String(d.id) : null,
+            job_id: d.job_id ? String(d.job_id) : null
+          };
+        });
+        var url = apiDispatch() + '?op=rate-designs';
+        if (owner) url += '&owner_id=' + encodeURIComponent(owner);
+        fetch(url, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ rating: opt.key, items: items })
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'rate_failed');
+              return data;
+            });
+          })
+          .then(function () {
+            var cs = CS();
+            designs.forEach(function (d) {
+              if (cs && typeof cs.applyQualityRatingLocal === 'function') {
+                cs.applyQualityRatingLocal(d, opt.key);
+              } else {
+                d.quality_rating = opt.key;
+              }
+            });
+            if (cs && typeof cs.redrawDesignsGridOnly === 'function') cs.redrawDesignsGridOnly();
+            if (window.CreatorCreationsBulk && typeof window.CreatorCreationsBulk.redrawCheckboxes === 'function') {
+              window.CreatorCreationsBulk.redrawCheckboxes();
+            }
+            shell.close();
+          })
+          .catch(function () {
+            busy = false;
+            btn.disabled = false;
+            window.alert(T('bulkRateFailed', 'Could not save ratings.'));
+          });
+      });
+      opts.appendChild(btn);
+    });
+    body.appendChild(opts);
+    var foot = document.createElement('div');
+    foot.className = 'creator-creations-bulk-sheet-footer creator-creations-bulk-sheet-footer--row';
+    foot.appendChild(btnSecondary(T('bulkCancel', 'Cancel'), shell.close));
+    panel.appendChild(h);
+    panel.appendChild(body);
+    panel.appendChild(foot);
+  }
+
   function buildDock() {
     dockEl = document.createElement('div');
     dockEl.id = 'creatorCreationsBulkDock';
@@ -1576,6 +1664,7 @@
       '<div class="creator-creations-bulk-dock__actions">' +
       '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="activate"></button>' +
       '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="deactivate"></button>' +
+      '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="rate"></button>' +
       '<button type="button" class="creator-creations-bulk-dock__act creator-creations-bulk-dock__act--danger" data-bulk-act="delete"></button>' +
       '<button type="button" class="creator-creations-bulk-dock__act" data-bulk-act="save"></button>' +
       '</div>' +
@@ -1585,6 +1674,7 @@
     dockEl.querySelector('[data-bulk-act="none"]').textContent = T('bulkDeselectAll', 'Deselect all');
     dockEl.querySelector('[data-bulk-act="activate"]').textContent = T('bulkActivate', 'Activate');
     dockEl.querySelector('[data-bulk-act="deactivate"]').textContent = T('bulkDeactivate', 'Deactivate');
+    dockEl.querySelector('[data-bulk-act="rate"]').textContent = T('bulkRate', 'Rate');
     dockEl.querySelector('[data-bulk-act="delete"]').textContent = T('bulkDelete', 'Delete');
     dockEl.querySelector('[data-bulk-act="save"]').textContent = T('bulkSaveAll', 'Save all');
 
@@ -1592,6 +1682,7 @@
     dockEl.querySelector('[data-bulk-act="none"]').addEventListener('click', deselectAll);
     dockEl.querySelector('[data-bulk-act="activate"]').addEventListener('click', execBulkActivate);
     dockEl.querySelector('[data-bulk-act="deactivate"]').addEventListener('click', execBulkDeactivate);
+    dockEl.querySelector('[data-bulk-act="rate"]').addEventListener('click', execBulkRate);
     dockEl.querySelector('[data-bulk-act="delete"]').addEventListener('click', execBulkDelete);
     dockEl.querySelector('[data-bulk-act="save"]').addEventListener('click', execBulkSaveUnsaved);
 

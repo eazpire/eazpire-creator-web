@@ -4262,6 +4262,7 @@
     getFilteredDesigns: function () { return filteredDesigns; },
     getFilteredProducts: function () { return filteredProducts; },
     setViewMode: setViewMode,
+    applyQualityRatingLocal: applyQualityRatingLocal,
     resolveBulkSelectionKey: resolveBulkSelectionKey,
     isBulkSelectableDesign: isBulkSelectableDesign,
     /** Job-shaped payload for {@link CreatorJobPreviewModalGlobal} (unsaved generated row). */

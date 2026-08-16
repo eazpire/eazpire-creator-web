@@ -2923,6 +2923,33 @@ html.creator-design-products-modal-open {
   color: var(--slm-text, #fff);
   font-size: 14px;
 }
+.creator-creations-bulk-rate-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.creator-creations-bulk-rate-opt {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.creator-creations-bulk-rate-opt:hover,
+.creator-creations-bulk-rate-opt:disabled {
+  background: rgba(255, 255, 255, 0.1);
+}
+.creator-creations-bulk-rate-opt--no-go { color: #fca5a5; }
+.creator-creations-bulk-rate-opt--good { color: #93c5fd; }
+.creator-creations-bulk-rate-opt--awesome { color: #fbbf24; }
 
 /* Drill modal — design toggles */
 .creator-creations-bulk-drill-grid {
