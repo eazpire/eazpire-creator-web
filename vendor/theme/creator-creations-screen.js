@@ -273,6 +273,156 @@
     list: '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
   };
 
+  function normalizeQualityRatingClient(value) {
+    var s = value == null ? '' : String(value).trim().toLowerCase().replace(/[\s-]+/g, '_');
+    if (s === 'no_go' || s === 'nogo' || s === 'no') return 'no_go';
+    if (s === 'good') return 'good';
+    if (s === 'awesome' || s === 'perfect') return 'awesome';
+    return null;
+  }
+
+  function qualityRatingLabel(rating) {
+    var M = window.CreatorMobileI18n || {};
+    if (rating === 'no_go') return M.ratingNoGo || M.creations_rating_no_go || 'No go';
+    if (rating === 'good') return M.ratingGood || M.creations_rating_good || 'Good';
+    if (rating === 'awesome') return M.ratingAwesome || M.creations_rating_awesome || 'Awesome';
+    return M.ratingAria || M.creations_rating_aria || 'Rate design';
+  }
+
+  var RATING_STAR_SVG =
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor">' +
+    '<path d="M12 2.6l2.6 6.1 6.6.6-5 4.4 1.5 6.4L12 16.7 6.3 20.1 7.8 13.7l-5-4.4 6.6-.6z"/></svg>';
+
+  function closeOpenRatingPops(exceptBtn) {
+    document.querySelectorAll('.creator-creations-rating-pop').forEach(function (pop) {
+      var host = pop.parentElement;
+      if (exceptBtn && host === exceptBtn) return;
+      pop.hidden = true;
+      if (host && host.setAttribute) host.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function applyQualityRatingLocal(design, rating) {
+    var id = design && design.id != null ? String(design.id).trim() : '';
+    var jobId = design && design.job_id != null ? String(design.job_id).trim() : '';
+    function patch(d) {
+      if (!d) return;
+      var match = (id && String(d.id || '').trim() === id) || (jobId && String(d.job_id || '').trim() === jobId);
+      if (match) d.quality_rating = rating;
+    }
+    designs.forEach(patch);
+    if (typeof filteredDesigns !== 'undefined' && Array.isArray(filteredDesigns)) {
+      filteredDesigns.forEach(patch);
+    }
+    design.quality_rating = rating;
+  }
+
+  function setRatingButtonState(btn, rating) {
+    if (!btn) return;
+    btn.classList.remove('is-no-go', 'is-good', 'is-awesome');
+    if (rating) btn.classList.add('is-' + rating.replace('_', '-'));
+    btn.setAttribute('aria-label', qualityRatingLabel(rating));
+    btn.dataset.rating = rating || '';
+  }
+
+  function postDesignRating(design, rating) {
+    var owner = getOwnerId();
+    var body = { rating: rating };
+    if (design && design.id) body.design_id = String(design.id);
+    if (design && design.job_id) body.job_id = String(design.job_id);
+    var url = API_BASE + '?op=rate-design';
+    if (owner) url += '&owner_id=' + encodeURIComponent(owner);
+    return fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok || !data || !data.ok) {
+          throw new Error((data && data.error) || 'rate_failed');
+        }
+        return data;
+      });
+    });
+  }
+
+  function appendQualityRatingControl(host, design, btnClass) {
+    if (!host || !design) return null;
+    var hasId = !!(design.id && String(design.id).trim());
+    var hasJob = !!(design.job_id && String(design.job_id).trim());
+    if (!hasId && !hasJob) return null;
+    if (design.upload_pending || design.saving_to_library) return null;
+    var M = window.CreatorMobileI18n || {};
+    var current = normalizeQualityRatingClient(design.quality_rating);
+    var wrap = document.createElement('div');
+    wrap.className = 'creator-creations-rating-wrap';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = btnClass || 'creator-creations-card-rating';
+    btn.innerHTML = RATING_STAR_SVG;
+    setRatingButtonState(btn, current);
+    var pop = document.createElement('div');
+    pop.className = 'creator-creations-rating-pop';
+    pop.hidden = true;
+    var options = [
+      { key: 'no_go', label: M.ratingNoGo || M.creations_rating_no_go || 'No go', t: 'creator.creations.rating_no_go' },
+      { key: 'good', label: M.ratingGood || M.creations_rating_good || 'Good', t: 'creator.creations.rating_good' },
+      { key: 'awesome', label: M.ratingAwesome || M.creations_rating_awesome || 'Awesome', t: 'creator.creations.rating_awesome' }
+    ];
+    options.forEach(function (opt) {
+      var optBtn = document.createElement('button');
+      optBtn.type = 'button';
+      optBtn.className = 'creator-creations-rating-opt';
+      optBtn.dataset.rating = opt.key;
+      optBtn.setAttribute('data-t', opt.t);
+      optBtn.textContent = opt.label;
+      if (current === opt.key) optBtn.classList.add('is-current');
+      optBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var next = opt.key;
+        var prev = normalizeQualityRatingClient(design.quality_rating);
+        applyQualityRatingLocal(design, next);
+        setRatingButtonState(btn, next);
+        pop.querySelectorAll('.creator-creations-rating-opt').forEach(function (el) {
+          el.classList.toggle('is-current', el.dataset.rating === next);
+        });
+        pop.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        postDesignRating(design, next).catch(function () {
+          applyQualityRatingLocal(design, prev);
+          setRatingButtonState(btn, prev);
+          pop.querySelectorAll('.creator-creations-rating-opt').forEach(function (el) {
+            el.classList.toggle('is-current', el.dataset.rating === prev);
+          });
+          window.alert(M.ratingFailed || M.creations_rating_failed || 'Could not save rating.');
+        });
+      });
+      pop.appendChild(optBtn);
+    });
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var open = pop.hidden;
+      closeOpenRatingPops(btn);
+      pop.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    wrap.appendChild(btn);
+    wrap.appendChild(pop);
+    host.appendChild(wrap);
+    return wrap;
+  }
+
+  if (!window.__eazRatingPopBound) {
+    window.__eazRatingPopBound = true;
+    document.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('.creator-creations-rating-wrap')) return;
+      closeOpenRatingPops(null);
+    });
+  }
+
   function getOwnerId() {
     if (typeof window.__EAZ_OWNER_ID !== 'undefined' && window.__EAZ_OWNER_ID != null && String(window.__EAZ_OWNER_ID).trim()) {
       return String(window.__EAZ_OWNER_ID).trim();
@@ -400,7 +550,8 @@
       creator_name: item.creator_name || null,
       metadata: meta,
       library_status: item.library_status || 'inactive',
-      saving_to_library: !!item.saving_to_library
+      saving_to_library: !!item.saving_to_library,
+      quality_rating: normalizeQualityRatingClient(item.quality_rating)
     };
   }
 
@@ -470,7 +621,8 @@
       shop_locked:
         meta.shop_locked === true || meta.shop_locked === 'yes' || meta.shop_locked === 1,
       review_status: item.review_status || null,
-      review_item_id: item.review_item_id != null ? item.review_item_id : null
+      review_item_id: item.review_item_id != null ? item.review_item_id : null,
+      quality_rating: normalizeQualityRatingClient(item.quality_rating)
     };
   }
 
@@ -2320,6 +2472,7 @@
 
     appendShopLockBadges(card, design);
     appendReviewStatusBadge(card, design);
+    appendQualityRatingControl(card, design, 'creator-creations-card-rating');
 
     if (isBulkSelectableDesign(design)) {
       card.classList.add('creator-creations-card--bulk');
@@ -3122,6 +3275,7 @@
             }
           });
           rightActions.appendChild(prodBadge);
+          appendQualityRatingControl(rightActions, design, 'creator-creations-list-item-rating');
 
           var idStrList = design.id != null ? String(design.id).trim() : '';
           if (design.upload_pending) {
@@ -3797,7 +3951,7 @@
         target &&
         target.closest &&
         target.closest(
-          '.creator-creations-card-products-badge, .creator-creations-card-library-btn, .creator-creations-card-bulk-wrap, .creator-creations-list-item-badge--products-btn, .creator-creations-list-item-library-btn, .creator-creations-list-item-bulk-wrap'
+          '.creator-creations-card-products-badge, .creator-creations-card-library-btn, .creator-creations-card-bulk-wrap, .creator-creations-rating-wrap, .creator-creations-list-item-badge--products-btn, .creator-creations-list-item-library-btn, .creator-creations-list-item-bulk-wrap'
         )
       ) {
         return null;
