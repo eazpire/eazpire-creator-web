@@ -154,6 +154,9 @@
       );
     }
     if (code === 'already_added') return t('settings_names_already_added', 'You already added this name.');
+    if (code === 'blocked_phrase') {
+      return t('settings_names_blocked_phrase', 'This name contains a blocked phrase and cannot be used.');
+    }
     return t('settings_names_add_error', 'Could not add name.');
   }
 

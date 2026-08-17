@@ -5650,6 +5650,11 @@
       });
       var data = await response.json().catch(function () { return {}; });
       if (!response.ok || data.ok === false) {
+        if (data.error === 'blocked_phrase') {
+          var phrase = Array.isArray(data.phrases) && data.phrases[0] ? data.phrases[0] : '';
+          var blockedMsg = tPreview('meta_blocked_phrase', 'This text contains a blocked phrase ({{phrase}}) and cannot be saved.').replace('{{phrase}}', phrase || 'blocked phrase');
+          throw new Error(blockedMsg);
+        }
         throw new Error(data.error || 'save_failed');
       }
       var savedMeta = (data.design && data.design.metadata) || metadata;
@@ -5665,7 +5670,10 @@
       showCropSuccessToast(tPreview('meta_save', 'Save metadata'));
     } catch (err) {
       console.error('[CreatorDesignPreviewModal] metadata save failed', err);
-      alert(window.CreatorI18n?.errorSaving || 'Error saving');
+      var errText = err && err.message && String(err.message) !== 'save_failed'
+        ? String(err.message)
+        : (window.CreatorI18n?.errorSaving || 'Error saving');
+      alert(errText);
     } finally {
       metaSaving = false;
       updateMetadataSaveState();
