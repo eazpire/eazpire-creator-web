@@ -1,0 +1,157 @@
+/* Eazy Chat Quick Inspirations page — scoped to the chat view */
+.creator-chat__view--quick-inspirations {
+  min-height: 0;
+}
+
+.eazy-qi {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.eazy-qi__toolbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 8px;
+}
+
+.eazy-qi__tabs,
+.eazy-qi__origins {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.eazy-qi__tab,
+.eazy-qi__chip {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.eazy-qi__tab.is-active,
+.eazy-qi__chip.is-active {
+  background: #f97316;
+  border-color: #f97316;
+  color: #fff;
+}
+
+.eazy-qi__search {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.eazy-qi__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 12px 12px;
+}
+
+.eazy-qi__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (min-width: 520px) {
+  .eazy-qi__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.eazy-qi__card {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.eazy-qi__card img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.eazy-qi__status,
+.eazy-qi__empty {
+  margin: 16px 4px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.eazy-qi__more {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.eazy-qi__preview {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eazy-qi__preview[hidden] {
+  display: none !important;
+}
+
+.eazy-qi__preview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.eazy-qi__preview-img {
+  position: relative;
+  z-index: 1;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 56px);
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.eazy-qi__preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}

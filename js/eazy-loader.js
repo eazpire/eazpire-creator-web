@@ -97,6 +97,7 @@
       a("eaz-open-wear-hub.js"),
       a("eaz-artifacts-wear-promo.js"),
       a("eaz-artifacts-hub.js"),
+      a("eazy-quick-inspirations-panel.js"),
       a("wardrobe-figure.js"),
       a("eaz-artifacts-outfit.js"),
       a("eaz-artifacts-marketplace.js"),
@@ -140,6 +141,7 @@
         "/vendor/theme/eazy-guide-mode.css",
         "/vendor/theme/eazy-prize-cards.css",
         "/vendor/theme/eazy-verify.css",
+        "/vendor/theme/eazy-quick-inspirations-panel.css",
       ].forEach(loadCss);
 
       await injectPartial("creator-eazy-web-shell.html");

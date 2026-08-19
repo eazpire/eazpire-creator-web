@@ -4788,6 +4788,14 @@
     stopNotifPolling();
     stopJobsPolling();
 
+    if (prevView === "quick-inspirations" && name !== "quick-inspirations") {
+      try {
+        if (window.EazyQuickInspirationsPanel && typeof window.EazyQuickInspirationsPanel.closePreview === "function") {
+          window.EazyQuickInspirationsPanel.closePreview();
+        }
+      } catch (e) {}
+    }
+
     if (prevView === "games" && name !== "games") {
       _eazyGamesRefreshGen += 1;
       try {
@@ -4828,6 +4836,10 @@
     } else if (name === "verify") {
       if (window.EazyVerify && typeof window.EazyVerify.init === "function") {
         window.EazyVerify.init();
+      }
+    } else if (name === "quick-inspirations") {
+      if (window.EazyQuickInspirationsPanel && typeof window.EazyQuickInspirationsPanel.init === "function") {
+        window.EazyQuickInspirationsPanel.init();
       }
     }
 

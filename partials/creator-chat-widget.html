@@ -96,6 +96,14 @@
           <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/>
         </svg>
       </button>
+      <button type="button" class="creator-chat__sidebar-btn" data-view="quick-inspirations" title="Quick Inspirations">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      </button>
       
       <button type="button" class="creator-chat__sidebar-btn" data-view="functions" title="Functions">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
@@ -968,6 +976,46 @@
             </div>
             <img class="eaz-artifacts-qr-modal__img" id="eaz-artifacts-qr-modal-img" alt="" width="280" height="280" hidden/>
             <div class="eaz-artifacts-qr-modal__mint-host" id="eaz-artifacts-qr-modal-mint-host" hidden></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="creator-chat__view creator-chat__view--quick-inspirations" id="creator-chat-view-quick-inspirations">
+        <div class="creator-chat__view-header">
+          <div class="creator-chat__view-header-left">
+            <button type="button" class="creator-chat__hamburger creator-chat__view-hamburger" aria-label="Open sidebar">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4.5h12M3 9h12M3 13.5h12"/></svg>
+            </button>
+            <h3 class="creator-chat__view-title" data-t="eazy_chat.qi_title">Quick Inspirations</h3>
+          </div>
+          <button type="button" class="creator-chat__close creator-chat__panel-close" aria-label="Close chat">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+</button>
+        </div>
+        <div class="eazy-qi" id="eazy-qi-root">
+          <div class="eazy-qi__toolbar">
+            <div class="eazy-qi__tabs" role="tablist" aria-label="Quick Inspiration sources">
+              <button type="button" class="eazy-qi__tab is-active" data-eazy-qi-scope="public" role="tab" aria-selected="true" data-t="eazy_chat.qi_tab_public">Public</button>
+              <button type="button" class="eazy-qi__tab" data-eazy-qi-scope="yours" role="tab" aria-selected="false" data-t="eazy_chat.qi_tab_yours">Yours</button>
+            </div>
+            <div class="eazy-qi__origins" role="group" aria-label="Source">
+              <button type="button" class="eazy-qi__chip is-active" data-eazy-qi-origin="" data-t="eazy_chat.qi_origin_all">All</button>
+              <button type="button" class="eazy-qi__chip" data-eazy-qi-origin="user" data-t="eazy_chat.qi_origin_user">Community</button>
+              <button type="button" class="eazy-qi__chip" data-eazy-qi-origin="research" data-t="eazy_chat.qi_origin_research">Research</button>
+              <button type="button" class="eazy-qi__chip" data-eazy-qi-origin="trend_radar" data-t="eazy_chat.qi_origin_trend">Trends</button>
+            </div>
+            <input type="search" class="eazy-qi__search" id="eazy-qi-search" autocomplete="off" placeholder="Search inspirations…" aria-label="Search inspirations…">
+          </div>
+          <div class="eazy-qi__body">
+            <p class="eazy-qi__status" id="eazy-qi-loading" hidden data-t="eazy_chat.qi_loading">Loading…</p>
+            <p class="eazy-qi__empty" id="eazy-qi-empty" hidden></p>
+            <div class="eazy-qi__grid" id="eazy-qi-grid"></div>
+            <button type="button" class="eazy-qi__more" id="eazy-qi-more" hidden data-t="eazy_chat.qi_load_more">Load more</button>
+          </div>
+          <div class="eazy-qi__preview" id="eazy-qi-preview" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Inspiration preview">
+            <div class="eazy-qi__preview-backdrop" data-eazy-qi-preview-close></div>
+            <button type="button" class="eazy-qi__preview-close" data-eazy-qi-preview-close aria-label="Close preview">×</button>
+            <img class="eazy-qi__preview-img" id="eazy-qi-preview-img" alt="">
           </div>
         </div>
       </div>
