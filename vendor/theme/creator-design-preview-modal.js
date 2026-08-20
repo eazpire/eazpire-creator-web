@@ -5688,7 +5688,11 @@
       return;
     }
     var btn = document.getElementById('cdp-meta-regenerate-' + sectionId);
-    if (btn) btn.disabled = true;
+    var btnLabel = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = tPreview('meta_regenerate_working', 'Analyzing the design image…');
+    }
     try {
       var apiBaseUrl = resolveCreatorDispatchBase();
       var url = apiBaseUrl + '?op=regenerate-design-metadata&logged_in_customer_id=' + encodeURIComponent(ownerId);
@@ -5714,7 +5718,10 @@
       console.error('[CreatorDesignPreviewModal] regenerate metadata failed', err);
       alert(window.CreatorI18n?.errorSaving || 'Error regenerating metadata');
     } finally {
-      if (btn) btn.disabled = false;
+      if (btn) {
+        btn.disabled = false;
+        if (btnLabel) btn.textContent = btnLabel;
+      }
     }
   }
 
@@ -5917,7 +5924,17 @@
     var hist = document.getElementById('cdp-meta-history-' + sectionId);
     if (regen && !regen.__cdpBound) {
       regen.__cdpBound = true;
-      regen.addEventListener('click', function () { regenerateMetadataDraft(); });
+      regen.addEventListener('click', function () {
+        showConfirmModal(
+          (tPreview('meta_regenerate_confirm', 'Regenerate metadata?') +
+            '\n\n' +
+            tPreview(
+              'meta_regenerate_confirm_body',
+              'This analyzes the design image and replaces title, description, tags, and topics. You still need to Save to keep the new draft.'
+            )),
+          function () { regenerateMetadataDraft(); }
+        );
+      });
     }
     if (saveMeta && !saveMeta.__cdpBound) {
       saveMeta.__cdpBound = true;
