@@ -199,7 +199,7 @@
   function linkErrorMessage(data) {
     var code = data && (data.code || data.error_code || data.error);
     var map = {
-      youtube_bot: i18n('link_error_youtube_bot', 'YouTube blocked the download. Try again in a moment.'),
+      youtube_bot: i18n('link_error_youtube_bot', 'YouTube blocked the download from our servers. Save the video on your device and use Device instead.'),
       youtube_needs_merge: i18n('link_error_youtube_merge', 'This YouTube video cannot be downloaded as a single file.'),
       youtube_failed: i18n('link_error_youtube_failed', 'Could not load that YouTube video.'),
       youtube_http_error: i18n('link_error_youtube_failed', 'Could not load that YouTube video.'),
