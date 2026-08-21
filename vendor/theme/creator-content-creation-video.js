@@ -133,6 +133,11 @@
       '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_transition', 'Video Transition')) + '</span>' +
       '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_transition_desc', 'Chain clips with cinematic transitions, voiceover, and subtitles.')) + '</span>' +
       '</button>' +
+      '<button type="button" class="creator-video-tool-card" data-creator-video-clipper-open>' +
+      '<span class="creator-video-tool-card__icon" aria-hidden="true">✂️</span>' +
+      '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_clipper', 'Video Clipper')) + '</span>' +
+      '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_clipper_desc', 'Turn long talking videos into Shorts with a transcript-based cut plan.')) + '</span>' +
+      '</button>' +
       '</div>';
   }
 
@@ -1725,6 +1730,19 @@
           return;
         }
         console.warn('[ContentCreationVideo] CreatorVideoTransitionModal not loaded yet');
+      });
+    });
+
+    ctx.container.querySelectorAll('[data-creator-video-clipper-open]').forEach(function (btn) {
+      if (btn._cvclContentBound) return;
+      btn._cvclContentBound = true;
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (window.CreatorVideoClipperModal && typeof window.CreatorVideoClipperModal.open === 'function') {
+          window.CreatorVideoClipperModal.open();
+          return;
+        }
+        console.warn('[ContentCreationVideo] CreatorVideoClipperModal not loaded yet');
       });
     });
   }

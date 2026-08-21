@@ -1,0 +1,80 @@
+<div
+  id="creatorVideoClipperModal"
+  class="cvcl-modal-root"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cvcl-modal-title"
+>
+  <div class="cvcl-modal__shell">
+    <header class="cvcl-modal__header">
+      <h2 id="cvcl-modal-title" class="cvcl-modal__title" data-t="creator.video_clipper.title">Video Clipper</h2>
+      <button
+        type="button"
+        class="cvcl-btn cvcl-btn--icon"
+        id="cvcl-btn-close"
+        aria-label="Close"
+      >×</button>
+    </header>
+
+    <div class="cvcl-body">
+      <section class="cvcl-source">
+        <p class="cvcl-lead" data-t="creator.video_clipper.lead">Turn a long talking video into Shorts. We transcribe the speech, propose clip times, then cut 9:16 clips.</p>
+
+        <div class="cvcl-upload" id="cvcl-upload" role="button" tabindex="0">
+          <input type="file" id="cvcl-file" accept="video/*" hidden>
+          <div class="cvcl-upload__empty" id="cvcl-upload-empty">
+            <span class="cvcl-upload__plus" aria-hidden="true">+</span>
+            <span data-t="creator.video_clipper.pick_video">Choose a long-form video</span>
+            <span class="cvcl-upload__hint" data-t="creator.video_clipper.pick_hint">30–60 minutes with speech works best. Max 500 MB.</span>
+          </div>
+          <div class="cvcl-upload__preview" id="cvcl-upload-preview" hidden>
+            <video id="cvcl-video" playsinline controls></video>
+            <button type="button" class="cvcl-preview-remove" id="cvcl-remove-video" aria-label="Remove video">×</button>
+          </div>
+        </div>
+        <p class="cvcl-meta" id="cvcl-meta" hidden></p>
+
+        <div class="cvcl-settings">
+          <label class="cvcl-check">
+            <input type="checkbox" id="cvcl-auto-count" checked>
+            <span data-t="creator.video_clipper.auto_count">Auto clip count</span>
+          </label>
+          <label class="cvcl-field">
+            <span data-t="creator.video_clipper.clip_count">Clips</span>
+            <input type="number" id="cvcl-count" min="1" max="12" value="5" disabled>
+          </label>
+          <label class="cvcl-check">
+            <input type="checkbox" id="cvcl-auto-duration" checked>
+            <span data-t="creator.video_clipper.auto_duration">Auto duration</span>
+          </label>
+          <label class="cvcl-field">
+            <span data-t="creator.video_clipper.min_s">Min seconds</span>
+            <input type="number" id="cvcl-min" min="8" max="90" value="15" disabled>
+          </label>
+          <label class="cvcl-field">
+            <span data-t="creator.video_clipper.max_s">Max seconds</span>
+            <input type="number" id="cvcl-max" min="8" max="90" value="45" disabled>
+          </label>
+        </div>
+
+        <div class="cvcl-actions">
+          <button type="button" class="cvcl-btn cvcl-btn--primary" id="cvcl-btn-analyze" disabled>
+            Analyze video
+          </button>
+          <button type="button" class="cvcl-btn" id="cvcl-btn-export" disabled>
+            Export selected Shorts
+          </button>
+        </div>
+        <p class="cvcl-status" id="cvcl-status" role="status"></p>
+      </section>
+
+      <section class="cvcl-plan" aria-label="Clip plan">
+        <h3 class="cvcl-plan__title" data-t="creator.video_clipper.plan">Clip plan</h3>
+        <p class="cvcl-plan__empty" id="cvcl-plan-empty" data-t="creator.video_clipper.plan_empty">Analyze a video to see suggested clip times. You can edit start and end before export.</p>
+        <div class="cvcl-plan__list" id="cvcl-plan-list" hidden></div>
+      </section>
+    </div>
+  </div>
+</div>

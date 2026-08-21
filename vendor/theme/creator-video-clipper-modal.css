@@ -1,0 +1,222 @@
+/* Video Clipper modal (IDEA-077) */
+.cvcl-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  background: rgba(2, 2, 8, 0.96);
+  color: #fff;
+}
+.cvcl-modal-root[hidden] {
+  display: none !important;
+}
+.cvcl-modal__shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: linear-gradient(160deg, #0a0614 0%, #120a1e 45%, #080510 100%);
+}
+.cvcl-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+.cvcl-modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.cvcl-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cvcl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cvcl-btn--primary {
+  border-color: rgba(249, 115, 22, 0.55);
+  background: rgba(249, 115, 22, 0.22);
+}
+.cvcl-btn--icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+}
+.cvcl-body {
+  display: grid;
+  grid-template-columns: minmax(280px, 42%) 1fr;
+  gap: 0;
+  min-height: 0;
+  flex: 1;
+}
+@media (max-width: 900px) {
+  .cvcl-body {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+}
+.cvcl-source,
+.cvcl-plan {
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 18px 24px;
+}
+.cvcl-plan {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+}
+.cvcl-lead,
+.cvcl-upload__hint,
+.cvcl-meta,
+.cvcl-plan__empty,
+.cvcl-status,
+.cvcl-clip__reason {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.cvcl-upload {
+  margin: 14px 0;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  min-height: 160px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+.cvcl-upload__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 160px;
+  padding: 16px;
+  text-align: center;
+}
+.cvcl-upload__plus {
+  font-size: 28px;
+  line-height: 1;
+  opacity: 0.7;
+}
+.cvcl-upload__preview video {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  background: #000;
+}
+.cvcl-preview-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  cursor: pointer;
+}
+.cvcl-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin: 14px 0;
+}
+.cvcl-check,
+.cvcl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.cvcl-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.cvcl-field input[type="number"] {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  padding: 8px 10px;
+}
+.cvcl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cvcl-status {
+  min-height: 1.4em;
+  margin-top: 10px;
+}
+.cvcl-plan__title {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+.cvcl-clip {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.cvcl-clip__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cvcl-clip__title {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-weight: 650;
+  font-size: 14px;
+}
+.cvcl-clip__times {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cvcl-clip__times label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+.cvcl-clip__times input {
+  width: 88px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  padding: 6px 8px;
+}
+.cvcl-clip__preview {
+  margin-top: 8px;
+}
