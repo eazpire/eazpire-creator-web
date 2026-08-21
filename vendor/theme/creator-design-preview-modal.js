@@ -5703,7 +5703,13 @@
         body: JSON.stringify({ design_id: currentDesign.id, owner_id: ownerId })
       });
       var data = await response.json().catch(function () { return {}; });
-      if (!response.ok || data.ok === false) throw new Error(data.error || 'regenerate_failed');
+      if (!response.ok || data.ok === false) {
+        throw new Error(
+          data.message ||
+            data.error ||
+            tPreview('meta_regenerate_failed', 'Could not regenerate metadata.')
+        );
+      }
       var nextMeta = data.metadata || data.design && data.design.metadata || data;
       if (typeof nextMeta === 'string') {
         try { nextMeta = JSON.parse(nextMeta); } catch (e) { nextMeta = {}; }
@@ -5716,7 +5722,10 @@
       if (nextMeta.title && modalTitle) modalTitle.textContent = truncateTitle(String(nextMeta.title), 80);
     } catch (err) {
       console.error('[CreatorDesignPreviewModal] regenerate metadata failed', err);
-      alert(window.CreatorI18n?.errorSaving || 'Error regenerating metadata');
+      alert(
+        (err && err.message) ||
+          tPreview('meta_regenerate_failed', 'Could not regenerate metadata.')
+      );
     } finally {
       if (btn) {
         btn.disabled = false;
