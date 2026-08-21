@@ -71,6 +71,13 @@
     var ownerId = getOwnerId();
     var url = API_BASE + '?op=' + encodeURIComponent(op);
     if (ownerId) url += '&owner_id=' + encodeURIComponent(ownerId);
+    if (opts.query) {
+      Object.keys(opts.query).forEach(function (key) {
+        if (opts.query[key] != null && String(opts.query[key]) !== '') {
+          url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(String(opts.query[key]));
+        }
+      });
+    }
     var init = { method: opts.method || 'GET', credentials: 'include' };
     if (opts.body instanceof FormData) {
       init.body = opts.body;
@@ -156,6 +163,119 @@
     if (preview) preview.hidden = false;
     if (analyze) analyze.disabled = false;
     setStatus('');
+  }
+
+  function isYouTubeUrl(raw) {
+    try {
+      var parsed = new URL(String(raw || '').trim());
+      var host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+      return host === 'youtu.be' || host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setOverlay(id, open) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.hidden = !open;
+    el.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
+
+  function setLinkStatus(msg, kind) {
+    var el = document.getElementById('cvcl-link-status');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = 'cvcl-link-status' + (kind ? ' is-' + kind : '');
+  }
+
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  function linkErrorMessage(data) {
+    var code = data && (data.error_code || data.error);
+    var map = {
+      youtube_bot: i18n('link_error_youtube_bot', 'YouTube blocked the download. Try again in a moment.'),
+      youtube_needs_merge: i18n('link_error_youtube_merge', 'This YouTube video cannot be downloaded as a single file.'),
+      youtube_failed: i18n('link_error_youtube_failed', 'Could not load that YouTube video.'),
+      timeout: i18n('link_error_timeout', 'Import timed out. Try again in a moment.'),
+      rate_limit: i18n('link_error_rate', 'Too many imports. Please wait a moment.'),
+      invalid_url: i18n('link_error_youtube_only', 'Please paste a YouTube URL.'),
+    };
+    if (code && map[code]) return map[code];
+    return (data && data.message) || i18n('link_error_generic', 'Could not load video from that link.');
+  }
+
+  async function pollLinkIngest(assetId) {
+    var maxAttempts = 120;
+    for (var i = 0; i < maxAttempts; i++) {
+      if (i > 0 && i % 3 === 0) {
+        setLinkStatus(i18n('link_processing', 'Downloading from YouTube…'), 'info');
+      }
+      var data = await apiJson('video-studio-link-ingest-status', { query: { asset_id: assetId } });
+      if (data && data.status === 'ready' && data.asset) return { ok: true, asset: data.asset };
+      if (data && data.status === 'failed') return { ok: false, data: data };
+      if (data && !data.ok && data.error && data.error !== 'asset_not_found') return { ok: false, data: data };
+      await sleep(2000);
+    }
+    return { ok: false, data: { error: 'timeout' } };
+  }
+
+  async function setSourceFromRemoteUrl(url, name) {
+    var res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) throw new Error('fetch_failed');
+    var blob = await res.blob();
+    if (!blob || !blob.size) throw new Error('empty_file');
+    var file = new File([blob], name || 'youtube.mp4', { type: blob.type || 'video/mp4' });
+    setSourceFile(file);
+  }
+
+  async function loadYouTubeLink() {
+    var input = document.getElementById('cvcl-link-url');
+    var loadBtn = document.getElementById('cvcl-link-load');
+    var url = input ? String(input.value || '').trim() : '';
+    if (!isYouTubeUrl(url)) {
+      setLinkStatus(i18n('link_error_youtube_only', 'Please paste a YouTube URL.'), 'error');
+      return;
+    }
+    if (loadBtn) loadBtn.disabled = true;
+    setLinkStatus(i18n('link_downloading', 'Starting YouTube download…'), 'info');
+    try {
+      var data = await apiJson('video-studio-link-ingest', {
+        method: 'POST',
+        json: { url: url, format: 'mp4' },
+      });
+      if (!data || (!data.ok && !data.asset_id)) {
+        setLinkStatus(linkErrorMessage(data || {}), 'error');
+        return;
+      }
+      var asset = data.asset || null;
+      if (data.asset_id && (data.status === 'queued' || data.status === 'processing' || (!asset && data.status !== 'ready'))) {
+        setLinkStatus(i18n('link_queued', 'Import queued — preparing YouTube video…'), 'info');
+        var polled = await pollLinkIngest(data.asset_id);
+        if (!polled.ok || !polled.asset) {
+          setLinkStatus(linkErrorMessage(polled.data || {}), 'error');
+          return;
+        }
+        asset = polled.asset;
+      }
+      var remote = asset && (asset.url || asset.thumb_url);
+      if (!remote) {
+        setLinkStatus(linkErrorMessage(data || { error: 'youtube_failed' }), 'error');
+        return;
+      }
+      setLinkStatus(i18n('link_loading_player', 'Loading video into Clipper…'), 'info');
+      await setSourceFromRemoteUrl(remote, (asset && asset.original_name) || 'youtube.mp4');
+      setLinkStatus(i18n('link_ready', 'YouTube video loaded.'), 'success');
+      setOverlay('cvcl-link', false);
+      setOverlay('cvcl-addsrc', false);
+      setStatus(i18n('link_ready', 'YouTube video loaded.'));
+    } catch (e) {
+      setLinkStatus(linkErrorMessage({ error: 'youtube_failed', message: String(e && e.message ? e.message : '') }), 'error');
+    } finally {
+      if (loadBtn) loadBtn.disabled = false;
+    }
   }
 
   function encodeWavMono16(float32, sampleRate) {
@@ -503,6 +623,8 @@
     root.hidden = true;
     root.setAttribute('aria-hidden', 'true');
     document.documentElement.classList.remove('cvcl-open');
+    setOverlay('cvcl-addsrc', false);
+    setOverlay('cvcl-link', false);
     var video = $('#cvcl-video');
     if (video) video.pause();
   }
@@ -517,18 +639,51 @@
     if (upload && file) {
       upload.addEventListener('click', function (e) {
         if (e.target && e.target.closest && e.target.closest('#cvcl-remove-video')) return;
-        if (!state.file) file.click();
+        if (!state.file) setOverlay('cvcl-addsrc', true);
       });
       upload.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          if (!state.file) file.click();
+          if (!state.file) setOverlay('cvcl-addsrc', true);
         }
       });
       file.addEventListener('change', function () {
         var f = file.files && file.files[0];
         if (f) setSourceFile(f);
         file.value = '';
+      });
+    }
+    var addDevice = document.getElementById('cvcl-addsrc-device');
+    if (addDevice && file) {
+      addDevice.addEventListener('click', function () {
+        setOverlay('cvcl-addsrc', false);
+        file.click();
+      });
+    }
+    var addLink = document.getElementById('cvcl-addsrc-link');
+    if (addLink) {
+      addLink.addEventListener('click', function () {
+        setOverlay('cvcl-addsrc', false);
+        setLinkStatus('', '');
+        var urlInput = document.getElementById('cvcl-link-url');
+        if (urlInput) urlInput.value = '';
+        setOverlay('cvcl-link', true);
+        if (urlInput) urlInput.focus();
+      });
+    }
+    var addCancel = document.getElementById('cvcl-addsrc-cancel');
+    if (addCancel) addCancel.addEventListener('click', function () { setOverlay('cvcl-addsrc', false); });
+    var linkCancel = document.getElementById('cvcl-link-cancel');
+    if (linkCancel) linkCancel.addEventListener('click', function () { setOverlay('cvcl-link', false); });
+    var linkLoad = document.getElementById('cvcl-link-load');
+    if (linkLoad) linkLoad.addEventListener('click', loadYouTubeLink);
+    var linkUrl = document.getElementById('cvcl-link-url');
+    if (linkUrl) {
+      linkUrl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          loadYouTubeLink();
+        }
       });
     }
     var remove = $('#cvcl-remove-video');
