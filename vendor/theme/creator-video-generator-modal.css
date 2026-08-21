@@ -592,12 +592,17 @@ body.cvg-modal-open {
   .cvs-link-phone { flex-basis: auto; width: 100%; }
 }
 
-/* Tools grid on Videos content tab */
+/* Tools grid on Videos content tab — Studio, Generator, Transition, Clipper in one row */
 .creator-video-tools-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   padding: 8px 4px 24px;
+}
+@media (min-width: 900px) {
+  .creator-video-tools-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 .creator-video-tool-card {
   appearance: none;

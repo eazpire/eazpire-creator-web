@@ -3543,6 +3543,17 @@ html.creator-creations-bulk-overlay-open {
   flex-direction: column;
   overflow: hidden;
 }
+.creator-marketing-panel-content[data-content="videos"] {
+  overflow: visible;
+}
+.creator-marketing-panel-content[data-content="videos"] .creator-video-tools-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 900px) {
+  .creator-marketing-panel-content[data-content="videos"] .creator-video-tools-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
 .creator-marketing-panel-content.is-active { display: flex; }
 .creator-marketing-coming-soon-block {
   display: flex;

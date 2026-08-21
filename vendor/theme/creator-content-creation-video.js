@@ -118,22 +118,22 @@
     if (!container) return;
     container.innerHTML =
       '<div class="creator-video-tools-grid" data-creator-video-tools-grid>' +
-      '<button type="button" class="creator-video-tool-card" data-creator-video-studio-open>' +
+      '<button type="button" class="creator-video-tool-card cmkt-card--function" data-mkt-function="video-studio" data-creator-video-studio-open>' +
       '<span class="creator-video-tool-card__icon" aria-hidden="true">🎞️</span>' +
       '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_studio', 'Video Studio')) + '</span>' +
       '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_studio_desc', 'Edit clips on a timeline, crop, mix audio, and export.')) + '</span>' +
       '</button>' +
-      '<button type="button" class="creator-video-tool-card" data-creator-video-generator-open>' +
+      '<button type="button" class="creator-video-tool-card cmkt-card--function" data-mkt-function="video-generator" data-creator-video-generator-open>' +
       '<span class="creator-video-tool-card__icon" aria-hidden="true">✨</span>' +
       '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_generator', 'Video Generator')) + '</span>' +
       '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_generator_desc', 'Generate videos with Motion Control and more AI tools.')) + '</span>' +
       '</button>' +
-      '<button type="button" class="creator-video-tool-card" data-creator-video-transition-open>' +
+      '<button type="button" class="creator-video-tool-card cmkt-card--function" data-mkt-function="video-transition" data-creator-video-transition-open>' +
       '<span class="creator-video-tool-card__icon" aria-hidden="true">🔀</span>' +
       '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_transition', 'Video Transition')) + '</span>' +
       '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_transition_desc', 'Chain clips with cinematic transitions, voiceover, and subtitles.')) + '</span>' +
       '</button>' +
-      '<button type="button" class="creator-video-tool-card" data-creator-video-clipper-open>' +
+      '<button type="button" class="creator-video-tool-card cmkt-card--function" data-mkt-function="video-clipper" data-creator-video-clipper-open>' +
       '<span class="creator-video-tool-card__icon" aria-hidden="true">✂️</span>' +
       '<span class="creator-video-tool-card__title">' + escapeAttr(i18n('tool_video_clipper', 'Video Clipper')) + '</span>' +
       '<span class="creator-video-tool-card__desc">' + escapeAttr(i18n('tool_video_clipper_desc', 'Turn long talking videos into Shorts with a transcript-based cut plan.')) + '</span>' +
