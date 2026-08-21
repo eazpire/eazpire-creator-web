@@ -89,7 +89,16 @@
       init.headers = { 'Content-Type': 'application/json' };
       init.body = JSON.stringify(opts.json);
     }
-    var res = await fetch(url, init);
+    var res;
+    try {
+      res = await fetch(url, init);
+    } catch (e) {
+      return {
+        ok: false,
+        error: 'network_error',
+        message: i18n('link_error_network', 'Network error. Please try again.'),
+      };
+    }
     try {
       return await res.json();
     } catch (e) {
@@ -206,9 +215,15 @@
       timeout: i18n('link_error_timeout', 'Import timed out. Try again in a moment.'),
       rate_limit: i18n('link_error_rate', 'Too many imports. Please wait a moment.'),
       invalid_url: i18n('link_error_youtube_only', 'Please paste a YouTube URL.'),
+      network_error: i18n('link_error_network', 'Network error. Please try again.'),
+      fetch_failed: i18n('link_error_network', 'Network error. Please try again.'),
     };
-    if (data && data.message && String(data.message).length > 8 && String(data.message).indexOf('Could not load that YouTube') === -1) {
-      return String(data.message);
+    var rawMsg = data && data.message ? String(data.message) : '';
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(rawMsg)) {
+      return map.network_error;
+    }
+    if (rawMsg.length > 8 && rawMsg.indexOf('Could not load that YouTube') === -1) {
+      return rawMsg;
     }
     if (code && map[code]) return map[code];
     return (data && data.message) || i18n('link_error_generic', 'Could not load video from that link.');
@@ -230,7 +245,9 @@
   }
 
   async function setSourceFromRemoteUrl(url, name) {
-    var res = await fetch(url, { credentials: 'include' });
+    // /file/ URLs send Access-Control-Allow-Origin: *. Browsers reject
+    // credentials:'include' with a wildcard — that surfaces as "Failed to fetch".
+    var res = await fetch(url, { credentials: 'omit', mode: 'cors' });
     if (!res.ok) throw new Error('fetch_failed');
     var blob = await res.blob();
     if (!blob || !blob.size) throw new Error('empty_file');
@@ -279,11 +296,10 @@
       setOverlay('cvcl-addsrc', false);
       setStatus(i18n('link_ready', 'YouTube video loaded.'));
     } catch (e) {
+      var msg = e && e.message ? String(e.message) : '';
       setLinkStatus(linkErrorMessage({
-        error: e && e.message === 'fetch_failed' ? 'fetch_failed' : 'youtube_failed',
-        message: e && e.message === 'fetch_failed'
-          ? i18n('link_error_generic', 'Could not load video from that link.')
-          : String(e && e.message ? e.message : ''),
+        error: /fetch_failed|failed to fetch|networkerror/i.test(msg) ? 'network_error' : 'youtube_failed',
+        message: msg,
       }), 'error');
     } finally {
       if (loadBtn) loadBtn.disabled = false;
