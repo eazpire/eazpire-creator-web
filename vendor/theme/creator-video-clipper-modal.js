@@ -70,7 +70,10 @@
     opts = opts || {};
     var ownerId = getOwnerId();
     var url = API_BASE + '?op=' + encodeURIComponent(op);
-    if (ownerId) url += '&owner_id=' + encodeURIComponent(ownerId);
+    if (ownerId) {
+      url += '&owner_id=' + encodeURIComponent(ownerId);
+      url += '&logged_in_customer_id=' + encodeURIComponent(ownerId);
+    }
     if (opts.query) {
       Object.keys(opts.query).forEach(function (key) {
         if (opts.query[key] != null && String(opts.query[key]) !== '') {
@@ -194,15 +197,19 @@
   }
 
   function linkErrorMessage(data) {
-    var code = data && (data.error_code || data.error);
+    var code = data && (data.code || data.error_code || data.error);
     var map = {
       youtube_bot: i18n('link_error_youtube_bot', 'YouTube blocked the download. Try again in a moment.'),
       youtube_needs_merge: i18n('link_error_youtube_merge', 'This YouTube video cannot be downloaded as a single file.'),
       youtube_failed: i18n('link_error_youtube_failed', 'Could not load that YouTube video.'),
+      youtube_http_error: i18n('link_error_youtube_failed', 'Could not load that YouTube video.'),
       timeout: i18n('link_error_timeout', 'Import timed out. Try again in a moment.'),
       rate_limit: i18n('link_error_rate', 'Too many imports. Please wait a moment.'),
       invalid_url: i18n('link_error_youtube_only', 'Please paste a YouTube URL.'),
     };
+    if (data && data.message && String(data.message).length > 8 && String(data.message).indexOf('Could not load that YouTube') === -1) {
+      return String(data.message);
+    }
     if (code && map[code]) return map[code];
     return (data && data.message) || i18n('link_error_generic', 'Could not load video from that link.');
   }
@@ -272,7 +279,12 @@
       setOverlay('cvcl-addsrc', false);
       setStatus(i18n('link_ready', 'YouTube video loaded.'));
     } catch (e) {
-      setLinkStatus(linkErrorMessage({ error: 'youtube_failed', message: String(e && e.message ? e.message : '') }), 'error');
+      setLinkStatus(linkErrorMessage({
+        error: e && e.message === 'fetch_failed' ? 'fetch_failed' : 'youtube_failed',
+        message: e && e.message === 'fetch_failed'
+          ? i18n('link_error_generic', 'Could not load video from that link.')
+          : String(e && e.message ? e.message : ''),
+      }), 'error');
     } finally {
       if (loadBtn) loadBtn.disabled = false;
     }
