@@ -3466,7 +3466,7 @@ body.creator-video-motion-info-modal-open {
 
 .creator-desktop-creations-host .creator-creations-panel:not(.creator-creations-panel--hidden) .creator-creations-toolbar {
   border-radius: 0 0 12px 12px;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-top: 0;
 }

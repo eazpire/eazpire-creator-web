@@ -713,10 +713,8 @@
   flex-shrink: 0;
 }
 .creator-creations-sort-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 40;
+  position: fixed;
+  z-index: 5200;
   min-width: 220px;
   padding: 6px;
   border: 1px solid rgba(255, 255, 255, 0.12);

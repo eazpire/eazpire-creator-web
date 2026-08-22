@@ -3800,6 +3800,8 @@
   function closeCreationsSortMenus() {
     openSortMenuTab = null;
     document.querySelectorAll('.creator-creations-sort-menu').forEach(function (el) { el.remove(); });
+    var loose = document.getElementById('creatorCreationsSortMenu');
+    if (loose) loose.remove();
     document.querySelectorAll('.creator-creations-sort-btn').forEach(function (btn) {
       btn.classList.remove('is-open');
       btn.setAttribute('aria-expanded', 'false');
