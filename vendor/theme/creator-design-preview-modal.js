@@ -437,7 +437,9 @@
   }
 
   var AMAZON_BULLETS_META_KEY = 'amazon_bullet_points_de';
-  var AMAZON_BULLET_SLOT_COUNT = 5;
+  var AMAZON_BULLET_SLOT_COUNT = 2;
+  var AMAZON_BULLET_SLOT_KEYS = ['meta_bullet_design', 'meta_bullet_message'];
+  var AMAZON_BULLET_SLOT_FALLBACKS = ['Design', 'Message'];
 
   function normalizeAmazonBullets(meta) {
     var raw = meta && meta[AMAZON_BULLETS_META_KEY];
@@ -5511,8 +5513,9 @@
       var label = document.createElement('label');
       label.className = 'cdp-modal__label cdp-modal__label--compact';
       label.setAttribute('for', 'cdp-meta-bullet-' + sectionId + '-' + index);
-      var labelTpl = tPreview('meta_bullet_point_n', 'Bullet point {{ n }}');
-      label.textContent = labelTpl.replace(/\{\{\s*n\s*\}\}/g, String(index + 1));
+      var slotKey = AMAZON_BULLET_SLOT_KEYS[index] || 'meta_bullet_point_n';
+      var slotFallback = AMAZON_BULLET_SLOT_FALLBACKS[index] || ('Bullet point ' + (index + 1));
+      label.textContent = tPreview(slotKey, slotFallback);
       var input = document.createElement('input');
       input.type = 'text';
       input.id = 'cdp-meta-bullet-' + sectionId + '-' + index;
