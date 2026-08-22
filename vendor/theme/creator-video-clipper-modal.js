@@ -26,6 +26,8 @@
     text: '',
     clips: [],
     selected: {},
+    exports: [],
+    sidebarCollapsed: false,
   };
 
   function isBadTranslationString(s) {
@@ -140,7 +142,8 @@
     state.text = '';
     state.clips = [];
     state.selected = {};
-    renderPlan();
+    clearExports();
+    renderResults();
     var video = $('#cvcl-video');
     var empty = $('#cvcl-upload-empty');
     var preview = $('#cvcl-upload-preview');
@@ -398,57 +401,59 @@
     return { text: texts.join(' ').trim(), words: words, cues: cues };
   }
 
-  function renderPlan() {
-    var empty = $('#cvcl-plan-empty');
-    var list = $('#cvcl-plan-list');
-    var exportBtn = $('#cvcl-btn-export');
+  function clearExports() {
+    (state.exports || []).forEach(function (item) {
+      if (item && item.url) {
+        try { URL.revokeObjectURL(item.url); } catch (e) {}
+      }
+    });
+    state.exports = [];
+  }
+
+  function renderResults() {
+    var empty = $('#cvcl-results-empty');
+    var list = $('#cvcl-results-list');
     if (!list) return;
-    if (!state.clips.length) {
+    if (!state.exports.length) {
       if (empty) empty.hidden = false;
       list.hidden = true;
       list.innerHTML = '';
-      if (exportBtn) exportBtn.disabled = true;
       return;
     }
     if (empty) empty.hidden = true;
     list.hidden = false;
-    list.innerHTML = state.clips.map(function (clip, idx) {
-      var id = clip.id || ('clip_' + (idx + 1));
-      var checked = state.selected[id] !== false ? ' checked' : '';
+    list.innerHTML = state.exports.map(function (item, idx) {
+      var title = String(item.title || ('Short ' + (idx + 1))).replace(/</g, '&lt;');
       return (
-        '<article class="cvcl-clip" data-clip-id="' + id + '">' +
-          '<div class="cvcl-clip__top">' +
-            '<input type="checkbox" data-cvcl-select' + checked + '>' +
-            '<input type="text" class="cvcl-clip__title" data-cvcl-title value="' + String(clip.title || '').replace(/"/g, '&quot;') + '">' +
-            '<button type="button" class="cvcl-btn" data-cvcl-preview>' + i18n('preview', 'Preview') + '</button>' +
+        '<article class="cvcl-short">' +
+          '<div class="cvcl-short__player">' +
+            '<video src="' + item.url + '" playsinline controls preload="metadata"></video>' +
+            '<button type="button" class="cvcl-short__fs" data-cvcl-fs aria-label="' +
+              i18n('fullscreen', 'Fullscreen') + '">⛶</button>' +
           '</div>' +
-          '<div class="cvcl-clip__times">' +
-            '<label>' + i18n('start', 'Start') + ' <input type="number" min="0" step="0.1" data-cvcl-start value="' + clip.start + '"></label>' +
-            '<label>' + i18n('end', 'End') + ' <input type="number" min="0" step="0.1" data-cvcl-end value="' + clip.end + '"></label>' +
-          '</div>' +
-          (clip.reason ? '<p class="cvcl-clip__reason">' + String(clip.reason).replace(/</g, '&lt;') + '</p>' : '') +
+          '<p class="cvcl-short__title">' + title + '</p>' +
         '</article>'
       );
     }).join('');
-    if (exportBtn) exportBtn.disabled = state.analyzing || state.exporting;
   }
 
-  function readPlanFromDom() {
-    var list = $('#cvcl-plan-list');
-    if (!list) return;
-    var cards = list.querySelectorAll('.cvcl-clip');
-    cards.forEach(function (card, idx) {
-      var clip = state.clips[idx];
-      if (!clip) return;
-      var title = card.querySelector('[data-cvcl-title]');
-      var start = card.querySelector('[data-cvcl-start]');
-      var end = card.querySelector('[data-cvcl-end]');
-      var sel = card.querySelector('[data-cvcl-select]');
-      if (title) clip.title = title.value;
-      if (start) clip.start = Number(start.value) || clip.start;
-      if (end) clip.end = Number(end.value) || clip.end;
-      state.selected[clip.id] = !!(sel && sel.checked);
-    });
+  function setSidebarCollapsed(collapsed) {
+    state.sidebarCollapsed = !!collapsed;
+    var side = $('#cvcl-sidebar');
+    var rail = $('#cvcl-sidebar-toggle');
+    if (side) side.classList.toggle('is-collapsed', state.sidebarCollapsed);
+    if (rail) {
+      rail.setAttribute('aria-expanded', state.sidebarCollapsed ? 'false' : 'true');
+      rail.textContent = state.sidebarCollapsed ? '›' : '‹';
+    }
+  }
+
+  function enterFullscreen(video) {
+    if (!video) return;
+    var req = video.requestFullscreen || video.webkitRequestFullscreen || video.webkitEnterFullscreen;
+    if (req) {
+      try { req.call(video); } catch (e) {}
+    }
   }
 
   function waitSeek(video) {
@@ -475,19 +480,59 @@
   }
 
   function pickRecorderMime() {
-    var types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    var types = [
+      'video/webm;codecs=vp9,opus',
+      'video/mp4;codecs=avc1.640028,mp4a.40.2',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+    ];
     for (var i = 0; i < types.length; i++) {
       if (window.MediaRecorder && MediaRecorder.isTypeSupported(types[i])) return types[i];
     }
     return 'video/webm';
   }
 
+  function shortCanvasSize(video) {
+    var vw = video.videoWidth || SHORT_W;
+    var vh = video.videoHeight || SHORT_H;
+    var cropW;
+    var cropH;
+    if (vw / vh >= 9 / 16) {
+      cropH = vh;
+      cropW = Math.round(vh * 9 / 16);
+    } else {
+      cropW = vw;
+      cropH = Math.round(vw * 16 / 9);
+    }
+    var w = cropW;
+    var h = cropH;
+    if (w < 720 || h < 1280) {
+      var up = Math.min(720 / Math.max(1, w), 1280 / Math.max(1, h));
+      w = Math.round(w * up);
+      h = Math.round(h * up);
+    }
+    if (w > SHORT_W || h > SHORT_H) {
+      var down = Math.min(SHORT_W / w, SHORT_H / h);
+      w = Math.round(w * down);
+      h = Math.round(h * down);
+    }
+    w -= w % 2;
+    h -= h % 2;
+    return { w: Math.max(2, w), h: Math.max(2, h) };
+  }
+
   async function renderShort(video, start, end) {
+    var size = shortCanvasSize(video);
     var canvas = document.createElement('canvas');
-    canvas.width = SHORT_W;
-    canvas.height = SHORT_H;
-    var ctx = canvas.getContext('2d');
-    var stream = canvas.captureStream(30);
+    canvas.width = size.w;
+    canvas.height = size.h;
+    var ctx = canvas.getContext('2d', { alpha: false });
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+    var fps = 30;
+    var stream = canvas.captureStream(fps);
     var capture = null;
     try {
       capture = video.captureStream ? video.captureStream() : (video.mozCaptureStream && video.mozCaptureStream());
@@ -496,7 +541,13 @@
       capture.getAudioTracks().forEach(function (track) { stream.addTrack(track); });
     }
     var mime = pickRecorderMime();
-    var recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4500000 });
+    var bits = size.h >= 1600 ? 14000000 : 10000000;
+    var recorder;
+    try {
+      recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bits, audioBitsPerSecond: 192000 });
+    } catch (e2) {
+      recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bits });
+    }
     var chunks = [];
     recorder.ondataavailable = function (ev) {
       if (ev.data && ev.data.size) chunks.push(ev.data);
@@ -507,11 +558,11 @@
     video.currentTime = Math.max(0, start);
     await waitSeek(video);
     video.muted = false;
-    recorder.start(250);
+    recorder.start(100);
     await video.play();
     await new Promise(function (resolve) {
       var tick = function () {
-        drawCover(ctx, video, SHORT_W, SHORT_H);
+        drawCover(ctx, video, size.w, size.h);
         if (video.currentTime >= end || video.paused || video.ended) {
           video.pause();
           if (recorder.state !== 'inactive') recorder.stop();
@@ -523,7 +574,7 @@
       tick();
     });
     await stopped;
-    return new Blob(chunks, { type: mime });
+    return { blob: new Blob(chunks, { type: mime }), width: size.w, height: size.h, mime: mime };
   }
 
   async function analyze() {
@@ -566,8 +617,9 @@
       state.clips = plan.clips;
       state.selected = {};
       plan.clips.forEach(function (c) { state.selected[c.id] = true; });
-      renderPlan();
-      setStatus(i18n('plan_ready', 'Plan ready — edit times if you want, then export.'));
+      clearExports();
+      renderResults();
+      setStatus(i18n('plan_ready', 'Analysis ready — export to split the video into Shorts.') + ' (' + plan.clips.length + ')');
     } catch (err) {
       var msg = String(err && err.message || err);
       if (msg === 'decode_failed') {
@@ -585,63 +637,48 @@
 
   async function exportSelected() {
     if (state.exporting || !state.clips.length) return;
-    readPlanFromDom();
     var video = $('#cvcl-video');
     if (!video || !video.src) return;
-    var chosen = state.clips.filter(function (c) { return state.selected[c.id] !== false; });
+    var chosen = state.clips.slice();
     if (!chosen.length) {
-      setStatus(i18n('need_selection', 'Select at least one clip.'));
+      setStatus(i18n('need_selection', 'Analyze the video first, then export.'));
       return;
     }
     state.exporting = true;
     $('#cvcl-btn-export') && ($('#cvcl-btn-export').disabled = true);
+    clearExports();
+    renderResults();
     try {
       for (var i = 0; i < chosen.length; i++) {
         var clip = chosen[i];
-        setStatus(i18n('exporting', 'Exporting Short…') + ' ' + (i + 1) + '/' + chosen.length);
-        var blob = await renderShort(video, clip.start, clip.end);
+        setStatus(i18n('exporting', 'Splitting Short…') + ' ' + (i + 1) + '/' + chosen.length);
+        var rendered = await renderShort(video, clip.start, clip.end);
+        var blob = rendered.blob;
+        var ext = (rendered.mime || '').indexOf('mp4') >= 0 ? 'mp4' : 'webm';
         var fd = new FormData();
-        fd.append('file', blob, (clip.title || 'short') + '.webm');
+        fd.append('file', blob, (clip.title || 'short') + '.' + ext);
         fd.append('title', clip.title || 'Video Clipper short');
         fd.append('aspect_preset', 'shorts_9_16');
-        fd.append('width', String(SHORT_W));
-        fd.append('height', String(SHORT_H));
+        fd.append('width', String(rendered.width || SHORT_W));
+        fd.append('height', String(rendered.height || SHORT_H));
         fd.append('duration_s', String(Math.max(0.1, clip.end - clip.start)));
-        var saved = await apiJson('video-studio-export', { method: 'POST', body: fd });
-        if (!saved || !saved.ok) throw new Error((saved && saved.error) || 'export_failed');
-        var local = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = local;
-        a.download = (clip.title || 'short').replace(/[^\w\-]+/g, '_') + '.webm';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(local); }, 2000);
+        try {
+          await apiJson('video-studio-export', { method: 'POST', body: fd });
+        } catch (saveErr) {}
+        state.exports.push({
+          id: clip.id || ('clip_' + (i + 1)),
+          title: clip.title || ('Short ' + (i + 1)),
+          url: URL.createObjectURL(blob),
+        });
+        renderResults();
       }
-      setStatus(i18n('export_done', 'Shorts saved to your videos and downloaded.'));
+      setSidebarCollapsed(true);
+      setStatus(i18n('export_done', 'Shorts are ready on the right. Saved to your videos.'));
     } catch (err) {
       setStatus(i18n('export_failed', 'Export failed.') + ' ' + String(err && err.message || err));
     }
     state.exporting = false;
     $('#cvcl-btn-export') && ($('#cvcl-btn-export').disabled = !state.clips.length);
-  }
-
-  function previewClip(idx) {
-    var clip = state.clips[idx];
-    var video = $('#cvcl-video');
-    if (!clip || !video) return;
-    readPlanFromDom();
-    clip = state.clips[idx];
-    video.currentTime = Math.max(0, clip.start || 0);
-    video.play();
-    var stopAt = clip.end;
-    var watch = function () {
-      if (video.currentTime >= stopAt) {
-        video.pause();
-        video.removeEventListener('timeupdate', watch);
-      }
-    };
-    video.addEventListener('timeupdate', watch);
   }
 
   function open() {
@@ -662,6 +699,10 @@
     setOverlay('cvcl-link', false);
     var video = $('#cvcl-video');
     if (video) video.pause();
+    var list = $('#cvcl-results-list');
+    if (list) {
+      list.querySelectorAll('video').forEach(function (el) { try { el.pause(); } catch (e) {} });
+    }
   }
 
   function bindOnce() {
@@ -735,18 +776,24 @@
     if (analyzeBtn) analyzeBtn.addEventListener('click', analyze);
     var exportBtn = $('#cvcl-btn-export');
     if (exportBtn) exportBtn.addEventListener('click', exportSelected);
-    var list = $('#cvcl-plan-list');
-    if (list) {
-      list.addEventListener('click', function (e) {
-        var btn = e.target && e.target.closest && e.target.closest('[data-cvcl-preview]');
+    var rail = $('#cvcl-sidebar-toggle');
+    if (rail) {
+      rail.addEventListener('click', function () {
+        setSidebarCollapsed(!state.sidebarCollapsed);
+      });
+    }
+    var results = $('#cvcl-results-list');
+    if (results) {
+      results.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest && e.target.closest('[data-cvcl-fs]');
         if (!btn) return;
-        var card = btn.closest('.cvcl-clip');
-        var cards = list.querySelectorAll('.cvcl-clip');
-        var idx = Array.prototype.indexOf.call(cards, card);
-        if (idx >= 0) previewClip(idx);
+        var wrap = btn.closest('.cvcl-short__player');
+        var clipVideo = wrap && wrap.querySelector('video');
+        enterFullscreen(clipVideo);
       });
     }
     syncSettingInputs();
+    setSidebarCollapsed(false);
   }
 
   function bindOpeners() {
