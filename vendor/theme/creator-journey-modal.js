@@ -2440,6 +2440,22 @@
     });
   }
 
+  function listingLimitTiersForChannelAxis(channel, axis) {
+    var ch = channel && (channel.channel_id || (channel.metadata && channel.metadata.channel_id));
+    if (!ch) return [];
+    var all = (journeyData && journeyData.nodes) || [];
+    return all.filter(function (n) {
+      if (n.category !== 'listing_limit' || !n.metadata || n.metadata.listing_limit_kind !== 'tier') {
+        return false;
+      }
+      var nCh = n.channel_id || (n.metadata && n.metadata.channel_id);
+      if (nCh !== ch) return false;
+      return (n.metadata.listing_limit_axis || 'daily') === axis;
+    }).sort(function (a, b) {
+      return (Number(a.metadata.listing_tier_level) || 0) - (Number(b.metadata.listing_tier_level) || 0);
+    });
+  }
+
   function socialPostTierNodes(platformNode) {
     var plat = socialPlatformIdFromNode(platformNode);
     if (!plat) return [];
@@ -2531,11 +2547,8 @@
   function renderListingLimitCard(node) {
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
-    var isParent = isListingLimitAxisParent(node) || isListingLimitChannel(node);
-    var tiers = isParent ? listingLimitTierNodes(node) : [];
-    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
-    var expandable = isParent && !!node.unlocked && lockedTiers.length > 0;
-    var expanded = expandable && !!expandedListingLimitKeys[node.node_key];
+    var expandable = false;
+    var expanded = false;
     var isTier = node.metadata && node.metadata.listing_limit_kind === 'tier';
     var cls = 'cj-tree-card cj-tree-card--listing-limit';
     if (isListingLimitChannel(node) || isListingLimitAxisParent(node)) cls += ' cj-tree-card--listing-channel';
@@ -2566,63 +2579,61 @@
       act.actionHtml + '</div></article>';
   }
 
-  function renderListingLimitExpandPanel(channelNode) {
-    if (!channelNode || !channelNode.unlocked || !expandedListingLimitKeys[channelNode.node_key]) return '';
-    var tiers = listingLimitTierNodes(channelNode);
-    var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
-    if (!lockedTiers.length) return '';
-    var axis = channelNode.metadata && channelNode.metadata.listing_limit_axis;
-    var axisLabel = axis === 'cap'
-      ? t('creator.journey.listing_limits_cap_title', 'Cap')
-      : t('creator.journey.listing_limits_daily_title', 'Daily');
-    return '<div class="cj-variant-branch cj-listing-limit-branch" data-cj-listing-limit-branch="' +
-      escapeHtml(channelNode.node_key) + '">' +
-      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
-      '<div class="cj-variant-panel" data-cj-listing-limit-panel="' + escapeHtml(channelNode.node_key) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(channelNode) + ' · ' + axisLabel) + '</h4>' +
-      renderCarouselShell(lockedTiers.map(renderListingLimitCard).join('')) +
-      '</div></div>';
+  function renderListingLimitSkillCarousel(channel, axis, title) {
+    var tiers = listingLimitTiersForChannelAxis(channel, axis);
+    if (!tiers.length) return '';
+    return '<div class="cj-listing-limit-skill">' +
+      '<h4 class="cj-listing-limit-skill__title">' + escapeHtml(title) + '</h4>' +
+      renderCarouselShell(tiers.map(renderListingLimitCard).join('')) +
+      '</div>';
   }
 
-  function renderListingLimitAxisSection(nodes, axis, title) {
-    var parents = (nodes || []).filter(function (n) {
-      return isListingLimitAxisParent(n) && n.metadata && n.metadata.listing_limit_axis === axis;
+  function renderListingLimitChannelSection(channel) {
+    var name = nodeTitle(channel);
+    var cardHtml = '<div class="cj-listing-limit-channel__card">' + renderListingLimitCard(channel) + '</div>';
+    if (!channel.unlocked) {
+      return '<section class="cj-product-section cj-listing-limit-channel is-locked">' +
+        cardHtml + '</section>';
+    }
+    return '<section class="cj-product-section cj-listing-limit-channel is-unlocked">' +
+      cardHtml +
+      '<div class="cj-variant-branch cj-listing-limit-branch" data-cj-listing-limit-branch="' +
+      escapeHtml(channel.node_key) + '">' +
+      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+      '<div class="cj-variant-panel" data-cj-listing-limit-panel="' + escapeHtml(channel.node_key) + '">' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(name) + '</h4>' +
+      renderListingLimitSkillCarousel(
+        channel, 'daily', t('creator.journey.listing_limits_daily_title', 'Daily')
+      ) +
+      renderListingLimitSkillCarousel(
+        channel, 'cap', t('creator.journey.listing_limits_cap_title', 'Cap')
+      ) +
+      '</div></div></section>';
+  }
+
+  function listingLimitChannelNodes(nodes) {
+    var channels = (nodes || []).filter(isListingLimitChannel);
+    if (channels.length) return channels;
+    var seen = {};
+    var out = [];
+    (nodes || []).forEach(function (n) {
+      if (!isListingLimitAxisParent(n)) return;
+      var ch = n.channel_id;
+      if (!ch || seen[ch]) return;
+      seen[ch] = true;
+      out.push(n);
     });
-    if (!parents.length) return '';
-    var split = splitUnlockedLocked(parents);
-    var html = '';
-    var cardsHtml = '';
-    var expandHtml = '';
-    split.unlocked.forEach(function (n) {
-      cardsHtml += renderListingLimitCard(n);
-      if (expandedListingLimitKeys[n.node_key]) {
-        expandHtml += renderListingLimitExpandPanel(n);
-      }
-    });
-    var lockedHtml = split.locked.map(renderListingLimitCard).join('');
-    html += '<section class="cj-product-section cj-listing-limit-axis">' +
-      renderSectionHead(title, '', '') +
-      (cardsHtml ? renderCarouselShell(cardsHtml) + expandHtml : '') +
-      (lockedHtml
-        ? '<div class="cj-listing-limit-available">' +
-          renderSectionHead(t('creator.journey.available_skills', 'Available'), '', '') +
-          renderCarouselShell(lockedHtml) + '</div>'
-        : '') +
-      '</section>';
-    return html;
+    return out;
   }
 
   function renderListingLimitTree(nodes) {
-    var dailyHtml = renderListingLimitAxisSection(
-      nodes, 'daily', t('creator.journey.listing_limits_daily_title', 'Daily')
-    );
-    var capHtml = renderListingLimitAxisSection(
-      nodes, 'cap', t('creator.journey.listing_limits_cap_title', 'Cap')
-    );
-    if (!dailyHtml && !capHtml) {
+    var channels = listingLimitChannelNodes(nodes);
+    if (!channels.length) {
       return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
     }
-    return '<div class="cj-product-sections">' + dailyHtml + capHtml + '</div>';
+    return '<div class="cj-product-sections">' +
+      channels.map(renderListingLimitChannelSection).join('') +
+      '</div>';
   }
 
   function renderSocialCard(node) {
@@ -3903,10 +3914,9 @@
       var connector = branch.querySelector(':scope > .cj-variant-connector');
       var panel = branch.querySelector(':scope > .cj-variant-panel');
       if (!connector || !key) return;
-      var section = branch.closest('.cj-product-section') || list;
-      var card = section.querySelector(
-        '.cj-tree-card--listing-channel.is-expanded[data-cj-expand-listing-limit="' + key + '"]'
-      );
+      var section = branch.closest('.cj-listing-limit-channel') || branch.closest('.cj-product-section') || list;
+      var card = section.querySelector('.cj-listing-limit-channel__card .cj-tree-card--listing-channel') ||
+        section.querySelector('.cj-tree-card--listing-channel[data-node="' + key + '"]');
       anchorConnectorToCard(connector, panel, card, branch);
     });
   }

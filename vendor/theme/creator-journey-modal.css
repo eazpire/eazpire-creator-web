@@ -4225,6 +4225,35 @@
   padding-top: 16px;
 }
 
+.cj-listing-limit-channel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cj-listing-limit-channel__card {
+  display: flex;
+  justify-content: center;
+}
+
+.cj-listing-limit-channel .cj-listing-limit-branch {
+  width: 100%;
+}
+
+.cj-listing-limit-skill + .cj-listing-limit-skill {
+  margin-top: 18px;
+}
+
+.cj-listing-limit-skill__title {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cj-accent);
+  text-align: center;
+}
+
 .cj-tree-card.is-expanded.cj-tree-card--creation-limit-parent,
 .cj-tree-card.is-expanded.cj-tree-card--listing-channel,
 .cj-tree-card.is-expanded.cj-tree-card--social-platform {
