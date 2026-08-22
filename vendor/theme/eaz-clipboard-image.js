@@ -153,7 +153,7 @@
     var type = blob.type || 'image/png';
     if (!isImageMime(type)) return null;
     var ext = (type.split('/')[1] || 'png').split(';')[0] || 'png';
-    var name = nameHint || blob.name || ('clipboard-image.' + ext);
+    var name = nameHint || ('clipboard-image-' + Date.now() + '.' + ext);
     try {
       return new File([blob], name, { type: type, lastModified: Date.now() });
     } catch (e) {
@@ -220,10 +220,8 @@
    * @returns {Promise<{ file: File|Blob|null, error: null|'empty'|'denied'|'unsupported' }>}
    */
   function readImageWithStatus() {
-    if (cachedFile) {
-      return Promise.resolve({ file: cachedFile, error: null });
-    }
     if (!isApiAvailable()) {
+      if (cachedFile) return Promise.resolve({ file: cachedFile, error: null });
       return Promise.resolve({ file: null, error: 'unsupported' });
     }
     return navigator.clipboard
@@ -239,12 +237,11 @@
         return { file: null, error: 'empty' };
       })
       .catch(function (err) {
-        if (cachedFile) return { file: cachedFile, error: null };
         var name = err && err.name ? String(err.name) : '';
+        if (cachedFile) return { file: cachedFile, error: null };
         if (name === 'NotAllowedError' || name === 'SecurityError') {
           return { file: null, error: 'denied' };
         }
-        // Some browsers throw when clipboard has no image / empty
         return { file: null, error: 'empty' };
       });
   }
