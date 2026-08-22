@@ -246,6 +246,8 @@
       creation.generate_cap,
       shopify.listings_used_today,
       shopify.listings_per_day,
+      shopify.listings_used_total,
+      shopify.listings_cap,
       shopify.channel_unlocked,
     ].join('|');
   }
@@ -281,12 +283,14 @@
         rootEl,
         loadingState
       );
+      var publishDaily = (shopify.listings_per_day || 0) > 0;
       applyItem(
         rootEl.querySelector('[data-limit="publish"]'),
-        shopify.listings_used_today,
-        shopify.listings_per_day,
+        publishDaily ? shopify.listings_used_today : shopify.listings_used_total,
+        publishDaily ? shopify.listings_per_day : shopify.listings_cap,
         hasListing &&
-          (shopify.channel_unlocked === false || (shopify.listings_per_day || 0) <= 0),
+          (shopify.channel_unlocked === false ||
+            (publishDaily ? (shopify.listings_per_day || 0) <= 0 : (shopify.listings_cap || 0) <= 0)),
         rootEl,
         loadingState
       );

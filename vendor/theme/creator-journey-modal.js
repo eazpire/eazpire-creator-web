@@ -702,7 +702,7 @@
           ? activeListing.metadata.listings_cap
           : activeListing.metadata.listings_per_day;
       } else if (node.unlocked && node.channel_id === 'shopify') {
-        listingVal = axis === 'cap' ? 50 : 10;
+        listingVal = axis === 'cap' ? 50 : null;
       }
       if (listingVal == null || listingVal === '') return '';
       return axis === 'cap'
