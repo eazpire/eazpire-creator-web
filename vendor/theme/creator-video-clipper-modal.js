@@ -9,7 +9,7 @@
     : 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch');
 
   var TARGET_RATE = 16000;
-  var CHUNK_SEC = 8 * 60;
+  var CHUNK_SEC = 25;
   var SHORT_W = 1080;
   var SHORT_H = 1920;
   var MAX_BYTES = 500 * 1024 * 1024;
@@ -380,8 +380,15 @@
       fd.append('offset_s', String(offset));
       var data = await apiJson('video-clipper-transcribe', { method: 'POST', body: fd });
       if (!data || !data.ok) {
+        data = await apiJson('video-clipper-transcribe', { method: 'POST', body: fd });
+      }
+      if (!data || !data.ok) {
         try { await ctx.close(); } catch (e3) {}
-        throw new Error((data && data.error) || 'transcribe_failed');
+        var code = data && data.error;
+        if (code === 'chunk_too_long') {
+          throw new Error(i18n('chunk_too_long', 'That audio piece was too long. Refresh the page and try Analyze again.'));
+        }
+        throw new Error(i18n('transcribe_failed', 'Speech recognition failed. Try Analyze again.'));
       }
       if (data.text) texts.push(data.text);
       if (Array.isArray(data.words)) words = words.concat(data.words);
