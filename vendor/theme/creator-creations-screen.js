@@ -1658,6 +1658,113 @@
     return id !== '' ? 'active' : 'inactive';
   }
 
+  var creationsSlotUsage = {
+    max_active_design_slots: 0,
+    max_products: 0,
+    active_designs_used: 0,
+    products_used: 0
+  };
+
+  function creationsSlotPct(used, cap) {
+    var u = Number(used) || 0;
+    var c = Number(cap) || 0;
+    if (c <= 0) return 0;
+    return Math.min(100, Math.round((u / c) * 100));
+  }
+
+  function applyCreationsSlotItem(root, key, used, cap) {
+    var item = root.querySelector('[data-slot="' + key + '"]');
+    if (!item) return;
+    var fill = item.querySelector('[data-slot-fill]');
+    var count = item.querySelector('[data-slot-count]');
+    var u = Number(used) || 0;
+    var c = Number(cap) || 0;
+    var label = c > 0 ? u + '/' + c : String(u);
+    if (count && count.textContent !== label) count.textContent = label;
+    var width = creationsSlotPct(u, c) + '%';
+    if (fill && fill.style.width !== width) fill.style.width = width;
+    item.classList.toggle('is-at-limit', c > 0 && u >= c);
+  }
+
+  function renderCreationsSlotBar() {
+    var root = document.querySelector('[data-creations-slots]');
+    if (!root) return;
+    applyCreationsSlotItem(
+      root,
+      'designs',
+      creationsSlotUsage.active_designs_used,
+      creationsSlotUsage.max_active_design_slots
+    );
+    applyCreationsSlotItem(
+      root,
+      'products',
+      creationsSlotUsage.products_used,
+      creationsSlotUsage.max_products
+    );
+  }
+
+  function applyJourneyLimitsToSlotBar(data) {
+    var j =
+      (data && data.journey_limits) ||
+      (window.__EAZ_DAILY_LIMITS__ && window.__EAZ_DAILY_LIMITS__.journey_limits) ||
+      null;
+    if (!j) return;
+    creationsSlotUsage.max_active_design_slots = Number(j.max_active_design_slots) || 0;
+    creationsSlotUsage.max_products = Number(j.max_products) || 0;
+    if (j.active_designs_used != null) {
+      creationsSlotUsage.active_designs_used = Number(j.active_designs_used) || 0;
+    }
+    if (j.products_used != null) {
+      creationsSlotUsage.products_used = Number(j.products_used) || 0;
+    }
+    renderCreationsSlotBar();
+  }
+
+  function refreshCreationsSlotBarFromLists() {
+    if (Array.isArray(designs)) {
+      creationsSlotUsage.active_designs_used = designs.filter(function (d) {
+        return resolveLibraryStatus(d) === 'active';
+      }).length;
+    }
+    if (Array.isArray(products)) {
+      var keys = {};
+      products.forEach(function (p) {
+        if (!p || p.is_sample) return;
+        var k = String(p.product_key || p.id || '').trim();
+        if (k) keys[k] = true;
+      });
+      creationsSlotUsage.products_used = Object.keys(keys).length;
+    }
+    renderCreationsSlotBar();
+  }
+
+  function fetchCreationsSlotLimits() {
+    var cached = window.__EAZ_DAILY_LIMITS__;
+    if (cached && cached.journey_limits) applyJourneyLimitsToSlotBar(cached);
+    var owner = getOwnerId();
+    if (!owner) return Promise.resolve(null);
+    var url = API_BASE + '?op=get-daily-limits&owner_id=' + encodeURIComponent(owner);
+    return fetchDispatchJson(url, 'get-daily-limits')
+      .then(function (data) {
+        if (data && data.ok) {
+          window.__EAZ_DAILY_LIMITS__ = window.__EAZ_DAILY_LIMITS__ || {};
+          window.__EAZ_DAILY_LIMITS__.ok = true;
+          window.__EAZ_DAILY_LIMITS__.journey_limits = data.journey_limits || null;
+          if (data.creation_limits_effective) {
+            window.__EAZ_DAILY_LIMITS__.creation_limits_effective = data.creation_limits_effective;
+          }
+          if (data.listing_limits_effective) {
+            window.__EAZ_DAILY_LIMITS__.listing_limits_effective = data.listing_limits_effective;
+          }
+          applyJourneyLimitsToSlotBar(data);
+        }
+        return data;
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
   function designsMatchingActivity(d) {
     var ls = resolveLibraryStatus(d);
     return designsActivityFilter === 'active' ? ls === 'active' : ls === 'inactive';
@@ -1852,6 +1959,7 @@
     }
     filterDesigns((document.getElementById('creatorDesignsSearch') || {}).value || '');
     renderDesignsGrid();
+    refreshCreationsSlotBarFromLists();
     return found;
   }
 
@@ -3634,6 +3742,9 @@
             search_value: ((document.getElementById('creatorDesignsSearch') || {}).value || '')
           });
           renderDesignsGrid();
+          refreshCreationsSlotBarFromLists();
+          fetchCreationsSlotLimits();
+          if (!productsLoadedOnce) loadProducts();
           startLibrarySaveWatchIfNeeded();
         } catch (renderErr) {
           console.error('[CreationsScreen] render after loadDesigns failed:', renderErr);
@@ -3708,6 +3819,8 @@
       filteredProducts = products.slice();
       filterProducts(document.getElementById('creatorProductsSearch')?.value || '');
       renderProductsGrid();
+      refreshCreationsSlotBarFromLists();
+      fetchCreationsSlotLimits();
       ensureTestPublishProductsPoll();
       window.dispatchEvent(new CustomEvent('creator-products-loaded', { detail: { count: products.length } }));
     }).catch(function (err) {
@@ -4246,6 +4359,7 @@
     }
 
     // Initial load when creations screen is visible on load (mobile swipe)
+    fetchCreationsSlotLimits();
     if (viewport && viewport.classList.contains('slide-2')) {
       switchTab('designs');
     } else {

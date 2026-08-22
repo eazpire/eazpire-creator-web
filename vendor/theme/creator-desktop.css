@@ -3512,15 +3512,15 @@ body.creator-video-motion-info-modal-open {
 }
 
 .creator-desktop-creations-host .creator-creations-activity-switch {
+  height: 40px;
   border-radius: 8px;
   border-color: rgba(249, 115, 22, 0.28);
 }
 .creator-desktop-creations-host .creator-creations-activity-btn {
-  padding: 5px 10px;
-  font-size: 11px;
-}
-.creator-desktop-creations-host .creator-creations-count {
-  font-size: 11px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .creator-desktop-creations-host .creator-creations-filter-badge {

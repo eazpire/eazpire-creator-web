@@ -10,6 +10,29 @@
       </span>
     </button>
   </div>
+  <div
+    class="creator-creations-slots"
+    data-creations-slots
+    aria-label="Active design slots and product slots"
+  >
+    <div class="creator-creations-slots__row">
+      <div class="creator-creations-slots__item" data-slot="designs">
+        <span class="creator-creations-slots__name" data-t="creator.creations.slots_designs">Active designs</span>
+        <span class="creator-creations-slots__bar" aria-hidden="true">
+          <span class="creator-creations-slots__bar-fill creator-creations-slots__bar-fill--designs" data-slot-fill style="width:0%"></span>
+          <span class="creator-creations-slots__bar-text" data-slot-count>—</span>
+        </span>
+      </div>
+      <span class="creator-creations-slots__divider" aria-hidden="true">│</span>
+      <div class="creator-creations-slots__item" data-slot="products">
+        <span class="creator-creations-slots__name" data-t="creator.creations.slots_products">Products</span>
+        <span class="creator-creations-slots__bar" aria-hidden="true">
+          <span class="creator-creations-slots__bar-fill creator-creations-slots__bar-fill--products" data-slot-fill style="width:0%"></span>
+          <span class="creator-creations-slots__bar-text" data-slot-count>—</span>
+        </span>
+      </div>
+    </div>
+  </div>
 
   <div class="creator-creations-panel" id="creatorCreationsPanelDesigns" data-tab="designs">
     <div class="creator-creations-toolbar" id="creatorDesignsToolbar">
@@ -33,7 +56,6 @@
           <button type="button" class="creator-creations-activity-btn is-active" data-designs-activity="active" aria-pressed="true" data-eazy-guide="creations.activity-active" data-t="creator.creations.designs_tab_active">Active</button>
           <button type="button" class="creator-creations-activity-btn" data-designs-activity="inactive" aria-pressed="false" data-eazy-guide="creations.activity-inactive" data-t="creator.creations.designs_tab_inactive">Inactive</button>
         </div>
-        <span class="creator-creations-count" id="creatorDesignsCount">0 Designs</span>
       </div>
     </div>
     <div class="creator-creations-grid-wrap">

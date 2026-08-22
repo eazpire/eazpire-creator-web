@@ -162,6 +162,7 @@
       ok: true,
       creation_limits_effective: data.creation_limits_effective || null,
       listing_limits_effective: data.listing_limits_effective || null,
+      journey_limits: data.journey_limits || null,
     };
     window.__EAZ_DAILY_LIMITS_FETCHED_AT__ = Date.now();
   }
