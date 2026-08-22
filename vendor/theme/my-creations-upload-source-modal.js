@@ -63,7 +63,81 @@
     input.click();
   }
 
+  function phoneUploadErrorMessage() {
+    return (
+      (window.CreatorI18n &&
+        window.CreatorI18n.my_creations &&
+        window.CreatorI18n.my_creations.phone_config_error) ||
+      (window.CreatorI18n && window.CreatorI18n.phone_upload_config_error) ||
+      'Phone upload is not available.'
+    );
+  }
+
+  function tryOpenPhoneUpload(sectionId) {
+    if (window.CreatorPhoneUploadModal && typeof window.CreatorPhoneUploadModal.open === 'function') {
+      window.CreatorPhoneUploadModal.open({ sectionId: sectionId });
+      return true;
+    }
+    return false;
+  }
+
+  function openPhoneUpload(sectionId) {
+    if (tryOpenPhoneUpload(sectionId)) return;
+    var ensure =
+      window.CreatorPortalFeatures && typeof window.CreatorPortalFeatures.ensureCreations === 'function'
+        ? window.CreatorPortalFeatures.ensureCreations()
+        : null;
+    if (ensure && typeof ensure.then === 'function') {
+      ensure
+        .then(function () {
+          if (!tryOpenPhoneUpload(sectionId)) {
+            window.alert(phoneUploadErrorMessage());
+          }
+        })
+        .catch(function () {
+          window.alert(phoneUploadErrorMessage());
+        });
+      return;
+    }
+    window.alert(phoneUploadErrorMessage());
+  }
+
+  function ensureModalBound() {
+    var modal = document.getElementById(MODAL_ID);
+    if (!modal || modal.dataset.myCreationsChoiceBound === '1') return;
+    modal.dataset.myCreationsChoiceBound = '1';
+
+    modal.querySelectorAll('[data-my-creations-upload-source]').forEach(function (opt) {
+      opt.addEventListener('click', function () {
+        var source = opt.getAttribute('data-my-creations-upload-source');
+        var sectionId = modal.dataset.sectionId || '';
+        closeChoiceModal();
+        if (source === 'device') {
+          openFilePickerThenDesignModal(sectionId);
+          return;
+        }
+        if (source === 'mobile') {
+          openPhoneUpload(sectionId);
+        }
+      });
+    });
+
+    var closeBtn = document.getElementById('my-creations-upload-source-close');
+    if (closeBtn && closeBtn.dataset.myCreationsCloseBound !== '1') {
+      closeBtn.dataset.myCreationsCloseBound = '1';
+      closeBtn.addEventListener('click', closeChoiceModal);
+    }
+    if (modal.dataset.myCreationsDismissBound !== '1') {
+      modal.dataset.myCreationsDismissBound = '1';
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeChoiceModal();
+      });
+      modal.addEventListener('cancel', closeChoiceModal);
+    }
+  }
+
   function openChoiceModal(sectionId) {
+    ensureModalBound();
     var modal = document.getElementById(MODAL_ID);
     if (!modal || typeof modal.showModal !== 'function') {
       openFilePickerThenDesignModal(sectionId);
@@ -94,40 +168,7 @@
       });
     });
 
-    var modal = document.getElementById(MODAL_ID);
-    if (!modal || modal.dataset.myCreationsChoiceBound === '1') return;
-    modal.dataset.myCreationsChoiceBound = '1';
-
-    modal.querySelectorAll('[data-my-creations-upload-source]').forEach(function (opt) {
-      opt.addEventListener('click', function () {
-        var source = opt.getAttribute('data-my-creations-upload-source');
-        var sectionId = modal.dataset.sectionId || '';
-        closeChoiceModal();
-        if (source === 'device') {
-          openFilePickerThenDesignModal(sectionId);
-          return;
-        }
-        if (source === 'mobile') {
-          if (!window.CreatorPhoneUploadModal || typeof window.CreatorPhoneUploadModal.open !== 'function') {
-            window.alert(
-              (window.CreatorI18n && window.CreatorI18n.phone_upload_config_error) ||
-                'Phone upload is not available.'
-            );
-            return;
-          }
-          window.CreatorPhoneUploadModal.open({ sectionId: sectionId });
-        }
-      });
-    });
-
-    var closeBtn = document.getElementById('my-creations-upload-source-close');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', closeChoiceModal);
-    }
-    modal.addEventListener('click', function (e) {
-      if (e.target === modal) closeChoiceModal();
-    });
-    modal.addEventListener('cancel', closeChoiceModal);
+    ensureModalBound();
   }
 
   function openCreationsUploadSourceChoice(sectionId) {
