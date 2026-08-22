@@ -41,11 +41,58 @@
     </div>
     <div class="creator-header__actions">
       
-      <button type="button" class="creator-header__balance-btn" id="creatorHeaderBalanceBtn" role="button" tabindex="0" aria-label="Available and pending EAZC" data-eazy-guide="chrome.eazc">
-        <img class="creator-header__balance-coin" src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo" alt="" width="18" height="18" loading="lazy" data-eaz-coin="eazc">
-        <span class="creator-header__balance-value" id="global-sales-balance-value" data-sales-balance-value data-debug-owner="">Loading...</span>
-        <span class="creator-header__balance-unit" data-sales-balance-unit>EAZC</span>
-      </button>
+
+
+
+
+
+  
+
+
+<div class="eaz-eazc-badge eaz-eazc-badge--" data-eazc-badge data-eazc-owner="">
+  <button
+    type="button"
+    class="eaz-eazc-badge__main"
+    
+    aria-label="Available and pending EAZC"
+    data-eazy-guide="chrome.eazc"
+    data-eazc-open-balance="1"
+  >
+    <img
+      class="eaz-eazc-badge__coin"
+      src="https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=platform-asset-public&slot=eazc_coin_logo"
+      alt=""
+      width="18"
+      height="18"
+      loading="lazy"
+      data-eaz-coin="eazc"
+    >
+    <span
+      class="eaz-eazc-badge__value"
+      
+      data-sales-balance-value
+      data-debug-owner="null"
+    ></span>
+    <span
+      class="eaz-eazc-badge__unit creator-header__balance-unit creator-desktop-header__balance-unit"
+      data-sales-balance-unit
+    >EAZC</span>
+  </button>
+  <button
+    type="button"
+    class="eaz-eazc-badge__info"
+    data-open-eazc-earn-modal
+    aria-label="How you earn EAZC from sales"
+    title="How you earn EAZC from sales"
+  >
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+      <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+      <path d="M10 9v5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+      <circle cx="10" cy="6.5" r="0.85" fill="currentColor"></circle>
+    </svg>
+  </button>
+</div>
+
       <button type="button" class="creator-header__account-btn creator-settings-trigger" id="creatorHeaderAccountBtn" data-open-settings aria-label="Creator Settings" data-eazy-guide="chrome.settings">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4 20c0-3.3 2.7-6 6-6h4c3.3 0 6 2.7 6 6"/></svg>
       </button>

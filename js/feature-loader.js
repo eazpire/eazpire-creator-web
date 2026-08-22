@@ -12,10 +12,11 @@
     settings: null,
     journey: null,
     dashboard: null,
+    eazcEarn: null,
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "listing-limits-split-20260822";
+  var PORTAL_ASSET_V = "eazc-earn-modal-20260823";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -128,6 +129,7 @@
   function sharedCss() {
     [
       "/vendor/theme/sales-modal.css",
+      "/vendor/theme/eaz-eazc-earn-modal.css",
       "/vendor/theme/creator-mobile.css",
       "/vendor/theme/creator-daily-limits-subheader.css",
       "/vendor/theme/creator-mobile-screens.css",
@@ -244,6 +246,7 @@
       loadCss(global.__CREATOR_STUDIO_MODAL_CSS);
       loadCss(global.__CREATOR_EDIT_STUDIO_MODAL_CSS);
 
+      await loadScript(asset("eaz-universal-search.js"));
       await loadScript(asset("creator-lazy-modals.js"));
       await loadScriptsSequential([
         asset("creator-upload-remove-background.js"),
@@ -489,6 +492,22 @@
     return state.automations;
   }
 
+  async function ensureEazcEarnModal() {
+    if (state.eazcEarn) return state.eazcEarn;
+    state.eazcEarn = (async function () {
+      loadCss("/vendor/theme/eaz-eazc-earn-modal.css");
+      await injectPartial("eaz-eazc-earn-modal.html");
+      await loadScript(asset("eaz-eazc-earn-modal.js"));
+    })();
+    try {
+      await state.eazcEarn;
+    } catch (e) {
+      state.eazcEarn = null;
+      console.warn("[CreatorPortalFeatures] eazc earn modal load failed", e);
+    }
+    return state.eazcEarn;
+  }
+
   async function ensureDashboard() {
     if (state.dashboard) return state.dashboard;
 
@@ -641,6 +660,7 @@
     if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
       global.CreatorPortalEazy.ensure();
     }
+    ensureEazcEarnModal();
     if (name === "dashboard") ensureDashboard();
     if (name === "creations") ensureCreations();
     if (name === "generator") {
@@ -652,6 +672,7 @@
   }
 
   bindSettingsTriggers();
+  ensureEazcEarnModal();
 
   global.CreatorPortalFeatures = {
     onRoute: onRoute,
@@ -662,6 +683,7 @@
     ensureAutomations: ensureAutomations,
     ensureSettings: ensureSettings,
     ensureJourney: ensureJourney,
+    ensureEazcEarnModal: ensureEazcEarnModal,
     openSettings: openSettings,
     applyMarketingDeepLink: applyMarketingDeepLink,
   };

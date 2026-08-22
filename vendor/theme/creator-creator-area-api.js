@@ -192,7 +192,7 @@
     return avail + locked;
   }
 
-  /** Creator header: Available + Pending EAZC (never fiat). */
+  /** Creator + Shop header: Available + Pending EAZC (never fiat). */
   window.applyCreatorHeaderEazcBalance = function (amountOrPayload) {
     var amount =
       amountOrPayload != null && typeof amountOrPayload === 'object'
@@ -200,23 +200,12 @@
         : Number(amountOrPayload);
     if (!Number.isFinite(amount) || amount < 0) amount = 0;
     var formatted = fmtHeaderEazc(amount);
-    var balanceEl = document.getElementById('global-sales-balance-value');
-    var desktopSalesEl = document.getElementById('creator-desktop-sales-balance-value');
-    var unitEls = document.querySelectorAll('[data-sales-balance-unit]');
-    if (balanceEl) {
-      balanceEl.textContent = formatted;
-      balanceEl.style.color = '';
-      balanceEl.dataset.eazcHeader = '1';
-    }
-    if (desktopSalesEl) {
-      desktopSalesEl.textContent = formatted;
-      desktopSalesEl.style.color = '';
-      desktopSalesEl.dataset.eazcHeader = '1';
-    }
-    unitEls.forEach(function (u) {
-      u.textContent = 'EAZC';
+    document.querySelectorAll('[data-sales-balance-value]').forEach(function (el) {
+      el.textContent = formatted;
+      el.style.color = '';
+      el.dataset.eazcHeader = '1';
     });
-    document.querySelectorAll('.creator-desktop-header [data-sales-balance-unit]').forEach(function (u) {
+    document.querySelectorAll('[data-sales-balance-unit]').forEach(function (u) {
       u.textContent = 'EAZC';
     });
     window.__salesBalanceCache.amount = amount;

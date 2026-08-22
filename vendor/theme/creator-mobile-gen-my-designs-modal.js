@@ -177,9 +177,13 @@
     if (!query || !query.trim()) {
       filteredDesigns = designs.slice();
     } else {
-      var q = query.trim().toLowerCase();
+      var q = query.trim();
       filteredDesigns = designs.filter(function (d) {
-        return (d.title || '').toLowerCase().indexOf(q) >= 0 || (d.prompt || '').toLowerCase().indexOf(q) >= 0;
+        var blob = [d.title, d.prompt, d.creator_name, d.search_text].filter(Boolean).join(' ');
+        if (window.EazUniversalSearch && window.EazUniversalSearch.matchLocal) {
+          return window.EazUniversalSearch.matchLocal(blob, q);
+        }
+        return blob.toLowerCase().indexOf(q.toLowerCase()) >= 0;
       });
     }
   }

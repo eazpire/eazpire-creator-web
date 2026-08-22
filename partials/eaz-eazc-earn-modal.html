@@ -1,0 +1,101 @@
+<dialog
+  class="eaz-eazc-earn"
+  id="eazcEarnModal"
+  aria-labelledby="eazcEarnModalTitle"
+  aria-modal="true"
+>
+  <div class="eaz-eazc-earn__glow" aria-hidden="true"></div>
+  <div class="eaz-eazc-earn__shell">
+    <header class="eaz-eazc-earn__head">
+      <div class="eaz-eazc-earn__head-copy">
+        <p class="eaz-eazc-earn__kicker" data-t="creator.eazc_earn.kicker">Sales earnings</p>
+        <h2 class="eaz-eazc-earn__title" id="eazcEarnModalTitle" data-t="creator.eazc_earn.title">How you earn EAZC</h2>
+      </div>
+      <button
+        type="button"
+        class="eaz-eazc-earn__close"
+        data-eazc-earn-close
+        aria-label="Close"
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+      </button>
+    </header>
+
+    <div class="eaz-eazc-earn__body">
+      <p class="eaz-eazc-earn__intro" data-t="creator.eazc_earn.intro">EAZC is credited when someone actually buys a product. This page covers sales earnings only — not daily game coins.</p>
+      <p class="eaz-eazc-earn__pending" data-t="creator.eazc_earn.pending_hint">New sales EAZC stays pending for 30 days (return window), then it becomes available to cash out or convert.</p>
+
+      <div class="eaz-eazc-earn__cards">
+        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--create">
+          <summary class="eaz-eazc-earn__summary">
+            <span class="eaz-eazc-earn__card-index">01</span>
+            <span class="eaz-eazc-earn__card-copy">
+              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_products_title">Your products</span>
+              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_products_teaser">You sell a design you published.</span>
+            </span>
+          </summary>
+          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_products_body">You receive your royalty share of the net profit (10–40%). Community cashback and referrals are paid from the separate community share.</p>
+        </details>
+
+        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--create">
+          <summary class="eaz-eazc-earn__summary">
+            <span class="eaz-eazc-earn__card-index">02</span>
+            <span class="eaz-eazc-earn__card-copy">
+              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_remix_title">Remixes</span>
+              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_remix_teaser">Someone remixed your design — or you remixed theirs.</span>
+            </span>
+          </summary>
+          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_remix_body">From the creator share: the remix seller receives 87.5% and the original creator receives 12.5%.</p>
+        </details>
+
+        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--create">
+          <summary class="eaz-eazc-earn__summary">
+            <span class="eaz-eazc-earn__card-index">03</span>
+            <span class="eaz-eazc-earn__card-copy">
+              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_qi_title">Quick Inspirations</span>
+              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_qi_teaser">Someone sold a design made from your Quick Inspiration.</span>
+            </span>
+          </summary>
+          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_qi_body">The Quick Inspiration author receives 5 royalty points from the seller’s creator share (half of that share at the 10% starter royalty). Automatic trend inspirations do not pay.</p>
+        </details>
+
+        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--create">
+          <summary class="eaz-eazc-earn__summary">
+            <span class="eaz-eazc-earn__card-index">04</span>
+            <span class="eaz-eazc-earn__card-copy">
+              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_shop_title">Shop designs</span>
+              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_shop_teaser">Your design is used on a shop or custom product.</span>
+            </span>
+          </summary>
+          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_shop_body">Up to 3 designs on one product share the creator amount equally. If a slot is a remix, that slot still splits 87.5% / 12.5%.</p>
+        </details>
+
+        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--community">
+          <summary class="eaz-eazc-earn__summary">
+            <span class="eaz-eazc-earn__card-index">05</span>
+            <span class="eaz-eazc-earn__card-copy">
+              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_community_title">Creator Community</span>
+              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_community_teaser">You and your recruiter both opted in.</span>
+            </span>
+          </summary>
+          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_community_body">The seller keeps 70% of the creator share. The recruiter who invited them receives 30%. Publish Assist does not add an extra split.</p>
+        </details>
+
+        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--community">
+          <summary class="eaz-eazc-earn__summary">
+            <span class="eaz-eazc-earn__card-index">06</span>
+            <span class="eaz-eazc-earn__card-copy">
+              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_referral_title">Referrals &amp; cashback</span>
+              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_referral_teaser">Someone buys with your link — or you buy while logged in.</span>
+            </span>
+          </summary>
+          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_referral_body">From the community share: the buyer receives 20% cashback, your direct referral link earns 10%, and further network levels earn smaller shares.</p>
+        </details>
+      </div>
+
+      <p class="eaz-eazc-earn__royalty" data-t="creator.eazc_earn.royalty_footer">Your creator share starts at 10% of net profit and can rise to 40% in Creator Journey → Royalties.</p>
+    </div>
+  </div>
+</dialog>

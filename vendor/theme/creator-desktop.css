@@ -279,6 +279,21 @@ body.creator-mobile-page .creator-desktop-app {
     }
   }
 
+  .eaz-eazc-badge--creator-desktop {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f8f7ff;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+  }
+
+  .eaz-eazc-badge--creator-desktop .creator-desktop-header__balance {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding-right: 6px;
+  }
+
   .creator-desktop-header__balance {
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.2);

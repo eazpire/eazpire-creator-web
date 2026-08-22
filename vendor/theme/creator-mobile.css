@@ -564,6 +564,26 @@ body.creator-mobile-page .creator-mobile-app {
   flex-shrink: 0;
 }
 
+.eaz-eazc-badge--creator-mobile {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.18);
+}
+
+.eaz-eazc-badge--creator-mobile .creator-header__balance-btn {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding-right: 4px;
+}
+
+.eaz-eazc-badge--creator-mobile .eaz-eazc-badge__info {
+  color: #f97316;
+}
+
 .creator-header__balance-btn {
   display: inline-flex;
   align-items: center;

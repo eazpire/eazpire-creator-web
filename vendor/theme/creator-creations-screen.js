@@ -2434,9 +2434,14 @@
     if (!query || !query.trim()) {
       filteredDesigns = base.slice();
     } else {
-      var q = query.trim().toLowerCase();
+      var q = query.trim();
       filteredDesigns = base.filter(function (d) {
-        return (d.title || '').toLowerCase().indexOf(q) >= 0 || (d.prompt || '').toLowerCase().indexOf(q) >= 0;
+        var blob = [d.title, d.prompt, d.creator_name, d.search_text, d.searchText].filter(Boolean).join(' ');
+        if (window.EazUniversalSearch && window.EazUniversalSearch.matchLocal) {
+          return window.EazUniversalSearch.matchLocal(blob, q);
+        }
+        var low = q.toLowerCase();
+        return blob.toLowerCase().indexOf(low) >= 0;
       });
     }
     filteredDesigns.forEach(function (d) {
@@ -2455,11 +2460,14 @@
     if (!query || !query.trim()) {
       filteredProducts = products.slice();
     } else {
-      var q = query.trim().toLowerCase();
+      var q = query.trim();
       filteredProducts = products.filter(function (p) {
-        return (p.title || '').toLowerCase().indexOf(q) >= 0 ||
-          (p.product_name || '').toLowerCase().indexOf(q) >= 0 ||
-          (p.product_key || '').toLowerCase().indexOf(q) >= 0;
+        var blob = [p.title, p.product_name, p.product_key, p.creator_name, p.search_text, p.searchText].filter(Boolean).join(' ');
+        if (window.EazUniversalSearch && window.EazUniversalSearch.matchLocal) {
+          return window.EazUniversalSearch.matchLocal(blob, q);
+        }
+        var low = q.toLowerCase();
+        return blob.toLowerCase().indexOf(low) >= 0;
       });
     }
     applyCreationsSort(filteredProducts, 'products');
