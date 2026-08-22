@@ -60,6 +60,71 @@
             </label>
           </div>
 
+          <label class="cvcl-switch">
+            <input type="checkbox" id="cvcl-sub-on">
+            <span class="cvcl-switch__track" aria-hidden="true"></span>
+            <span data-t="creator.video_clipper.add_subtitle">Add subtitle</span>
+          </label>
+          <div class="cvcl-sub" id="cvcl-sub-panel" hidden>
+            <div class="cvcl-settings">
+              <label class="cvcl-field">
+                <span data-t="creator.video_clipper.sub_words">Words</span>
+                <input type="number" id="cvcl-sub-words" min="1" max="16" value="6">
+              </label>
+              <label class="cvcl-field">
+                <span data-t="creator.video_clipper.sub_lines">Lines</span>
+                <input type="number" id="cvcl-sub-lines" min="1" max="4" value="2">
+              </label>
+              <label class="cvcl-field">
+                <span data-t="creator.video_clipper.sub_font">Font</span>
+                <select id="cvcl-sub-font">
+                  <option value="Arial">Arial</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Impact">Impact</option>
+                  <option value="Verdana">Verdana</option>
+                  <option value="Trebuchet MS">Trebuchet MS</option>
+                  <option value="Courier New">Courier New</option>
+                </select>
+              </label>
+              <label class="cvcl-field">
+                <span data-t="creator.video_clipper.sub_color">Color</span>
+                <input type="color" id="cvcl-sub-color" value="#ffffff">
+              </label>
+              <label class="cvcl-field">
+                <span data-t="creator.video_clipper.sub_background">Background</span>
+                <select id="cvcl-sub-bg-mode">
+                  <option value="transparent">Transparent</option>
+                  <option value="color">Color</option>
+                </select>
+              </label>
+              <label class="cvcl-field" id="cvcl-sub-bg-wrap" hidden>
+                <span data-t="creator.video_clipper.sub_bg_color">Color</span>
+                <input type="color" id="cvcl-sub-bg" value="#000000">
+              </label>
+              <label class="cvcl-field">
+                <span data-t="creator.video_clipper.sub_animation">Animation</span>
+                <select id="cvcl-sub-anim">
+                  <option value="fade">Fade</option>
+                  <option value="slide_up">Slide up</option>
+                  <option value="pop">Pop</option>
+                  <option value="typewriter">Typewriter</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+            </div>
+            <p class="cvcl-sub-viewer-label" data-t="creator.video_clipper.sub_viewer">Subtitle viewer</p>
+            <div class="cvcl-sub-viewer" id="cvcl-sub-viewer">
+              <video id="cvcl-sub-video" muted playsinline loop></video>
+              <div class="cvcl-sub-stage" id="cvcl-sub-stage">
+                <div class="cvcl-sub-box is-selected" id="cvcl-sub-box">
+                  <div class="cvcl-sub-text" id="cvcl-sub-text"></div>
+                  <span class="cvcl-sub-handle cvcl-sub-handle--scale" data-cvcl-sub-scale aria-hidden="true"></span>
+                  <span class="cvcl-sub-handle cvcl-sub-handle--rotate" data-cvcl-sub-rotate aria-hidden="true">↻</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="cvcl-actions">
             <button type="button" class="cvcl-btn cvcl-btn--primary" id="cvcl-btn-analyze" disabled>
               Analyze video

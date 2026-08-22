@@ -28,6 +28,21 @@
     selected: {},
     exports: [],
     sidebarCollapsed: false,
+    subtitle: {
+      enabled: false,
+      wordsPer: 6,
+      lines: 2,
+      font: 'Arial',
+      color: '#ffffff',
+      bgMode: 'transparent',
+      bgColor: '#000000',
+      animation: 'fade',
+      x: 0.5,
+      y: 0.5,
+      scale: 1,
+      rotation: 0,
+    },
+    captionBlocks: [],
   };
 
   function isBadTranslationString(s) {
@@ -59,6 +74,299 @@
   function setStatus(msg) {
     var el = $('#cvcl-status');
     if (el) el.textContent = msg || '';
+  }
+
+  function clampCaptionSettings(input) {
+    var rawWords = Number(input && input.wordsPer);
+    var rawLines = Number(input && input.lines);
+    return {
+      wordsPer: Math.max(1, Math.min(16, Math.round(Number.isFinite(rawWords) ? rawWords : 6))),
+      lines: Math.max(1, Math.min(4, Math.round(Number.isFinite(rawLines) ? rawLines : 2))),
+    };
+  }
+
+  function buildCaptionBlocks(words, opts) {
+    opts = opts || {};
+    var packed = clampCaptionSettings(opts);
+    var wordsPer = packed.wordsPer;
+    var lines = packed.lines;
+    var rangeStart = Number(opts.start);
+    var rangeEnd = Number(opts.end);
+    var hasStart = Number.isFinite(rangeStart);
+    var hasEnd = Number.isFinite(rangeEnd);
+    var inRange = [];
+    (Array.isArray(words) ? words : []).forEach(function (raw) {
+      if (!raw) return;
+      var text = String(raw.text || raw.word || '').trim();
+      if (!text) return;
+      var start = Number(raw.start);
+      if (!Number.isFinite(start)) return;
+      var end = Number.isFinite(Number(raw.end)) ? Number(raw.end) : start + 0.28;
+      if (hasStart && end <= rangeStart) return;
+      if (hasEnd && start >= rangeEnd) return;
+      inRange.push({ text: text, start: start, end: end });
+    });
+    var blocks = [];
+    for (var i = 0; i < inRange.length; i += wordsPer) {
+      var chunk = inRange.slice(i, i + wordsPer);
+      if (!chunk.length) continue;
+      var perLine = Math.max(1, Math.ceil(chunk.length / lines));
+      var lineTexts = [];
+      for (var line = 0; line < lines; line++) {
+        var part = chunk.slice(line * perLine, (line + 1) * perLine).map(function (w) { return w.text; });
+        if (part.length) lineTexts.push(part.join(' '));
+      }
+      blocks.push({
+        start: chunk[0].start,
+        end: chunk[chunk.length - 1].end,
+        lines: lineTexts,
+      });
+    }
+    return blocks;
+  }
+
+  function captionAtTime(blocks, timeS) {
+    var t = Number(timeS);
+    if (!Number.isFinite(t) || !Array.isArray(blocks)) return null;
+    for (var i = 0; i < blocks.length; i++) {
+      if (t >= blocks[i].start && t < blocks[i].end) return blocks[i];
+    }
+    return null;
+  }
+
+  function captionAnimProgress(block, timeS, animation) {
+    if (!block) return 1;
+    if (animation === 'none') return 1;
+    var span = Math.max(0.12, Math.min(0.32, (block.end - block.start) * 0.28));
+    return Math.max(0, Math.min(1, (Number(timeS) - block.start) / span));
+  }
+
+  function visibleCaptionText(block, timeS, animation) {
+    if (!block) return '';
+    var full = (block.lines || []).join('\n');
+    if (animation !== 'typewriter') return full;
+    var p = captionAnimProgress(block, timeS, animation);
+    return full.slice(0, Math.max(0, Math.round(full.length * p)));
+  }
+
+  function readSubtitleFromDom() {
+    var sub = state.subtitle;
+    var on = $('#cvcl-sub-on');
+    sub.enabled = !!(on && on.checked);
+    var wordsEl = $('#cvcl-sub-words');
+    var linesEl = $('#cvcl-sub-lines');
+    var packed = clampCaptionSettings({
+      wordsPer: wordsEl && wordsEl.value,
+      lines: linesEl && linesEl.value,
+    });
+    sub.wordsPer = packed.wordsPer;
+    sub.lines = packed.lines;
+    var font = $('#cvcl-sub-font');
+    var color = $('#cvcl-sub-color');
+    var bgMode = $('#cvcl-sub-bg-mode');
+    var bg = $('#cvcl-sub-bg');
+    var anim = $('#cvcl-sub-anim');
+    if (font) sub.font = font.value || 'Arial';
+    if (color) sub.color = color.value || '#ffffff';
+    if (bgMode) sub.bgMode = bgMode.value === 'color' ? 'color' : 'transparent';
+    if (bg) sub.bgColor = bg.value || '#000000';
+    if (anim) sub.animation = anim.value || 'fade';
+    var wrap = $('#cvcl-sub-bg-wrap');
+    if (wrap) wrap.hidden = sub.bgMode !== 'color';
+    var panel = $('#cvcl-sub-panel');
+    if (panel) panel.hidden = !sub.enabled;
+  }
+
+  function applySubtitleBoxTransform() {
+    var box = $('#cvcl-sub-box');
+    if (!box) return;
+    var sub = state.subtitle;
+    box.style.left = (sub.x * 100) + '%';
+    box.style.top = (sub.y * 100) + '%';
+    box.style.transform = 'translate(-50%, -50%) rotate(' + sub.rotation + 'deg) scale(' + sub.scale + ')';
+    var text = $('#cvcl-sub-text');
+    if (text) {
+      text.style.fontFamily = sub.font;
+      text.style.color = sub.color;
+      text.style.background = sub.bgMode === 'color' ? sub.bgColor : 'transparent';
+      text.style.padding = sub.bgMode === 'color' ? '4px 8px' : '0';
+      text.style.borderRadius = sub.bgMode === 'color' ? '6px' : '0';
+    }
+  }
+
+  function rebuildCaptionBlocks() {
+    readSubtitleFromDom();
+    var range = state.clips[0] || { start: 0, end: state.durationS || 0 };
+    state.captionBlocks = buildCaptionBlocks(state.words, {
+      wordsPer: state.subtitle.wordsPer,
+      lines: state.subtitle.lines,
+      start: range.start,
+      end: range.end || state.durationS,
+    });
+    applySubtitleBoxTransform();
+    updateSubtitlePreviewText();
+  }
+
+  function updateSubtitlePreviewText() {
+    var text = $('#cvcl-sub-text');
+    var video = $('#cvcl-sub-video');
+    if (!text) return;
+    if (!state.subtitle.enabled) {
+      text.textContent = '';
+      return;
+    }
+    var t = video && Number.isFinite(video.currentTime) ? video.currentTime : (state.clips[0] && state.clips[0].start) || 0;
+    var block = captionAtTime(state.captionBlocks, t);
+    if (!block && state.captionBlocks[0]) block = state.captionBlocks[0];
+    text.textContent = visibleCaptionText(block, t, state.subtitle.animation) || i18n('add_subtitle', 'Add subtitle');
+    if (block && state.subtitle.animation === 'fade') {
+      text.style.opacity = String(captionAnimProgress(block, t, 'fade'));
+    } else if (block && state.subtitle.animation === 'slide_up') {
+      var p = captionAnimProgress(block, t, 'slide_up');
+      text.style.opacity = String(p);
+      text.style.transform = 'translateY(' + ((1 - p) * 10) + 'px)';
+    } else if (block && state.subtitle.animation === 'pop') {
+      var pop = captionAnimProgress(block, t, 'pop');
+      text.style.opacity = String(pop);
+      text.style.transform = 'scale(' + (0.86 + 0.14 * pop) + ')';
+    } else {
+      text.style.opacity = '1';
+      text.style.transform = '';
+    }
+  }
+
+  function syncSubtitlePreviewVideo() {
+    var preview = $('#cvcl-sub-video');
+    if (!preview) return;
+    if (state.objectUrl) {
+      if (preview.src !== state.objectUrl) preview.src = state.objectUrl;
+      preview.muted = true;
+      var start = state.clips[0] ? state.clips[0].start : 0;
+      preview.currentTime = start;
+      preview.play().catch(function () {});
+    } else {
+      preview.removeAttribute('src');
+    }
+  }
+
+  function drawCaption(ctx, w, h, timeS, clipStart, clipEnd) {
+    var sub = state.subtitle;
+    if (!sub.enabled) return;
+    var blocks = buildCaptionBlocks(state.words, {
+      wordsPer: sub.wordsPer,
+      lines: sub.lines,
+      start: clipStart,
+      end: clipEnd,
+    });
+    var block = captionAtTime(blocks, timeS);
+    if (!block) return;
+    var progress = captionAnimProgress(block, timeS, sub.animation);
+    var opacity = 1;
+    var dy = 0;
+    var extraScale = 1;
+    if (sub.animation === 'fade') opacity = progress;
+    if (sub.animation === 'slide_up') {
+      opacity = progress;
+      dy = (1 - progress) * h * 0.035;
+    }
+    if (sub.animation === 'pop') {
+      opacity = progress;
+      extraScale = 0.86 + 0.14 * progress;
+    }
+    var shown = visibleCaptionText(block, timeS, sub.animation);
+    var lines = shown.split('\n').filter(Boolean);
+    if (!lines.length) return;
+    var fontSize = Math.max(14, w * 0.048);
+    ctx.save();
+    ctx.translate(w * sub.x, h * sub.y + dy);
+    ctx.rotate((sub.rotation || 0) * Math.PI / 180);
+    ctx.scale((sub.scale || 1) * extraScale, (sub.scale || 1) * extraScale);
+    ctx.globalAlpha = opacity;
+    ctx.font = '700 ' + fontSize + 'px ' + (sub.font || 'Arial');
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var lineH = fontSize * 1.25;
+    var blockH = lines.length * lineH;
+    var maxW = 0;
+    lines.forEach(function (line) {
+      maxW = Math.max(maxW, ctx.measureText(line).width);
+    });
+    var padX = fontSize * 0.42;
+    var padY = fontSize * 0.26;
+    if (sub.bgMode === 'color') {
+      ctx.fillStyle = sub.bgColor || '#000';
+      var x0 = -maxW / 2 - padX;
+      var y0 = -blockH / 2 - padY;
+      var rw = maxW + padX * 2;
+      var rh = blockH + padY * 2;
+      var r = Math.min(10, fontSize * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(x0 + r, y0);
+      ctx.lineTo(x0 + rw - r, y0);
+      ctx.quadraticCurveTo(x0 + rw, y0, x0 + rw, y0 + r);
+      ctx.lineTo(x0 + rw, y0 + rh - r);
+      ctx.quadraticCurveTo(x0 + rw, y0 + rh, x0 + rw - r, y0 + rh);
+      ctx.lineTo(x0 + r, y0 + rh);
+      ctx.quadraticCurveTo(x0, y0 + rh, x0, y0 + rh - r);
+      ctx.lineTo(x0, y0 + r);
+      ctx.quadraticCurveTo(x0, y0, x0 + r, y0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = sub.color || '#fff';
+    lines.forEach(function (line, idx) {
+      ctx.fillText(line, 0, -blockH / 2 + lineH / 2 + idx * lineH);
+    });
+    ctx.restore();
+  }
+
+  function bindSubtitleHandles() {
+    var box = $('#cvcl-sub-box');
+    var viewer = $('#cvcl-sub-viewer');
+    if (!box || !viewer || box.getAttribute('data-cvcl-handles') === '1') return;
+    box.setAttribute('data-cvcl-handles', '1');
+    var drag = null;
+    function pointInViewer(ev) {
+      var rect = viewer.getBoundingClientRect();
+      return {
+        x: (ev.clientX - rect.left) / Math.max(1, rect.width),
+        y: (ev.clientY - rect.top) / Math.max(1, rect.height),
+      };
+    }
+    function onMove(ev) {
+      if (!drag) return;
+      ev.preventDefault();
+      var p = pointInViewer(ev);
+      if (drag.mode === 'move') {
+        state.subtitle.x = Math.max(0.08, Math.min(0.92, p.x));
+        state.subtitle.y = Math.max(0.08, Math.min(0.92, p.y));
+      } else if (drag.mode === 'scale') {
+        var dx = p.x - state.subtitle.x;
+        var dy = p.y - state.subtitle.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        state.subtitle.scale = Math.max(0.45, Math.min(2.4, dist / 0.18));
+      } else if (drag.mode === 'rotate') {
+        state.subtitle.rotation = Math.round(Math.atan2(p.y - state.subtitle.y, p.x - state.subtitle.x) * 180 / Math.PI + 90);
+      }
+      applySubtitleBoxTransform();
+    }
+    function onUp() {
+      drag = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+    box.addEventListener('pointerdown', function (ev) {
+      if (ev.target && ev.target.closest && ev.target.closest('[data-cvcl-sub-scale]')) {
+        drag = { mode: 'scale' };
+      } else if (ev.target && ev.target.closest && ev.target.closest('[data-cvcl-sub-rotate]')) {
+        drag = { mode: 'rotate' };
+      } else {
+        drag = { mode: 'move' };
+      }
+      ev.preventDefault();
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    });
   }
 
   function fmtClock(sec) {
@@ -177,6 +485,7 @@
     if (empty) empty.hidden = true;
     if (preview) preview.hidden = false;
     if (analyze) analyze.disabled = false;
+    syncSubtitlePreviewVideo();
     setStatus('');
   }
 
@@ -563,6 +872,7 @@
     await new Promise(function (resolve) {
       var tick = function () {
         drawCover(ctx, video, size.w, size.h);
+        drawCaption(ctx, size.w, size.h, video.currentTime, start, end);
         if (video.currentTime >= end || video.paused || video.ended) {
           video.pause();
           if (recorder.state !== 'inactive') recorder.stop();
@@ -619,6 +929,8 @@
       plan.clips.forEach(function (c) { state.selected[c.id] = true; });
       clearExports();
       renderResults();
+      rebuildCaptionBlocks();
+      syncSubtitlePreviewVideo();
       setStatus(i18n('plan_ready', 'Analysis ready — export to split the video into Shorts.') + ' (' + plan.clips.length + ')');
     } catch (err) {
       var msg = String(err && err.message || err);
@@ -662,6 +974,7 @@
         fd.append('width', String(rendered.width || SHORT_W));
         fd.append('height', String(rendered.height || SHORT_H));
         fd.append('duration_s', String(Math.max(0.1, clip.end - clip.start)));
+        fd.append('tool', 'video_clipper');
         try {
           await apiJson('video-studio-export', { method: 'POST', body: fd });
         } catch (saveErr) {}
@@ -673,7 +986,7 @@
         renderResults();
       }
       setSidebarCollapsed(true);
-      setStatus(i18n('export_done', 'Shorts are ready on the right. Saved to your videos.'));
+      setStatus(i18n('export_done', 'Shorts are ready on the right. Saved in Assets → Videos → Video Clipper.'));
     } catch (err) {
       setStatus(i18n('export_failed', 'Export failed.') + ' ' + String(err && err.message || err));
     }
@@ -772,6 +1085,22 @@
       var el = document.getElementById(id);
       if (el) el.addEventListener('change', syncSettingInputs);
     });
+    ['cvcl-sub-on', 'cvcl-sub-words', 'cvcl-sub-lines', 'cvcl-sub-font', 'cvcl-sub-color', 'cvcl-sub-bg-mode', 'cvcl-sub-bg', 'cvcl-sub-anim'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', rebuildCaptionBlocks);
+      if (el) el.addEventListener('change', rebuildCaptionBlocks);
+    });
+    var subVideo = $('#cvcl-sub-video');
+    if (subVideo) {
+      subVideo.addEventListener('timeupdate', function () {
+        if (state.clips[0] && subVideo.currentTime >= (state.clips[0].end || state.durationS)) {
+          subVideo.currentTime = state.clips[0].start || 0;
+        }
+        updateSubtitlePreviewText();
+      });
+    }
+    bindSubtitleHandles();
+    applySubtitleBoxTransform();
     var analyzeBtn = $('#cvcl-btn-analyze');
     if (analyzeBtn) analyzeBtn.addEventListener('click', analyze);
     var exportBtn = $('#cvcl-btn-export');

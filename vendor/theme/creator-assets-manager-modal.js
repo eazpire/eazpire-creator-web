@@ -217,6 +217,7 @@
     { system_key: 'motion_videos', titleKey: 'folder_motion_videos', title: 'Motion Videos', parent_system_key: 'videos' },
     { system_key: 'transition_videos', titleKey: 'folder_transition_videos', title: 'Transition Videos', parent_system_key: 'videos' },
     { system_key: 'transition_clips', titleKey: 'folder_transition_clips', title: 'Transition Clips', parent_system_key: 'videos' },
+    { system_key: 'video_clipper', titleKey: 'folder_video_clipper', title: 'Video Clipper', parent_system_key: 'videos' },
     { system_key: 'downloads', titleKey: 'folder_downloads', title: 'Downloads' }
   ];
 
@@ -277,6 +278,28 @@
       if (ai === -1) return 1;
       if (bi === -1) return -1;
       return ai - bi;
+    });
+    list.forEach(function (node) {
+      if (!node || node.system_key !== 'videos') return;
+      node.children = Array.isArray(node.children) ? node.children : [];
+      SYSTEM_FOLDER_DEFS.filter(function (c) {
+        return c.parent_system_key === 'videos';
+      }).forEach(function (c) {
+        var exists = node.children.some(function (ch) {
+          return ch && ch.system_key === c.system_key;
+        });
+        if (exists) return;
+        node.children.push({
+          id: c.system_key,
+          system_key: c.system_key,
+          title: c.title,
+          is_system: true,
+          parent_id: node.id,
+          asset_count: 0,
+          children: [],
+          _local: true
+        });
+      });
     });
     return list;
   }
