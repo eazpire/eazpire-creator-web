@@ -3482,12 +3482,18 @@ body.creator-video-motion-info-modal-open {
   display: none;
 }
 
-.creator-desktop-creations-host .creator-creations-grid--2,
+.creator-desktop-creations-host .creator-creations-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.creator-desktop-creations-host .creator-creations-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .creator-desktop-creations-host .creator-creations-grid--4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.creator-desktop-creations-host .creator-creations-grid--3,
 .creator-desktop-creations-host .creator-creations-grid--6 {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }

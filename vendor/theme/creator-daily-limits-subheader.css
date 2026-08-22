@@ -49,6 +49,7 @@
   gap: 7px;
   flex: 0 0 auto;
   min-width: 0;
+  cursor: pointer;
 }
 
 .creator-daily-limits__item.is-locked {
@@ -144,6 +145,7 @@
   padding: 0 0 0 10px;
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   min-width: 0;
+  cursor: pointer;
 }
 
 .creator-daily-limits__countdown {
@@ -275,4 +277,27 @@
   .creator-daily-limits__timer-wrap {
     padding-left: 8px;
   }
+}
+
+.creator-cap-info-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%) translateY(12px);
+  z-index: 420;
+  max-width: min(92vw, 420px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(20, 24, 38, 0.94);
+  color: #f5f3ff;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.creator-cap-info-toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }

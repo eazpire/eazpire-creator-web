@@ -67,6 +67,26 @@
     });
   }
 
+  function showCreatorCapInfoToast(message) {
+    var text = String(message || '').trim();
+    if (!text) return;
+    var el = document.getElementById('creatorCapInfoToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'creatorCapInfoToast';
+      el.className = 'creator-cap-info-toast';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.add('is-visible');
+    if (el._hideTimer) clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(function () {
+      el.classList.remove('is-visible');
+    }, 3400);
+  }
+
   function i18n(key, fromRoot) {
     if (fromRoot && fromRoot.dataset) {
       var dsKey = 'i18n' + key.charAt(0).toUpperCase() + key.slice(1);
@@ -387,6 +407,7 @@
 
   function collectRoots() {
     roots = Array.prototype.slice.call(document.querySelectorAll('[data-creator-daily-limits]'));
+    bindCapInfoClicks();
   }
 
   function pollOwnerAndRefresh(attempt) {
@@ -408,6 +429,51 @@
       return;
     }
     refresh(true);
+  }
+
+  function bindCapInfoClicks() {
+    roots.forEach(function (rootEl) {
+      if (rootEl.dataset.capInfoBound === '1') return;
+      rootEl.dataset.capInfoBound = '1';
+      var map = {
+        upload: rootEl.getAttribute('data-i18n-info-uploads') || 'Daily image uploads used versus your limit. Resets with the timer.',
+        design: rootEl.getAttribute('data-i18n-info-generations') || 'Daily AI generations used versus your limit. Each generate counts.',
+        publish: rootEl.getAttribute('data-i18n-info-publishes') || 'Daily product publishes used versus your limit.'
+      };
+      rootEl.querySelectorAll('.creator-daily-limits__item[data-limit]').forEach(function (item) {
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabindex', '0');
+        function show() {
+          var key = item.getAttribute('data-limit');
+          showCreatorCapInfoToast(map[key] || '');
+        }
+        item.addEventListener('click', show);
+        item.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            show();
+          }
+        });
+      });
+      var timer = rootEl.querySelector('[data-limit-countdown], .creator-daily-limits__timer-wrap');
+      if (timer) {
+        timer.setAttribute('role', 'button');
+        timer.setAttribute('tabindex', '0');
+        function showTimer() {
+          showCreatorCapInfoToast(
+            rootEl.getAttribute('data-i18n-info-timer') ||
+              'Time left until daily upload, generation, and publish limits reset (00:00 UTC).'
+          );
+        }
+        timer.addEventListener('click', showTimer);
+        timer.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            showTimer();
+          }
+        });
+      }
+    });
   }
 
   function bindEvents() {
@@ -461,6 +527,7 @@
     if (!roots.length) return;
     mounted = true;
     bindEvents();
+    bindCapInfoClicks();
     /* Soft only ensures mount wiring; never force a paint on route changes. */
     if (!soft) {
       pollOwnerAndRefresh(0);
@@ -474,6 +541,7 @@
       refresh: refresh,
       syncChromeMetrics: syncChromeMetrics,
       mount: mount,
+      showInfo: showCreatorCapInfoToast,
       applyFromData: function (data) {
         if (!data || !data.ok) return false;
         storeLimitsCache(data);
@@ -487,6 +555,10 @@
       },
       __mounted: true,
     };
+  }
+
+  if (typeof window.showCreatorCapInfoToast !== 'function') {
+    window.showCreatorCapInfoToast = showCreatorCapInfoToast;
   }
 
   if (document.readyState === 'loading') {

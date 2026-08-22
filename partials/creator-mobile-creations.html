@@ -6,7 +6,7 @@
     </div>
     <button type="button" class="creator-creations-view-btn" id="creatorCreationsViewBtn" aria-label="View mode" aria-haspopup="dialog" data-eazy-guide="creations.view-mode">
       <span class="creator-creations-view-icon" id="creatorCreationsViewIcon">
-        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16.5" y="9.5" width="5" height="5" rx="1"/></svg>
+        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="8" height="8" rx="1"/><rect x="13" y="8" width="8" height="8" rx="1"/></svg>
       </span>
     </button>
   </div>
@@ -14,9 +14,11 @@
     class="creator-creations-slots"
     data-creations-slots
     aria-label="Active design slots and product slots"
+    data-i18n-info-designs="Active designs in your library versus your Skill Tree slot cap. Inactive designs do not count."
+    data-i18n-info-products="Published product types versus your Skill Tree listing cap."
   >
     <div class="creator-creations-slots__row">
-      <div class="creator-creations-slots__item" data-slot="designs">
+      <div class="creator-creations-slots__item" data-slot="designs" role="button" tabindex="0">
         <span class="creator-creations-slots__name" data-t="creator.creations.slots_designs">Active designs</span>
         <span class="creator-creations-slots__bar" aria-hidden="true">
           <span class="creator-creations-slots__bar-fill creator-creations-slots__bar-fill--designs" data-slot-fill style="width:0%"></span>
@@ -24,7 +26,7 @@
         </span>
       </div>
       <span class="creator-creations-slots__divider" aria-hidden="true">│</span>
-      <div class="creator-creations-slots__item" data-slot="products">
+      <div class="creator-creations-slots__item" data-slot="products" role="button" tabindex="0">
         <span class="creator-creations-slots__name" data-t="creator.creations.slots_products">Products</span>
         <span class="creator-creations-slots__bar" aria-hidden="true">
           <span class="creator-creations-slots__bar-fill creator-creations-slots__bar-fill--products" data-slot-fill style="width:0%"></span>

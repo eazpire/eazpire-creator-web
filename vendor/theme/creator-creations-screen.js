@@ -215,6 +215,9 @@
   var productsSortAvailability = null;
   var openSortMenuTab = null;
   var viewMode = 'grid2';
+  var chromeHidden = false;
+  var chromeFloating = false;
+  var lastChromeScrollTop = 0;
   var designsRenderedCount = 0;
   var productsRenderedCount = 0;
   /** First batch: static thumbnails only (fast LCP). ParticleReveal only for index >= this (scroll-loaded). */
@@ -1672,6 +1675,84 @@
     return Math.min(100, Math.round((u / c) * 100));
   }
 
+  function syncCreationsChromeOffsets() {
+    var root = document.getElementById('creatorCreations');
+    if (!root) return;
+    var tabs = root.querySelector('.creator-creations-tabs');
+    var slots = root.querySelector('.creator-creations-slots');
+    if (tabs && tabs.offsetHeight) root.style.setProperty('--creations-tabs-h', tabs.offsetHeight + 'px');
+    if (slots && slots.offsetHeight) root.style.setProperty('--creations-slots-h', slots.offsetHeight + 'px');
+  }
+
+  function applyCreationsChromeState() {
+    var root = document.getElementById('creatorCreations');
+    if (!root) return;
+    root.classList.toggle('is-chrome-hidden', chromeHidden);
+    root.classList.toggle('is-chrome-floating', chromeFloating && !chromeHidden);
+    if (chromeFloating && !chromeHidden) syncCreationsChromeOffsets();
+  }
+
+  function onCreationsChromeScroll(wrap) {
+    if (!wrap) return;
+    var top = wrap.scrollTop || 0;
+    var dy = top - lastChromeScrollTop;
+    lastChromeScrollTop = top;
+    if (top <= 16) {
+      chromeHidden = false;
+      chromeFloating = false;
+    } else if (dy > 8) {
+      syncCreationsChromeOffsets();
+      chromeHidden = true;
+      chromeFloating = false;
+    } else if (dy < -8) {
+      chromeHidden = false;
+      chromeFloating = true;
+    }
+    applyCreationsChromeState();
+  }
+
+  function showCreationsCapInfo(message) {
+    if (window.CreatorDailyLimitsSubheader && typeof window.CreatorDailyLimitsSubheader.showInfo === 'function') {
+      window.CreatorDailyLimitsSubheader.showInfo(message);
+      return;
+    }
+    if (typeof window.showCreatorCapInfoToast === 'function') {
+      window.showCreatorCapInfoToast(message);
+      return;
+    }
+    window.alert(message);
+  }
+
+  function bindCreationsSlotInfoClicks() {
+    var root = document.querySelector('[data-creations-slots]');
+    if (!root || root.dataset.slotInfoBound === '1') return;
+    root.dataset.slotInfoBound = '1';
+    var designsMsg =
+      root.getAttribute('data-i18n-info-designs') ||
+      (window.CreatorI18n && window.CreatorI18n.creations && window.CreatorI18n.creations.slots_designs_info) ||
+      'Active designs in your library versus your Skill Tree slot cap. Inactive designs do not count.';
+    var productsMsg =
+      root.getAttribute('data-i18n-info-products') ||
+      (window.CreatorI18n && window.CreatorI18n.creations && window.CreatorI18n.creations.slots_products_info) ||
+      'Published product types versus your Skill Tree listing cap.';
+    function bindItem(key, msg) {
+      var item = root.querySelector('[data-slot="' + key + '"]');
+      if (!item) return;
+      function show() {
+        showCreationsCapInfo(msg);
+      }
+      item.addEventListener('click', show);
+      item.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          show();
+        }
+      });
+    }
+    bindItem('designs', designsMsg);
+    bindItem('products', productsMsg);
+  }
+
   function applyCreationsSlotItem(root, key, used, cap) {
     var item = root.querySelector('[data-slot="' + key + '"]');
     if (!item) return;
@@ -2787,11 +2868,11 @@
   }
 
   function onDesignsGridScroll() {
-    if (viewMode === 'list') return;
     var grid = document.getElementById('creatorDesignsGrid');
-    if (!grid) return;
-    var gridWrap = grid.parentElement;
-    if (!gridWrap) return;
+    var gridWrap = grid && grid.parentElement;
+    onCreationsChromeScroll(gridWrap);
+    if (viewMode === 'list') return;
+    if (!grid || !gridWrap) return;
     if (designsRenderedCount >= currentRenderDesigns.length) return;
 
     var scrollTop = gridWrap.scrollTop;
@@ -3236,11 +3317,11 @@
   }
 
   function onProductsGridScroll() {
-    if (viewMode === 'list') return;
     var grid = document.getElementById('creatorProductsGrid');
-    if (!grid) return;
-    var gridWrap = grid.parentElement;
-    if (!gridWrap) return;
+    var gridWrap = grid && grid.parentElement;
+    onCreationsChromeScroll(gridWrap);
+    if (viewMode === 'list') return;
+    if (!grid || !gridWrap) return;
     if (productsRenderedCount >= filteredProducts.length) return;
 
     var scrollTop = gridWrap.scrollTop;
@@ -3842,8 +3923,12 @@
   }
 
   function setViewMode(mode) {
-    var isAllowed = mode === 'grid2' || mode === 'grid3' || mode === 'grid4' || mode === 'grid6' || mode === 'list';
-    viewMode = isAllowed ? mode : 'grid2';
+    var desktop = window.matchMedia && window.matchMedia('(min-width: 992px)').matches;
+    var allowed = desktop ? ['grid4', 'grid6', 'list'] : ['grid2', 'grid3', 'list'];
+    if (allowed.indexOf(mode) < 0) {
+      mode = desktop ? 'grid4' : 'grid2';
+    }
+    viewMode = mode;
     var creations = document.getElementById('creatorCreations');
     if (creations) creations.classList.toggle('creator-creations--list', viewMode === 'list');
     var designGrid = document.getElementById('creatorDesignsGrid');
@@ -4360,6 +4445,7 @@
 
     // Initial load when creations screen is visible on load (mobile swipe)
     fetchCreationsSlotLimits();
+    bindCreationsSlotInfoClicks();
     if (viewport && viewport.classList.contains('slide-2')) {
       switchTab('designs');
     } else {

@@ -821,6 +821,11 @@
       third.style.display = '';
       third.setAttribute('aria-hidden', 'false');
     }
+    var fourth = options[3];
+    if (fourth) {
+      fourth.style.display = 'none';
+      fourth.setAttribute('aria-hidden', 'true');
+    }
   }
 
   function restoreMobileCreationsViewModes() {
@@ -858,6 +863,14 @@
       third.setAttribute('aria-hidden', 'false');
       var thirdLabel = third.querySelector('span:last-child');
       if (thirdLabel) thirdLabel.textContent = M.viewList || 'List view';
+    }
+    var fourth = options[3];
+    if (fourth) {
+      fourth.style.display = 'none';
+      fourth.setAttribute('aria-hidden', 'true');
+    }
+    if (window.CreationsScreen && typeof window.CreationsScreen.setViewMode === 'function') {
+      window.CreationsScreen.setViewMode('grid2');
     }
   }
 
