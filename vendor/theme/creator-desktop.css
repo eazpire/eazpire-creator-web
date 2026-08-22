@@ -3493,40 +3493,22 @@ body.creator-video-motion-info-modal-open {
 }
 
 .creator-desktop-creations-host .creator-creations-filter-btn {
-  width: auto;
-  min-width: 124px;
+  width: 40px;
+  min-width: 40px;
   height: 40px;
-  padding: 0 12px 0 10px;
-  justify-content: flex-start;
-  gap: 8px;
+  padding: 0;
+  justify-content: center;
   border-radius: 10px;
-  border-color: rgba(249, 115, 22, 0.35);
-  background: linear-gradient(180deg, rgba(249, 115, 22, 0.14) 0%, rgba(249, 115, 22, 0.06) 100%);
 }
 
-.creator-desktop-creations-host .creator-creations-filter-btn .creator-creations-filter-btn__rail {
-  display: block;
-  width: 3px;
-  height: 18px;
-  border-radius: 99px;
-  background: linear-gradient(180deg, #fb923c 0%, #f97316 100%);
-  box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
-  flex: 0 0 auto;
-}
-
+.creator-desktop-creations-host .creator-creations-filter-btn .creator-creations-filter-btn__rail,
 .creator-desktop-creations-host .creator-creations-filter-btn .creator-creations-filter-btn__label {
-  display: inline-block;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: #f3f4f6;
-  line-height: 1;
-  white-space: nowrap;
+  display: none;
 }
 
 .creator-desktop-creations-host .creator-creations-filter-btn svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 .creator-desktop-creations-host .creator-creations-activity-switch {

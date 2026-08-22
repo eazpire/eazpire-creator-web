@@ -719,11 +719,13 @@
     }
     var origin = '';
     var onEazStorefront = false;
+    var onCreatorPortal = false;
     try {
       if (window.location && window.location.origin) {
         origin = window.location.origin.replace(/\/$/, '');
         var hn = (window.location.hostname || '').toLowerCase();
         onEazStorefront = hn === 'www.eazpire.com' || hn === 'eazpire.com';
+        onCreatorPortal = !!window.__CREATOR_PORTAL_HOST__ || hn === 'creator.eazpire.com';
       }
     } catch (_) {}
     var cfg = window.CREATOR_API_CONFIG || {};
@@ -734,6 +736,14 @@
       .trim()
       .replace(/\/+$/, '')
       .replace(/\/apps\/creator-dispatch$/i, '');
+    if (onCreatorPortal && origin) {
+      pushUnique(origin + '/api/dispatch');
+      pushUnique(origin + '/apps/creator-dispatch');
+      pushUnique(origin + '/api/eaz-crop-design');
+      pushUnique(toCreatorDispatchEndpoint(engineRoot));
+      pushUnique(CREATOR_DISPATCH_FALLBACK);
+      return out;
+    }
     if (onEazStorefront && origin) {
       pushUnique(origin + '/api/eaz-crop-design');
       pushUnique(toCreatorDispatchEndpoint(engineRoot));

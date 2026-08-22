@@ -708,6 +708,65 @@
   display: flex;
 }
 
+.creator-creations-sort-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.creator-creations-sort-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(22, 24, 30, 0.96);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.creator-creations-sort-menu[hidden] {
+  display: none;
+}
+.creator-creations-sort-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #f3f4f6;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.creator-creations-sort-option:hover:not(:disabled) {
+  background: rgba(249, 115, 22, 0.14);
+}
+.creator-creations-sort-option.is-active {
+  color: #fb923c;
+}
+.creator-creations-sort-option:disabled,
+.creator-creations-sort-option.is-disabled {
+  color: rgba(255, 255, 255, 0.32);
+  cursor: not-allowed;
+}
+.creator-creations-sort-option__dir {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+}
+.creator-creations-sort-option.is-active .creator-creations-sort-option__dir {
+  color: #fdba74;
+}
+.creator-creations-sort-btn.is-open {
+  border-color: rgba(249, 115, 22, 0.5);
+  background: rgba(249, 115, 22, 0.1);
+}
+
 .creator-creations-upload-btn {
   width: 40px;
   height: 40px;

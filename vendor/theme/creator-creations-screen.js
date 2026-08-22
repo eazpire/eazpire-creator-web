@@ -209,6 +209,11 @@
     renderDesignsGrid();
   }
   var lastDesignFilters = null;
+  var designsSort = { key: 'updated', dir: 'desc' };
+  var productsSort = { key: 'updated', dir: 'desc' };
+  var designsSortAvailability = null;
+  var productsSortAvailability = null;
+  var openSortMenuTab = null;
   var viewMode = 'grid2';
   var designsRenderedCount = 0;
   var productsRenderedCount = 0;
@@ -551,7 +556,9 @@
       metadata: meta,
       library_status: item.library_status || 'inactive',
       saving_to_library: !!item.saving_to_library,
-      quality_rating: normalizeQualityRatingClient(item.quality_rating)
+      quality_rating: normalizeQualityRatingClient(item.quality_rating),
+      remix_count: Number(item.remix_count) || 0,
+      favorite_count: Number(item.favorite_count) || 0
     };
   }
 
@@ -622,7 +629,9 @@
         meta.shop_locked === true || meta.shop_locked === 'yes' || meta.shop_locked === 1,
       review_status: item.review_status || null,
       review_item_id: item.review_item_id != null ? item.review_item_id : null,
-      quality_rating: normalizeQualityRatingClient(item.quality_rating)
+      quality_rating: normalizeQualityRatingClient(item.quality_rating),
+      remix_count: Number(item.remix_count) || 0,
+      favorite_count: Number(item.favorite_count) || 0
     };
   }
 
@@ -645,20 +654,66 @@
     return parseTsToMs(pick);
   }
 
+  function sortApi() {
+    return window.CreatorCreationsSort || null;
+  }
+
+  function creationsSortLabel(key, fallback) {
+    var M = window.CreatorMobileI18n || {};
+    var i18n = window.CreatorI18n || {};
+    var nested = i18n.creations || {};
+    var map = {
+      updated: ['creationsSortUpdated', 'sort_updated', 'Last changed'],
+      name: ['creationsSortName', 'sort_name', 'Name'],
+      favorites: ['creationsSortFavorites', 'sort_favorites', 'Favorites'],
+      remixes: ['creationsSortRemixes', 'sort_remixes', 'Remixes'],
+      published_products: ['creationsSortPublishedProducts', 'sort_published_products', 'Products published'],
+      sales: ['creationsSortSales', 'sort_sales', 'Sales'],
+      clicks: ['creationsSortClicks', 'sort_clicks', 'Clicks'],
+      add_to_cart: ['creationsSortAddToCart', 'sort_add_to_cart', 'Add to cart'],
+      impressions: ['creationsSortImpressions', 'sort_impressions', 'Impressions'],
+      revenue: ['creationsSortRevenue', 'sort_revenue', 'Revenue'],
+      last_sale: ['creationsSortLastSale', 'sort_last_sale', 'Last sale']
+    };
+    var row = map[key] || [null, null, fallback || key];
+    return M[row[0]] || nested[row[1]] || row[2];
+  }
+
+  function creationsSortDirLabel(key, dir) {
+    var M = window.CreatorMobileI18n || {};
+    var i18n = window.CreatorI18n || {};
+    var nested = i18n.creations || {};
+    function pick(a, b, fb) { return M[a] || nested[b] || fb; }
+    if (key === 'name') return dir === 'asc' ? pick('creationsSortDirAz', 'sort_dir_az', 'A-Z') : pick('creationsSortDirZa', 'sort_dir_za', 'Z-A');
+    if (key === 'updated' || key === 'last_sale') {
+      return dir === 'desc' ? pick('creationsSortDirNewest', 'sort_dir_newest', 'Newest') : pick('creationsSortDirOldest', 'sort_dir_oldest', 'Oldest');
+    }
+    return dir === 'desc' ? pick('creationsSortDirMost', 'sort_dir_most', 'Most') : pick('creationsSortDirLeast', 'sort_dir_least', 'Least');
+  }
+
+  function applyCreationsSort(list, tab) {
+    var api = sortApi();
+    var state = tab === 'products' ? productsSort : designsSort;
+    if (api && typeof api.sortItems === 'function') {
+      return api.sortItems(list, state.key, state.dir);
+    }
+    return list;
+  }
+
   function sortDesignsNewestFirst(arr) {
-    if (!arr || !arr.length) return arr;
-    arr.sort(function (a, b) {
-      var tb = designSortTimestampMs(b);
-      var ta = designSortTimestampMs(a);
-      if (tb !== ta) return tb - ta;
-      var sidb = String((b && b.id) || '').trim();
-      var sida = String((a && a.id) || '').trim();
-      if (sidb !== sida) return sidb.localeCompare(sida);
-      var jb = String((b && b.job_id) || '');
-      var ja = String((a && a.job_id) || '');
-      return jb.localeCompare(ja);
-    });
-    return arr;
+    return applyCreationsSort(arr, 'designs');
+  }
+
+  function resolveDesignsSortAvailability() {
+    var api = sortApi();
+    var extra = { remixes: true, published_products: true, favorites: false };
+    return api && api.defaultAvailability ? api.defaultAvailability(extra) : extra;
+  }
+
+  function resolveProductsSortAvailability() {
+    var api = sortApi();
+    var extra = productsSortAvailability || { favorites: true, remixes: true };
+    return api && api.defaultAvailability ? api.defaultAvailability(extra) : extra;
   }
 
   function sleepMs(ms) {
@@ -1556,6 +1611,10 @@
         product_name: p.product_name,
         shopify_handle: p.shopify_handle || null,
         published_at: p.last_published_at || null,
+        updated_at: p.updated_at || p.last_updated_at || p.last_published_at || null,
+        last_updated_at: p.last_updated_at || p.updated_at || p.last_published_at || null,
+        favorite_count: Number(p.favorite_count) || 0,
+        remix_count: Number(p.remix_count) || 0,
         review_status: p.review_status || null,
         shopify_completion_status: p.shopify_completion_status || null,
         publish_intent: p.publish_intent || null,
@@ -1576,20 +1635,12 @@
         mock_urls: Array.isArray(p.mock_urls) ? p.mock_urls : null
       });
     });
-    items.sort(function (a, b) {
-      var aTest =
-        a.is_test_product &&
-        a.shopify_completion_status !== 'complete' &&
-        a.shopify_completion_status !== 'failed';
-      var bTest =
-        b.is_test_product &&
-        b.shopify_completion_status !== 'complete' &&
-        b.shopify_completion_status !== 'failed';
-      if (aTest !== bTest) return aTest ? -1 : 1;
-      var ta = a.published_at ? (typeof a.published_at === 'string' ? new Date(a.published_at).getTime() : (a.published_at < 1e12 ? a.published_at * 1000 : a.published_at)) : 0;
-      var tb = b.published_at ? (typeof b.published_at === 'string' ? new Date(b.published_at).getTime() : (b.published_at < 1e12 ? b.published_at * 1000 : b.published_at)) : 0;
-      return tb - ta;
-    });
+    if (dataProducts.sort_availability && typeof dataProducts.sort_availability === 'object') {
+      productsSortAvailability = dataProducts.sort_availability;
+    } else {
+      productsSortAvailability = { favorites: true, remixes: true };
+    }
+    applyCreationsSort(items, 'products');
     return items;
   }
 
@@ -2146,6 +2197,15 @@
         return (d.title || '').toLowerCase().indexOf(q) >= 0 || (d.prompt || '').toLowerCase().indexOf(q) >= 0;
       });
     }
+    filteredDesigns.forEach(function (d) {
+      var id = d && d.id != null ? String(d.id).trim() : '';
+      if (!id) {
+        d.products_count = 0;
+        return;
+      }
+      d.products_count = Number(publishedSummaryByDesignId[id] || d.products_count || 0) || 0;
+    });
+    designsSortAvailability = resolveDesignsSortAvailability();
     sortDesignsNewestFirst(filteredDesigns);
   }
 
@@ -2160,6 +2220,7 @@
           (p.product_key || '').toLowerCase().indexOf(q) >= 0;
       });
     }
+    applyCreationsSort(filteredProducts, 'products');
   }
 
   function ensureParticleCanvas(container) {
@@ -3736,6 +3797,96 @@
     else if (tab === 'products') loadProducts();
   }
 
+  function closeCreationsSortMenus() {
+    openSortMenuTab = null;
+    document.querySelectorAll('.creator-creations-sort-menu').forEach(function (el) { el.remove(); });
+    document.querySelectorAll('.creator-creations-sort-btn').forEach(function (btn) {
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function renderCreationsSortMenu(tab) {
+    var api = sortApi();
+    if (!api) return;
+    var btn = document.getElementById(tab === 'products' ? 'creatorProductsSort' : 'creatorDesignsSort');
+    var wrap = btn && btn.closest('.creator-creations-sort-wrap');
+    if (!btn || !wrap) return;
+    closeCreationsSortMenus();
+    openSortMenuTab = tab;
+    btn.classList.add('is-open');
+    btn.setAttribute('aria-expanded', 'true');
+    var menu = document.createElement('div');
+    menu.className = 'creator-creations-sort-menu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', creationsSortLabel('updated', 'Sort by'));
+    var state = tab === 'products' ? productsSort : designsSort;
+    var availability = tab === 'products' ? resolveProductsSortAvailability() : resolveDesignsSortAvailability();
+    var unavailableHint =
+      (window.CreatorMobileI18n && window.CreatorMobileI18n.creationsSortUnavailable) ||
+      (window.CreatorI18n && window.CreatorI18n.creations && window.CreatorI18n.creations.sort_unavailable) ||
+      'Not available yet';
+    (api.KEYS || []).forEach(function (row) {
+      if (row.tabs && row.tabs.indexOf(tab) < 0) return;
+      var enabled = api.isAvailable(availability, row.id, tab);
+      var option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'creator-creations-sort-option' + (state.key === row.id ? ' is-active' : '') + (enabled ? '' : ' is-disabled');
+      option.setAttribute('role', 'menuitem');
+      option.disabled = !enabled;
+      if (!enabled) option.title = unavailableHint;
+      var label = document.createElement('span');
+      label.textContent = creationsSortLabel(row.id, row.id);
+      option.appendChild(label);
+      var dir = document.createElement('span');
+      dir.className = 'creator-creations-sort-option__dir';
+      dir.textContent = enabled
+        ? (state.key === row.id ? creationsSortDirLabel(row.id, state.dir) : '')
+        : unavailableHint;
+      option.appendChild(dir);
+      option.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!enabled) return;
+        setCreationsSort(tab, row.id);
+      });
+      menu.appendChild(option);
+    });
+    wrap.appendChild(menu);
+  }
+
+  function setCreationsSort(tab, key) {
+    var api = sortApi();
+    var current = tab === 'products' ? productsSort : designsSort;
+    var next = api && api.nextState ? api.nextState(current, key) : { key: key, dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc' };
+    if (tab === 'products') productsSort = next;
+    else designsSort = next;
+    try {
+      localStorage.setItem('eaz_creations_sort_' + tab, JSON.stringify(next));
+    } catch (_) {}
+    closeCreationsSortMenus();
+    if (tab === 'products') {
+      filterProducts((document.getElementById('creatorProductsSearch') || {}).value || '');
+      renderProductsGrid();
+    } else {
+      filterDesigns((document.getElementById('creatorDesignsSearch') || {}).value || '');
+      renderDesignsGrid();
+    }
+  }
+
+  function restoreCreationsSortState() {
+    ['designs', 'products'].forEach(function (tab) {
+      try {
+        var raw = localStorage.getItem('eaz_creations_sort_' + tab);
+        if (!raw) return;
+        var parsed = JSON.parse(raw);
+        if (!parsed || !parsed.key) return;
+        if (tab === 'products') productsSort = { key: parsed.key, dir: parsed.dir === 'asc' ? 'asc' : 'desc' };
+        else designsSort = { key: parsed.key, dir: parsed.dir === 'asc' ? 'asc' : 'desc' };
+      } catch (_) {}
+    });
+  }
+
   function bindCreationsScreen() {
     setViewMode(viewMode);
     var tabDesigns = document.querySelector('.creator-creations-tab[data-tab="designs"]');
@@ -3745,6 +3896,9 @@
     var uploadBtn = document.getElementById('creatorDesignsUpload');
     var filterDesignsBtn = document.getElementById('creatorDesignsFilter');
     var filterProductsBtn = document.getElementById('creatorProductsFilter');
+    var sortDesignsBtn = document.getElementById('creatorDesignsSort');
+    var sortProductsBtn = document.getElementById('creatorProductsSort');
+    restoreCreationsSortState();
 
     if (tabDesigns) tabDesigns.addEventListener('click', function () { switchTab('designs'); });
     if (tabProducts) tabProducts.addEventListener('click', function () { switchTab('products'); });
@@ -3808,10 +3962,35 @@
     }
 
     if (filterDesignsBtn) filterDesignsBtn.addEventListener('click', function () {
+      closeCreationsSortMenus();
       if (typeof window.openFilterModal === 'function') window.openFilterModal({ source: 'designs' });
     });
     if (filterProductsBtn) filterProductsBtn.addEventListener('click', function () {
+      closeCreationsSortMenus();
       if (typeof window.openFilterModal === 'function') window.openFilterModal({ source: 'products' });
+    });
+    if (sortDesignsBtn) {
+      sortDesignsBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (openSortMenuTab === 'designs') closeCreationsSortMenus();
+        else renderCreationsSortMenu('designs');
+      });
+    }
+    if (sortProductsBtn) {
+      sortProductsBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (openSortMenuTab === 'products') closeCreationsSortMenus();
+        else renderCreationsSortMenu('products');
+      });
+    }
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest || e.target.closest('.creator-creations-sort-wrap')) return;
+      closeCreationsSortMenus();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeCreationsSortMenus();
     });
 
     document.querySelectorAll('[data-designs-activity]').forEach(function (btn) {
@@ -3885,6 +4064,7 @@
               (p.product_key || '').toLowerCase().indexOf(q) >= 0;
           });
         }
+        applyCreationsSort(filteredProducts, 'products');
         renderProductsGrid();
       }
     });

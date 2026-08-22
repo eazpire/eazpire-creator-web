@@ -193,11 +193,13 @@
     }
     var origin = '';
     var onEazStorefront = false;
+    var onCreatorPortal = false;
     try {
       if (window.location && window.location.origin) {
         origin = window.location.origin.replace(/\/$/, '');
         var hn = (window.location.hostname || '').toLowerCase();
         onEazStorefront = hn === 'www.eazpire.com' || hn === 'eazpire.com';
+        onCreatorPortal = !!window.__CREATOR_PORTAL_HOST__ || hn === 'creator.eazpire.com';
       }
     } catch (_) {}
     var cfg = window.CREATOR_API_CONFIG || {};
@@ -208,6 +210,15 @@
       .trim()
       .replace(/\/+$/, '')
       .replace(/\/apps\/creator-dispatch$/i, '');
+    /* Creator hub: /api/eaz-crop-design used to serve the HTML shell. Prefer same-origin dispatch. */
+    if (onCreatorPortal && origin) {
+      pushUnique(origin + '/api/dispatch');
+      pushUnique(origin + '/apps/creator-dispatch');
+      pushUnique(origin + '/api/eaz-crop-design');
+      pushUnique(toCreatorDispatchEndpoint(engineRoot));
+      pushUnique(CREATOR_DISPATCH_FALLBACK);
+      return out;
+    }
     /* On production storefront, never use __eaz/creator-dispatch for crop: it often hits Shopify (HTML 503).
        Use a fixed order — do not insert resolveCreatorDispatchBase() (may be __eaz). */
     if (onEazStorefront && origin) {
@@ -996,6 +1007,21 @@
     if (modalImageMobileUploaded) modalImageMobileUploaded.src = busted;
     if (editImageEl) editImageEl.src = busted;
     return true;
+  }
+
+  function humanizeCropClientError(error) {
+    var msg = error && error.message ? String(error.message) : String(error || '');
+    var networkMsg =
+      (window.CreatorI18n && window.CreatorI18n.cropNetworkFailed) ||
+      'Could not reach the crop server. Please try again.';
+    if (!msg) return networkMsg;
+    if (/Failed to fetch/i.test(msg) || /NetworkError/i.test(msg) || /Load failed/i.test(msg)) {
+      return networkMsg;
+    }
+    if (/^HTTP 200/.test(msg) && /<!DOCTYPE|text\/html/i.test(msg)) {
+      return networkMsg;
+    }
+    return msg;
   }
 
   function resolveServerCropDimensions(design) {
@@ -7177,7 +7203,7 @@
         message: error && error.message ? String(error.message) : String(error),
       });
       console.error('Error cropping design:', error);
-      alert((window.CreatorI18n?.cropFailed || 'Fehler beim Croppen') + ': ' + (error.message || window.CreatorI18n?.errorUnknown || 'Unbekannter Fehler'));
+      alert((window.CreatorI18n?.cropFailed || 'Error cropping') + ': ' + (humanizeCropClientError(error) || window.CreatorI18n?.errorUnknown || 'Unknown error'));
     } finally {
       setCropBusyVisible(false);
       var editCropTriggerDone = document.getElementById('cdp-edit-crop-trigger-' + sectionId);

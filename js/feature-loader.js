@@ -234,6 +234,7 @@
         asset("creator-design-studio-modal.js"),
         asset("creator-edit-studio-modal.js"),
         asset("creator-design-preview-modal.js"),
+        asset("creator-creations-sort.js"),
         asset("creator-creations-screen.js"),
       ].map(withAssetV);
       global.__CREATOR_STUDIO_MODAL_JS = withAssetV(asset("creator-design-studio-modal.js"));
