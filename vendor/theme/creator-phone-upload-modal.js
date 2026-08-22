@@ -94,17 +94,29 @@
       });
   }
 
+  function isHubCreationsRoute() {
+    var host = String((window.location && window.location.hostname) || '');
+    if (!window.__CREATOR_PORTAL_HOST__ && host !== 'creator.eazpire.com') return false;
+    var path = typeof window.location.pathname === 'string' ? window.location.pathname : '';
+    var p = path.replace(/\/+$/, '').toLowerCase() || '/';
+    return p === '/creations' || p.indexOf('/creations/') === 0;
+  }
+
   function applyImageToMyCreationsDesignModal(sectionId, imageUrl) {
     if (!sectionId || !imageUrl) return false;
     var path = typeof window.location.pathname === 'string' ? window.location.pathname : '';
+    var hubCreations = isHubCreationsRoute();
     var isMyCreations =
-      path.indexOf('/pages/creator-dashboard') !== -1 || path.indexOf('/pages/my-creations') !== -1;
+      path.indexOf('/pages/creator-dashboard') !== -1 ||
+      path.indexOf('/pages/my-creations') !== -1 ||
+      hubCreations;
     var isDashboard =
-      path.indexOf('/pages/creator-dashboard') !== -1 && String(sectionId) === 'creator-mobile';
+      (path.indexOf('/pages/creator-dashboard') !== -1 || hubCreations) &&
+      String(sectionId) === 'creator-mobile';
 
     if (isDashboard) {
       var dm = document.getElementById('design-upload-modal-creator-mobile');
-      if (dm) {
+      if (dm || (window.DesignUploadModal && typeof window.DesignUploadModal.init === 'function')) {
         fetchImageAndOpenDesignUploadModal(sectionId, imageUrl);
         return true;
       }

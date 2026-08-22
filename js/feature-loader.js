@@ -15,7 +15,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "video-clipper-20260822d";
+  var PORTAL_ASSET_V = "phone-upload-creations-20260822";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -194,6 +194,7 @@
         injectPartial("creator-mobile-filter-modal.html"),
         injectPartial("creator-design-upload-modal.html"),
         injectPartial("my-creations-upload-source-modal.html"),
+        injectPartial("creator-phone-upload-modal.html"),
         injectPartial("creator-design-merge-modal.html"),
         injectPartial("creator-design-preview-modal.html"),
         injectPartial("creator-design-studio-modal.html"),
@@ -248,6 +249,7 @@
         asset("creator-upload-remove-background.js"),
         asset("creator-upload-crop.js"),
         asset("creator-design-upload-modal.js"),
+        asset("creator-phone-upload-modal.js"),
         asset("my-creations-upload-source-modal.js"),
         asset("creator-design-merge-modal.js"),
       ]);
