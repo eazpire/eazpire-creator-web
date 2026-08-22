@@ -7,6 +7,7 @@
   var CREATOR_ORIGIN = "https://creator.eazpire.com";
   var PORTAL_HOME = CREATOR_ORIGIN + "/";
   var BRIDGE_PATH = "/pages/creator-handoff";
+  var ISSUE_TIMEOUT_MS = 20000;
 
   function dispatchBase() {
     if (
@@ -64,11 +65,10 @@
     return parts.length ? parts.join(" — ") : "Could not verify your account. Please try again.";
   }
 
-  var cachedHandoff = null;
-  var cachedHandoffAt = 0;
-  var HANDOFF_CACHE_MS = 90000;
+  var inflightIssue = null;
+  var inflightCid = "";
 
-  function issueExchangeToken(customerId) {
+  function fetchExchangeToken(customerId) {
     var cid = readCustomerId(customerId);
     if (!cid) {
       return Promise.resolve({ ok: false, error: "not_logged_in", loginUrl: storefrontLoginUrl() });
@@ -85,8 +85,8 @@
           controller.abort();
         } catch (e) {}
       }
-    }, 12000);
-    var fetchOpts = { credentials: "include" };
+    }, ISSUE_TIMEOUT_MS);
+    var fetchOpts = { credentials: "include", cache: "no-store" };
     if (controller) fetchOpts.signal = controller.signal;
 
     return fetch(issueUrl.toString(), fetchOpts)
@@ -98,16 +98,19 @@
             return {
               ok: false,
               error: formatIssueError(issue),
+              reason: issue.reason || "",
               loginUrl: storefrontLoginUrl(),
             };
           }
           return { ok: true, url: completeUrl(issue.exchange_token) };
         });
       })
-      .catch(function () {
+      .catch(function (err) {
+        var name = err && err.name ? String(err.name) : "";
+        var aborted = name === "AbortError" || name === "TimeoutError";
         return {
           ok: false,
-          error: "Network error. Please try again.",
+          error: aborted ? "timeout" : "Network error. Please try again.",
           loginUrl: storefrontLoginUrl(),
         };
       })
@@ -116,38 +119,67 @@
       });
   }
 
-  function prefetchExchangeToken(opts) {
+  function issueExchangeToken(customerId, opts) {
     opts = opts || {};
-    var cid = readCustomerId(opts.customerId);
-    if (!cid) return Promise.resolve(null);
-    if (cachedHandoff && Date.now() - cachedHandoffAt < HANDOFF_CACHE_MS) {
-      return cachedHandoff;
+    var cid = readCustomerId(customerId);
+    if (!cid) {
+      return Promise.resolve({ ok: false, error: "not_logged_in", loginUrl: storefrontLoginUrl() });
     }
-    cachedHandoffAt = Date.now();
-    cachedHandoff = issueExchangeToken(cid).then(function (result) {
+    if (inflightIssue && inflightCid === cid) {
+      return inflightIssue;
+    }
+    inflightCid = cid;
+    inflightIssue = fetchExchangeToken(cid).then(function (result) {
       if (!(result && result.ok && result.url)) {
-        cachedHandoff = null;
-        cachedHandoffAt = 0;
+        inflightIssue = null;
+        inflightCid = "";
       }
       return result;
     });
-    return cachedHandoff;
+    return inflightIssue;
+  }
+
+  function takeInflightIssue() {
+    var pending = inflightIssue;
+    inflightIssue = null;
+    inflightCid = "";
+    return pending;
+  }
+
+  function prefetchExchangeToken(opts) {
+    opts = opts || {};
+    return issueExchangeToken(opts.customerId);
   }
 
   function resolveTargetUrl(opts) {
     opts = opts || {};
     var cid = readCustomerId(opts.customerId);
     if (!cid) {
-      return Promise.resolve(portalHomeUrl());
+      return Promise.resolve(storefrontLoginUrl());
     }
-    var pending =
-      cachedHandoff && Date.now() - cachedHandoffAt < HANDOFF_CACHE_MS
-        ? cachedHandoff
-        : prefetchExchangeToken({ customerId: cid });
-    return pending.then(function (result) {
+    var consume = opts.consume !== false;
+    var pending = consume ? takeInflightIssue() || issueExchangeToken(cid) : issueExchangeToken(cid);
+    function toUrl(result) {
       if (result && result.ok && result.url) return result.url;
-      if (result && result.loginUrl) return result.loginUrl;
-      return portalHomeUrl();
+      if (result && result.error === "not_logged_in") return storefrontLoginUrl();
+      return null;
+    }
+    return pending.then(function (result) {
+      var url = toUrl(result);
+      if (url) {
+        if (consume) {
+          inflightIssue = null;
+          inflightCid = "";
+        }
+        return url;
+      }
+      inflightIssue = null;
+      inflightCid = "";
+      return fetchExchangeToken(cid).then(function (retry) {
+        var retryUrl = toUrl(retry);
+        if (retryUrl) return retryUrl;
+        return storefrontLoginUrl();
+      });
     });
   }
 
@@ -172,16 +204,4 @@
     completeUrl: completeUrl,
     formatIssueError: formatIssueError,
   };
-
-  function prefetchHandoffWhenLoggedIn() {
-    var cid = readCustomerId();
-    if (!cid) return;
-    prefetchExchangeToken({ customerId: cid }).catch(function () {});
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", prefetchHandoffWhenLoggedIn);
-  } else {
-    prefetchHandoffWhenLoggedIn();
-  }
 })();

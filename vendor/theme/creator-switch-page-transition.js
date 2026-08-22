@@ -394,26 +394,32 @@
   function navigateWhenReady(targetUrl, fallbackMs) {
     var resolved = null;
     var done = false;
-    resolveTargetUrl(targetUrl).then(function (url) {
-      resolved = url;
-      if (done) {
+    var navigated = false;
+    function go(url) {
+      if (navigated || !url) return;
+      navigated = true;
+      try {
+        window.location.replace(url);
+      } catch (_e) {
         window.location.href = url;
       }
+    }
+    resolveTargetUrl(targetUrl).then(function (url) {
+      resolved = url;
+      if (done) go(url);
     }).catch(function () {
-      if (done) {
-        window.location.href = targetUrl && typeof targetUrl === 'string' ? targetUrl : '/';
-      }
+      if (done) go(targetUrl && typeof targetUrl === 'string' ? targetUrl : '/');
     });
     return function finishNavigate() {
       done = true;
       if (resolved) {
-        window.location.href = resolved;
+        go(resolved);
         return;
       }
       resolveTargetUrl(targetUrl).then(function (url) {
-        window.location.href = url;
+        go(url);
       }).catch(function () {
-        window.location.href = targetUrl && typeof targetUrl === 'string' ? targetUrl : '/';
+        go(targetUrl && typeof targetUrl === 'string' ? targetUrl : '/');
       });
     };
   }
@@ -422,7 +428,11 @@
     if (!targetUrl) return false;
     if (!transitionAnimEnabled(mode)) {
       resolveTargetUrl(targetUrl).then(function (url) {
-        window.location.href = url;
+        try {
+          window.location.replace(url);
+        } catch (_e) {
+          window.location.href = url;
+        }
       });
       return true;
     }
