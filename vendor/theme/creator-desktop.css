@@ -3459,9 +3459,32 @@ body.creator-video-motion-info-modal-open {
 
 .creator-desktop-creations-host .creator-creations-tabs {
   border-radius: 12px 12px 0 0;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-bottom: 0;
+  flex-wrap: nowrap;
+}
+
+.creator-desktop-creations-host .creator-creations-slots {
+  order: 2;
+  flex: 0 1 auto;
+  width: auto;
+  margin: 0 8px 0 auto;
+  padding: 0 4px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.creator-desktop-creations-host .creator-creations-view-btn {
+  order: 3;
+  margin-left: 0;
+}
+
+.creator-desktop-creations-host .creator-creations-slots__name {
+  display: inline;
 }
 
 .creator-desktop-creations-host .creator-creations-panel:not(.creator-creations-panel--hidden) .creator-creations-toolbar {

@@ -67,8 +67,14 @@
     });
   }
 
+  function capInfoText(raw, fallback) {
+    var s = String(raw || '').trim();
+    if (!s || /^translation missing/i.test(s)) return fallback;
+    return s;
+  }
+
   function showCreatorCapInfoToast(message) {
-    var text = String(message || '').trim();
+    var text = capInfoText(message, '');
     if (!text) return;
     var el = document.getElementById('creatorCapInfoToast');
     if (!el) {
@@ -84,7 +90,7 @@
     if (el._hideTimer) clearTimeout(el._hideTimer);
     el._hideTimer = setTimeout(function () {
       el.classList.remove('is-visible');
-    }, 3400);
+    }, 4200);
   }
 
   function i18n(key, fromRoot) {
@@ -432,48 +438,53 @@
   }
 
   function bindCapInfoClicks() {
-    roots.forEach(function (rootEl) {
-      if (rootEl.dataset.capInfoBound === '1') return;
-      rootEl.dataset.capInfoBound = '1';
-      var map = {
-        upload: rootEl.getAttribute('data-i18n-info-uploads') || 'Daily image uploads used versus your limit. Resets with the timer.',
-        design: rootEl.getAttribute('data-i18n-info-generations') || 'Daily AI generations used versus your limit. Each generate counts.',
-        publish: rootEl.getAttribute('data-i18n-info-publishes') || 'Daily product publishes used versus your limit.'
-      };
-      rootEl.querySelectorAll('.creator-daily-limits__item[data-limit]').forEach(function (item) {
-        item.setAttribute('role', 'button');
-        item.setAttribute('tabindex', '0');
-        function show() {
-          var key = item.getAttribute('data-limit');
-          showCreatorCapInfoToast(map[key] || '');
-        }
-        item.addEventListener('click', show);
-        item.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            show();
-          }
-        });
-      });
-      var timer = rootEl.querySelector('[data-limit-countdown], .creator-daily-limits__timer-wrap');
-      if (timer) {
-        timer.setAttribute('role', 'button');
-        timer.setAttribute('tabindex', '0');
-        function showTimer() {
-          showCreatorCapInfoToast(
-            rootEl.getAttribute('data-i18n-info-timer') ||
-              'Time left until daily upload, generation, and publish limits reset (00:00 UTC).'
+    if (document.documentElement.dataset.capInfoDelegated === '1') return;
+    document.documentElement.dataset.capInfoDelegated = '1';
+    function handle(e) {
+      var item = e.target && e.target.closest
+        ? e.target.closest('.creator-daily-limits__item[data-limit], [data-limit-countdown], .creator-daily-limits__timer-wrap, [data-slot]')
+        : null;
+      if (!item) return;
+      var root = item.closest('[data-creator-daily-limits], [data-creations-slots]');
+      var msg = '';
+      if (item.hasAttribute('data-slot')) {
+        var slot = item.getAttribute('data-slot');
+        msg = capInfoText(
+          (root && (slot === 'designs'
+            ? root.getAttribute('data-i18n-info-designs')
+            : root.getAttribute('data-i18n-info-products'))) ||
+            (window.CreatorI18n && window.CreatorI18n.creations &&
+              (slot === 'designs'
+                ? window.CreatorI18n.creations.slots_designs_info
+                : window.CreatorI18n.creations.slots_products_info)),
+          slot === 'designs'
+            ? 'Active designs in your library versus your Skill Tree slot cap. Level 1 slots are free; more slots unlock with EAZV. Inactive designs do not count.'
+            : 'Unlocked product types versus your Skill Tree product-slot cap. Level 1 is free; more product slots unlock with EAZV.'
+        );
+      } else if (item.getAttribute('data-limit') || item.hasAttribute('data-limit-countdown') || item.classList.contains('creator-daily-limits__timer-wrap')) {
+        var key = item.getAttribute('data-limit');
+        var map = {
+          upload: capInfoText(root && root.getAttribute('data-i18n-info-uploads'), 'Daily image uploads used versus your limit. Resets with the timer.'),
+          design: capInfoText(root && root.getAttribute('data-i18n-info-generations'), 'Daily AI generations used versus your limit. Each generate counts.'),
+          publish: capInfoText(root && root.getAttribute('data-i18n-info-publishes'), 'Daily product publishes used versus your limit.')
+        };
+        if (key && map[key]) msg = map[key];
+        else {
+          msg = capInfoText(
+            root && root.getAttribute('data-i18n-info-timer'),
+            'Time left until daily upload, generation, and publish limits reset (00:00 UTC).'
           );
         }
-        timer.addEventListener('click', showTimer);
-        timer.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            showTimer();
-          }
-        });
       }
-    });
+      if (!msg) return;
+      e.preventDefault();
+      showCreatorCapInfoToast(msg);
+    }
+    document.addEventListener('click', handle, true);
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      handle(e);
+    }, true);
   }
 
   function bindEvents() {

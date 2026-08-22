@@ -1692,23 +1692,52 @@
     if (chromeFloating && !chromeHidden) syncCreationsChromeOffsets();
   }
 
+  function setCreationsChromeFromDelta(dy, scrollTop) {
+    if (scrollTop != null && scrollTop <= 4) {
+      chromeHidden = false;
+      chromeFloating = false;
+      applyCreationsChromeState();
+      return;
+    }
+    if (dy > 0) {
+      chromeHidden = true;
+      chromeFloating = false;
+      applyCreationsChromeState();
+    } else if (dy < 0) {
+      chromeHidden = false;
+      chromeFloating = true;
+      applyCreationsChromeState();
+    }
+  }
+
   function onCreationsChromeScroll(wrap) {
     if (!wrap) return;
     var top = wrap.scrollTop || 0;
     var dy = top - lastChromeScrollTop;
     lastChromeScrollTop = top;
-    if (top <= 16) {
-      chromeHidden = false;
-      chromeFloating = false;
-    } else if (dy > 8) {
-      syncCreationsChromeOffsets();
-      chromeHidden = true;
-      chromeFloating = false;
-    } else if (dy < -8) {
-      chromeHidden = false;
-      chromeFloating = true;
-    }
-    applyCreationsChromeState();
+    setCreationsChromeFromDelta(dy, top);
+  }
+
+  function bindCreationsChromeScroll() {
+    var root = document.getElementById('creatorCreations');
+    if (!root || root.dataset.chromeScrollBound === '1') return;
+    root.dataset.chromeScrollBound = '1';
+    root.addEventListener(
+      'wheel',
+      function (e) {
+        setCreationsChromeFromDelta(e.deltaY, null);
+      },
+      { passive: true }
+    );
+    root.addEventListener(
+      'scroll',
+      function (e) {
+        var t = e.target;
+        if (!t || t === root) return;
+        onCreationsChromeScroll(t);
+      },
+      true
+    );
   }
 
   function showCreationsCapInfo(message) {
@@ -1724,17 +1753,18 @@
   }
 
   function bindCreationsSlotInfoClicks() {
+    if (document.documentElement.dataset.capInfoDelegated === '1') return;
     var root = document.querySelector('[data-creations-slots]');
     if (!root || root.dataset.slotInfoBound === '1') return;
     root.dataset.slotInfoBound = '1';
     var designsMsg =
       root.getAttribute('data-i18n-info-designs') ||
       (window.CreatorI18n && window.CreatorI18n.creations && window.CreatorI18n.creations.slots_designs_info) ||
-      'Active designs in your library versus your Skill Tree slot cap. Inactive designs do not count.';
+      'Active designs in your library versus your Skill Tree slot cap. Level 1 slots are free; more slots unlock with EAZV. Inactive designs do not count.';
     var productsMsg =
       root.getAttribute('data-i18n-info-products') ||
       (window.CreatorI18n && window.CreatorI18n.creations && window.CreatorI18n.creations.slots_products_info) ||
-      'Published product types versus your Skill Tree listing cap.';
+      'Unlocked product types versus your Skill Tree product-slot cap. Level 1 is free; more product slots unlock with EAZV.';
     function bindItem(key, msg) {
       var item = root.querySelector('[data-slot="' + key + '"]');
       if (!item) return;
@@ -4446,6 +4476,7 @@
     // Initial load when creations screen is visible on load (mobile swipe)
     fetchCreationsSlotLimits();
     bindCreationsSlotInfoClicks();
+    bindCreationsChromeScroll();
     if (viewport && viewport.classList.contains('slide-2')) {
       switchTab('designs');
     } else {

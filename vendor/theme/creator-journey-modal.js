@@ -2579,11 +2579,12 @@
       act.actionHtml + '</div></article>';
   }
 
-  function renderListingLimitSkillCarousel(channel, axis, title) {
+  function renderListingLimitSkillPanel(channel, axis, title) {
     var tiers = listingLimitTiersForChannelAxis(channel, axis);
     if (!tiers.length) return '';
-    return '<div class="cj-listing-limit-skill">' +
-      '<h4 class="cj-listing-limit-skill__title">' + escapeHtml(title) + '</h4>' +
+    return '<div class="cj-variant-panel cj-listing-limit-skill-panel" data-cj-listing-limit-panel="' +
+      escapeHtml((channel.node_key || '') + ':' + axis) + '">' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(title) + '</h4>' +
       renderCarouselShell(tiers.map(renderListingLimitCard).join('')) +
       '</div>';
   }
@@ -2600,12 +2601,12 @@
       '<div class="cj-variant-branch cj-listing-limit-branch" data-cj-listing-limit-branch="' +
       escapeHtml(channel.node_key) + '">' +
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
-      '<div class="cj-variant-panel" data-cj-listing-limit-panel="' + escapeHtml(channel.node_key) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(name) + '</h4>' +
-      renderListingLimitSkillCarousel(
+      '<div class="cj-listing-limit-skills">' +
+      '<h3 class="cj-listing-limit-channel__name">' + escapeHtml(name) + '</h3>' +
+      renderListingLimitSkillPanel(
         channel, 'daily', t('creator.journey.listing_limits_daily_title', 'Daily')
       ) +
-      renderListingLimitSkillCarousel(
+      renderListingLimitSkillPanel(
         channel, 'cap', t('creator.journey.listing_limits_cap_title', 'Cap')
       ) +
       '</div></div></section>';
@@ -3912,7 +3913,8 @@
     list.querySelectorAll('[data-cj-listing-limit-branch]').forEach(function (branch) {
       var key = branch.getAttribute('data-cj-listing-limit-branch');
       var connector = branch.querySelector(':scope > .cj-variant-connector');
-      var panel = branch.querySelector(':scope > .cj-variant-panel');
+      var panel = branch.querySelector('.cj-listing-limit-skills') ||
+        branch.querySelector('.cj-listing-limit-skill-panel');
       if (!connector || !key) return;
       var section = branch.closest('.cj-listing-limit-channel') || branch.closest('.cj-product-section') || list;
       var card = section.querySelector('.cj-listing-limit-channel__card .cj-tree-card--listing-channel') ||

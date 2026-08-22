@@ -4240,18 +4240,25 @@
   width: 100%;
 }
 
-.cj-listing-limit-skill + .cj-listing-limit-skill {
-  margin-top: 18px;
+.cj-listing-limit-skills {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
 }
 
-.cj-listing-limit-skill__title {
-  margin: 0 0 10px;
+.cj-listing-limit-channel__name {
+  margin: 0;
   font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--cj-accent);
   text-align: center;
+}
+
+.cj-listing-limit-skill-panel::before {
+  display: none;
 }
 
 .cj-tree-card.is-expanded.cj-tree-card--creation-limit-parent,
