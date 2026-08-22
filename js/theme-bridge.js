@@ -160,11 +160,23 @@
     }
     var method = String((fetchOpts.method || "GET")).toUpperCase();
     var idempotent = method === "GET" || method === "HEAD";
-    var attempts = idempotent ? 3 : 1;
+    var timeoutMs = operation === "get-creator-journey" ? 45000 : Number(global.CREATOR_API_CONFIG.TIMEOUT) || 90000;
+    var attempts = idempotent ? (operation === "get-creator-journey" ? 2 : 3) : 1;
     var lastErr = null;
     for (var attempt = 1; attempt <= attempts; attempt++) {
+      var controller = typeof AbortController === "function" ? new AbortController() : null;
+      var timeoutId = null;
+      if (controller) {
+        fetchOpts.signal = controller.signal;
+        timeoutId = setTimeout(function () {
+          try {
+            controller.abort();
+          } catch (_e) {}
+        }, timeoutMs);
+      }
       try {
         var res = await fetch(url.toString(), fetchOpts);
+        if (timeoutId) clearTimeout(timeoutId);
         var data = await res.json().catch(function () {
           return {};
         });
@@ -183,8 +195,9 @@
         }
         return data;
       } catch (e) {
+        if (timeoutId) clearTimeout(timeoutId);
         lastErr = e;
-        if (idempotent && attempt < attempts && (!e.status || e.status >= 500 || e.status === 429)) {
+        if (idempotent && attempt < attempts && (!e.status || e.status >= 500 || e.status === 429 || (e && e.name === "AbortError"))) {
           await new Promise(function (r) {
             setTimeout(r, 200 * attempt);
           });

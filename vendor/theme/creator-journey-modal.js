@@ -93,7 +93,14 @@
     var xpEl = document.getElementById('cjFloatLevelXp');
     var levelWrap = document.getElementById('cjFloatLevel');
 
-    if (treeLoad) treeLoad.hidden = !loading;
+    if (treeLoad) {
+      if (loading) {
+        treeLoad.hidden = false;
+        treeLoad.textContent = t('creator.journey.loading', 'Loading…');
+      } else if (journeyData && journeyData.ok) {
+        treeLoad.hidden = true;
+      }
+    }
     if (loading) {
       if (codeHint) codeHint.hidden = true;
       if (balanceWrap) {
@@ -662,8 +669,9 @@
     if (node.metadata && node.metadata.creation_limit_kind === 'parent') {
       return node.metadata.creation_limit_axis === 'upload' ? 'Upload' : 'Generate';
     }
-    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
-      return String(node.channel_id || '');
+    if (node.metadata && (node.metadata.listing_limit_kind === 'channel' ||
+        node.metadata.listing_limit_kind === 'axis')) {
+      return String(node.metadata.title || node.channel_id || '');
     }
     if (node.metadata && node.metadata.social_post_limit_kind === 'platform') {
       return String(node.metadata.title || node.social_platform || '');
@@ -684,16 +692,22 @@
       }
       return tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(val) });
     }
-    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
+    if (node.metadata && (node.metadata.listing_limit_kind === 'channel' ||
+        node.metadata.listing_limit_kind === 'axis')) {
+      var axis = node.metadata.listing_limit_axis || 'daily';
       var activeListing = highestUnlockedTierNode(listingLimitTierNodes(node));
-      var dailyVal = null;
+      var listingVal = null;
       if (activeListing && activeListing.metadata) {
-        dailyVal = activeListing.metadata.listings_per_day;
+        listingVal = axis === 'cap'
+          ? activeListing.metadata.listings_cap
+          : activeListing.metadata.listings_per_day;
       } else if (node.unlocked && node.channel_id === 'shopify') {
-        dailyVal = 10;
+        listingVal = axis === 'cap' ? 50 : 10;
       }
-      if (dailyVal == null || dailyVal === '') return '';
-      return tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(dailyVal) });
+      if (listingVal == null || listingVal === '') return '';
+      return axis === 'cap'
+        ? tpl('creator.journey.limit_cap_label', '{{ n }} Cap', { n: String(listingVal) })
+        : tpl('creator.journey.limit_daily_label', '{{ n }} Daily', { n: String(listingVal) });
     }
     if (node.metadata && node.metadata.social_post_limit_kind === 'platform') {
       var activeSocial = highestUnlockedTierNode(socialPostTierNodes(node));
@@ -719,7 +733,8 @@
         limitLabel: activeLimitLabelForParent(node)
       };
     }
-    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
+    if (node.metadata && (node.metadata.listing_limit_kind === 'channel' ||
+        node.metadata.listing_limit_kind === 'axis')) {
       return {
         iconSvg: listingLimitChannelIconSvg(node.channel_id),
         limitLabel: activeLimitLabelForParent(node)
@@ -758,7 +773,7 @@
   }
 
   function listingLimitCardMediaOpts(node) {
-    if (isListingLimitChannel(node)) return parentLimitMediaOpts(node);
+    if (isListingLimitChannel(node) || isListingLimitAxisParent(node)) return parentLimitMediaOpts(node);
     if (node.metadata && node.metadata.listing_limit_kind === 'tier') {
       return {
         iconSvg: listingLimitChannelIconSvg(node.channel_id)
@@ -917,9 +932,15 @@
       return (node.metadata.creation_limit_axis || 'axis') + '-tier-' +
         (node.metadata.creation_limit_tier || '');
     }
+    if (isListingLimitAxisParent(node)) {
+      return (node.metadata && node.metadata.listing_limit_axis || 'daily') + '-' +
+        (node.channel_id || 'channel');
+    }
     if (isListingLimitChannel(node)) return 'channel-' + (node.channel_id || 'channel');
     if (node.metadata && node.metadata.listing_limit_kind === 'tier') {
-      return (node.channel_id || 'channel') + '-tier-' + (node.metadata.listing_tier_level || '');
+      return (node.channel_id || 'channel') + '-' +
+        (node.metadata.listing_limit_axis || 'daily') + '-tier-' +
+        (node.metadata.listing_tier_level || '');
     }
     if (isChannelGroupNode(node)) return 'group-' + String(node.node_key || '').replace(/:/g, '-');
     if (node.channel_id) return String(node.channel_id);
@@ -998,7 +1019,7 @@
     if (isCreationLimitParent(node)) {
       return creationLimitTierNodes(node).some(function (tier) { return !tier.unlocked; });
     }
-    if (isListingLimitChannel(node)) {
+    if (isListingLimitAxisParent(node) || isListingLimitChannel(node)) {
       return !!node.unlocked && listingLimitTierNodes(node).some(function (tier) { return !tier.unlocked; });
     }
     if (isSocialPlatformNode(node)) {
@@ -1040,7 +1061,8 @@
     if (node.metadata && node.metadata.creation_limit_kind === 'parent') {
       return multiTierParentShortTitle(node);
     }
-    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
+    if (node.metadata && (node.metadata.listing_limit_kind === 'channel' ||
+        node.metadata.listing_limit_kind === 'axis')) {
       return multiTierParentShortTitle(node);
     }
     if (isDesignSlotLevelNode(node)) {
@@ -1508,7 +1530,8 @@
     var badgeHtml = '';
     var skipUnlockedBadge = node.metadata && (
       node.metadata.creation_limit_kind === 'parent' ||
-      node.metadata.listing_limit_kind === 'channel'
+      node.metadata.listing_limit_kind === 'channel' ||
+      node.metadata.listing_limit_kind === 'axis'
     );
     if (node.unlocked && !skipUnlockedBadge) {
       badgeHtml = renderUnlockedBadgeHtml(node);
@@ -2360,6 +2383,11 @@
       node.metadata && node.metadata.listing_limit_kind === 'channel';
   }
 
+  function isListingLimitAxisParent(node) {
+    return node && node.category === 'listing_limit' &&
+      node.metadata && node.metadata.listing_limit_kind === 'axis';
+  }
+
   function socialPlatformIdFromNode(node) {
     if (!node) return '';
     if (node.social_platform) return String(node.social_platform).toLowerCase();
@@ -2395,14 +2423,18 @@
     });
   }
 
-  function listingLimitTierNodes(channelNode) {
-    var ch = channelNode && channelNode.channel_id;
+  function listingLimitTierNodes(parentNode) {
+    var ch = parentNode && parentNode.channel_id;
     if (!ch) return [];
+    var axis = parentNode.metadata && parentNode.metadata.listing_limit_axis;
     var all = (journeyData && journeyData.nodes) || [];
     return all.filter(function (n) {
-      return n.category === 'listing_limit' &&
-        n.metadata && n.metadata.listing_limit_kind === 'tier' &&
-        n.channel_id === ch;
+      if (n.category !== 'listing_limit' || !n.metadata || n.metadata.listing_limit_kind !== 'tier') {
+        return false;
+      }
+      if (n.channel_id !== ch) return false;
+      if (axis && n.metadata.listing_limit_axis && n.metadata.listing_limit_axis !== axis) return false;
+      return true;
     }).sort(function (a, b) {
       return (Number(a.metadata.listing_tier_level) || 0) - (Number(b.metadata.listing_tier_level) || 0);
     });
@@ -2499,14 +2531,14 @@
   function renderListingLimitCard(node) {
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
-    var isChannel = isListingLimitChannel(node);
-    var tiers = isChannel ? listingLimitTierNodes(node) : [];
+    var isParent = isListingLimitAxisParent(node) || isListingLimitChannel(node);
+    var tiers = isParent ? listingLimitTierNodes(node) : [];
     var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
-    var expandable = isChannel && !!node.unlocked && lockedTiers.length > 0;
+    var expandable = isParent && !!node.unlocked && lockedTiers.length > 0;
     var expanded = expandable && !!expandedListingLimitKeys[node.node_key];
     var isTier = node.metadata && node.metadata.listing_limit_kind === 'tier';
     var cls = 'cj-tree-card cj-tree-card--listing-limit';
-    if (isChannel) cls += ' cj-tree-card--listing-channel';
+    if (isListingLimitChannel(node) || isListingLimitAxisParent(node)) cls += ' cj-tree-card--listing-channel';
     if (isTier) cls += ' cj-tree-card--listing-limit-tier';
     if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
@@ -2539,43 +2571,58 @@
     var tiers = listingLimitTierNodes(channelNode);
     var lockedTiers = tiers.filter(function (t) { return !t.unlocked; });
     if (!lockedTiers.length) return '';
+    var axis = channelNode.metadata && channelNode.metadata.listing_limit_axis;
+    var axisLabel = axis === 'cap'
+      ? t('creator.journey.listing_limits_cap_title', 'Cap')
+      : t('creator.journey.listing_limits_daily_title', 'Daily');
     return '<div class="cj-variant-branch cj-listing-limit-branch" data-cj-listing-limit-branch="' +
       escapeHtml(channelNode.node_key) + '">' +
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
       '<div class="cj-variant-panel" data-cj-listing-limit-panel="' + escapeHtml(channelNode.node_key) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(channelNode)) + '</h4>' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(nodeTitle(channelNode) + ' · ' + axisLabel) + '</h4>' +
       renderCarouselShell(lockedTiers.map(renderListingLimitCard).join('')) +
       '</div></div>';
   }
 
+  function renderListingLimitAxisSection(nodes, axis, title) {
+    var parents = (nodes || []).filter(function (n) {
+      return isListingLimitAxisParent(n) && n.metadata && n.metadata.listing_limit_axis === axis;
+    });
+    if (!parents.length) return '';
+    var split = splitUnlockedLocked(parents);
+    var html = '';
+    var cardsHtml = '';
+    var expandHtml = '';
+    split.unlocked.forEach(function (n) {
+      cardsHtml += renderListingLimitCard(n);
+      if (expandedListingLimitKeys[n.node_key]) {
+        expandHtml += renderListingLimitExpandPanel(n);
+      }
+    });
+    var lockedHtml = split.locked.map(renderListingLimitCard).join('');
+    html += '<section class="cj-product-section cj-listing-limit-axis">' +
+      renderSectionHead(title, '', '') +
+      (cardsHtml ? renderCarouselShell(cardsHtml) + expandHtml : '') +
+      (lockedHtml
+        ? '<div class="cj-listing-limit-available">' +
+          renderSectionHead(t('creator.journey.available_skills', 'Available'), '', '') +
+          renderCarouselShell(lockedHtml) + '</div>'
+        : '') +
+      '</section>';
+    return html;
+  }
+
   function renderListingLimitTree(nodes) {
-    var channels = (nodes || []).filter(isListingLimitChannel);
-    var split = splitUnlockedLocked(channels);
-    if (!channels.length) {
+    var dailyHtml = renderListingLimitAxisSection(
+      nodes, 'daily', t('creator.journey.listing_limits_daily_title', 'Daily')
+    );
+    var capHtml = renderListingLimitAxisSection(
+      nodes, 'cap', t('creator.journey.listing_limits_cap_title', 'Cap')
+    );
+    if (!dailyHtml && !capHtml) {
       return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
     }
-    var html = '<div class="cj-product-sections">';
-    if (split.unlocked.length) {
-      var cardsHtml = '';
-      var expandHtml = '';
-      split.unlocked.forEach(function (n) {
-        cardsHtml += renderListingLimitCard(n);
-        if (expandedListingLimitKeys[n.node_key]) {
-          expandHtml += renderListingLimitExpandPanel(n);
-        }
-      });
-      html += '<section class="cj-product-section cj-unlocked-skills">' +
-        renderSectionHead(t('creator.journey.unlocked_skills', 'Unlocked'), '', '') +
-        renderCarouselShell(cardsHtml) + expandHtml + '</section>';
-    }
-    if (split.locked.length) {
-      html += '<section class="cj-product-section">' +
-        renderSectionHead(t('creator.journey.available_skills', 'Available'), '', '') +
-        renderCarouselShell(split.locked.map(renderListingLimitCard).join('')) +
-        '</section>';
-    }
-    html += '</div>';
-    return html;
+    return '<div class="cj-product-sections">' + dailyHtml + capHtml + '</div>';
   }
 
   function renderSocialCard(node) {
@@ -5604,15 +5651,66 @@
     });
   }
 
+  function journeySessionKey(oid) {
+    return 'cj_journey_cache_v1:' + String(oid || '');
+  }
+
+  function readSessionJourney(oid) {
+    if (!oid) return null;
+    try {
+      var raw = sessionStorage.getItem(journeySessionKey(oid));
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !parsed.data || parsed.data.ok === false) return null;
+      if (Date.now() - Number(parsed.at || 0) > 10 * 60 * 1000) return null;
+      return parsed;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function writeSessionJourney(oid, data) {
+    if (!oid || !data || !data.ok) return;
+    try {
+      sessionStorage.setItem(journeySessionKey(oid), JSON.stringify({ at: Date.now(), data: data }));
+    } catch (_e) { /* quota / private mode */ }
+  }
+
+  function clearSessionJourney(oid) {
+    try {
+      if (oid) sessionStorage.removeItem(journeySessionKey(oid));
+    } catch (_e) {}
+  }
+
   function storeJourneyOnWindow(data) {
     if (!data || !data.ok) return;
     window.__EAZ_CREATOR_JOURNEY__ = data;
     window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ = Date.now();
+    var oid = ownerId();
+    if (oid) writeSessionJourney(oid, data);
   }
 
   function journeyCacheFresh() {
     return !!(journeyData && journeyData.ok && journeyFetchedAt &&
       (Date.now() - journeyFetchedAt) < JOURNEY_CACHE_TTL_MS);
+  }
+
+  function showTreeLoadError() {
+    var msg = t('creator.journey.load_error', 'Could not load journey data. Please try again.');
+    var retryLabel = t('creator.journey.retry', 'Try again');
+    var overviewLoad = document.getElementById('cjOverviewLoading');
+    if (overviewLoad && !(overviewStatsData && overviewStatsData.ok)) {
+      overviewLoad.hidden = false;
+      overviewLoad.textContent = msg;
+    }
+    var treeLoad = document.getElementById('cjTreeLoading');
+    if (treeLoad) {
+      treeLoad.hidden = false;
+      treeLoad.innerHTML =
+        '<span>' + escapeHtml(msg) + '</span> ' +
+        '<button type="button" class="cj-btn cj-btn--ghost" data-cj-retry-journey>' +
+        escapeHtml(retryLabel) + '</button>';
+    }
   }
 
   function overviewCacheFresh() {
@@ -5634,6 +5732,7 @@
     window.__EAZ_JOURNEY_LEVEL_LOAD_PROMISE__ = null;
     window.__EAZ_CREATOR_JOURNEY__ = null;
     window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ = 0;
+    clearSessionJourney(ownerId());
   }
 
   async function loadOverviewStats(opts) {
@@ -5778,6 +5877,18 @@
       storeJourneyOnWindow(journeyData);
       return journeyData;
     }
+    if (!force && !(journeyData && journeyData.ok)) {
+      var session = readSessionJourney(oid);
+      if (session && session.data && session.data.ok) {
+        journeyData = session.data;
+        journeyFetchedAt = Number(session.at) || 0;
+        window.__EAZ_CREATOR_JOURNEY__ = journeyData;
+        window.__EAZ_CREATOR_JOURNEY_FETCHED_AT__ = journeyFetchedAt;
+        renderSidebarBalance();
+        renderTree();
+        setPanelLoading(false);
+      }
+    }
     // force=true must always refetch — do not reuse an in-flight stale load
     // (size/color unlocks looked like they did nothing after Unlock).
     if (!force) {
@@ -5787,7 +5898,8 @@
       try { await journeyLoadPromise; } catch (_e) { /* continue with forced reload */ }
     }
 
-    setPanelLoading(true);
+    var hasPainted = !!(journeyData && journeyData.ok);
+    if (!hasPainted) setPanelLoading(true);
     renderSidebarBalance();
     journeyLoadPromise = (async function () {
       try {
@@ -5813,18 +5925,14 @@
           console.warn('[CreatorJourney] overview stats', e);
         });
       } catch (e) {
-        journeyData = null;
-        journeyFetchedAt = 0;
         console.warn('[CreatorJourney] journey', e);
-        var overviewLoad = document.getElementById('cjOverviewLoading');
-        if (overviewLoad) {
-          overviewLoad.hidden = false;
-          overviewLoad.textContent = t('creator.journey.load_error', 'Could not load journey data. Please try again.');
-        }
-        var treeLoad = document.getElementById('cjTreeLoading');
-        if (treeLoad) {
-          treeLoad.hidden = false;
-          treeLoad.textContent = t('creator.journey.load_error', 'Could not load journey data. Please try again.');
+        if (journeyData && journeyData.ok) {
+          setPanelLoading(false);
+          showCjToast(t('creator.journey.load_error', 'Could not load journey data. Please try again.'), true);
+        } else {
+          journeyData = null;
+          journeyFetchedAt = 0;
+          showTreeLoadError();
         }
       } finally {
         setPanelLoading(false);
@@ -6156,6 +6264,14 @@
     if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
     if (mobileDrawerOverlay) mobileDrawerOverlay.addEventListener('click', closeMobileSidebar);
     overlay.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('[data-cj-retry-journey]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        loadJourney({ force: true }).catch(function (err) {
+          console.warn('[CreatorJourney] retry', err);
+        });
+        return;
+      }
       if (e.target === overlay) close();
     });
     document.querySelectorAll('.cj-nav-item[data-cj-nav]').forEach(function (btn) {
