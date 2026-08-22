@@ -20,7 +20,9 @@ body.creator-mobile-page .creator-desktop-app {
     --creator-desktop-footer-height: 48px;
     --creator-desktop-content-gutter: 0px;
     --creator-desktop-section-gap: 12px;
-    --creator-desktop-main-pad-top: 16px;
+    /* Main is already inset by --creator-chrome-height (header + daily-limits). Extra pad here
+       created a full-width empty band between the stats strip and sidebar/stage. */
+    --creator-desktop-main-pad-top: 0px;
     --creator-desktop-sidebar-width: 272px;
     /* Aquarium band: padding to nav container; inner pad around first/last button stack */
     --creator-desktop-sidebar-aquarium-pad-y: 10px;
@@ -849,7 +851,7 @@ body.creator-mobile-page .creator-desktop-app {
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
-    padding: 8px 0 0;
+    padding: 0;
     scroll-padding-top: 12px;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;

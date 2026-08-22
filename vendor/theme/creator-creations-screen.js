@@ -216,7 +216,6 @@
   var openSortMenuTab = null;
   var viewMode = 'grid2';
   var chromeHidden = false;
-  var chromeFloating = false;
   var lastChromeScrollTop = 0;
   var designsRenderedCount = 0;
   var productsRenderedCount = 0;
@@ -1688,20 +1687,17 @@
     var root = document.getElementById('creatorCreations');
     if (!root) return;
     root.classList.toggle('is-chrome-hidden', chromeHidden);
-    root.classList.toggle('is-chrome-floating', chromeFloating && !chromeHidden);
-    if (chromeFloating && !chromeHidden) syncCreationsChromeOffsets();
+    root.classList.remove('is-chrome-floating');
   }
 
-  function setCreationsChromeFromDelta(dy, scrollTop) {
+  function setCreationsChromeFromDelta(dy) {
     if (dy > 0) {
       chromeHidden = true;
-      chromeFloating = false;
       applyCreationsChromeState();
       return;
     }
     if (dy < 0) {
       chromeHidden = false;
-      chromeFloating = !(scrollTop != null && scrollTop <= 4);
       applyCreationsChromeState();
     }
   }
@@ -1711,7 +1707,7 @@
     var top = wrap.scrollTop || 0;
     var dy = top - lastChromeScrollTop;
     lastChromeScrollTop = top;
-    setCreationsChromeFromDelta(dy, top);
+    setCreationsChromeFromDelta(dy);
   }
 
   function bindCreationsChromeScroll() {
@@ -1730,7 +1726,7 @@
     root.addEventListener(
       'wheel',
       function (e) {
-        if (e.deltaY) setCreationsChromeFromDelta(e.deltaY, null);
+        if (e.deltaY) setCreationsChromeFromDelta(e.deltaY);
       },
       { passive: true }
     );
@@ -1746,7 +1742,7 @@
       function (e) {
         var y = e.touches && e.touches[0] ? e.touches[0].clientY : null;
         if (lastTouchY != null && y != null) {
-          setCreationsChromeFromDelta(lastTouchY - y, null);
+          setCreationsChromeFromDelta(lastTouchY - y);
         }
         lastTouchY = y;
       },

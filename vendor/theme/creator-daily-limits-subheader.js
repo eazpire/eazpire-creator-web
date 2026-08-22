@@ -361,7 +361,7 @@
     var strip = document.querySelector('[data-creator-daily-limits]:not(.is-guest)');
     var stripH = strip && getComputedStyle(strip).display !== 'none' ? strip.offsetHeight : 0;
     var chromeH = headerH + stripH;
-    var contentTop = chromeH + (stripH > 0 ? 8 : 0);
+    var contentTop = chromeH;
 
     if (app) app.style.setProperty('--creator-chrome-height', chromeH + 'px');
     if (app) app.style.setProperty('--creator-content-top', contentTop + 'px');
