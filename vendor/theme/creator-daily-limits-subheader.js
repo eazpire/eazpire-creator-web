@@ -437,13 +437,32 @@
     refresh(true);
   }
 
+  function findCapInfoTarget(e) {
+    var sel =
+      '.creator-daily-limits__item[data-limit], [data-limit-countdown], .creator-daily-limits__timer-wrap, [data-slot]';
+    var t = e && e.target;
+    if (t && t.closest) {
+      var fromNode = t.closest(sel);
+      if (fromNode) return fromNode;
+    }
+    if (typeof e.clientX !== 'number' || typeof document.elementsFromPoint !== 'function') {
+      return null;
+    }
+    var stack = document.elementsFromPoint(e.clientX, e.clientY) || [];
+    for (var i = 0; i < stack.length; i++) {
+      var el = stack[i];
+      if (!el || !el.closest) continue;
+      var hit = el.closest(sel);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
   function bindCapInfoClicks() {
     if (document.documentElement.dataset.capInfoDelegated === '1') return;
     document.documentElement.dataset.capInfoDelegated = '1';
     function handle(e) {
-      var item = e.target && e.target.closest
-        ? e.target.closest('.creator-daily-limits__item[data-limit], [data-limit-countdown], .creator-daily-limits__timer-wrap, [data-slot]')
-        : null;
+      var item = findCapInfoTarget(e);
       if (!item) return;
       var root = item.closest('[data-creator-daily-limits], [data-creations-slots]');
       var msg = '';
@@ -480,7 +499,7 @@
       e.preventDefault();
       showCreatorCapInfoToast(msg);
     }
-    document.addEventListener('click', handle, true);
+    document.addEventListener('click', handle, false);
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       handle(e);
@@ -530,6 +549,7 @@
 
   function mount(opts) {
     var soft = !!(opts && opts.soft) || !!(opts && opts.detail && opts.detail.soft);
+    bindCapInfoClicks();
     if (mounted) {
       if (!soft) refresh(true);
       return;

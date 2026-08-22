@@ -18,7 +18,7 @@
   <!-- Header audio widget styles (play/pause icons + visualizer) â€” must be present at first paint -->
   <link rel="stylesheet" href="/vendor/theme/creator-audio-modal.css?v=8">
   <link rel="stylesheet" media="(min-width: 992px)" href="/vendor/theme/creator-desktop.css?v=8">
-  <link rel="stylesheet" href="/css/creator-portal.css?v=21">
+  <link rel="stylesheet" href="/css/creator-portal.css?v=22">
   <script>
     window.__CREATOR_PORTAL_HOST__ = true;
     window.__CREATOR_DASHBOARD_EMBED_PAGE = true;
@@ -35,6 +35,7 @@
 <body class="creator-mobile-page is-boot-loading" data-role="guest">
 
 <div class="creator-boot" id="creatorBoot" role="status" aria-live="polite" aria-label="Loading Eazpire Creator">
+  <div class="creator-theme-bg-layer creator-boot__bg" id="creatorBootBg" data-creator-theme-bg-layer="boot" aria-hidden="true"></div>
   <div class="creator-boot__center">
     <img class="creator-boot__logo" src="https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950" alt="" width="320" height="112" decoding="async" fetchpriority="high">
     <div class="creator-boot__bar-wrap" aria-hidden="true">
@@ -46,8 +47,74 @@
     <span class="creator-boot__status" id="creatorBootStatus">Loading Creator Hub</span>
   </div>
 </div>
+<script>
+(function () {
+  var layer = document.getElementById("creatorBootBg");
+  if (!layer) return;
+  var reduced = false;
+  try { reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+  var isMobile = false;
+  try { isMobile = window.matchMedia("(max-width: 991px)").matches; } catch (e2) {}
+  function apply(bg) {
+    if (!bg || !bg.url) return;
+    if (bg.media_type === "video" && !reduced) {
+      var existing = layer.querySelector("video.creator-theme-bg-video");
+      if (existing && existing.getAttribute("data-boot-src") === bg.url) return;
+      layer.innerHTML = "";
+      layer.classList.add("creator-theme-bg-layer--video");
+      var video = document.createElement("video");
+      video.className = "creator-theme-bg-video";
+      video.setAttribute("data-boot-src", bg.url);
+      video.muted = true;
+      video.defaultMuted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.setAttribute("autoplay", "");
+      video.setAttribute("loop", "");
+      video.preload = "auto";
+      if (bg.poster_url) video.poster = bg.poster_url;
+      video.src = bg.url;
+      layer.appendChild(video);
+      var playAttempt = video.play();
+      if (playAttempt && playAttempt.catch) playAttempt.catch(function () {});
+      return;
+    }
+    layer.style.backgroundImage = "url('" + String(bg.poster_url || bg.url).replace(/'/g, "\\'") + "')";
+    layer.classList.add("creator-theme-bg-layer--image");
+  }
+  try {
+    var cached = sessionStorage.getItem("creator_theme_bg_v1");
+    if (cached) {
+      var parsed = JSON.parse(cached);
+      if (parsed && parsed.expires > Date.now() && parsed.data && parsed.data.backgrounds) {
+        window.__CREATOR_THEME_LAST_PAYLOAD__ = parsed.data;
+        apply(isMobile ? parsed.data.backgrounds.mobile : parsed.data.backgrounds.desktop);
+      }
+    }
+  } catch (e3) {}
+  var defaults = window.__CREATOR_THEME_DEFAULTS__ || {};
+  if (!layer.querySelector("video") && !layer.style.backgroundImage) {
+    apply(isMobile ? defaults.mobile : defaults.desktop);
+  }
+  fetch("https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=get-creator-area-backgrounds", { credentials: "omit", cache: "default" })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (!data || !data.ok || !data.backgrounds) return;
+      window.__CREATOR_THEME_LAST_PAYLOAD__ = data;
+      try {
+        sessionStorage.setItem("creator_theme_bg_v1", JSON.stringify({ expires: Date.now() + 120000, data: data }));
+      } catch (e4) {}
+      apply(isMobile ? data.backgrounds.mobile : data.backgrounds.desktop);
+    })
+    .catch(function () {});
+})();
+</script>
 
-<div id="creatorPortalApp" hidden>
+<div id="creatorPortalApp" hidden aria-hidden="true">
   <div id="creatorPortalShell"></div>
 
   <div class="creator-login-bg" id="creatorLoginModal" aria-hidden="true">
@@ -84,13 +151,13 @@
 <script src="/js/api.js?v=8" defer></script>
 <script src="/js/theme-bridge.js?v=7" defer></script>
 <script src="/js/auth.js?v=8" defer></script>
-<script src="/js/shell-loader.js?v=13" defer></script>
+<script src="/js/shell-loader.js?v=14" defer></script>
 <script src="/js/dashboard-chrome.js?v=1" defer></script>
 <script src="/js/router.js?v=8" defer></script>
 <script src="/js/feature-loader.js?v=listing-limits-split-20260822" defer></script>
 <script src="/js/eazy-loader.js?v=10" defer></script>
 <script src="/js/dashboard.js?v=7" defer></script>
-<script src="/js/app.js?v=14" defer></script>
+<script src="/js/app.js?v=15" defer></script>
 <link rel="stylesheet" href="/js/eaz-admin-cursor-agent.css" id="eaz-ca-shell-css">
 <script>
   window.__EAZ_CURSOR_AGENT__ = {

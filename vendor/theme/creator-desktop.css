@@ -3457,6 +3457,11 @@ body.creator-video-motion-info-modal-open {
   overflow: hidden;
 }
 
+.creator-desktop-creations-host .creator-creations.is-chrome-hidden .creator-creations-tabs,
+.creator-desktop-creations-host .creator-creations.is-chrome-hidden .creator-creations-toolbar {
+  display: none !important;
+}
+
 .creator-desktop-creations-host .creator-creations-tabs {
   border-radius: 12px 12px 0 0;
   overflow: visible;

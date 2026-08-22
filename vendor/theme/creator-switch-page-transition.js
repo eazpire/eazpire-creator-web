@@ -1,8 +1,7 @@
 /**
- * Creator switch transition (DOM-freeze overlay):
- * - iframe preloading is blocked by storefront headers (X-Frame-Options/CSP frame-ancestors)
- * - html2canvas can fail on modern CSS color() values
- * - use a cloned DOM overlay that visually matches the current page, then dissolve it
+ * Creator switch navigation:
+ * - Shop → Creator: skip dissolve wipe; show Creator boot overlay + theme video, then navigate
+ * - Creator → Shop: cloned DOM / html2canvas snapshot dissolve (iframe preload blocked by CSP)
  */
 (function () {
   'use strict';
@@ -10,11 +9,13 @@
   var ACTIVE_KEY = '__creatorSwitchTransitionActive';
   var PARTICLES_CANVAS_ID = 'creator-switch-live-particles-canvas';
   var DOM_OVERLAY_ID = 'creator-switch-live-dom-overlay';
+  var BOOT_OVERLAY_ID = 'creator-switch-boot-overlay';
+  var BOOT_STYLE_ID = 'creator-switch-boot-overlay-style';
+  var THEME_BG_CACHE_KEY = 'creator_theme_bg_v1';
+  var CREATOR_BOOT_LOGO =
+    'https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950';
   var DURATION_DESKTOP_MS = 2400;
   var DURATION_MOBILE_MS = 1500;
-  /** Shop → Creator: shorter — portal still has its own boot. */
-  var DURATION_TO_CREATOR_DESKTOP_MS = 1100;
-  var DURATION_TO_CREATOR_MOBILE_MS = 800;
   /** Shop → Creator: wait for handoff URL before navigating (avoids landing logged out). */
   var NAV_FALLBACK_MS = 5200;
   var NAV_FALLBACK_TO_CREATOR_MS = 12000;
@@ -379,8 +380,173 @@
   }
 
   function transitionAnimEnabled(mode) {
-    if (mode === 'to-creator') return eazAnim('shop', 'creator_switch_transition');
     if (mode === 'to-shop') return eazAnim('creator', 'switch_page_transition');
+    return true;
+  }
+
+  function prefersReducedMotion() {
+    try {
+      return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function isCreatorMobileViewport() {
+    try {
+      return !!(window.matchMedia && window.matchMedia('(max-width: 991px)').matches);
+    } catch (_e2) {
+      return (window.innerWidth || 0) < 992;
+    }
+  }
+
+  function themeBgApiUrl() {
+    if (window.CREATOR_API_CONFIG && typeof window.CREATOR_API_CONFIG.getDispatchUrl === 'function') {
+      try {
+        var u = new URL(window.CREATOR_API_CONFIG.getDispatchUrl(), window.location.origin);
+        u.searchParams.set('op', 'get-creator-area-backgrounds');
+        return u.toString();
+      } catch (_e3) {}
+    }
+    return 'https://creator-engine.eazpire.workers.dev/apps/creator-dispatch?op=get-creator-area-backgrounds';
+  }
+
+  function pickThemeBg(payload) {
+    var bgs = (payload && payload.backgrounds) || {};
+    var slot = isCreatorMobileViewport() ? bgs.mobile : bgs.desktop;
+    if (slot && slot.url) return slot;
+    return isCreatorMobileViewport() ? bgs.desktop : bgs.mobile;
+  }
+
+  function readCachedThemeBg() {
+    try {
+      var raw = sessionStorage.getItem(THEME_BG_CACHE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.expires > Date.now() && parsed.data) return parsed.data;
+    } catch (_e4) {}
+    return null;
+  }
+
+  function writeCachedThemeBg(data) {
+    try {
+      sessionStorage.setItem(THEME_BG_CACHE_KEY, JSON.stringify({ expires: Date.now() + 120000, data: data }));
+    } catch (_e5) {}
+  }
+
+  function applyThemeMediaToLayer(layer, bg) {
+    if (!layer || !bg || !bg.url) return;
+    var useVideo = bg.media_type === 'video' && !prefersReducedMotion();
+    if (useVideo) {
+      var existing = layer.querySelector('video.creator-theme-bg-video');
+      if (existing && existing.getAttribute('data-boot-src') === bg.url) {
+        try { existing.play().catch(function () {}); } catch (_e6) {}
+        return;
+      }
+      layer.innerHTML = '';
+      layer.classList.add('creator-theme-bg-layer--video');
+      layer.style.backgroundImage = '';
+      var video = document.createElement('video');
+      video.className = 'creator-theme-bg-video';
+      video.setAttribute('data-boot-src', bg.url);
+      video.muted = true;
+      video.defaultMuted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.setAttribute('autoplay', '');
+      video.setAttribute('loop', '');
+      video.preload = 'auto';
+      if (bg.poster_url) video.poster = bg.poster_url;
+      video.src = bg.url;
+      layer.appendChild(video);
+      var playAttempt = video.play();
+      if (playAttempt && typeof playAttempt.catch === 'function') {
+        playAttempt.catch(function () {});
+      }
+      return;
+    }
+    layer.innerHTML = '';
+    layer.classList.remove('creator-theme-bg-layer--video');
+    layer.classList.add('creator-theme-bg-layer--image');
+    layer.style.backgroundImage =
+      "url('" + String(bg.poster_url || bg.url).replace(/'/g, "\\'") + "')";
+  }
+
+  function ensureCreatorBootOverlay() {
+    var existing = document.getElementById(BOOT_OVERLAY_ID);
+    if (existing) return existing;
+
+    if (!document.getElementById(BOOT_STYLE_ID)) {
+      var style = document.createElement('style');
+      style.id = BOOT_STYLE_ID;
+      style.textContent =
+        '#' + BOOT_OVERLAY_ID + '{position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:24px;margin:0;background:#030508;pointer-events:auto;}' +
+        '#' + BOOT_OVERLAY_ID + ' .creator-switch-boot__bg{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:#030508;background-size:cover;background-position:center;}' +
+        '#' + BOOT_OVERLAY_ID + ' .creator-switch-boot__bg::after{content:"";position:absolute;inset:0;background:rgba(3,5,8,.42);}' +
+        '#' + BOOT_OVERLAY_ID + ' .creator-switch-boot__bg video{width:100%;height:100%;object-fit:cover;display:block;}' +
+        '#' + BOOT_OVERLAY_ID + ' .creator-boot__center{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:28px;width:min(360px,100%);text-align:center;}' +
+        '#' + BOOT_OVERLAY_ID + ' .creator-boot__logo{max-width:min(240px,72vw);height:auto;margin:0 auto;display:block;animation:creatorSwitchBootLogo 2.4s ease-in-out infinite;}' +
+        '#' + BOOT_OVERLAY_ID + ' .creator-boot__bar-wrap{width:min(280px,78vw);}' +
+        '#' + BOOT_OVERLAY_ID + ' .creator-boot__bar{position:relative;height:6px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.06);box-shadow:inset 0 0 12px rgba(0,0,0,.55),0 0 24px rgba(124,92,255,.12);}' +
+        '#' + BOOT_OVERLAY_ID + ' .creator-boot__bar-fill{position:absolute;inset:0 auto 0 0;width:38%;border-radius:inherit;background:linear-gradient(90deg,rgba(56,189,248,.15) 0%,#7c3aed 18%,#c026d3 42%,#f97316 68%,#fde68a 100%);box-shadow:0 0 18px rgba(192,38,211,.55),0 0 32px rgba(124,58,237,.35);animation:creatorSwitchBootBar 2.1s ease-in-out infinite;}' +
+        '@keyframes creatorSwitchBootLogo{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.04);opacity:1}}' +
+        '@keyframes creatorSwitchBootBar{0%{transform:translateX(-105%);width:42%}50%{transform:translateX(85%);width:52%}100%{transform:translateX(260%);width:42%}}' +
+        '@media (prefers-reduced-motion:reduce){#' + BOOT_OVERLAY_ID + ' .creator-boot__logo,#' + BOOT_OVERLAY_ID + ' .creator-boot__bar-fill{animation:none}#' + BOOT_OVERLAY_ID + ' .creator-switch-boot__bg video{display:none}}';
+      document.head.appendChild(style);
+    }
+
+    var overlay = document.createElement('div');
+    overlay.id = BOOT_OVERLAY_ID;
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.setAttribute('aria-label', 'Loading Eazpire Creator');
+    overlay.innerHTML =
+      '<div class="creator-switch-boot__bg" data-creator-switch-boot-bg="true" aria-hidden="true"></div>' +
+      '<div class="creator-boot__center">' +
+      '<img class="creator-boot__logo" src="' + CREATOR_BOOT_LOGO + '" alt="" width="320" height="112" decoding="async" fetchpriority="high">' +
+      '<div class="creator-boot__bar-wrap" aria-hidden="true"><div class="creator-boot__bar"><div class="creator-boot__bar-fill"></div></div></div>' +
+      '</div>';
+    document.documentElement.appendChild(overlay);
+    return overlay;
+  }
+
+  function startCreatorBootOverlayMedia() {
+    var overlay = document.getElementById(BOOT_OVERLAY_ID);
+    if (!overlay) return;
+    var layer = overlay.querySelector('[data-creator-switch-boot-bg]');
+    if (!layer) return;
+
+    var cached = readCachedThemeBg();
+    if (cached) applyThemeMediaToLayer(layer, pickThemeBg(cached));
+
+    fetch(themeBgApiUrl(), { credentials: 'omit', cache: 'default' })
+      .then(function (res) { return res.json().catch(function () { return {}; }); })
+      .then(function (data) {
+        if (!data || !data.ok) return;
+        writeCachedThemeBg(data);
+        var still = document.getElementById(BOOT_OVERLAY_ID);
+        var nextLayer = still && still.querySelector('[data-creator-switch-boot-bg]');
+        if (nextLayer) applyThemeMediaToLayer(nextLayer, pickThemeBg(data));
+      })
+      .catch(function () {});
+  }
+
+  function startCreatorBootHandoff(targetUrl) {
+    if (window[ACTIVE_KEY]) return true;
+    window[ACTIVE_KEY] = true;
+    try {
+      ensureCreatorBootOverlay();
+      startCreatorBootOverlayMedia();
+    } catch (_overlayErr) {}
+    var finishNavigate = navigateWhenReady(targetUrl, NAV_FALLBACK_TO_CREATOR_MS);
+    setTimeout(function () {
+      if (window[ACTIVE_KEY]) finishNavigate();
+    }, NAV_FALLBACK_TO_CREATOR_MS);
+    finishNavigate();
     return true;
   }
 
@@ -426,6 +592,10 @@
 
   function startTransition(targetUrl, mode) {
     if (!targetUrl) return false;
+    // Shop → Creator: skip dissolve wipe; show Creator boot + theme video immediately.
+    if (mode === 'to-creator') {
+      return startCreatorBootHandoff(targetUrl);
+    }
     if (!transitionAnimEnabled(mode)) {
       resolveTargetUrl(targetUrl).then(function (url) {
         try {
@@ -439,13 +609,11 @@
     if (window[ACTIVE_KEY]) return true;
     window[ACTIVE_KEY] = true;
 
-    var direction = mode === 'to-creator' ? 'ltr' : 'rtl';
+    var direction = 'rtl';
     var isLikelyMobile = Math.min(window.innerWidth || 0, window.innerHeight || 0) < 900 ||
       ((navigator.maxTouchPoints || 0) > 0 && (window.innerWidth || 0) < 1200);
-    var durationMs = mode === 'to-creator'
-      ? (isLikelyMobile ? DURATION_TO_CREATOR_MOBILE_MS : DURATION_TO_CREATOR_DESKTOP_MS)
-      : (isLikelyMobile ? DURATION_MOBILE_MS : DURATION_DESKTOP_MS);
-    var finishNavigate = navigateWhenReady(targetUrl, mode === 'to-creator' ? NAV_FALLBACK_TO_CREATOR_MS : NAV_FALLBACK_MS);
+    var durationMs = isLikelyMobile ? DURATION_MOBILE_MS : DURATION_DESKTOP_MS;
+    var finishNavigate = navigateWhenReady(targetUrl, NAV_FALLBACK_MS);
     var navigated = false;
 
     function goToTarget() {
@@ -459,7 +627,7 @@
       if (window[ACTIVE_KEY]) {
         goToTarget();
       }
-    }, mode === 'to-creator' ? NAV_FALLBACK_TO_CREATOR_MS : NAV_FALLBACK_MS);
+    }, NAV_FALLBACK_MS);
 
     try {
       if (isLikelyMobile) {

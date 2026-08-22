@@ -9,7 +9,7 @@
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for footer EAZV -> Creator Settings (EAZ tab) fix (never falls back to sales modal).
-  var RUNTIME_V = "18-chrome-boot-20260720c";
+  var RUNTIME_V = "19-boot-theme-bg-20260822";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 
@@ -161,6 +161,16 @@
 
     applyShellChrome(host);
     host.dataset.loaded = "1";
+    var app = document.getElementById("creatorPortalApp");
+    if (app) {
+      app.hidden = false;
+      app.setAttribute("aria-hidden", "true");
+    }
+    loadScript("/vendor/theme/creator-theme-background.js").then(function () {
+      if (global.__CreatorThemeBackground && typeof global.__CreatorThemeBackground.loadAndApply === "function") {
+        return global.__CreatorThemeBackground.loadAndApply();
+      }
+    }).catch(function () {});
   }
 
   /** Fill generator / creations / marketing / automations after first paint. */

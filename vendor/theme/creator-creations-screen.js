@@ -1693,19 +1693,15 @@
   }
 
   function setCreationsChromeFromDelta(dy, scrollTop) {
-    if (scrollTop != null && scrollTop <= 4) {
-      chromeHidden = false;
-      chromeFloating = false;
-      applyCreationsChromeState();
-      return;
-    }
     if (dy > 0) {
       chromeHidden = true;
       chromeFloating = false;
       applyCreationsChromeState();
-    } else if (dy < 0) {
+      return;
+    }
+    if (dy < 0) {
       chromeHidden = false;
-      chromeFloating = true;
+      chromeFloating = !(scrollTop != null && scrollTop <= 4);
       applyCreationsChromeState();
     }
   }
@@ -1720,20 +1716,48 @@
 
   function bindCreationsChromeScroll() {
     var root = document.getElementById('creatorCreations');
-    if (!root || root.dataset.chromeScrollBound === '1') return;
+    if (!root) {
+      if (!bindCreationsChromeScroll._tries) bindCreationsChromeScroll._tries = 0;
+      if (bindCreationsChromeScroll._tries < 40) {
+        bindCreationsChromeScroll._tries += 1;
+        setTimeout(bindCreationsChromeScroll, 250);
+      }
+      return;
+    }
+    if (root.dataset.chromeScrollBound === '1') return;
     root.dataset.chromeScrollBound = '1';
+    var lastTouchY = null;
     root.addEventListener(
       'wheel',
       function (e) {
-        setCreationsChromeFromDelta(e.deltaY, null);
+        if (e.deltaY) setCreationsChromeFromDelta(e.deltaY, null);
       },
       { passive: true }
     );
     root.addEventListener(
+      'touchstart',
+      function (e) {
+        lastTouchY = e.touches && e.touches[0] ? e.touches[0].clientY : null;
+      },
+      { passive: true }
+    );
+    root.addEventListener(
+      'touchmove',
+      function (e) {
+        var y = e.touches && e.touches[0] ? e.touches[0].clientY : null;
+        if (lastTouchY != null && y != null) {
+          setCreationsChromeFromDelta(lastTouchY - y, null);
+        }
+        lastTouchY = y;
+      },
+      { passive: true }
+    );
+    document.addEventListener(
       'scroll',
       function (e) {
         var t = e.target;
-        if (!t || t === root) return;
+        if (!t || t === document || t === document.documentElement || t === document.body) return;
+        if (!root.contains(t)) return;
         onCreationsChromeScroll(t);
       },
       true
@@ -1753,7 +1777,6 @@
   }
 
   function bindCreationsSlotInfoClicks() {
-    if (document.documentElement.dataset.capInfoDelegated === '1') return;
     var root = document.querySelector('[data-creations-slots]');
     if (!root || root.dataset.slotInfoBound === '1') return;
     root.dataset.slotInfoBound = '1';
@@ -1768,14 +1791,18 @@
     function bindItem(key, msg) {
       var item = root.querySelector('[data-slot="' + key + '"]');
       if (!item) return;
-      function show() {
+      function show(e) {
+        if (e) {
+          e.preventDefault();
+          if (e.stopPropagation) e.stopPropagation();
+        }
         showCreationsCapInfo(msg);
       }
       item.addEventListener('click', show);
       item.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          show();
+          show(e);
         }
       });
     }

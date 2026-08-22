@@ -314,7 +314,8 @@
     }
 
     var existing = layer.querySelector("video.creator-theme-bg-video");
-    if (existing && existing.__creatorBgSrc === url) {
+    if (existing && (existing.__creatorBgSrc === url || existing.getAttribute("data-boot-src") === url)) {
+      existing.__creatorBgSrc = url;
       layer.classList.remove("creator-theme-bg-layer--image");
       layer.classList.add("creator-theme-bg-layer--video");
       layer.style.backgroundImage = "";
@@ -384,17 +385,41 @@
     }
   }
 
+  function applyBootOverlay(bg) {
+    var boot = document.getElementById("creatorBoot");
+    var layer = document.getElementById("creatorBootBg") || (boot ? ensureMediaLayer(boot, "boot") : null);
+    if (!layer) return;
+    if (bg.media_type === "video" && bg.url) {
+      applyVideoLayer(layer, bg.url, bg.poster_url);
+      return;
+    }
+    applyImageLayer(layer, (bg && (bg.poster_url || bg.url)) || "");
+  }
+
+  function stopBootOverlay() {
+    var layer = document.getElementById("creatorBootBg");
+    if (layer) clearLayer(layer);
+  }
+
   function applyAll(payload) {
     var bgs = (payload && payload.backgrounds) || {};
     var mobile = resolveBg(bgs.mobile, "mobile");
     var desktop = resolveBg(bgs.desktop, "desktop");
+    var active = MOBILE_QUERY.matches ? mobile : desktop;
     var key = JSON.stringify({ mobile: mobile, desktop: desktop });
     if (key === appliedKey) {
       resumeAllThemeBgVideos();
+      applyBootOverlay(active);
+      if (MOBILE_QUERY.matches) {
+        applyMobile(mobile);
+      } else {
+        applyDesktop(desktop);
+      }
       return;
     }
     appliedKey = key;
 
+    applyBootOverlay(active);
     if (MOBILE_QUERY.matches) {
       applyMobile(mobile);
     } else {
@@ -434,6 +459,8 @@
 
   function hasShellTargets() {
     return (
+      !!document.getElementById("creatorBootBg") ||
+      !!document.getElementById("creatorBoot") ||
       !!document.querySelector(".creator-mobile-app") ||
       !!document.getElementById("creatorDesktopApp") ||
       !!document.getElementById("creatorDesktopHero")
@@ -550,5 +577,6 @@
   window.__CreatorThemeBackground = {
     resumeAllThemeBgVideos: resumeAllThemeBgVideos,
     loadAndApply: loadAndApply,
+    stopBootOverlay: stopBootOverlay,
   };
 })();

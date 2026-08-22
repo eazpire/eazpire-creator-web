@@ -56,8 +56,33 @@
     var boot = document.getElementById("creatorBoot");
     var app = document.getElementById("creatorPortalApp");
     document.body.classList.remove("is-boot-loading");
-    if (boot) boot.hidden = true;
-    if (app) app.hidden = false;
+    if (app) {
+      app.hidden = false;
+      app.removeAttribute("aria-hidden");
+    }
+    function hideBoot() {
+      if (boot) boot.hidden = true;
+      if (
+        global.__CreatorThemeBackground &&
+        typeof global.__CreatorThemeBackground.stopBootOverlay === "function"
+      ) {
+        global.__CreatorThemeBackground.stopBootOverlay();
+      }
+    }
+    if (boot && !prefersReducedMotion()) {
+      boot.classList.add("is-leaving");
+      setTimeout(hideBoot, 280);
+    } else {
+      hideBoot();
+    }
+  }
+
+  function prefersReducedMotion() {
+    try {
+      return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch (e) {
+      return false;
+    }
   }
 
   function tickBootProgress(ts) {
