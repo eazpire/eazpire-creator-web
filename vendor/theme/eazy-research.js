@@ -1,9 +1,13 @@
 /**
- * eazy Research creator page — reprint-safe Amazon.de demand signals.
- * Reviews / BSR only. Never invents unit sales.
+ * eazy Research creator page — reprint-safe demand signals.
+ * Reviews / rating only in the product modal. Never invents unit sales.
  */
 (function (global) {
   "use strict";
+
+  var WATCH_KEY = "eazy-research-watched";
+  var HEART_SVG =
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
 
   var state = {
     products: [],
@@ -16,6 +20,7 @@
     reprintOk: true,
     view: "opportunities",
     loading: false,
+    watched: [],
   };
 
   function t(key, fallback) {
@@ -84,6 +89,47 @@
     return "https://www.amazon.de/dp/" + encodeURIComponent(asin);
   }
 
+  function loadWatched() {
+    try {
+      var raw = global.localStorage && global.localStorage.getItem(WATCH_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(arr)) return [];
+      return arr.map(function (x) { return String(x || "").trim(); }).filter(Boolean);
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  function saveWatched(asins) {
+    state.watched = asins.slice();
+    try {
+      if (global.localStorage) global.localStorage.setItem(WATCH_KEY, JSON.stringify(asins));
+    } catch (_e) { /* guest storage may be blocked */ }
+  }
+
+  function isWatched(asin) {
+    return state.watched.indexOf(String(asin)) !== -1;
+  }
+
+  function toggleWatch(asin) {
+    if (!asin) return;
+    var id = String(asin);
+    var next = state.watched.filter(function (x) { return x !== id; });
+    if (next.length === state.watched.length) next.push(id);
+    saveWatched(next);
+  }
+
+  function formatWindow(win) {
+    var m = String(win || "").trim().match(/^(\d+)\s*d$/i);
+    if (m) return t("creator.research.window_days", "{n} days").replace("{n}", m[1]);
+    return String(win || "").trim();
+  }
+
+  function subNicheOf(p) {
+    if (!p) return "";
+    return p.sub_niche || p.sub_niche_key || p.subniche || "";
+  }
+
   function goGenerator() {
     if (global.CreatorDesktopShell && typeof global.CreatorDesktopShell.switchScreen === "function") {
       global.CreatorDesktopShell.switchScreen("generator");
@@ -105,7 +151,7 @@
 
   function filterClient(rows) {
     var out = rows.slice();
-    if (state.reprintOk) out = out.filter(function (p) { return p.reprint_ok === true || Number(p.reprint_ok) === 1; });
+    out = out.filter(function (p) { return p.reprint_ok === true || Number(p.reprint_ok) === 1; });
     if (state.niche && state.niche !== "all") out = out.filter(function (p) { return p.niche_key === state.niche; });
     var q = String(state.q || "").trim().toLowerCase();
     if (q) {
@@ -115,7 +161,9 @@
     }
     if (state.view === "rising") out = out.filter(function (p) { return p.trend === "rising" || (p.rising_score || 0) > 0; });
     if (state.view === "review_growth") out = out.filter(function (p) { return p.review_delta != null && p.review_delta > 0; });
-    if (state.view === "watched") return [];
+    if (state.view === "watched") {
+      out = out.filter(function (p) { return isWatched(p.asin); });
+    }
     var sort = state.sort;
     out.sort(function (a, b) {
       if (state.view === "rising" || sort === "rising") return (b.rising_score || 0) - (a.rising_score || 0);
@@ -148,15 +196,20 @@
     var deltaHtml = delta
       ? '<span class="eazy-research-card__delta is-' + esc(p.trend || "unknown") + '">' +
         esc(delta) + " " + t("creator.research.reviews", "reviews") +
-        (p.review_delta_window ? " / " + esc(p.review_delta_window) : "") +
+        (p.review_delta_window ? " / " + esc(formatWindow(p.review_delta_window)) : "") +
         "</span>"
       : "";
+    var watched = isWatched(p.asin);
+    var watchLabel = watched
+      ? t("creator.research.watch_remove", "Remove from watchlist")
+      : t("creator.research.watch_add", "Add to watchlist");
     return (
       '<article class="eazy-research-card" data-asin="' + esc(p.asin) + '">' +
+        '<button type="button" class="eazy-research-card__watch' + (watched ? " is-on" : "") +
+          '" data-erz-watch="' + esc(p.asin) + '" aria-pressed="' + (watched ? "true" : "false") +
+          '" aria-label="' + esc(watchLabel) + '">' + HEART_SVG + "</button>" +
         '<button type="button" class="eazy-research-card__hit" data-erz-open="' + esc(p.asin) + '">' +
-          '<div class="eazy-research-card__media">' + img +
-            (p.reprint_ok ? '<span class="eazy-research-card__safe">' + esc(t("creator.research.reprint_ok", "Reprint-safe")) + "</span>" : "") +
-          "</div>" +
+          '<div class="eazy-research-card__media">' + img + "</div>" +
           '<div class="eazy-research-card__body">' +
             "<h3>" + esc(p.title || p.asin) + "</h3>" +
             '<div class="eazy-research-card__metrics">' +
@@ -167,17 +220,18 @@
               "<span>" + esc(bsr) + "</span>" +
               "<span>" + esc(fmtPrice(p)) + "</span>" +
             "</div>" +
-            '<div class="eazy-research-card__tags">' +
-              (p.niche_key ? "<span>" + esc(nicheLabel(p.niche_key)) + "</span>" : "") +
-              "<span>DE</span>" +
-            "</div>" +
+            (p.niche_key
+              ? '<div class="eazy-research-card__tags"><span>' + esc(nicheLabel(p.niche_key)) + "</span></div>"
+              : "") +
           "</div>" +
         "</button>" +
         '<details class="eazy-research-card__menu">' +
           "<summary aria-label=\"" + esc(t("creator.research.menu", "Product actions")) + "\">⋯</summary>" +
           '<div class="eazy-research-card__menu-list">' +
             '<a href="' + esc(amazonUrl(p.asin)) + '" target="_blank" rel="noopener noreferrer">' + esc(t("creator.research.open_source", "Open on Amazon.de")) + "</a>" +
-            '<button type="button" data-erz-watch disabled>' + esc(t("creator.research.watch", "Watch")) + " · " + esc(t("creator.research.coming_soon", "Coming soon")) + "</button>" +
+            '<button type="button" data-erz-watch="' + esc(p.asin) + '">' +
+              esc(watched ? t("creator.research.watch_remove", "Remove from watchlist") : t("creator.research.watch", "Watch")) +
+            "</button>" +
             '<button type="button" data-erz-gen>' + esc(t("creator.research.send_generator", "Send to Generator")) + "</button>" +
           "</div>" +
         "</details>" +
@@ -214,7 +268,7 @@
       if (empty) {
         empty.hidden = false;
         empty.textContent = state.view === "watched"
-          ? t("creator.research.empty_watched", "Watchlists are coming next. Browse Opportunities to find products worth tracking.")
+          ? t("creator.research.empty_watched", "No watched products yet. Tap the heart on a product to start tracking it.")
           : (state.q || (state.niche && state.niche !== "all"))
             ? t("creator.research.empty_search", "No reprint-safe products match this search. Try a broader niche such as Coffee or Hiking.")
             : t("creator.research.empty_action", "Pick a niche above or type a search to explore reprint-safe products.");
@@ -234,7 +288,7 @@
       var count = state.products.length;
       var ago = state.lastRun && state.lastRun.collected_at ? timeAgo(state.lastRun.collected_at) : "";
       status.textContent = t("creator.research.collector_ok", "Collector · preview") +
-        " · " + count + " " + t("creator.research.reprint_ok", "Reprint-safe") +
+        " · " + count +
         (ago ? " · " + ago : "");
       return;
     }
@@ -256,65 +310,74 @@
     });
   }
 
+  function statRow(label, value) {
+    return (
+      '<div class="eazy-research-modal__stat">' +
+        '<span class="eazy-research-modal__stat-label">' + esc(label) + "</span>" +
+        '<span class="eazy-research-modal__stat-value">' + esc(value) + "</span>" +
+      "</div>"
+    );
+  }
+
+  function detailHtml(p) {
+    var reviews = p.latest && p.latest.reviews_count != null ? String(p.latest.reviews_count) : "—";
+    var rating = p.latest && p.latest.rating != null && isFinite(Number(p.latest.rating))
+      ? stars(p.latest.rating)
+      : "—";
+    var delta = fmtDelta(p.review_delta);
+    var windowLabel = formatWindow(p.review_delta_window || "7d");
+    var deltaRow = delta
+      ? statRow(
+          t("creator.research.reviews_last_window", "Reviews last {window}").replace("{window}", windowLabel),
+          delta
+        )
+      : "";
+    var niche = p.niche_key ? nicheLabel(p.niche_key) : "";
+    var sub = subNicheOf(p);
+    var nicheLine = [niche, sub].filter(Boolean).join(" · ");
+    return (
+      (p.image_url ? '<img src="' + esc(p.image_url) + '" alt="">' : "") +
+      '<h3 id="eazy-research-modal-title">' + esc(p.title || p.asin) + "</h3>" +
+      (nicheLine ? '<p class="eazy-research__meta">' + esc(nicheLine) + "</p>" : "") +
+      '<div class="eazy-research-modal__stats">' +
+        statRow(t("creator.research.reviews_total", "Reviews total"), reviews) +
+        deltaRow +
+        statRow(t("creator.research.rating_avg", "Average rating"), rating) +
+      "</div>"
+    );
+  }
+
   async function openDetail(root, asin) {
-    var drawer = root.querySelector("[data-erz-drawer]");
-    var box = drawer && drawer.querySelector("[data-erz-detail]");
-    if (!drawer || !box) return;
-    drawer.hidden = false;
+    var modal = root.querySelector("[data-erz-modal]");
+    var box = modal && modal.querySelector("[data-erz-detail]");
+    if (!modal || !box) return;
+    modal.hidden = false;
     box.innerHTML = "<p>" + esc(t("creator.research.loading", "Loading...")) + "</p>";
+    var local = (state.products || []).find(function (x) { return x.asin === asin; }) || null;
     var data = await api("eazy-research-product", { asin: asin }).catch(function () { return null; });
-    var p = data && data.product;
+    var p = (data && data.product) || local;
     if (!p) {
       box.innerHTML = "<p>" + esc(t("creator.research.not_found", "Product not found.")) + "</p>";
       return;
     }
-    var hist = (p.observations || data.snapshots || []).map(function (o) {
-      var when = o.collected_at || o.captured_at;
-      var day = when ? new Date(Number(when) || when).toISOString().slice(0, 10) : "";
-      return "<li>" + esc(day) +
-        " · " + t("creator.research.reviews", "reviews") + " " + (o.reviews_count == null ? "—" : o.reviews_count) +
-        " · BSR " + (o.bsr == null ? "—" : Number(o.bsr).toLocaleString("de-DE")) + "</li>";
-    }).join("");
-    var captured = p.latest && p.latest.captured_at;
-    var confidence = state.preview
-      ? t("creator.research.confidence_preview", "Preview catalog — not live Amazon snapshots yet")
-      : t("creator.research.confidence", "Based on last snapshot {time}").replace("{time}", timeAgo(captured) || "—");
-    box.innerHTML =
-      (p.image_url ? '<img src="' + esc(p.image_url) + '" alt="">' : "") +
-      "<h3>" + esc(p.title || p.asin) + "</h3>" +
-      '<p class="eazy-research__meta">' + esc(p.asin) + " · " +
-        (p.reprint_ok ? t("creator.research.reprint_ok", "Reprint-safe") : t("creator.research.blocked", "Hidden from ranking")) +
-        (p.niche_key ? " · " + esc(nicheLabel(p.niche_key)) : "") +
-      "</p>" +
-      '<p class="eazy-research-drawer__metrics">' +
-        esc(stars(p.latest && p.latest.rating)) + " · " +
-        (p.latest && p.latest.reviews_count != null ? p.latest.reviews_count : "—") + " " + t("creator.research.reviews", "reviews") +
-        (fmtDelta(p.review_delta) ? " · " + esc(fmtDelta(p.review_delta)) : "") +
-        " · " + esc(p.latest && p.latest.bsr != null ? "BSR " + Number(p.latest.bsr).toLocaleString("de-DE") : t("creator.research.bsr_missing", "No BSR")) +
-        " · " + esc(fmtPrice(p)) +
-      "</p>" +
-      "<p>" + esc(confidence) + "</p>" +
-      "<p>" + t("creator.research.no_sales_claim", "We never show invented unit sales. BSR and reviews are observed snapshots only.") + "</p>" +
-      "<h4>" + esc(t("creator.research.history_title", "Snapshot history")) + "</h4>" +
-      "<ul>" + hist + "</ul>" +
-      '<div class="eazy-research-drawer__cta">' +
-        '<a class="eazy-research-drawer__btn" href="' + esc(amazonUrl(p.asin)) + '" target="_blank" rel="noopener noreferrer">' +
-          esc(t("creator.research.open_source", "Open on Amazon.de")) + "</a>" +
-        '<button type="button" class="eazy-research-drawer__btn" data-erz-gen>' +
-          esc(t("creator.research.send_generator", "Send to Generator")) + "</button>" +
-      "</div>";
+    if (local) {
+      if (p.review_delta == null && local.review_delta != null) p.review_delta = local.review_delta;
+      if (!p.review_delta_window && local.review_delta_window) p.review_delta_window = local.review_delta_window;
+      if (!p.niche_key && local.niche_key) p.niche_key = local.niche_key;
+    }
+    box.innerHTML = detailHtml(p);
   }
 
   function closeDetail(root) {
-    var drawer = (root && root.querySelector("[data-erz-drawer]")) || document.querySelector("[data-erz-drawer]");
-    if (drawer) drawer.hidden = true;
+    var modal = (root && root.querySelector("[data-erz-modal]")) || document.querySelector("[data-erz-modal]");
+    if (modal) modal.hidden = true;
   }
 
   async function load(root) {
     state.loading = true;
     render(root);
     var data = await api("eazy-research-products", {
-      reprint_ok: state.reprintOk ? 1 : 0,
+      reprint_ok: 1,
       limit: 80,
       sort: state.sort,
     }).catch(function () { return null; });
@@ -335,6 +398,10 @@
 
   function bind(root) {
     var qTimer = null;
+    var toolbar = root.querySelector("[data-erz-toolbar]");
+    if (toolbar) {
+      toolbar.addEventListener("submit", function (ev) { ev.preventDefault(); });
+    }
     var q = root.querySelector("[data-erz-q]");
     if (q) {
       q.addEventListener("input", function () {
@@ -350,14 +417,15 @@
         renderGrid(root);
       });
     }
-    var safe = root.querySelector("[data-erz-safe]");
-    if (safe) {
-      safe.addEventListener("change", function () {
-        state.reprintOk = Boolean(safe.checked);
-        load(root);
-      });
-    }
     root.addEventListener("click", function (ev) {
+      var watch = ev.target.closest("[data-erz-watch]");
+      if (watch) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        toggleWatch(watch.getAttribute("data-erz-watch"));
+        render(root);
+        return;
+      }
       var chip = ev.target.closest("[data-erz-niche]");
       if (chip) {
         state.niche = chip.getAttribute("data-erz-niche") || "all";
@@ -381,11 +449,11 @@
     });
   }
 
-  function bindDrawer(root) {
-    var drawer = root.querySelector("[data-erz-drawer]");
-    if (!drawer || drawer.dataset.erzBound === "1") return;
-    drawer.dataset.erzBound = "1";
-    drawer.addEventListener("click", function (ev) {
+  function bindModal(root) {
+    var modal = root.querySelector("[data-erz-modal]");
+    if (!modal || modal.dataset.erzBound === "1") return;
+    modal.dataset.erzBound = "1";
+    modal.addEventListener("click", function (ev) {
       if (ev.target.closest("[data-erz-close]")) closeDetail(root);
       if (ev.target.closest("[data-erz-gen]")) goGenerator();
     });
@@ -397,8 +465,9 @@
   function mount(root) {
     if (!root || root.dataset.erzBound === "1") return;
     root.dataset.erzBound = "1";
+    state.watched = loadWatched();
     bind(root);
-    bindDrawer(root);
+    bindModal(root);
     load(root);
   }
 

@@ -581,11 +581,6 @@
         <option value="newest" data-t="creator.research.sort_newest">Newest snapshot</option>
       </select>
     </label>
-    <label class="eazy-research__toggle">
-      <input type="checkbox" data-erz-safe checked>
-      <span data-t="creator.research.filter_reprint">Reprint-safe only</span>
-    </label>
-    <span class="eazy-research__market" data-t="creator.research.marketplace_amazon_de">Amazon.de</span>
   </form>
 
   <div class="eazy-research__chips" data-erz-chips role="list"></div>
@@ -602,12 +597,12 @@
 
   <footer class="eazy-research__collector" data-erz-status></footer>
 
-  <div class="eazy-research-drawer" data-erz-drawer hidden>
-    <div class="eazy-research-drawer__backdrop" data-erz-close></div>
-    <aside class="eazy-research-drawer__panel" role="dialog" aria-modal="true">
-      <button type="button" class="eazy-research-drawer__close" data-erz-close data-t="creator.research.close_detail">Close product</button>
+  <div class="eazy-research-modal" data-erz-modal hidden>
+    <div class="eazy-research-modal__backdrop" data-erz-close></div>
+    <div class="eazy-research-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="eazy-research-modal-title">
+      <button type="button" class="eazy-research-modal__close" data-erz-close aria-label="Close product">×</button>
       <div data-erz-detail></div>
-    </aside>
+    </div>
   </div>
 </div>
 </div>
