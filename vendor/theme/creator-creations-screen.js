@@ -1783,7 +1783,7 @@
     var productsMsg =
       root.getAttribute('data-i18n-info-products') ||
       (window.CreatorI18n && window.CreatorI18n.creations && window.CreatorI18n.creations.slots_products_info) ||
-      'Unlocked product types versus your Skill Tree product-slot cap. Level 1 is free; more product slots unlock with EAZV.';
+      'Live listings versus your Skill Tree listing cap. Each listed product uses one slot.';
     function bindItem(key, msg) {
       var item = root.querySelector('[data-slot="' + key + '"]');
       if (!item) return;
@@ -1837,20 +1837,42 @@
     );
   }
 
+  function shopifyListingSlotsFromPayload(data) {
+    var listing =
+      (data && data.listing_limits_effective) ||
+      (window.__EAZ_DAILY_LIMITS__ && window.__EAZ_DAILY_LIMITS__.listing_limits_effective) ||
+      {};
+    var shopify = (listing.channels && listing.channels.shopify) || {};
+    var cap = Number(shopify.listings_cap != null ? shopify.listings_cap : shopify.listings_cap) || 0;
+    var usedRaw = shopify.listings_used_total != null
+      ? shopify.listings_used_total
+      : shopify.listings_used_total;
+    var used = usedRaw == null ? NaN : Number(usedRaw);
+    return { cap: cap, used: used, hasChannel: !!(listing.channels && listing.channels.shopify) };
+  }
+
   function applyJourneyLimitsToSlotBar(data) {
     var j =
       (data && data.journey_limits) ||
       (window.__EAZ_DAILY_LIMITS__ && window.__EAZ_DAILY_LIMITS__.journey_limits) ||
       null;
-    if (!j) return;
-    creationsSlotUsage.max_active_design_slots = Number(j.max_active_design_slots) || 0;
-    creationsSlotUsage.max_products = Number(j.max_products) || 0;
-    if (j.active_designs_used != null) {
-      creationsSlotUsage.active_designs_used = Number(j.active_designs_used) || 0;
+    if (j) {
+      creationsSlotUsage.max_active_design_slots = Number(j.max_active_design_slots) || 0;
+      if (j.active_designs_used != null) {
+        creationsSlotUsage.active_designs_used = Number(j.active_designs_used) || 0;
+      }
     }
-    if (j.products_used != null) {
-      creationsSlotUsage.products_used = Number(j.products_used) || 0;
+    var listingSlots = shopifyListingSlotsFromPayload(data);
+    if (listingSlots.hasChannel || listingSlots.cap > 0 || !isNaN(listingSlots.used)) {
+      if (listingSlots.cap > 0) creationsSlotUsage.max_products = listingSlots.cap;
+      if (!isNaN(listingSlots.used)) creationsSlotUsage.products_used = listingSlots.used;
+    } else if (j) {
+      creationsSlotUsage.max_products = Number(j.max_products) || 0;
+      if (j.products_used != null) {
+        creationsSlotUsage.products_used = Number(j.products_used) || 0;
+      }
     }
+    if (!j && !listingSlots.hasChannel) return;
     renderCreationsSlotBar();
   }
 
@@ -1860,21 +1882,12 @@
         return resolveLibraryStatus(d) === 'active';
       }).length;
     }
-    if (Array.isArray(products)) {
-      var keys = {};
-      products.forEach(function (p) {
-        if (!p || p.is_sample) return;
-        var k = String(p.product_key || p.id || '').trim();
-        if (k) keys[k] = true;
-      });
-      creationsSlotUsage.products_used = Object.keys(keys).length;
-    }
     renderCreationsSlotBar();
   }
 
   function fetchCreationsSlotLimits() {
     var cached = window.__EAZ_DAILY_LIMITS__;
-    if (cached && cached.journey_limits) applyJourneyLimitsToSlotBar(cached);
+    if (cached && (cached.journey_limits || cached.listing_limits_effective)) applyJourneyLimitsToSlotBar(cached);
     var owner = getOwnerId();
     if (!owner) return Promise.resolve(null);
     var url = API_BASE + '?op=get-daily-limits&owner_id=' + encodeURIComponent(owner);

@@ -4243,8 +4243,23 @@
 .cj-listing-limit-skills {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 16px;
   width: 100%;
+}
+
+.cj-listing-limit-axis-parents {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.cj-listing-limit-axis-parents .cj-tree-card {
+  width: 156px;
+  flex: 0 0 auto;
 }
 
 .cj-listing-limit-channel__name {

@@ -664,13 +664,27 @@
     return LISTING_CHANNEL_ICONS[ch] || LISTING_CHANNEL_DEFAULT_ICON;
   }
 
+  function listingLimitAxisTitle(axis) {
+    return String(axis || '').toLowerCase() === 'cap'
+      ? t('creator.journey.listing_limits_cap_title', 'Cap')
+      : t('creator.journey.listing_limits_daily_title', 'Daily');
+  }
+
+  function listingLimitAxisIconSvg(axis) {
+    return String(axis || '').toLowerCase() === 'cap'
+      ? '<svg viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/></svg>'
+      : '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>';
+  }
+
   function multiTierParentShortTitle(node) {
+    if (node.metadata && node.metadata.listing_limit_kind === 'axis') {
+      return listingLimitAxisTitle(node.metadata.listing_limit_axis);
+    }
     if (node.metadata && node.metadata.title) return String(node.metadata.title);
     if (node.metadata && node.metadata.creation_limit_kind === 'parent') {
       return node.metadata.creation_limit_axis === 'upload' ? 'Upload' : 'Generate';
     }
-    if (node.metadata && (node.metadata.listing_limit_kind === 'channel' ||
-        node.metadata.listing_limit_kind === 'axis')) {
+    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
       return String(node.metadata.title || node.channel_id || '');
     }
     if (node.metadata && node.metadata.social_post_limit_kind === 'platform') {
@@ -733,8 +747,13 @@
         limitLabel: activeLimitLabelForParent(node)
       };
     }
-    if (node.metadata && (node.metadata.listing_limit_kind === 'channel' ||
-        node.metadata.listing_limit_kind === 'axis')) {
+    if (node.metadata && node.metadata.listing_limit_kind === 'axis') {
+      return {
+        iconSvg: listingLimitAxisIconSvg(node.metadata.listing_limit_axis),
+        limitLabel: activeLimitLabelForParent(node)
+      };
+    }
+    if (node.metadata && node.metadata.listing_limit_kind === 'channel') {
       return {
         iconSvg: listingLimitChannelIconSvg(node.channel_id),
         limitLabel: activeLimitLabelForParent(node)
@@ -1568,6 +1587,18 @@
           actionHtml: ''
         };
       }
+    }
+    if (isListingLimitChannel(node) || isListingLimitAxisParent(node)) {
+      return {
+        title: nodeTitle(node),
+        canAct: false,
+        cost: 0,
+        catalogCost: 0,
+        freePick: false,
+        unlockReady: false,
+        hasAction: false,
+        actionHtml: ''
+      };
     }
     var freePick = !!node.free_pick_eligible;
     var cost = nodeEffectiveCost(node);
@@ -2547,11 +2578,14 @@
   function renderListingLimitCard(node) {
     var lock = resolveCardLockOpts(node);
     var act = cardActionState(node, lock.levelLocked);
-    var expandable = false;
-    var expanded = false;
+    var isAxis = isListingLimitAxisParent(node);
+    var axisTiers = isAxis ? listingLimitTierNodes(node) : [];
+    var expandable = isAxis && axisTiers.length > 0;
+    var expanded = expandable && !!expandedListingLimitKeys[node.node_key];
     var isTier = node.metadata && node.metadata.listing_limit_kind === 'tier';
     var cls = 'cj-tree-card cj-tree-card--listing-limit';
-    if (isListingLimitChannel(node) || isListingLimitAxisParent(node)) cls += ' cj-tree-card--listing-channel';
+    if (isListingLimitChannel(node) || isAxis) cls += ' cj-tree-card--listing-channel';
+    if (isAxis) cls += ' cj-tree-card--listing-axis';
     if (isTier) cls += ' cj-tree-card--listing-limit-tier';
     if (lock.visuallyLocked) cls += ' is-level-locked';
     if (node.unlocked) cls += ' is-unlocked';
@@ -2579,23 +2613,64 @@
       act.actionHtml + '</div></article>';
   }
 
-  function renderListingLimitSkillPanel(channel, axis, title) {
-    var tiers = listingLimitTiersForChannelAxis(channel, axis);
-    if (!tiers.length) return '';
-    return '<div class="cj-variant-panel cj-listing-limit-skill-panel" data-cj-listing-limit-panel="' +
-      escapeHtml((channel.node_key || '') + ':' + axis) + '">' +
-      '<h4 class="cj-variant-panel__title">' + escapeHtml(title) + '</h4>' +
-      renderCarouselShell(tiers.map(renderListingLimitCard).join('')) +
-      '</div>';
+  function listingLimitAxisParentsForChannel(channel, nodes) {
+    var ch = channel && (channel.channel_id || (channel.metadata && channel.metadata.channel_id));
+    var pool = (nodes && nodes.length ? nodes : null) || (journeyData && journeyData.nodes) || [];
+    var found = pool.filter(function (n) {
+      if (!isListingLimitAxisParent(n)) return false;
+      return (n.channel_id || (n.metadata && n.metadata.channel_id)) === ch;
+    }).sort(function (a, b) {
+      var aa = (a.metadata && a.metadata.listing_limit_axis) || 'daily';
+      var bb = (b.metadata && b.metadata.listing_limit_axis) || 'daily';
+      if (aa === bb) return 0;
+      return aa === 'daily' ? -1 : 1;
+    });
+    if (found.length) return found;
+    return ['daily', 'cap'].map(function (axis) {
+      return {
+        node_key: 'listing_limit:' + ch + ':' + axis,
+        category: 'listing_limit',
+        channel_id: ch,
+        unlocked: !!(channel && channel.unlocked),
+        metadata: {
+          listing_limit_kind: 'axis',
+          listing_limit_axis: axis,
+          title: axis === 'cap' ? 'Cap' : 'Daily'
+        }
+      };
+    });
   }
 
-  function renderListingLimitChannelSection(channel) {
+  function renderListingLimitAxisExpandPanel(channel, axisNode) {
+    if (!axisNode || !expandedListingLimitKeys[axisNode.node_key]) return '';
+    var axis = (axisNode.metadata && axisNode.metadata.listing_limit_axis) || 'daily';
+    var title = listingLimitAxisTitle(axis);
+    var tiers = listingLimitTiersForChannelAxis(channel, axis);
+    if (!tiers.length) return '';
+    return '<div class="cj-variant-branch cj-listing-limit-branch" data-cj-listing-limit-branch="' +
+      escapeHtml(axisNode.node_key) + '">' +
+      '<div class="cj-variant-connector" aria-hidden="true"></div>' +
+      '<div class="cj-variant-panel cj-listing-limit-skill-panel" data-cj-listing-limit-panel="' +
+      escapeHtml(axisNode.node_key) + '">' +
+      '<h4 class="cj-variant-panel__title">' + escapeHtml(title) + '</h4>' +
+      renderCarouselShell(tiers.map(renderListingLimitCard).join('')) +
+      '</div></div>';
+  }
+
+  function renderListingLimitChannelSection(channel, nodes) {
     var name = nodeTitle(channel);
     var cardHtml = '<div class="cj-listing-limit-channel__card">' + renderListingLimitCard(channel) + '</div>';
     if (!channel.unlocked) {
       return '<section class="cj-product-section cj-listing-limit-channel is-locked">' +
         cardHtml + '</section>';
     }
+    var axes = listingLimitAxisParentsForChannel(channel, nodes);
+    var axisCards = '';
+    var expandHtml = '';
+    axes.forEach(function (axisNode) {
+      axisCards += renderListingLimitCard(axisNode);
+      expandHtml += renderListingLimitAxisExpandPanel(channel, axisNode);
+    });
     return '<section class="cj-product-section cj-listing-limit-channel is-unlocked">' +
       cardHtml +
       '<div class="cj-variant-branch cj-listing-limit-branch" data-cj-listing-limit-branch="' +
@@ -2603,12 +2678,8 @@
       '<div class="cj-variant-connector" aria-hidden="true"></div>' +
       '<div class="cj-listing-limit-skills">' +
       '<h3 class="cj-listing-limit-channel__name">' + escapeHtml(name) + '</h3>' +
-      renderListingLimitSkillPanel(
-        channel, 'daily', t('creator.journey.listing_limits_daily_title', 'Daily')
-      ) +
-      renderListingLimitSkillPanel(
-        channel, 'cap', t('creator.journey.listing_limits_cap_title', 'Cap')
-      ) +
+      '<div class="cj-listing-limit-axis-parents">' + axisCards + '</div>' +
+      expandHtml +
       '</div></div></section>';
   }
 
@@ -2633,7 +2704,7 @@
       return '<p class="cj-muted">' + escapeHtml(t('creator.journey.starter_empty', 'No items in this category yet.')) + '</p>';
     }
     return '<div class="cj-product-sections">' +
-      channels.map(renderListingLimitChannelSection).join('') +
+      channels.map(function (ch) { return renderListingLimitChannelSection(ch, nodes); }).join('') +
       '</div>';
   }
 

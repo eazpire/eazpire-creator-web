@@ -478,7 +478,7 @@
                 : window.CreatorI18n.creations.slots_products_info)),
           slot === 'designs'
             ? 'Active designs in your library versus your Skill Tree slot cap. Level 1 slots are free; more slots unlock with EAZV. Inactive designs do not count.'
-            : 'Unlocked product types versus your Skill Tree product-slot cap. Level 1 is free; more product slots unlock with EAZV.'
+            : 'Live listings versus your Skill Tree listing cap. Each listed product uses one slot.'
         );
       } else if (item.getAttribute('data-limit') || item.hasAttribute('data-limit-countdown') || item.classList.contains('creator-daily-limits__timer-wrap')) {
         var key = item.getAttribute('data-limit');
