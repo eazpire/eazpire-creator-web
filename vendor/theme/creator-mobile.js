@@ -549,7 +549,7 @@
     if (!viewport || !track) return;
     var guestStrict = window.__CREATOR_IS_LOGGED_IN === false && !window.__DEV_BYPASS;
     if (!guestStrict) return;
-    if (currentIndex === 0 || currentIndex === 2) return;
+    if (currentIndex === 0 || currentIndex === 1 || currentIndex === 2) return;
     var section = document.querySelector('.creator-screen[data-screen="' + currentIndex + '"]');
     if (!section) return;
     section.appendChild(buildCreatorGuestLockOverlay());
@@ -557,7 +557,24 @@
 
   window.syncCreatorGuestNavLocksMobile = syncCreatorGuestNavLocksMobile;
 
+  function isCreatorSessionLoggedIn() {
+    if (window.__DEV_BYPASS) return true;
+    if (window.__CREATOR_IS_LOGGED_IN === true) return true;
+    try {
+      var auth = window.CreatorPortalAuth && window.CreatorPortalAuth.state;
+      if (auth && (auth.loggedIn || auth.ownerId)) return true;
+    } catch (_auth) {}
+    if (window.__EAZ_OWNER_ID) return true;
+    return false;
+  }
+
+  function isCreatorKnownGuest() {
+    if (isCreatorSessionLoggedIn()) return false;
+    return window.__CREATOR_IS_LOGGED_IN === false && !window.__DEV_BYPASS;
+  }
+
   function refreshCreatorGuestLocksAfterBypass() {
+    if (typeof window.syncCreatorGeneratorGuestLock === 'function') window.syncCreatorGeneratorGuestLock();
     if (typeof window.syncCreatorGuestNavLocksMobile === 'function') window.syncCreatorGuestNavLocksMobile();
     try {
       if (
@@ -635,16 +652,26 @@
     var title = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLockedTitle) || 'Log in to continue';
     var text = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLockedText) || 'Sign in to use this feature.';
     var cta = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLoginCta) || 'Login';
+    var loginHref = window.__CREATOR_PORTAL_HOST__ ? '/auth/login' : LOGIN_URL;
 
     var lock = document.createElement('div');
     lock.className = 'creator-generator-lock';
+    lock.setAttribute('data-creator-generator-lock', '1');
     lock.innerHTML =
       '<div class="creator-generator-lock__card">' +
       '<h3 class="creator-generator-lock__title">' + title + '</h3>' +
       '<p class="creator-generator-lock__text">' + text + '</p>' +
-      '<a class="creator-generator-lock__cta" href="' + LOGIN_URL + '">' + cta + '</a>' +
+      '<a class="creator-generator-lock__cta" href="' + loginHref + '">' + cta + '</a>' +
       '</div>';
     generator.appendChild(lock);
+  }
+
+  function removeGeneratorLockUi() {
+    var generator = document.getElementById('creatorGenerator');
+    if (!generator) return;
+    generator.querySelectorAll('.creator-generator-lock').forEach(function (el) {
+      el.remove();
+    });
   }
 
   function setGeneratorLocked(locked) {
@@ -654,13 +681,40 @@
     window.__GENERATOR_LOCKED = !!locked;
     if (locked) {
       ensureGeneratorLockUi();
+    } else {
+      removeGeneratorLockUi();
     }
+  }
+
+  function syncCreatorGeneratorGuestLock() {
+    if (isCreatorSessionLoggedIn()) {
+      setGeneratorLocked(false);
+      return;
+    }
+    if (isCreatorKnownGuest()) {
+      setGeneratorLocked(true);
+      return;
+    }
+    setGeneratorLocked(false);
+  }
+  window.syncCreatorGeneratorGuestLock = syncCreatorGeneratorGuestLock;
+
+  function scheduleGeneratorLockSync() {
+    syncCreatorGeneratorGuestLock();
+    if (document.getElementById('creatorGenerator')) return;
+    var attempts = 0;
+    var timer = setInterval(function () {
+      attempts += 1;
+      if (document.getElementById('creatorGenerator') || attempts >= 25) {
+        clearInterval(timer);
+        syncCreatorGeneratorGuestLock();
+      }
+    }, 200);
   }
 
   async function verifyDevBypass() {
     try {
-      var isLoggedIn = Boolean(window.__CREATOR_IS_LOGGED_IN);
-      if (isLoggedIn) {
+      if (isCreatorSessionLoggedIn()) {
         window.__DEV_BYPASS = false;
         setGeneratorLocked(false);
         return;
@@ -669,7 +723,7 @@
       var token = getDevBypassToken();
       if (!token) {
         window.__DEV_BYPASS = false;
-        setGeneratorLocked(true);
+        setGeneratorLocked(isCreatorKnownGuest());
         return;
       }
 
@@ -704,9 +758,13 @@
     }
   }
 
-  if (!viewport || !track) return;
-
+  window.addEventListener('eazCreatorContextReady', function () {
+    verifyDevBypass();
+  });
   verifyDevBypass();
+  scheduleGeneratorLockSync();
+
+  if (!viewport || !track) return;
 
   function goTo(index) {
     index = Math.max(0, Math.min(index, TOTAL - 1));
@@ -765,6 +823,7 @@
     }
 
     replaceCreatorShellHashForIndex(index);
+    if (typeof window.syncCreatorGeneratorGuestLock === 'function') window.syncCreatorGeneratorGuestLock();
     if (typeof window.syncCreatorGuestNavLocksMobile === 'function') window.syncCreatorGuestNavLocksMobile();
 
     var shellTab = CREATOR_SHELL_HASH_SCREENS[index];

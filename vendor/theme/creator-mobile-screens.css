@@ -409,6 +409,11 @@
   -webkit-backdrop-filter: blur(4px);
 }
 
+/* Inner generator lock is only visible while #creatorGenerator is locked. */
+.creator-generator:not(.creator-generator--locked) > .creator-generator-lock {
+  display: none;
+}
+
 .creator-generator-lock__card {
   width: 100%;
   max-width: 320px;

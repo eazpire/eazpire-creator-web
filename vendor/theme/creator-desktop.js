@@ -243,7 +243,7 @@
     removeDesktopGuestNavLocks();
     if (!creatorGuestBypassDesktop()) return;
     var scr = String(screen || 'dashboard').toLowerCase();
-    if (scr === 'dashboard' || scr === 'generator') return;
+    if (scr === 'dashboard' || scr === 'research' || scr === 'generator') return;
     var panel = document.querySelector('.creator-desktop-stage__panel[data-desktop-screen="' + scr + '"]');
     if (!panel || typeof window.buildCreatorGuestLockOverlay !== 'function') return;
     panel.appendChild(window.buildCreatorGuestLockOverlay());
@@ -499,6 +499,9 @@
         }, 80);
       }
       syncCreatorGuestDesktopLock(normalized);
+      if (typeof window.syncCreatorGeneratorGuestLock === 'function') {
+        window.syncCreatorGeneratorGuestLock();
+      }
       if (normalized === 'research' && window.CreatorPortalFeatures && typeof window.CreatorPortalFeatures.ensureResearch === 'function') {
         window.CreatorPortalFeatures.ensureResearch();
       }

@@ -112,8 +112,13 @@
 
   function applyOwnerFromAuth() {
     var oid = resolveOwnerId();
-    if (oid) {
-      global.__EAZ_OWNER_ID = oid;
+    var portalLoggedIn = !!(
+      global.CreatorPortalAuth &&
+      global.CreatorPortalAuth.state &&
+      global.CreatorPortalAuth.state.loggedIn
+    );
+    if (oid || portalLoggedIn) {
+      if (oid) global.__EAZ_OWNER_ID = oid;
       global.__CREATOR_IS_LOGGED_IN = true;
       global.__creatorSettingsUserLoggedIn = true;
       try {
@@ -297,6 +302,16 @@
         }
       }
       global.dispatchEvent(new CustomEvent("eazCreatorContextReady", { detail: { soft: soft } }));
+      if (typeof global.syncCreatorGeneratorGuestLock === "function") {
+        try {
+          global.syncCreatorGeneratorGuestLock();
+        } catch (_genLock) {}
+      }
+      if (typeof global.syncCreatorGuestNavLocksMobile === "function") {
+        try {
+          global.syncCreatorGuestNavLocksMobile();
+        } catch (_navLock) {}
+      }
     },
     assetUrl: function (file) {
       return "/vendor/theme/" + file;
