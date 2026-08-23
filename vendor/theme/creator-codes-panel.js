@@ -616,22 +616,22 @@
       return {
         title: t(
           "settings.creator_community_recruiter_opt_in_confirm_title",
-          "Enable community for recruits"
+          "Share my unlocked products"
         ),
         body: t(
           "settings.creator_community_recruiter_opt_in_confirm_body",
-          "When you and a recruit both opt in: you receive AI bonus designs when they create, and you earn 30% of their net creator profit on new sales (they keep 70%). You can turn this off anytime — new sales stop sharing revenue; already published products keep their split."
+          "When you and a recruit both opt in, they can publish their designs on products and variants you have unlocked and they have not. You earn 30% of their creator share on those borrowed slots. They keep 100% on slots they unlock themselves. You can turn this off anytime; the next sale uses the new rule."
         ),
       };
     }
     return {
       title: t(
         "settings.creator_community_member_opt_in_confirm_title",
-        "Join community program"
+        "Borrow recruiter products"
       ),
       body: t(
         "settings.creator_community_member_opt_in_confirm_body",
-        "When you and the creator who invited you both opt in: they receive bonus designs when you create, and you keep 70% of your net creator profit on new sales (they receive 30%). You can turn this off anytime — new sales stop sharing revenue; your existing published products keep their split."
+        "When you and the creator who invited you both opt in, you can publish your designs on products and variants they have unlocked and you have not. You keep 70% of the creator share on those borrowed slots, and 100% on everything you unlock yourself. You can turn this off anytime; the next sale uses the new rule."
       ),
     };
   }
@@ -860,71 +860,15 @@
         hide(membersSection);
       }
 
-      var designsData = await api("get-community-designs");
+      var paBtn = $("[data-cc-publish-assist]", root);
+      if (paBtn) hide(paBtn);
+
       var designsSection = $("[data-cc-designs-section]", root);
-      var designsList = $("[data-cc-designs-list]", root);
-      var designsEmpty = $("[data-cc-designs-empty]", root);
-      var designs = (designsData.ok && designsData.designs) || [];
-
-      if (designsSection) show(designsSection);
-      if (designs.length === 0) {
-        if (designsList) designsList.innerHTML = "";
-        if (designsEmpty) show(designsEmpty);
-      } else {
-        if (designsEmpty) hide(designsEmpty);
-        if (designsList) {
-          designsList.innerHTML = designs
-            .map(function (d) {
-              var img = d.preview_url
-                ? '<img src="' + d.preview_url + '" alt="" />'
-                : "";
-              return (
-                '<div class="cc-community-design-card" data-design-id="' +
-                d.id +
-                '">' +
-                img +
-                '<div class="cc-community-design-actions">' +
-                '<button type="button" class="cc-btn cc-btn--primary cc-btn--copy" data-cc-claim-design="' +
-                d.id +
-                '"><span>' +
-                t("settings.creator_community_claim_btn", "Claim") +
-                "</span></button>" +
-                '<button type="button" class="cc-btn cc-btn--copy" data-cc-dismiss-design="' +
-                d.id +
-                '"><span>' +
-                t("settings.creator_community_dismiss_btn", "Dismiss") +
-                "</span></button></div></div>"
-              );
-            })
-            .join("");
-
-          designsList.querySelectorAll("[data-cc-claim-design]").forEach(function (btn) {
-            btn.addEventListener("click", async function () {
-              var id = btn.getAttribute("data-cc-claim-design");
-              try {
-                var res = await apiPost("claim-community-design", {
-                  community_design_id: Number(id),
-                });
-                if (res.ok) await loadCommunityPanel(root);
-                else alert(res.error || "Error");
-              } catch (_) {
-                alert(t("settings.creator_codes_connection_error", "Connection error."));
-              }
-            });
-          });
-
-          designsList.querySelectorAll("[data-cc-dismiss-design]").forEach(function (btn) {
-            btn.addEventListener("click", async function () {
-              var id = btn.getAttribute("data-cc-dismiss-design");
-              try {
-                var res = await apiPost("dismiss-community-design", {
-                  community_design_id: Number(id),
-                });
-                if (res.ok) await loadCommunityPanel(root);
-              } catch (_) {}
-            });
-          });
-        }
+      if (designsSection) hide(designsSection);
+      var pendingStat = $("[data-cc-stat-pending]", root);
+      if (pendingStat && pendingStat.closest) {
+        var pendingCard = pendingStat.closest(".cc-stat-card");
+        if (pendingCard) hide(pendingCard);
       }
     } catch (_) {}
   }

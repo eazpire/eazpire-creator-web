@@ -1065,9 +1065,18 @@
     if (old) old.remove();
     var unlocked = Number(product.variants_unlocked);
     var total = Number(product.variants_total);
-    if (!Number.isFinite(total) || total < 1) return;
-    if (!Number.isFinite(unlocked) || unlocked < 0) unlocked = 0;
     var M = Mi();
+    var oldHints = card.querySelectorAll('.creator-design-products-modal__card-borrowed-hint');
+    for (var hi = 0; hi < oldHints.length; hi++) oldHints[hi].remove();
+    if (!Number.isFinite(total) || total < 1) {
+      if (product.borrowed && product.unlocked !== true) {
+        var tagOnly = document.createElement('div');
+        tagOnly.className = 'creator-design-products-modal__card-borrowed-hint';
+        tagOnly.textContent = M.designProductsBorrowedVariantTag || 'From recruiter';
+        card.appendChild(tagOnly);
+      }
+      return;
+    }
     var tpl = M.designProductsVariantsCount || 'Variants: {{unlocked}}/{{total}}';
     var label = document.createElement('div');
     label.className = 'creator-design-products-modal__card-variants';
@@ -1076,6 +1085,21 @@
       .replace(/\{\{\s*total\s*\}\}/gi, String(total))
       .replace(/\{\{\s*x\s*\}\}/gi, String(unlocked));
     card.appendChild(label);
+    card.querySelectorAll('.creator-design-products-modal__card-borrowed-hint').forEach(function (el) {
+      el.remove();
+    });
+    if (product.borrowed_variants) {
+      var hint = document.createElement('div');
+      hint.className = 'creator-design-products-modal__card-borrowed-hint';
+      hint.textContent =
+        M.designProductsBorrowedVariantsHint || 'More variants available from your recruiter';
+      card.appendChild(hint);
+    } else if (product.borrowed && !product.unlocked) {
+      var tag = document.createElement('div');
+      tag.className = 'creator-design-products-modal__card-borrowed-hint';
+      tag.textContent = M.designProductsBorrowedVariantTag || 'From recruiter';
+      card.appendChild(tag);
+    }
   }
 
   function refreshAllCardBadges() {
@@ -1091,17 +1115,24 @@
 
   function isProductUnlocked(p) {
     if (!p) return false;
+    if (p.borrowed === true) return true;
     if (typeof p.unlocked === 'boolean') return p.unlocked;
     // Fallback when API has no unlock flags: treat as unlocked.
     return true;
   }
 
+  function isBorrowedOnlyProduct(p) {
+    return !!(p && p.borrowed === true && p.unlocked !== true);
+  }
+
   function partitionProducts() {
     var unlocked = [];
+    var borrowed = [];
     var locked = [];
     for (var i = 0; i < ctxAllProducts.length; i++) {
       var p = ctxAllProducts[i];
-      if (isProductUnlocked(p)) unlocked.push(p);
+      if (isBorrowedOnlyProduct(p)) borrowed.push(p);
+      else if (isProductUnlocked(p)) unlocked.push(p);
       else locked.push(p);
     }
     var active = [];
@@ -1123,7 +1154,7 @@
         queue.push(u);
       }
     }
-    return { unlocked: unlocked, locked: locked, active: active, queue: queue };
+    return { unlocked: unlocked, locked: locked, borrowed: borrowed, active: active, queue: queue };
   }
 
   function visibleKeys() {
@@ -1132,9 +1163,7 @@
     var list =
       ctxFilter === 'locked'
         ? []
-        : ctxFilter === 'all'
-          ? parts.unlocked
-          : parts.unlocked;
+        : (parts.unlocked || []).concat(parts.borrowed || []);
     return list
       .map(function (p) {
         return String(p.product_key || '').trim();
@@ -1505,6 +1534,16 @@
     wrap.appendChild(
       makeGroup('queue', M.designProductsGroupQueue || M.designProductsTabQueue || 'Queue', parts.queue, false)
     );
+    if ((parts.borrowed || []).length) {
+      wrap.appendChild(
+        makeGroup(
+          'borrowed',
+          M.designProductsGroupBorrowed || 'Additional from your recruiter',
+          parts.borrowed,
+          false
+        )
+      );
+    }
     gridEl.appendChild(wrap);
     scheduleComposedRelayout(gridEl);
   }

@@ -1637,6 +1637,11 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.cds-size-borrowed {
+  font-size: 0.72rem;
+  color: rgba(180, 210, 255, 0.92);
+}
+
 .cds-size-chip {
   display: inline-flex;
   align-items: center;

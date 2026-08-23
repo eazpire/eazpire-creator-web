@@ -3380,7 +3380,11 @@
           '</span>' +
           (locked
             ? '<span class="cds-size-lock">' + t('designStudioLocked', 'Locked') + '</span>'
-            : '') +
+            : v.borrowed
+              ? '<span class="cds-size-borrowed">' +
+                t('designStudioBorrowedVariant', 'From recruiter') +
+                '</span>'
+              : '') +
           '</label>';
       }
       html += '</div></div></div>';

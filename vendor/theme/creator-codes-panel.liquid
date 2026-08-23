@@ -1,0 +1,263 @@
+{%- comment -%}
+  Creator Codes Panel
+  Shows either:
+  - Redeem input (for non-creators)
+  - Code generator + share + history (for creators)
+  t-safe + data-t: avoids Shopify Markets en.* missing-key flash; D1 overlay on /de/ etc.
+{%- endcomment -%}
+
+<div class="cc-panel" data-cc-root>
+
+  <!-- Loading -->
+  <div class="cc-loading" data-cc-loading>
+    <div class="cc-spinner"></div>
+  </div>
+
+  <!-- Not Creator: Redeem Section -->
+  <div class="cc-section cc-redeem-section" data-cc-redeem-section style="display:none">
+    <div class="csm-panel-header">
+      <h4 class="csm-panel-title" data-t="creator.settings.creator_codes_redeem_title">{% render 't-safe', key: 'creator.settings.creator_codes_redeem_title', fallback: 'Become a Creator' %}</h4>
+      <p class="csm-panel-subtitle" data-t="creator.settings.creator_codes_redeem_subtitle">{% render 't-safe', key: 'creator.settings.creator_codes_redeem_subtitle', fallback: 'Enter a Creator Code to unlock all Creator features.' %}</p>
+    </div>
+    <div class="cc-redeem-form">
+      <div class="cc-input-group">
+        <input
+          type="text"
+          class="cc-input"
+          data-cc-redeem-input
+          placeholder="{% render 't-safe', key: 'creator.settings.creator_codes_redeem_placeholder', fallback: 'EAZ-XXXXXX' %}"
+          maxlength="10"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="button" class="cc-btn cc-btn--primary" data-cc-redeem-btn>
+          <span data-t="creator.settings.creator_codes_redeem_btn">{% render 't-safe', key: 'creator.settings.creator_codes_redeem_btn', fallback: 'Redeem now' %}</span>
+        </button>
+      </div>
+      <div class="cc-message" data-cc-redeem-message style="display:none"></div>
+    </div>
+    <div class="cc-not-creator-hint" data-cc-not-creator-hint style="display:none">
+      <p data-t="creator.settings.creator_codes_not_creator">{% render 't-safe', key: 'creator.settings.creator_codes_not_creator', fallback: 'Complete your quests to become a Creator first.' %}</p>
+    </div>
+  </div>
+
+  <!-- Creator: Code Generate + Share Section -->
+  <div class="cc-section cc-creator-section" data-cc-creator-section style="display:none">
+    <div class="csm-panel-header">
+      <h4 class="csm-panel-title" data-t="creator.settings.creator_codes_title">{% render 't-safe', key: 'creator.settings.creator_codes_title', fallback: 'Creator Codes' %}</h4>
+      <p class="csm-panel-subtitle" data-t="creator.settings.creator_codes_subtitle">{% render 't-safe', key: 'creator.settings.creator_codes_subtitle', fallback: 'Your key to the Creator Community' %}</p>
+    </div>
+
+    <!-- Generate Button (visible when can_generate) -->
+    <div class="cc-generate-section" data-cc-generate-section style="display:none">
+      <button type="button" class="cc-btn cc-btn--generate" data-cc-generate-btn>
+        <svg viewBox="0 0 24 24" class="cc-btn-icon"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        <span data-t="creator.settings.creator_codes_generate_btn">{% render 't-safe', key: 'creator.settings.creator_codes_generate_btn', fallback: 'Unlock new Creator Code' %}</span>
+      </button>
+    </div>
+
+    <!-- Pending sale entitlement -->
+    <div class="cc-pending-banner cc-pending-sale" data-cc-pending-sale style="display:none">
+      <div class="cc-pending-banner__glow"></div>
+      <h5 class="cc-pending-banner__title" data-t="creator.settings.creator_codes_pending_sale_title">{% render 't-safe', key: 'creator.settings.creator_codes_pending_sale_title', fallback: 'First sale unlocked!' %}</h5>
+      <p class="cc-pending-banner__text" data-t="creator.settings.creator_codes_pending_sale_subtitle">{% render 't-safe', key: 'creator.settings.creator_codes_pending_sale_subtitle', fallback: 'You earned a Creator Code from your first sale. Reveal it here — it is not shown in notifications.' %}</p>
+      <button type="button" class="cc-btn cc-btn--generate cc-btn--reveal" data-cc-reveal-sale-btn>
+        <span data-t="creator.settings.creator_codes_reveal_btn">{% render 't-safe', key: 'creator.settings.creator_codes_reveal_btn', fallback: 'Show Creator Code' %}</span>
+      </button>
+    </div>
+
+    <!-- Pending purchase entitlement -->
+    <div class="cc-pending-banner cc-pending-purchase" data-cc-pending-purchase style="display:none">
+      <div class="cc-pending-banner__glow"></div>
+      <h5 class="cc-pending-banner__title" data-t="creator.settings.creator_codes_pending_purchase_title">{% render 't-safe', key: 'creator.settings.creator_codes_pending_purchase_title', fallback: 'Purchase unlocked!' %}</h5>
+      <p class="cc-pending-banner__text" data-t="creator.settings.creator_codes_pending_purchase_subtitle">{% render 't-safe', key: 'creator.settings.creator_codes_pending_purchase_subtitle', fallback: 'Your order qualifies for a Creator Code. Follow the steps below to reveal it.' %}</p>
+      <p class="cc-pending-banner__qr-hint" data-cc-purchase-qr-hint data-t="creator.settings.creator_codes_pending_purchase_qr_hint" style="display:none">{% render 't-safe', key: 'creator.settings.creator_codes_pending_purchase_qr_hint', fallback: 'Scan the QR code on your product to continue.' %}</p>
+      <div class="cc-qr-actions" data-cc-qr-actions style="display:none">
+        <button type="button" class="cc-btn cc-btn--action" data-cc-scan-qr-btn><span data-t="creator.settings.creator_codes_scan_qr_btn">{% render 't-safe', key: 'creator.settings.creator_codes_scan_qr_btn', fallback: 'Scan QR code' %}</span></button>
+        <button type="button" class="cc-btn cc-btn--copy" data-cc-upload-qr-btn><span data-t="creator.settings.creator_codes_scan_qr_upload_btn">{% render 't-safe', key: 'creator.settings.creator_codes_scan_qr_upload_btn', fallback: 'Upload QR image' %}</span></button>
+        <button type="button" class="cc-btn cc-btn--copy" data-cc-phone-qr-btn><span data-t="creator.settings.creator_codes_scan_phone_btn">{% render 't-safe', key: 'creator.settings.creator_codes_scan_phone_btn', fallback: 'Scan with phone' %}</span></button>
+        <input type="file" accept="image/*" data-cc-qr-file-input hidden />
+      </div>
+      <div class="cc-qr-scanner" data-cc-qr-scanner hidden>
+        <video data-cc-qr-video playsinline muted></video>
+      </div>
+      <p class="cc-message" data-cc-qr-message style="display:none"></p>
+      <button type="button" class="cc-btn cc-btn--generate cc-btn--reveal" data-cc-reveal-purchase-btn style="display:none">
+        <span data-t="creator.settings.creator_codes_reveal_btn">{% render 't-safe', key: 'creator.settings.creator_codes_reveal_btn', fallback: 'Show Creator Code' %}</span>
+      </button>
+    </div>
+
+    <!-- Active Code Display -->
+    <div class="cc-active-code" data-cc-active-code style="display:none">
+      <div class="cc-code-card">
+        <div class="cc-code-label" data-t="creator.settings.creator_codes_generate_subtitle">{% render 't-safe', key: 'creator.settings.creator_codes_generate_subtitle', fallback: 'Share this code to invite others to become Creators.' %}</div>
+        <div class="cc-code-display" data-cc-code-display></div>
+      </div>
+
+      <input type="hidden" data-cc-ref-link />
+
+      <div class="cc-action-buttons">
+        <button type="button" class="cc-btn cc-btn--action" data-cc-copy-code>
+          <svg viewBox="0 0 24 24" class="cc-btn-icon" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          <span data-cc-copy-text data-t="creator.settings.creator_codes_copy_btn">{% render 't-safe', key: 'creator.settings.creator_codes_copy_btn', fallback: 'Copy' %}</span>
+        </button>
+        <button type="button" class="cc-btn cc-btn--action" data-cc-send-user-btn style="display:none">
+          <svg viewBox="0 0 24 24" class="cc-btn-icon" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <span data-t="creator.settings.creator_codes_send_user_btn">{% render 't-safe', key: 'creator.settings.creator_codes_send_user_btn', fallback: 'Send to user' %}</span>
+        </button>
+        <button type="button" class="cc-btn cc-btn--action" data-cc-pool-btn style="display:none">
+          <svg viewBox="0 0 24 24" class="cc-btn-icon" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          <span data-t="creator.settings.creator_codes_eazy_pool_btn">{% render 't-safe', key: 'creator.settings.creator_codes_eazy_pool_btn', fallback: 'Eazy pool' %}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="cc-stats" data-cc-stats style="display:none">
+      <div class="cc-stat-card">
+        <div class="cc-stat-value" data-cc-stat-generated>0</div>
+        <div class="cc-stat-label" data-t="creator.settings.creator_codes_stats_generated">{% render 't-safe', key: 'creator.settings.creator_codes_stats_generated', fallback: 'Generated' %}</div>
+      </div>
+      <div class="cc-stat-card">
+        <div class="cc-stat-value" data-cc-stat-redeemed>0</div>
+        <div class="cc-stat-label" data-t="creator.settings.creator_codes_stats_redeemed">{% render 't-safe', key: 'creator.settings.creator_codes_stats_redeemed', fallback: 'Redeemed' %}</div>
+      </div>
+      <div class="cc-stat-card">
+        <div class="cc-stat-value" data-cc-stat-community>0</div>
+        <div class="cc-stat-label" data-t="creator.settings.creator_codes_stats_community">{% render 't-safe', key: 'creator.settings.creator_codes_stats_community', fallback: 'Community' %}</div>
+      </div>
+    </div>
+
+    <!-- Creator Community (opt-in, members, bonus designs) -->
+    <div class="cc-community" data-cc-community style="display:none">
+      <div class="cc-community-header">
+        <h5 class="cc-community-title" data-t="creator.settings.creator_community_title">{% render 't-safe', key: 'creator.settings.creator_community_title', fallback: 'Creator Community' %}</h5>
+        <p class="cc-community-subtitle" data-t="creator.settings.creator_community_subtitle">{% render 't-safe', key: 'creator.settings.creator_community_subtitle', fallback: 'Borrow recruiter products. They earn 30% only on slots you have not unlocked yet.' %}</p>
+      </div>
+
+      <button type="button" class="cc-btn cc-btn--generate" data-cc-publish-assist style="display:none;margin-bottom:16px">
+        <svg class="cc-btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 21h16"/></svg>
+        <span data-t="creator.publish_assist.open_btn">{% render 't-safe', key: 'creator.publish_assist.open_btn', fallback: 'Open Publish Assist' %}</span>
+      </button>
+
+      <label class="cc-community-toggle" data-cc-recruiter-opt-in-wrap style="display:none">
+        <input type="checkbox" data-cc-recruiter-opt-in />
+        <span data-t="creator.settings.creator_community_recruiter_opt_in">{% render 't-safe', key: 'creator.settings.creator_community_recruiter_opt_in', fallback: 'Enable community features for my recruits' %}</span>
+      </label>
+
+      <div class="cc-community-member-optins" data-cc-member-optins style="display:none"></div>
+
+      <div class="cc-stats cc-community-stats" data-cc-community-stats style="display:none">
+        <div class="cc-stat-card">
+          <div class="cc-stat-value" data-cc-stat-active>0</div>
+          <div class="cc-stat-label" data-t="creator.settings.creator_community_stats_active">{% render 't-safe', key: 'creator.settings.creator_community_stats_active', fallback: 'Active' %}</div>
+        </div>
+        <div class="cc-stat-card">
+          <div class="cc-stat-value" data-cc-stat-pending>0</div>
+          <div class="cc-stat-label" data-t="creator.settings.creator_community_stats_pending">{% render 't-safe', key: 'creator.settings.creator_community_stats_pending', fallback: 'Pending designs' %}</div>
+        </div>
+        <div class="cc-stat-card">
+          <div class="cc-stat-value" data-cc-stat-revenue>0</div>
+          <div class="cc-stat-label" data-t="creator.settings.creator_community_stats_revenue">{% render 't-safe', key: 'creator.settings.creator_community_stats_revenue', fallback: 'Revenue' %}</div>
+        </div>
+      </div>
+
+      <div class="cc-community-members" data-cc-members-section style="display:none">
+        <h6 class="cc-community-section-title" data-t="creator.settings.creator_community_members_title">{% render 't-safe', key: 'creator.settings.creator_community_members_title', fallback: 'Community members' %}</h6>
+        <div class="cc-community-members-list" data-cc-members-list></div>
+      </div>
+
+      <div class="cc-community-designs" data-cc-designs-section style="display:none">
+        <h6 class="cc-community-section-title" data-t="creator.settings.creator_community_designs_title">{% render 't-safe', key: 'creator.settings.creator_community_designs_title', fallback: 'Bonus designs' %}</h6>
+        <div class="cc-community-designs-list" data-cc-designs-list></div>
+        <p class="cc-community-empty" data-cc-designs-empty style="display:none" data-t="creator.settings.creator_community_designs_empty">{% render 't-safe', key: 'creator.settings.creator_community_designs_empty', fallback: 'No pending bonus designs.' %}</p>
+      </div>
+    </div>
+
+    <!-- Redeemed History -->
+    <div class="cc-history" data-cc-history style="display:none">
+      <h5 class="cc-history-title" data-t="creator.settings.creator_codes_redeemed_title">{% render 't-safe', key: 'creator.settings.creator_codes_redeemed_title', fallback: 'Redeemed Codes' %}</h5>
+      <div class="cc-history-list" data-cc-history-list></div>
+      <div class="cc-history-empty" data-cc-history-empty style="display:none" data-t="creator.settings.creator_codes_redeemed_empty">
+        {% render 't-safe', key: 'creator.settings.creator_codes_redeemed_empty', fallback: 'No codes have been redeemed yet.' %}
+      </div>
+    </div>
+  </div>
+
+  <!-- User Picker Modal -->
+  {%- capture _cc_picker_search_ph -%}{% render 't-safe', key: 'creator.settings.creator_codes_picker_search_placeholder', fallback: 'Search by username' %}{%- endcapture -%}
+  <dialog class="cc-picker-modal" data-cc-picker-modal>
+    <div class="cc-picker-modal__inner">
+      <h4 class="cc-picker-modal__title" data-t="creator.settings.creator_codes_picker_title">{% render 't-safe', key: 'creator.settings.creator_codes_picker_title', fallback: 'Send Creator Code' %}</h4>
+      <input type="search" class="cc-picker-modal__search" data-cc-picker-search autocomplete="off" placeholder="{{ _cc_picker_search_ph | escape }}" />
+      <p class="cc-picker-modal__hint" data-t="creator.settings.creator_codes_picker_search_hint">{% render 't-safe', key: 'creator.settings.creator_codes_picker_search_hint', fallback: 'Type at least 2 characters to search' %}</p>
+      <div class="cc-picker-modal__loading" data-cc-picker-loading style="display:none" data-t="creator.common.loading">{% render 't-safe', key: 'creator.common.loading', fallback: 'Loading…' %}</div>
+      <div class="cc-picker-modal__list" data-cc-picker-list></div>
+      <p class="cc-picker-modal__empty" data-cc-picker-empty style="display:none" data-t="creator.settings.creator_codes_picker_empty">{% render 't-safe', key: 'creator.settings.creator_codes_picker_empty', fallback: 'No eligible users found' %}</p>
+      <div class="cc-picker-modal__confirm" data-cc-picker-confirm style="display:none">
+        <p class="cc-picker-modal__confirm-text" data-cc-picker-confirm-text></p>
+        <label class="cc-picker-modal__confirm-check">
+          <input type="checkbox" data-cc-picker-confirm-check />
+          <span data-t="creator.settings.creator_codes_gift_confirm">{% render 't-safe', key: 'creator.settings.creator_codes_gift_confirm', fallback: 'I understand I will lose this code' %}</span>
+        </label>
+        <div class="cc-picker-modal__confirm-actions">
+          <button type="button" class="cc-btn cc-btn--primary" data-cc-picker-send disabled>
+            <span data-t="creator.settings.creator_codes_send_user_btn">{% render 't-safe', key: 'creator.settings.creator_codes_send_user_btn', fallback: 'Send to user' %}</span>
+          </button>
+          <button type="button" class="cc-btn cc-btn--danger" data-cc-picker-cancel>
+            <span data-t="creator.settings.creator_codes_gift_cancel_btn">{% render 't-safe', key: 'creator.settings.creator_codes_gift_cancel_btn', fallback: 'Cancel' %}</span>
+          </button>
+        </div>
+      </div>
+      <button type="button" class="cc-btn cc-btn--danger cc-picker-modal__close" data-cc-picker-close>
+        <span data-t="creator.settings.creator_codes_gift_cancel_btn">{% render 't-safe', key: 'creator.settings.creator_codes_gift_cancel_btn', fallback: 'Cancel' %}</span>
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Creator Community opt-in confirm -->
+  <dialog class="cc-pool-modal" data-cc-community-opt-in-modal>
+    <div class="cc-pool-modal__inner">
+      <h4 class="cc-pool-modal__title" data-cc-community-opt-in-title></h4>
+      <p class="cc-pool-modal__text" data-cc-community-opt-in-text></p>
+      <div class="cc-pool-modal__footer">
+        <button type="button" class="cc-btn cc-btn--primary" data-cc-community-opt-in-confirm>
+          <span data-t="creator.settings.creator_community_opt_in_confirm_btn">{% render 't-safe', key: 'creator.settings.creator_community_opt_in_confirm_btn', fallback: 'Activate' %}</span>
+        </button>
+        <button type="button" class="cc-btn cc-btn--danger" data-cc-community-opt-in-cancel>
+          <span data-t="creator.common.cancel">{% render 't-safe', key: 'creator.common.cancel', fallback: 'Cancel' %}</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Eazy Pool Confirm Modal -->
+  <dialog class="cc-pool-modal" data-cc-pool-modal>
+    <div class="cc-pool-modal__inner">
+      <h4 class="cc-pool-modal__title" data-t="creator.settings.creator_codes_pool_confirm_title">{% render 't-safe', key: 'creator.settings.creator_codes_pool_confirm_title', fallback: 'Eazy pool' %}</h4>
+      <p class="cc-pool-modal__text" data-cc-pool-confirm-text></p>
+      <label class="cc-pool-modal__confirm">
+        <input type="checkbox" data-cc-pool-confirm-check />
+        <span data-t="creator.settings.creator_codes_gift_confirm">{% render 't-safe', key: 'creator.settings.creator_codes_gift_confirm', fallback: 'I understand I will lose this code' %}</span>
+      </label>
+      <div class="cc-pool-modal__footer">
+        <button type="button" class="cc-btn cc-btn--primary" data-cc-pool-send disabled>
+          <span data-t="creator.settings.creator_codes_eazy_pool_btn">{% render 't-safe', key: 'creator.settings.creator_codes_eazy_pool_btn', fallback: 'Eazy pool' %}</span>
+        </button>
+        <button type="button" class="cc-btn cc-btn--danger" data-cc-pool-cancel>
+          <span data-t="creator.settings.creator_codes_gift_cancel_btn">{% render 't-safe', key: 'creator.settings.creator_codes_gift_cancel_btn', fallback: 'Cancel' %}</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Code Reveal Animation Overlay -->
+  <div class="cc-reveal-overlay" data-cc-reveal-overlay style="display:none">
+    <div class="cc-reveal-container">
+      <div class="cc-reveal-particles" data-cc-particles></div>
+      <div class="cc-reveal-flash" data-cc-flash></div>
+      <div class="cc-reveal-code" data-cc-reveal-code></div>
+      <div class="cc-reveal-text" data-t="creator.settings.creator_codes_reveal_text">{% render 't-safe', key: 'creator.settings.creator_codes_reveal_text', fallback: 'Your new Creator Code' %}</div>
+    </div>
+  </div>
+</div>

@@ -30,9 +30,14 @@
   /** Match creator-design-products-modal: Skill Tree unlock flag from get-catalog-products. */
   function isProductUnlocked(p) {
     if (!p) return false;
+    if (p.borrowed === true) return true;
     if (typeof p.unlocked === 'boolean') return p.unlocked;
     // Fallback when API has no unlock flags: treat as unlocked.
     return true;
+  }
+
+  function isBorrowedOnlyProduct(p) {
+    return !!(p && p.borrowed === true && p.unlocked !== true);
   }
 
   /** 'direct_sell' | 'personalized_sample' — chosen in the Activate modal (fixed per design). */
@@ -476,10 +481,27 @@
     var gridEl = activateProdCtx.gridEl;
     gridEl.innerHTML = '';
     var Mgrid = Mi();
-    for (var i = 0; i < products.length; i++) {
-      var p = products[i];
+    var own = [];
+    var borrowed = [];
+    for (var si = 0; si < products.length; si++) {
+      if (isBorrowedOnlyProduct(products[si])) borrowed.push(products[si]);
+      else own.push(products[si]);
+    }
+
+    function appendActivateGroup(title, list) {
+      if (!list.length) return;
+      var head = document.createElement('div');
+      head.className = 'cdp-modal__products-group-head';
+      head.textContent = title + ' (' + list.length + ')';
+      gridEl.appendChild(head);
+      for (var i = 0; i < list.length; i++) {
+        appendActivateCard(list[i], Mgrid);
+      }
+    }
+
+    function appendActivateCard(p, Mgrid) {
       var pk = String(p.product_key || '').trim();
-      if (!pk) continue;
+      if (!pk) return;
       var card = document.createElement('label');
       card.className = 'creator-design-products-modal__card';
       var cb = document.createElement('input');
@@ -513,9 +535,24 @@
           .replace(/\{\{\s*total\s*\}\}/gi, String(vTotal));
         card.appendChild(vLabel);
       }
+      if (p.borrowed_variants) {
+        var hint = document.createElement('div');
+        hint.className = 'creator-design-products-modal__card-borrowed-hint';
+        hint.textContent =
+          Mgrid.designProductsBorrowedVariantsHint || 'More variants available from your recruiter';
+        card.appendChild(hint);
+      } else if (isBorrowedOnlyProduct(p)) {
+        var tag = document.createElement('div');
+        tag.className = 'creator-design-products-modal__card-borrowed-hint';
+        tag.textContent = Mgrid.designProductsBorrowedVariantTag || 'From recruiter';
+        card.appendChild(tag);
+      }
       refreshActivateCardBadges(card, pk);
       gridEl.appendChild(card);
     }
+
+    appendActivateGroup(Mgrid.designProductsGroupOwn || 'Your products', own);
+    appendActivateGroup(Mgrid.designProductsGroupBorrowed || 'Additional from your recruiter', borrowed);
   }
 
   async function fetchActivateCatalogBundle(design) {

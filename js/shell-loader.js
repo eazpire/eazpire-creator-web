@@ -10,7 +10,7 @@
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for footer EAZV -> Creator Settings (EAZ tab) fix (never falls back to sales modal).
   // Must stay in lockstep with index.html `shell-loader.js?v=` so browsers drop the 7-day vendor cache.
-  var RUNTIME_V = "eazy-research-desktop-20260823";
+  var RUNTIME_V = "creator-nav-rail-20260823";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 
@@ -160,6 +160,13 @@
       parts[4] +
       mobileFooterHtml() +
       "</div>";
+
+    try {
+      if (localStorage.getItem("eazCreatorDesktopNavCollapsed") === "1") {
+        var navWrap = host.querySelector("#creatorDesktopSidebarWrap");
+        if (navWrap) navWrap.classList.add("is-collapsed");
+      }
+    } catch (_navCollapsed) {}
 
     applyShellChrome(host);
     host.dataset.loaded = "1";

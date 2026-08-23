@@ -314,6 +314,61 @@
     } catch (e) {}
   }
 
+  var DESKTOP_NAV_COLLAPSED_KEY = 'eazCreatorDesktopNavCollapsed';
+
+  function isDesktopNavCollapsedStored() {
+    try {
+      return localStorage.getItem(DESKTOP_NAV_COLLAPSED_KEY) === '1';
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function desktopNavRailPhrase(kind, rail) {
+    var map = window.CreatorI18n || {};
+    var key = kind === 'expand' ? 'creator.mobile.expand_menu' : 'creator.mobile.collapse_menu';
+    if (map[key]) return map[key];
+    var attr = kind === 'expand' ? 'data-expand-label' : 'data-collapse-label';
+    var fromDom = rail && rail.getAttribute(attr);
+    if (fromDom) return fromDom;
+    return kind === 'expand' ? 'Expand menu' : 'Collapse menu';
+  }
+
+  function applyDesktopNavCollapsed(collapsed) {
+    var wrap = document.getElementById('creatorDesktopSidebarWrap');
+    var rail = document.getElementById('creatorDesktopMenuRail');
+    if (!wrap) return;
+    wrap.classList.toggle('is-collapsed', !!collapsed);
+    if (rail) {
+      rail.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      var phrase = desktopNavRailPhrase(collapsed ? 'expand' : 'collapse', rail);
+      rail.setAttribute('aria-label', phrase);
+      rail.setAttribute('title', phrase);
+    }
+    document.querySelectorAll('#creatorDesktopNav [data-desktop-switch]').forEach(function (btn) {
+      var label = String(btn.getAttribute('data-screen-title') || '').trim();
+      if (collapsed && label) btn.setAttribute('title', label);
+      else btn.removeAttribute('title');
+    });
+    try {
+      localStorage.setItem(DESKTOP_NAV_COLLAPSED_KEY, collapsed ? '1' : '0');
+    } catch (_store) {}
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (_resize) {}
+  }
+
+  function initDesktopMenuRail() {
+    var wrap = document.getElementById('creatorDesktopSidebarWrap');
+    var rail = document.getElementById('creatorDesktopMenuRail');
+    if (!wrap || !rail || rail.getAttribute('data-bound') === '1') return;
+    rail.setAttribute('data-bound', '1');
+    applyDesktopNavCollapsed(wrap.classList.contains('is-collapsed') || isDesktopNavCollapsedStored());
+    rail.addEventListener('click', function () {
+      applyDesktopNavCollapsed(!wrap.classList.contains('is-collapsed'));
+    });
+  }
+
   function initDesktopShellSwitch() {
     var nav = document.getElementById('creatorDesktopNav');
     if (!nav) return;
@@ -3595,6 +3650,7 @@
   window.CreatorDesktopResetDashboardScroll = resetDesktopDashboardScroll;
 
   initDesktopShellSwitch();
+  initDesktopMenuRail();
   // Move shared screens into desktop hosts when wide; restore into mobile swipe when narrow
   // (DevTools dock / resize). Dashboard stays in both shells — only Generator/Creations/…
   // were relocated and previously stayed trapped in display:none desktop hosts.

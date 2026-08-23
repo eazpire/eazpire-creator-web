@@ -2453,6 +2453,14 @@ html.creator-design-products-modal-open {
   color: rgba(255, 200, 120, 0.92);
   letter-spacing: 0.02em;
 }
+.creator-design-products-modal__card-borrowed-hint {
+  font-size: 0.58rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  padding: 0 4px 6px;
+  color: rgba(180, 210, 255, 0.92);
+}
 .creator-design-products-modal__card-badges {
   position: absolute;
   top: 8px;

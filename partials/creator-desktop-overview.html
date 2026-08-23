@@ -296,6 +296,7 @@
 
 <main class="creator-desktop-main" id="creatorDesktopMain">
   <div class="creator-desktop-workspace">
+    <div class="creator-desktop-sidebar-wrap" id="creatorDesktopSidebarWrap">
     <aside class="creator-desktop-sidebar" aria-label="Page navigation">
       <div class="creator-drawer__aquarium creator-desktop-sidebar__aquarium" id="creatorDesktopSidebarAquarium" aria-hidden="true"></div>
       <nav class="creator-desktop-sidebar__nav" id="creatorDesktopNav" role="tablist" aria-label="Page navigation">
@@ -414,6 +415,29 @@
         </button>
       </nav>
     </aside>
+    <button
+      type="button"
+      class="creator-desktop-menu-rail"
+      id="creatorDesktopMenuRail"
+      aria-controls="creatorDesktopNav"
+      aria-expanded="true"
+      aria-label="Collapse menu"
+      title="Menu"
+      data-collapse-label="Collapse menu"
+      data-expand-label="Expand menu"
+    >
+      <span class="creator-desktop-menu-rail__arrow-zone" aria-hidden="true">
+        <svg class="creator-desktop-menu-rail__arrow" width="12" height="12" viewBox="0 0 14 14" fill="none">
+          <path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <svg class="creator-desktop-menu-rail__icon" width="16" height="16" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M1 3.5H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M1 10.5H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="creator-desktop-menu-rail__label" data-t="creator.mobile.menu">Menu</span>
+    </button>
+    </div>
     <div class="creator-desktop-main-column">
       <section class="creator-desktop-hero" id="creatorDesktopHero" data-desktop-active-screen="dashboard" style="--creator-desktop-hero-bg: url('https://cdn.shopify.com/s/files/1/0739/5203/5098/files/galaxy-nebula-bg.png')">
         <div class="creator-desktop-hero__particles" id="creatorDesktopParticles" aria-hidden="true"></div>

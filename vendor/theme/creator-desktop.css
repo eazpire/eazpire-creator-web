@@ -24,6 +24,8 @@ body.creator-mobile-page .creator-desktop-app {
        created a full-width empty band between the stats strip and sidebar/stage. */
     --creator-desktop-main-pad-top: 0px;
     --creator-desktop-sidebar-width: 272px;
+    --creator-desktop-sidebar-collapsed-width: 76px;
+    --creator-desktop-menu-rail-width: 24px;
     /* Aquarium band: padding to nav container; inner pad around first/last button stack */
     --creator-desktop-sidebar-aquarium-pad-y: 10px;
     --creator-desktop-sidebar-aquarium-inner-pad-y: 6px;
@@ -575,6 +577,170 @@ body.creator-mobile-page .creator-desktop-app {
     display: flex;
     flex-direction: row;
     align-items: stretch;
+  }
+
+  .creator-desktop-sidebar-wrap {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    flex: 0 0 auto;
+    min-height: 0;
+    align-self: stretch;
+    position: relative;
+    z-index: 2;
+  }
+
+  .creator-desktop-menu-rail {
+    width: var(--creator-desktop-menu-rail-width);
+    min-width: var(--creator-desktop-menu-rail-width);
+    flex: 0 0 var(--creator-desktop-menu-rail-width);
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    background:
+      radial-gradient(120% 80% at 0% 0%, rgba(147, 112, 219, 0.08), transparent 55%),
+      linear-gradient(180deg, rgba(16, 18, 42, 0.5), rgba(8, 10, 26, 0.42));
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: stretch;
+    position: relative;
+    color: rgba(255, 255, 255, 0.62);
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background 0.2s ease;
+  }
+
+  .creator-desktop-menu-rail:hover {
+    background: rgba(249, 115, 22, 0.22);
+  }
+
+  .creator-desktop-menu-rail:focus-visible {
+    outline: 2px solid rgba(251, 146, 60, 0.85);
+    outline-offset: -2px;
+  }
+
+  .creator-desktop-menu-rail__arrow-zone {
+    width: 100%;
+    height: 48px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    box-sizing: border-box;
+    flex-shrink: 0;
+  }
+
+  .creator-desktop-menu-rail__arrow-zone::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #f97316;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .creator-desktop-menu-rail:hover .creator-desktop-menu-rail__arrow-zone::after {
+    opacity: 1;
+  }
+
+  .creator-desktop-menu-rail__arrow {
+    width: 12px;
+    height: 12px;
+    display: block;
+    color: rgba(255, 255, 255, 0.62);
+    transition: transform 0.28s ease, color 0.2s ease;
+  }
+
+  .creator-desktop-sidebar-wrap.is-collapsed .creator-desktop-menu-rail__arrow {
+    transform: rotate(180deg);
+  }
+
+  .creator-desktop-menu-rail:hover .creator-desktop-menu-rail__arrow {
+    color: #fb923c;
+  }
+
+  .creator-desktop-menu-rail__icon {
+    margin-top: 12px;
+    width: 16px;
+    height: 16px;
+    display: block;
+    color: rgba(255, 255, 255, 0.62);
+    opacity: 0;
+    flex-shrink: 0;
+    transition: opacity 0.3s 0.15s ease, color 0.2s ease;
+  }
+
+  .creator-desktop-sidebar-wrap.is-collapsed .creator-desktop-menu-rail__icon {
+    opacity: 0.6;
+  }
+
+  .creator-desktop-menu-rail:hover .creator-desktop-menu-rail__icon {
+    color: #fb923c;
+    opacity: 1;
+  }
+
+  .creator-desktop-menu-rail__label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.3s 0.2s ease, color 0.2s ease;
+  }
+
+  .creator-desktop-sidebar-wrap.is-collapsed .creator-desktop-menu-rail__label {
+    opacity: 0.6;
+  }
+
+  .creator-desktop-menu-rail:hover .creator-desktop-menu-rail__label {
+    color: #fb923c;
+    opacity: 1;
+  }
+
+  .creator-desktop-sidebar-wrap.is-collapsed .creator-desktop-sidebar {
+    flex-basis: var(--creator-desktop-sidebar-collapsed-width);
+    width: var(--creator-desktop-sidebar-collapsed-width);
+    max-width: var(--creator-desktop-sidebar-collapsed-width);
+    overflow: hidden;
+  }
+
+  .creator-desktop-sidebar-wrap.is-collapsed .creator-desktop-sidebar__nav {
+    padding-left: 8px;
+    padding-right: 8px;
+    align-items: center;
+  }
+
+  .creator-desktop-sidebar-wrap.is-collapsed .creator-desktop-sidebar__item.creator-nav-menu-row {
+    justify-content: center;
+    padding: 10px 6px;
+    gap: 0;
+  }
+
+  .creator-desktop-sidebar-wrap.is-collapsed .creator-nav-menu-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .creator-desktop-sidebar {
