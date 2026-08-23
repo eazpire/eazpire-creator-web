@@ -319,13 +319,14 @@
     if (!nav) return;
     var buttons = nav.querySelectorAll('[data-desktop-switch]');
     if (!buttons.length) return;
-    var allowed = { dashboard: true, generator: true, creations: true, marketing: true, automations: true };
-    var order = ['dashboard', 'generator', 'creations', 'marketing', 'automations'];
+    var allowed = { dashboard: true, research: true, generator: true, creations: true, marketing: true, automations: true };
+    var order = ['dashboard', 'research', 'generator', 'creations', 'marketing', 'automations'];
     function portalScreenFromPath() {
       if (!window.__CREATOR_PORTAL_HOST__) return '';
       try {
         var path = String(window.location.pathname || '/').replace(/\/+$/, '').toLowerCase() || '/';
         if (path === '/' || path === '/dashboard') return 'dashboard';
+        if (path === '/research') return 'research';
         if (path === '/generator') return 'generator';
         if (path === '/creations') return 'creations';
         if (path === '/marketing') return 'marketing';
@@ -707,7 +708,7 @@
       }
     } catch (_e) {}
 
-    var slideMap = { dashboard: 0, generator: 1, creations: 2, marketing: 3, automations: 4 };
+    var slideMap = { dashboard: 0, research: 1, generator: 2, creations: 3, marketing: 4, automations: 5 };
     if (!isDesktop) {
       var slide = slideMap[screen];
       if (typeof slide === 'number' && typeof window.__creatorGoTo === 'function') {

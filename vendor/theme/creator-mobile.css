@@ -1530,15 +1530,15 @@ body.creator-mobile-page .creator-mobile-app {
   z-index: 1;
 }
 
-.creator-swipe-viewport.slide-1,
-.creator-swipe-viewport.slide-3,
-.creator-swipe-viewport.slide-4 {
+.creator-swipe-viewport.slide-2,
+.creator-swipe-viewport.slide-4,
+.creator-swipe-viewport.slide-5 {
   bottom: var(--creator-global-footer-height, 44px);
 }
 
 .creator-swipe-track {
   display: flex;
-  width: 500%;
+  width: 600%;
   height: 100%;
   min-height: 0;
   transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
@@ -1546,10 +1546,11 @@ body.creator-mobile-page .creator-mobile-app {
 }
 
 .creator-swipe-viewport.slide-0 .creator-swipe-track { transform: translateX(0); }
-.creator-swipe-viewport.slide-1 .creator-swipe-track { transform: translateX(-20%); }
-.creator-swipe-viewport.slide-2 .creator-swipe-track { transform: translateX(-40%); }
-.creator-swipe-viewport.slide-3 .creator-swipe-track { transform: translateX(-60%); }
-.creator-swipe-viewport.slide-4 .creator-swipe-track { transform: translateX(-80%); }
+.creator-swipe-viewport.slide-1 .creator-swipe-track { transform: translateX(-16.666%); }
+.creator-swipe-viewport.slide-2 .creator-swipe-track { transform: translateX(-33.333%); }
+.creator-swipe-viewport.slide-3 .creator-swipe-track { transform: translateX(-50%); }
+.creator-swipe-viewport.slide-4 .creator-swipe-track { transform: translateX(-66.666%); }
+.creator-swipe-viewport.slide-5 .creator-swipe-track { transform: translateX(-83.333%); }
 
 /* Character modals are inside transformed .creator-swipe-track (new stacking context).
    Fixed app header (z-index: 100) is a later DOM sibling, so it painted above the modal scrim.
@@ -1560,8 +1561,8 @@ body.creator-video-character-modal-open .creator-swipe-viewport {
 
 .creator-screen {
   position: relative;
-  flex: 0 0 20%;
-  width: 20%;
+  flex: 0 0 16.666%;
+  width: 16.666%;
   height: 100%;
   min-height: 0;
   padding: calc(var(--creator-header-to-content, 16px) + 8px) 20px 24px;
@@ -1571,15 +1572,15 @@ body.creator-video-character-modal-open .creator-swipe-viewport {
   -webkit-overflow-scrolling: touch;
 }
 
-.creator-screen[data-screen="1"] {
+.creator-screen[data-screen="2"] {
   padding-left: 0;
   padding-right: 0;
   padding-bottom: 0;
 }
 
-.creator-screen[data-screen="2"],
 .creator-screen[data-screen="3"],
-.creator-screen[data-screen="4"] {
+.creator-screen[data-screen="4"],
+.creator-screen[data-screen="5"] {
   padding: var(--creator-header-to-content, 16px) 0 0;
   display: flex;
   flex-direction: column;

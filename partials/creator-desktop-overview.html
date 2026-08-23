@@ -322,6 +322,25 @@
           type="button"
           role="tab"
           aria-selected="false"
+          aria-controls="creatorDesktopPanelResearch"
+          id="creatorDesktopNavResearch"
+          data-desktop-switch="research"
+          data-screen-title="Research"
+          data-eazy-guide="chrome.nav-research"
+        >
+          <span class="creator-nav-menu-icon-wrap">
+<svg class="creator-nav-menu-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+        <circle cx="11" cy="11" r="6.25" fill="none" stroke="currentColor" stroke-width="1.75"/>
+        <path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" d="M16 16l4 4M8 11h6M11 8v6"/>
+      </svg>
+</span>
+          <span class="creator-nav-menu-label" data-t="creator.mobile.research">Research</span>
+        </button>
+        <button
+          class="creator-desktop-sidebar__item creator-nav-menu-row"
+          type="button"
+          role="tab"
+          aria-selected="false"
           aria-controls="creatorDesktopPanelGenerator"
           id="creatorDesktopNavGenerator"
           data-desktop-switch="generator"
@@ -452,7 +471,7 @@
           <article class="creator-desktop-card creator-desktop-card--overview">
             <h2 data-t="creator.mobile.overview">Overview</h2>
             <div class="creator-stats-grid creator-desktop-stats-grid">
-              <article class="creator-stat-card creator-stat-card--designs creator-stat-card--clickable" role="button" tabindex="0" data-goto="2" data-creations-tab="designs">
+              <article class="creator-stat-card creator-stat-card--designs creator-stat-card--clickable" role="button" tabindex="0" data-goto="3" data-creations-tab="designs">
                 <div class="creator-stat-card__icon creator-stat-card__icon--designs">🎨</div>
                 <span class="creator-stat-card__label" data-t="creator.overview.designs_label">Designs</span>
                 <div class="creator-stat-card__dual">
@@ -463,7 +482,7 @@
                 </div>
               </article>
 
-              <article class="creator-stat-card creator-stat-card--products creator-stat-card--clickable" role="button" tabindex="0" data-goto="2" data-creations-tab="products">
+              <article class="creator-stat-card creator-stat-card--products creator-stat-card--clickable" role="button" tabindex="0" data-goto="3" data-creations-tab="products">
                 <div class="creator-stat-card__icon creator-stat-card__icon--products">📦</div>
                 <span class="creator-stat-card__label" data-t="creator.overview.products_label">Products</span>
                 <div class="creator-stat-card__dual">
@@ -474,7 +493,7 @@
                 </div>
               </article>
 
-              <article class="creator-stat-card creator-stat-card--heroes creator-stat-card--clickable" role="button" tabindex="0" data-goto="3" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
+              <article class="creator-stat-card creator-stat-card--heroes creator-stat-card--clickable" role="button" tabindex="0" data-goto="4" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
                 <div class="creator-stat-card__icon creator-stat-card__icon--heroes">🖼️</div>
                 <span class="creator-stat-card__label" data-t="creator.overview.hero_images_label">Hero Images</span>
                 <div class="creator-stat-card__dual">
@@ -489,28 +508,32 @@
 
           <article class="creator-desktop-card creator-desktop-card--actions">
             <h2 data-t="creator.overview.quick_actions">Quick Actions</h2>
-            <a href="#" class="creator-desktop-action" data-goto="1">
+            <a href="#" class="creator-desktop-action" data-goto="2">
               <span class="creator-desktop-action__title" data-t="creator.overview.action_generator_title">Design Generator</span>
               <span class="creator-desktop-action__desc" data-t="creator.overview.action_generator_desc">Create new design</span>
             </a>
-            <a href="#" class="creator-desktop-action" data-goto="2" data-creations-tab="designs">
+            <a href="#" class="creator-desktop-action" data-goto="3" data-creations-tab="designs">
               <span class="creator-desktop-action__title" data-t="creator.overview.action_designs_title">My Designs</span>
               <span class="creator-desktop-action__desc" data-t="creator.overview.action_designs_desc">Manage designs</span>
             </a>
-            <a href="#" class="creator-desktop-action" data-goto="3" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
+            <a href="#" class="creator-desktop-action" data-goto="4" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
               <span class="creator-desktop-action__title" data-t="creator.overview.action_content_title">Content Creation</span>
               <span class="creator-desktop-action__desc" data-t="creator.overview.action_content_desc">Create Hero Images</span>
             </a>
-            <a href="#" class="creator-desktop-action" data-goto="4" data-automations-maintab="design-generator">
+            <a href="#" class="creator-desktop-action" data-goto="5" data-automations-maintab="design-generator">
               <span class="creator-desktop-action__title" data-t="creator.overview.action_automations_title">Automations</span>
               <span class="creator-desktop-action__desc" data-t="creator.overview.action_automations_desc">Schedule design generation</span>
             </a>
-            <a href="#" class="creator-desktop-action" data-goto="2" data-creations-tab="products">
+            <a href="#" class="creator-desktop-action" data-goto="3" data-creations-tab="products">
               <span class="creator-desktop-action__title" data-t="creator.overview.action_products_title">My Products</span>
               <span class="creator-desktop-action__desc" data-t="creator.overview.action_products_desc">Manage products</span>
             </a>
           </article>
         </section>
+      </section>
+
+      <section class="creator-desktop-stage__panel creator-desktop-stage__panel--research" id="creatorDesktopPanelResearch" data-desktop-screen="research" role="tabpanel" aria-labelledby="creatorDesktopNavResearch" aria-label="Research" hidden>
+        <div class="creator-desktop-research-host" id="creatorDesktopResearchHost"></div>
       </section>
 
       <section class="creator-desktop-stage__panel creator-desktop-stage__panel--generator" id="creatorDesktopPanelGenerator" data-desktop-screen="generator" role="tabpanel" aria-labelledby="creatorDesktopNavGenerator" aria-label="Generator" hidden>

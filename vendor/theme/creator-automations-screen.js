@@ -117,7 +117,7 @@
 
   function isAutomationsMobileSlideVisible() {
     var vp = document.getElementById('creatorMobileSwipeViewport');
-    return !!(vp && vp.classList.contains('slide-4'));
+    return !!(vp && vp.classList.contains('slide-5'));
   }
 
   function isAutomationsDesktopPanelVisible() {
@@ -239,7 +239,7 @@
     var headerTitle = document.querySelector('.creator-header__title');
     if (headerTitle && typeof window.__creatorGoTo === 'function') {
       var vp = document.getElementById('creatorMobileSwipeViewport');
-      if (vp && vp.classList.contains('slide-4')) {
+      if (vp && vp.classList.contains('slide-5')) {
         headerTitle.textContent = getHeaderTitle();
       }
     }
@@ -1828,7 +1828,7 @@
     var viewport = document.getElementById('creatorMobileSwipeViewport');
     function isAutomationsViewport(vp) {
       if (!vp) return false;
-      if (vp.classList.contains('slide-4')) return true;
+      if (vp.classList.contains('slide-5')) return true;
       return String(vp.getAttribute('data-initial-slide') || '') === '4';
     }
 
@@ -1848,7 +1848,7 @@
 
     if (viewport) {
       var observer = new MutationObserver(function () {
-        if (viewport.classList.contains('slide-4')) {
+        if (viewport.classList.contains('slide-5')) {
           refreshAutomationsListIfContextVisible();
         } else {
           setAutomationsGridLoadingUi(false);

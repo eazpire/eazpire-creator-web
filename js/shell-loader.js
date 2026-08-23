@@ -52,7 +52,7 @@
     if (global.CreatorPortalRouter && typeof global.CreatorPortalRouter.current === "function") {
       route = global.CreatorPortalRouter.current() || "dashboard";
     }
-    var slideMap = { dashboard: 0, generator: 1, creations: 2, marketing: 3, automations: 4 };
+    var slideMap = { dashboard: 0, research: 1, generator: 2, creations: 3, marketing: 4, automations: 5 };
     var slide = slideMap[route];
     var viewport = document.getElementById("creatorMobileSwipeViewport");
     if (viewport && typeof slide === "number") {
@@ -148,10 +148,11 @@
       '<section class="creator-screen" data-screen="0">' +
       parts[1] +
       "</section>" +
-      '<section class="creator-screen" data-screen="1" data-portal-screen-slot="generator"></section>' +
-      '<section class="creator-screen" data-screen="2" data-portal-screen-slot="creations"></section>' +
-      '<section class="creator-screen" data-screen="3" data-portal-screen-slot="marketing"></section>' +
-      '<section class="creator-screen" data-screen="4" data-portal-screen-slot="automations"></section>' +
+      '<section class="creator-screen" data-screen="1" data-portal-screen-slot="research"></section>' +
+      '<section class="creator-screen" data-screen="2" data-portal-screen-slot="generator"></section>' +
+      '<section class="creator-screen" data-screen="3" data-portal-screen-slot="creations"></section>' +
+      '<section class="creator-screen" data-screen="4" data-portal-screen-slot="marketing"></section>' +
+      '<section class="creator-screen" data-screen="5" data-portal-screen-slot="automations"></section>' +
       "</div></div>" +
       parts[2] +
       parts[3] +
@@ -182,12 +183,13 @@
     }
     secondaryScreensPromise = (async function () {
       var parts = await Promise.all([
+        fetchPartial("creator-mobile-research.html"),
         fetchPartial("creator-mobile-generator.html"),
         fetchPartial("creator-mobile-creations.html"),
         fetchPartial("creator-mobile-marketing.html"),
         fetchPartial("creator-mobile-automations.html"),
       ]);
-      var slots = ["generator", "creations", "marketing", "automations"];
+      var slots = ["research", "generator", "creations", "marketing", "automations"];
       slots.forEach(function (slot, i) {
         var el = host.querySelector('[data-portal-screen-slot="' + slot + '"]');
         if (!el || el.dataset.filled === "1") return;
@@ -200,6 +202,11 @@
         }
       });
       host.dataset.secondaryScreens = "1";
+      if (global.CreatorPortalFeatures && typeof global.CreatorPortalFeatures.ensureResearch === "function") {
+        global.CreatorPortalFeatures.ensureResearch().catch(function (e) {
+          console.warn("[CreatorPortal] research load failed", e);
+        });
+      }
     })().catch(function (e) {
       secondaryScreensPromise = null;
       console.warn("[CreatorPortal] secondary screens load failed", e);

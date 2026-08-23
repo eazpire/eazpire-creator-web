@@ -1,0 +1,125 @@
+.eazy-research {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding: 4px 2px 24px;
+  color: #f4f1ff;
+}
+
+.eazy-research__intro h2 {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.eazy-research__intro p {
+  margin: 0;
+  opacity: 0.78;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.eazy-research__status {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 12, 36, 0.55);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  opacity: 0.88;
+}
+
+.eazy-research__grid {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 900px) {
+  .eazy-research__grid {
+    grid-template-columns: 1.4fr 1fr;
+  }
+}
+
+.eazy-research__card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(16, 10, 32, 0.62);
+  border-radius: 16px;
+  padding: 14px;
+  min-height: 140px;
+}
+
+.eazy-research__card h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.eazy-research__empty {
+  opacity: 0.7;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.eazy-research__item {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0;
+  border-radius: 12px;
+  padding: 8px;
+  margin: 0 0 8px;
+  cursor: pointer;
+}
+
+.eazy-research__item img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #1b1430;
+}
+
+.eazy-research__item strong {
+  display: block;
+  font-size: 0.86rem;
+  line-height: 1.3;
+}
+
+.eazy-research__meta {
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.eazy-research__badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(124, 92, 255, 0.25);
+}
+
+.eazy-research__badge.is-rising { background: rgba(46, 204, 113, 0.22); }
+.eazy-research__badge.is-declining { background: rgba(231, 76, 60, 0.22); }
+
+.eazy-research__detail {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(10, 6, 24, 0.72);
+}
+
+.eazy-research__detail img {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #120c22;
+}
+
+.eazy-research__detail[hidden] { display: none; }

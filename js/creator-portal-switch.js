@@ -52,6 +52,7 @@
   var PORTAL_CREATOR_PATHS = [
     "/",
     "/dashboard",
+    "/research",
     "/generator",
     "/creations",
     "/marketing",
@@ -93,7 +94,7 @@
       return creatorPortalUrl;
     }
 
-    var creatorPaths = (root.dataset.creatorPaths || "/dashboard,/generator,/creations,/marketing,/automations")
+    var creatorPaths = (root.dataset.creatorPaths || "/dashboard,/research,/generator,/creations,/marketing,/automations")
       .split(",")
       .map(normalizePath)
       .filter(Boolean);

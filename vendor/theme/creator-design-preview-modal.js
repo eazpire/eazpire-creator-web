@@ -2630,7 +2630,7 @@
       return window.CreatorDesktopShell.getActiveScreen() === 'generator';
     }
     const vp = document.getElementById('creatorMobileSwipeViewport');
-    if (vp && vp.classList.contains('slide-1')) return true;
+    if (vp && vp.classList.contains('slide-2')) return true;
     return false;
   }
 
@@ -2652,7 +2652,7 @@
       } catch (_e) {}
       try {
         if (typeof window.__creatorGoTo === 'function') {
-          window.__creatorGoTo(1);
+          window.__creatorGoTo(2);
         }
       } catch (_e2) {}
       const genEl = document.getElementById('creatorGenerator');

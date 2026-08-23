@@ -84,8 +84,8 @@
     var dsk = creatorShellGetDesktopScreen();
     var target = null;
     if (!jobOverlay && speechVisible && docked) {
-      if (mobileVis && slideIdx === 1) target = document.getElementById('creatorEazySpeechAnchorGen');
-      else if (mobileVis && slideIdx === 3) target = document.getElementById('creatorEazySpeechAnchorMar');
+      if (mobileVis && slideIdx === 2) target = document.getElementById('creatorEazySpeechAnchorGen');
+      else if (mobileVis && slideIdx === 4) target = document.getElementById('creatorEazySpeechAnchorMar');
       else if (!mobileVis && dsk === 'generator') target = document.getElementById('creatorEazySpeechAnchorGen');
       else if (!mobileVis && dsk === 'marketing') target = document.getElementById('creatorEazySpeechAnchorMar');
     }
@@ -315,10 +315,10 @@
     var disabled = true;
 
     if (mobileVis) {
-      if (slideIdx === 1 && genReady && !confirmOpen) {
+      if (slideIdx === 2 && genReady && !confirmOpen) {
         show = true;
         disabled = false;
-      } else if (slideIdx === 3 && heroProductsReady && heroBtn) {
+      } else if (slideIdx === 4 && heroProductsReady && heroBtn) {
         show = true;
         disabled = !!heroBtn.disabled;
       }
@@ -343,13 +343,13 @@
         var mv = creatorShellIsMobileAppVisible();
         var si = creatorShellGetSlideIndex();
         var dk = creatorShellGetDesktopScreen();
-        if (mv && si === 1) {
+        if (mv && si === 2) {
           if (window.CreatorGenerator && typeof window.CreatorGenerator.triggerGenerate === 'function') {
             window.CreatorGenerator.triggerGenerate();
           }
           return;
         }
-        if (mv && si === 3) {
+        if (mv && si === 4) {
           var hb = creatorShellQueryVisibleHeroStartBtn();
           if (hb && !hb.disabled) hb.click();
           return;
@@ -373,7 +373,7 @@
 
   /**
    * Single #eazy-mascot: face toward hero/generator speech bubbles (not duplicate footer mascots).
-   * Generator: slide-1 + owner + (prompt or refs). Hero: slide-3 + product(s), or desktop/legacy ready hero footer.
+   * Generator: slide-2 + owner + (prompt or refs). Hero: slide-4 + product(s), or desktop/legacy ready hero footer.
    */
   function syncCreatorMobileEazyLookLeft() {
     var mascot = document.getElementById('eazy-mascot');
@@ -395,7 +395,7 @@
     var hasGenInput = promptOk || imgs.length > 0;
 
     var genLook = false;
-    if (mobileVis && slideIdx === 1 && owner && hasGenInput) {
+    if (mobileVis && slideIdx === 2 && owner && hasGenInput) {
       genLook = true;
     } else if (!mobileVis && dsk === 'generator' && owner && hasGenInput) {
       genLook = true;
@@ -405,7 +405,7 @@
     var hasHeroProducts = !!(sp.top || sp.addition);
 
     var heroLook = false;
-    if (mobileVis && slideIdx === 3 && hasHeroProducts) {
+    if (mobileVis && slideIdx === 4 && hasHeroProducts) {
       heroLook = true;
     } else if (!mobileVis && dsk === 'marketing' && hasHeroProducts) {
       var hb = creatorShellQueryVisibleHeroStartBtn();
@@ -464,9 +464,9 @@
 
   const SCREEN_LABELS = (typeof window.CreatorMobileI18n !== 'undefined' && window.CreatorMobileI18n.screenLabels)
     ? window.CreatorMobileI18n.screenLabels
-    : ['Dashboard', 'Generator', 'Designs', 'Marketing', 'Automations'];
-  const TOTAL = 5;
-  const CREATOR_SHELL_HASH_SCREENS = ['dashboard', 'generator', 'creations', 'marketing', 'automations'];
+    : ['Dashboard', 'Research', 'Generator', 'Designs', 'Marketing', 'Automations'];
+  const TOTAL = 6;
+  const CREATOR_SHELL_HASH_SCREENS = ['dashboard', 'research', 'generator', 'creations', 'marketing', 'automations'];
 
   function creatorShellPathSupportsDashboardTabHash() {
     try {
@@ -483,7 +483,7 @@
       var raw = (window.location.hash || '').replace(/^#/, '').toLowerCase().trim();
       if (!raw) return null;
       if (raw === 'settings') return null;
-      if (raw === 'promotions') return 3;
+      if (raw === 'promotions') return 4;
       var i = CREATOR_SHELL_HASH_SCREENS.indexOf(raw);
       return i >= 0 ? i : null;
     } catch (_e2) {
@@ -499,7 +499,7 @@
       var cur = (window.location.hash || '').replace(/^#/, '').toLowerCase();
       if (name === 'dashboard' && !cur) return;
       if (cur === name) return;
-      if (index === 3 && name === 'marketing' && cur === 'promotions') return;
+      if (index === 4 && name === 'marketing' && cur === 'promotions') return;
       var u = new URL(window.location.href);
       u.hash = name;
       window.history.replaceState(window.history.state, '', u.pathname + u.search + u.hash);
@@ -549,7 +549,7 @@
     if (!viewport || !track) return;
     var guestStrict = window.__CREATOR_IS_LOGGED_IN === false && !window.__DEV_BYPASS;
     if (!guestStrict) return;
-    if (currentIndex === 0 || currentIndex === 1) return;
+    if (currentIndex === 0 || currentIndex === 2) return;
     var section = document.querySelector('.creator-screen[data-screen="' + currentIndex + '"]');
     if (!section) return;
     section.appendChild(buildCreatorGuestLockOverlay());

@@ -12,11 +12,13 @@
     settings: null,
     journey: null,
     dashboard: null,
+    research: null,
     eazcEarn: null,
+    research: null,
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "eazc-earn-modal-20260823";
+  var PORTAL_ASSET_V = "eazy-research-20260823";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -552,6 +554,28 @@
     return state.dashboard;
   }
 
+  async function ensureResearch() {
+    if (state.research) return state.research;
+    state.research = (async function () {
+      loadCss(asset("eazy-research.css"));
+      var host = document.getElementById("creatorDesktopResearchHost");
+      if (host && !host.querySelector("[data-eazy-research]")) {
+        await injectPartial("creator-mobile-research.html", host);
+      }
+      await loadScript(asset("eazy-research.js"));
+      if (global.EazyResearchPage && typeof global.EazyResearchPage.boot === "function") {
+        global.EazyResearchPage.boot();
+      }
+    })();
+    try {
+      await state.research;
+    } catch (e) {
+      state.research = null;
+      console.warn("[CreatorPortalFeatures] research load failed", e);
+    }
+    return state.research;
+  }
+
   async function ensureSettings() {
     if (state.settings) return state.settings;
 
@@ -662,6 +686,7 @@
     }
     ensureEazcEarnModal();
     if (name === "dashboard") ensureDashboard();
+    if (name === "research") ensureResearch();
     if (name === "creations") ensureCreations();
     if (name === "generator") {
       ensureGenerator();
@@ -677,6 +702,7 @@
   global.CreatorPortalFeatures = {
     onRoute: onRoute,
     ensureDashboard: ensureDashboard,
+    ensureResearch: ensureResearch,
     ensureCreations: ensureCreations,
     ensureGenerator: ensureGenerator,
     ensureMarketing: ensureMarketing,

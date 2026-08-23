@@ -6,6 +6,7 @@
 
   var SCREEN_TITLES = {
     dashboard: "Dashboard",
+    research: "Research",
     creations: "My Creations",
     marketing: "Marketing",
     automations: "Automations",
@@ -13,9 +14,10 @@
   };
 
   var VALID = Object.keys(SCREEN_TITLES);
-  var SLIDE_INDEX = { dashboard: 0, generator: 1, creations: 2, marketing: 3, automations: 4 };
+  var SLIDE_INDEX = { dashboard: 0, research: 1, generator: 2, creations: 3, marketing: 4, automations: 5 };
   var PATH_FOR_SCREEN = {
     dashboard: "/dashboard",
+    research: "/research",
     generator: "/generator",
     creations: "/creations",
     marketing: "/marketing",
@@ -24,6 +26,7 @@
   var SCREEN_FOR_PATH = {
     "/": "dashboard",
     "/dashboard": "dashboard",
+    "/research": "research",
     "/generator": "generator",
     "/creations": "creations",
     "/marketing": "marketing",
