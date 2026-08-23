@@ -3,99 +3,221 @@
   id="eazcEarnModal"
   aria-labelledby="eazcEarnModalTitle"
   aria-modal="true"
+  data-earn-active="start"
 >
   <div class="eaz-eazc-earn__glow" aria-hidden="true"></div>
   <div class="eaz-eazc-earn__shell">
     <header class="eaz-eazc-earn__head">
       <div class="eaz-eazc-earn__head-copy">
-        <p class="eaz-eazc-earn__kicker" data-t="creator.eazc_earn.kicker">Sales earnings</p>
-        <h2 class="eaz-eazc-earn__title" id="eazcEarnModalTitle" data-t="creator.eazc_earn.title">How you earn EAZC</h2>
+        <p class="eaz-eazc-earn__kicker" data-t="creator.eazc_earn.kicker">Get paid</p>
+        <h2 class="eaz-eazc-earn__title" id="eazcEarnModalTitle" data-t="creator.eazc_earn.title">How you earn real money</h2>
       </div>
-      <button
-        type="button"
-        class="eaz-eazc-earn__close"
-        data-eazc-earn-close
-        aria-label="Close"
-      >
+      <button type="button" class="eaz-eazc-earn__close" data-eazc-earn-close aria-label="Close">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
           <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
         </svg>
       </button>
     </header>
+    <div class="eaz-eazc-earn__layout">
+      <nav class="eaz-eazc-earn__nav" aria-label="Earn money menu">
+        <button type="button" class="eaz-eazc-earn__nav-btn is-active" data-earn-nav="start" aria-current="page">
+          <span class="eaz-eazc-earn__nav-pip" aria-hidden="true"></span>
+          <span data-t="creator.eazc_earn.nav_start">Overview</span>
+        </button>
+        <button type="button" class="eaz-eazc-earn__nav-btn" data-earn-nav="products">
+          <span class="eaz-eazc-earn__nav-pip" aria-hidden="true">01</span>
+          <span data-t="creator.eazc_earn.nav_products">Your designs</span>
+        </button>
+        <button type="button" class="eaz-eazc-earn__nav-btn" data-earn-nav="remix">
+          <span class="eaz-eazc-earn__nav-pip" aria-hidden="true">02</span>
+          <span data-t="creator.eazc_earn.nav_remix">Remixes</span>
+        </button>
+        <button type="button" class="eaz-eazc-earn__nav-btn" data-earn-nav="qi">
+          <span class="eaz-eazc-earn__nav-pip" aria-hidden="true">03</span>
+          <span data-t="creator.eazc_earn.nav_qi">Quick Inspirations</span>
+        </button>
+        <button type="button" class="eaz-eazc-earn__nav-btn" data-earn-nav="shop">
+          <span class="eaz-eazc-earn__nav-pip" aria-hidden="true">04</span>
+          <span data-t="creator.eazc_earn.nav_shop">Shop products</span>
+        </button>
+        <button type="button" class="eaz-eazc-earn__nav-btn" data-earn-nav="community">
+          <span class="eaz-eazc-earn__nav-pip" aria-hidden="true">05</span>
+          <span data-t="creator.eazc_earn.nav_community">Community</span>
+        </button>
+        <button type="button" class="eaz-eazc-earn__nav-btn" data-earn-nav="referral">
+          <span class="eaz-eazc-earn__nav-pip" aria-hidden="true">06</span>
+          <span data-t="creator.eazc_earn.nav_referral">Invites &amp; cashback</span>
+        </button>
+        <button type="button" class="eaz-eazc-earn__nav-btn eaz-eazc-earn__nav-btn--cash" data-earn-nav="payout">
+          <span class="eaz-eazc-earn__nav-pip" aria-hidden="true"></span>
+          <span data-t="creator.eazc_earn.nav_payout">Turn it into money</span>
+        </button>
+      </nav>
+      <div class="eaz-eazc-earn__stage">
+        <article class="eaz-eazc-earn__page is-active" data-earn-page="start">
+          <p class="eaz-eazc-earn__eyebrow" data-t="creator.eazc_earn.page_start_eyebrow">Start here</p>
+          <h3 class="eaz-eazc-earn__page-title" data-t="creator.eazc_earn.page_start_title">From a sale to money in your pocket</h3>
+          <p class="eaz-eazc-earn__lead" data-t="creator.eazc_earn.page_start_lead">Every path on the left pays you from a real purchase. Open a topic — or jump in from the tiles.</p>
+          <p class="eaz-eazc-earn__intro" data-t="creator.eazc_earn.intro">You get paid when someone actually buys a product. Earnings are tracked as EAZC first, then you convert them into shop credit or cash. This guide is sales money only — not daily game coins.</p>
+          <ol class="eaz-eazc-earn__path">
+            <li class="eaz-eazc-earn__path-step eaz-eazc-earn__path-step--orange">
+              <span class="eaz-eazc-earn__path-num">1</span>
+              <span>
+                <strong data-t="creator.eazc_earn.path_1_title">Someone buys</strong>
+                <span data-t="creator.eazc_earn.path_1_body">Print and shipping come off first. What’s left is net profit. You earn a creator share of that profit.</span>
+              </span>
+            </li>
+            <li class="eaz-eazc-earn__path-step eaz-eazc-earn__path-step--white">
+              <span class="eaz-eazc-earn__path-num">2</span>
+              <span>
+                <strong data-t="creator.eazc_earn.path_2_title">Wait 30 days</strong>
+                <span data-t="creator.eazc_earn.path_2_body">New sales stay pending during the return window. Then the amount is yours to convert.</span>
+              </span>
+            </li>
+            <li class="eaz-eazc-earn__path-step eaz-eazc-earn__path-step--blue">
+              <span class="eaz-eazc-earn__path-num">3</span>
+              <span>
+                <strong data-t="creator.eazc_earn.path_3_title">Get paid</strong>
+                <span data-t="creator.eazc_earn.path_3_body">Convert to shop credit (+10% bonus) or send cash via Wise.</span>
+              </span>
+            </li>
+          </ol>
+          <div class="eaz-eazc-earn__tiles">
+            <button type="button" class="eaz-eazc-earn__tile" data-earn-goto="products"><span class="eaz-eazc-earn__tile-num">01</span><span data-t="creator.eazc_earn.nav_products">Your designs</span></button>
+            <button type="button" class="eaz-eazc-earn__tile" data-earn-goto="remix"><span class="eaz-eazc-earn__tile-num">02</span><span data-t="creator.eazc_earn.nav_remix">Remixes</span></button>
+            <button type="button" class="eaz-eazc-earn__tile" data-earn-goto="qi"><span class="eaz-eazc-earn__tile-num">03</span><span data-t="creator.eazc_earn.nav_qi">Quick Inspirations</span></button>
+            <button type="button" class="eaz-eazc-earn__tile" data-earn-goto="shop"><span class="eaz-eazc-earn__tile-num">04</span><span data-t="creator.eazc_earn.nav_shop">Shop products</span></button>
+            <button type="button" class="eaz-eazc-earn__tile" data-earn-goto="community"><span class="eaz-eazc-earn__tile-num">05</span><span data-t="creator.eazc_earn.nav_community">Community</span></button>
+            <button type="button" class="eaz-eazc-earn__tile" data-earn-goto="referral"><span class="eaz-eazc-earn__tile-num">06</span><span data-t="creator.eazc_earn.nav_referral">Invites &amp; cashback</span></button>
+          </div>
+          <button type="button" class="eaz-eazc-earn__cash-cta" data-earn-goto="payout">
+            <span data-t="creator.eazc_earn.hub_cta">See how cash-out works</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </article>
 
-    <div class="eaz-eazc-earn__body">
-      <p class="eaz-eazc-earn__intro" data-t="creator.eazc_earn.intro">EAZC is credited when someone actually buys a product. This page covers sales earnings only — not daily game coins.</p>
-      <p class="eaz-eazc-earn__pending" data-t="creator.eazc_earn.pending_hint">New sales EAZC stays pending for 30 days (return window), then it becomes available to cash out or convert.</p>
-
-      <div class="eaz-eazc-earn__cards">
-        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--create">
-          <summary class="eaz-eazc-earn__summary">
-            <span class="eaz-eazc-earn__card-index">01</span>
-            <span class="eaz-eazc-earn__card-copy">
-              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_products_title">Your products</span>
-              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_products_teaser">You sell a design you published.</span>
-            </span>
-          </summary>
-          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_products_body">You receive your royalty share of the net profit (10–40%). Community cashback and referrals are paid from the separate community share.</p>
-        </details>
-
-        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--create">
-          <summary class="eaz-eazc-earn__summary">
-            <span class="eaz-eazc-earn__card-index">02</span>
-            <span class="eaz-eazc-earn__card-copy">
-              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_remix_title">Remixes</span>
-              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_remix_teaser">Someone remixed your design — or you remixed theirs.</span>
-            </span>
-          </summary>
-          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_remix_body">From the creator share: the remix seller receives 87.5% and the original creator receives 12.5%.</p>
-        </details>
-
-        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--create">
-          <summary class="eaz-eazc-earn__summary">
-            <span class="eaz-eazc-earn__card-index">03</span>
-            <span class="eaz-eazc-earn__card-copy">
-              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_qi_title">Quick Inspirations</span>
-              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_qi_teaser">Someone sold a design made from your Quick Inspiration.</span>
-            </span>
-          </summary>
-          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_qi_body">The Quick Inspiration author receives 5 royalty points from the seller’s creator share (half of that share at the 10% starter royalty). Automatic trend inspirations do not pay.</p>
-        </details>
-
-        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--create">
-          <summary class="eaz-eazc-earn__summary">
-            <span class="eaz-eazc-earn__card-index">04</span>
-            <span class="eaz-eazc-earn__card-copy">
-              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_shop_title">Shop designs</span>
-              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_shop_teaser">Your design is used on a shop or custom product.</span>
-            </span>
-          </summary>
-          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_shop_body">Up to 3 designs on one product share the creator amount equally. If a slot is a remix, that slot still splits 87.5% / 12.5%.</p>
-        </details>
-
-        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--community">
-          <summary class="eaz-eazc-earn__summary">
-            <span class="eaz-eazc-earn__card-index">05</span>
-            <span class="eaz-eazc-earn__card-copy">
-              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_community_title">Creator Community</span>
-              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_community_teaser">You and your recruiter both opted in.</span>
-            </span>
-          </summary>
-          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_community_body">The seller keeps 70% of the creator share. The recruiter who invited them receives 30%. Publish Assist does not add an extra split.</p>
-        </details>
-
-        <details class="eaz-eazc-earn__card eaz-eazc-earn__card--community">
-          <summary class="eaz-eazc-earn__summary">
-            <span class="eaz-eazc-earn__card-index">06</span>
-            <span class="eaz-eazc-earn__card-copy">
-              <span class="eaz-eazc-earn__card-title" data-t="creator.eazc_earn.card_referral_title">Referrals &amp; cashback</span>
-              <span class="eaz-eazc-earn__card-teaser" data-t="creator.eazc_earn.card_referral_teaser">Someone buys with your link — or you buy while logged in.</span>
-            </span>
-          </summary>
-          <p class="eaz-eazc-earn__card-body" data-t="creator.eazc_earn.card_referral_body">From the community share: the buyer receives 20% cashback, your direct referral link earns 10%, and further network levels earn smaller shares.</p>
-        </details>
+        <article class="eaz-eazc-earn__page" data-earn-page="products" hidden>
+          <p class="eaz-eazc-earn__eyebrow" data-t="creator.eazc_earn.page_products_eyebrow">Path 01</p>
+          <h3 class="eaz-eazc-earn__page-title" data-t="creator.eazc_earn.page_products_title">Sell your own designs</h3>
+          <p class="eaz-eazc-earn__lead" data-t="creator.eazc_earn.page_products_lead">Publish a design. When it sells, you earn a royalty on the net profit — 10% to start, up to 40% later.</p>
+          <p class="eaz-eazc-earn__body" data-t="creator.eazc_earn.page_products_body">Community cashback and referrals come from a separate community share. They do not take your creator royalty.</p>
+          <figure class="eaz-eazc-earn__receipt">
+            <figcaption class="eaz-eazc-earn__stamp" data-t="creator.eazc_earn.example_stamp">Example</figcaption>
+            <p class="eaz-eazc-earn__receipt-story" data-t="creator.eazc_earn.page_products_example">A customer pays €34.90 for Lena’s hoodie. After print and shipping, €8.00 net profit remains.</p>
+            <dl class="eaz-eazc-earn__lines">
+              <div><dt data-t="creator.eazc_earn.page_products_l1">Net profit</dt><dd data-t="creator.eazc_earn.page_products_v1">€8.00</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_products_l2">Lena at 10% royalty</dt><dd data-t="creator.eazc_earn.page_products_v2">about €0.80</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_products_l3">Same sale at 40%</dt><dd data-t="creator.eazc_earn.page_products_v3">about €3.20</dd></div>
+            </dl>
+            <p class="eaz-eazc-earn__receipt-note" data-t="creator.eazc_earn.example_note">Illustrative numbers. Your payout depends on the product, print cost, and your royalty tier.</p>
+          </figure>
+          <p class="eaz-eazc-earn__fact" data-t="creator.eazc_earn.page_products_fact">That €0.80 is credited as EAZC. After 30 days Lena converts it into euros (or her payout currency) in Balance &amp; Payouts.</p>
+        </article>
+        <article class="eaz-eazc-earn__page" data-earn-page="remix" hidden>
+          <p class="eaz-eazc-earn__eyebrow" data-t="creator.eazc_earn.page_remix_eyebrow">Path 02</p>
+          <h3 class="eaz-eazc-earn__page-title" data-t="creator.eazc_earn.page_remix_title">Earn on remixes</h3>
+          <p class="eaz-eazc-earn__lead" data-t="creator.eazc_earn.page_remix_lead">If someone remixed your design — or you remixed theirs — you still share the creator royalty from that sale.</p>
+          <p class="eaz-eazc-earn__body" data-t="creator.eazc_earn.page_remix_body">The remix seller receives 87.5% of the creator share. The original creator receives 12.5%.</p>
+          <figure class="eaz-eazc-earn__receipt">
+            <figcaption class="eaz-eazc-earn__stamp" data-t="creator.eazc_earn.example_stamp">Example</figcaption>
+            <p class="eaz-eazc-earn__receipt-story" data-t="creator.eazc_earn.page_remix_example">Noah remixed Lena’s print and sold the same hoodie. The creator share is still about €0.80.</p>
+            <dl class="eaz-eazc-earn__lines">
+              <div><dt data-t="creator.eazc_earn.page_remix_l1">Noah, remix seller</dt><dd data-t="creator.eazc_earn.page_remix_v1">€0.70 (87.5%)</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_remix_l2">Lena, original design</dt><dd data-t="creator.eazc_earn.page_remix_v2">€0.10 (12.5%)</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_remix_l3">Community cashback</dt><dd data-t="creator.eazc_earn.page_remix_v3">paid separately</dd></div>
+            </dl>
+            <p class="eaz-eazc-earn__receipt-note" data-t="creator.eazc_earn.example_note">Illustrative numbers. Your payout depends on the product, print cost, and your royalty tier.</p>
+          </figure>
+          <p class="eaz-eazc-earn__fact" data-t="creator.eazc_earn.page_remix_fact">You earn on both sides: selling a remix, and when others remix you.</p>
+        </article>
+        <article class="eaz-eazc-earn__page" data-earn-page="qi" hidden>
+          <p class="eaz-eazc-earn__eyebrow" data-t="creator.eazc_earn.page_qi_eyebrow">Path 03</p>
+          <h3 class="eaz-eazc-earn__page-title" data-t="creator.eazc_earn.page_qi_title">Quick Inspirations</h3>
+          <p class="eaz-eazc-earn__lead" data-t="creator.eazc_earn.page_qi_lead">Save a Quick Inspiration. If someone builds a design from it and that product sells, you share the creator royalty.</p>
+          <p class="eaz-eazc-earn__body" data-t="creator.eazc_earn.page_qi_body">The Quick Inspiration author receives 5 royalty points from the seller’s creator share — half of that share at the 10% starter royalty. Automatic trend inspirations do not pay.</p>
+          <figure class="eaz-eazc-earn__receipt">
+            <figcaption class="eaz-eazc-earn__stamp" data-t="creator.eazc_earn.example_stamp">Example</figcaption>
+            <p class="eaz-eazc-earn__receipt-story" data-t="creator.eazc_earn.page_qi_example">Mira saved a Quick Inspiration. Someone used it on a mug. Creator share on that sale: about €0.80 at 10% royalty.</p>
+            <dl class="eaz-eazc-earn__lines">
+              <div><dt data-t="creator.eazc_earn.page_qi_l1">Mira, inspiration author</dt><dd data-t="creator.eazc_earn.page_qi_v1">€0.40</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_qi_l2">The seller</dt><dd data-t="creator.eazc_earn.page_qi_v2">€0.40</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_qi_l3">Trend auto-inspirations</dt><dd data-t="creator.eazc_earn.page_qi_v3">€0.00</dd></div>
+            </dl>
+            <p class="eaz-eazc-earn__receipt-note" data-t="creator.eazc_earn.example_note">Illustrative numbers. Your payout depends on the product, print cost, and your royalty tier.</p>
+          </figure>
+          <p class="eaz-eazc-earn__fact" data-t="creator.eazc_earn.page_qi_fact">At higher royalty tiers the seller keeps a larger slice; Mira still gets those 5 points.</p>
+        </article>
+        <article class="eaz-eazc-earn__page" data-earn-page="shop" hidden>
+          <p class="eaz-eazc-earn__eyebrow" data-t="creator.eazc_earn.page_shop_eyebrow">Path 04</p>
+          <h3 class="eaz-eazc-earn__page-title" data-t="creator.eazc_earn.page_shop_title">Shop &amp; custom products</h3>
+          <p class="eaz-eazc-earn__lead" data-t="creator.eazc_earn.page_shop_lead">Your design can sit on a shop product or a custom piece someone configures. When that item sells, you share the creator royalty.</p>
+          <p class="eaz-eazc-earn__body" data-t="creator.eazc_earn.page_shop_body">Up to 3 designs on one product split the creator amount equally. If a slot is a remix, that slot still splits 87.5% / 12.5%.</p>
+          <figure class="eaz-eazc-earn__receipt">
+            <figcaption class="eaz-eazc-earn__stamp" data-t="creator.eazc_earn.example_stamp">Example</figcaption>
+            <p class="eaz-eazc-earn__receipt-story" data-t="creator.eazc_earn.page_shop_example">A custom hoodie uses three shop designs, including yours. Creator share: about €0.80.</p>
+            <dl class="eaz-eazc-earn__lines">
+              <div><dt data-t="creator.eazc_earn.page_shop_l1">Each design slot</dt><dd data-t="creator.eazc_earn.page_shop_v1">about €0.27</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_shop_l2">Your slot if it is a remix</dt><dd data-t="creator.eazc_earn.page_shop_v2">still 87.5% / 12.5%</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_shop_l3">Empty slots</dt><dd data-t="creator.eazc_earn.page_shop_v3">do not dilute you</dd></div>
+            </dl>
+            <p class="eaz-eazc-earn__receipt-note" data-t="creator.eazc_earn.example_note">Illustrative numbers. Your payout depends on the product, print cost, and your royalty tier.</p>
+          </figure>
+          <p class="eaz-eazc-earn__fact" data-t="creator.eazc_earn.page_shop_fact">You do not need to be the seller. The product just has to use your design.</p>
+        </article>
+        <article class="eaz-eazc-earn__page" data-earn-page="community" hidden>
+          <p class="eaz-eazc-earn__eyebrow" data-t="creator.eazc_earn.page_community_eyebrow">Path 05</p>
+          <h3 class="eaz-eazc-earn__page-title" data-t="creator.eazc_earn.page_community_title">Creator Community</h3>
+          <p class="eaz-eazc-earn__lead" data-t="creator.eazc_earn.page_community_lead">Invite another creator. If you both opt in, you share their creator royalty when they sell.</p>
+          <p class="eaz-eazc-earn__body" data-t="creator.eazc_earn.page_community_body">The seller keeps 70% of the creator share. The recruiter who invited them receives 30%. Publish Assist does not add an extra split.</p>
+          <figure class="eaz-eazc-earn__receipt">
+            <figcaption class="eaz-eazc-earn__stamp" data-t="creator.eazc_earn.example_stamp">Example</figcaption>
+            <p class="eaz-eazc-earn__receipt-story" data-t="creator.eazc_earn.page_community_example">Lena opted in with her recruiter. Her hoodie still has about €0.80 creator share.</p>
+            <dl class="eaz-eazc-earn__lines">
+              <div><dt data-t="creator.eazc_earn.page_community_l1">Lena, the seller</dt><dd data-t="creator.eazc_earn.page_community_v1">€0.56 (70%)</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_community_l2">Her recruiter</dt><dd data-t="creator.eazc_earn.page_community_v2">€0.24 (30%)</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_community_l3">If only one opted in</dt><dd data-t="creator.eazc_earn.page_community_v3">no community split</dd></div>
+            </dl>
+            <p class="eaz-eazc-earn__receipt-note" data-t="creator.eazc_earn.example_note">Illustrative numbers. Your payout depends on the product, print cost, and your royalty tier.</p>
+          </figure>
+          <p class="eaz-eazc-earn__fact" data-t="creator.eazc_earn.page_community_fact">Both people must opt in. It is a partnership, not an automatic tax.</p>
+        </article>
+        <article class="eaz-eazc-earn__page" data-earn-page="referral" hidden>
+          <p class="eaz-eazc-earn__eyebrow" data-t="creator.eazc_earn.page_referral_eyebrow">Path 06</p>
+          <h3 class="eaz-eazc-earn__page-title" data-t="creator.eazc_earn.page_referral_title">Invites &amp; buyer cashback</h3>
+          <p class="eaz-eazc-earn__lead" data-t="creator.eazc_earn.page_referral_lead">Share your link. When someone buys — or when you buy while logged in — money comes from the community share, not from the creator royalty.</p>
+          <p class="eaz-eazc-earn__body" data-t="creator.eazc_earn.page_referral_body">From the community share: the buyer receives 20% cashback, your direct referral link earns 10%, and further network levels earn smaller shares.</p>
+          <figure class="eaz-eazc-earn__receipt">
+            <figcaption class="eaz-eazc-earn__stamp" data-t="creator.eazc_earn.example_stamp">Example</figcaption>
+            <p class="eaz-eazc-earn__receipt-story" data-t="creator.eazc_earn.page_referral_example">On Lena’s €8.00 profit, the community share is about €4.00. That pot pays cashback and referrals.</p>
+            <dl class="eaz-eazc-earn__lines">
+              <div><dt data-t="creator.eazc_earn.page_referral_l1">Buyer cashback (20%)</dt><dd data-t="creator.eazc_earn.page_referral_v1">about €0.80</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_referral_l2">Your direct invite (10%)</dt><dd data-t="creator.eazc_earn.page_referral_v2">about €0.40</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_referral_l3">You buy while logged in</dt><dd data-t="creator.eazc_earn.page_referral_v3">you get the cashback</dd></div>
+            </dl>
+            <p class="eaz-eazc-earn__receipt-note" data-t="creator.eazc_earn.example_note">Illustrative numbers. Your payout depends on the product, print cost, and your royalty tier.</p>
+          </figure>
+          <p class="eaz-eazc-earn__fact" data-t="creator.eazc_earn.page_referral_fact">This is extra money on top of design royalties — from shopping, not from publishing.</p>
+        </article>
+        <article class="eaz-eazc-earn__page eaz-eazc-earn__page--payout" data-earn-page="payout" hidden>
+          <p class="eaz-eazc-earn__eyebrow" data-t="creator.eazc_earn.page_payout_eyebrow">Cash out</p>
+          <h3 class="eaz-eazc-earn__page-title" data-t="creator.eazc_earn.page_payout_title">Turn it into money</h3>
+          <p class="eaz-eazc-earn__lead" data-t="creator.eazc_earn.page_payout_lead">EAZC is only the ledger. The point is fiat: shop credit you can spend, or cash in your bank.</p>
+          <p class="eaz-eazc-earn__body" data-t="creator.eazc_earn.page_payout_body">On Creator, tap the amount on your EAZC badge to open Balance &amp; Payouts. Convert available earnings at the lowest pack rate.</p>
+          <figure class="eaz-eazc-earn__receipt">
+            <figcaption class="eaz-eazc-earn__stamp" data-t="creator.eazc_earn.example_stamp">Example</figcaption>
+            <p class="eaz-eazc-earn__receipt-story" data-t="creator.eazc_earn.page_payout_example">After 30 days Lena converts her hoodie sale. She can take shop credit with a +10% bonus, or send euros to her Wise account.</p>
+            <dl class="eaz-eazc-earn__lines">
+              <div><dt data-t="creator.eazc_earn.page_payout_l1">Pending (30 days)</dt><dd data-t="creator.eazc_earn.page_payout_v1">not cashable yet</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_payout_l2">Available EAZC</dt><dd data-t="creator.eazc_earn.page_payout_v2">convert to fiat</dd></div>
+              <div><dt data-t="creator.eazc_earn.page_payout_l3">Shop credit or Wise</dt><dd data-t="creator.eazc_earn.page_payout_v3">+10% if you spend it here</dd></div>
+            </dl>
+            <p class="eaz-eazc-earn__receipt-note" data-t="creator.eazc_earn.example_note">Illustrative numbers. Your payout depends on the product, print cost, and your royalty tier.</p>
+          </figure>
+          <p class="eaz-eazc-earn__fact" data-t="creator.eazc_earn.page_payout_fact">The shop wallet pill is fiat / store credit. The orange badge is EAZC waiting to become money. Game coins, Move-to-Earn, and Wear &amp; Earn are separate.</p>
+          <p class="eaz-eazc-earn__pending" data-t="creator.eazc_earn.pending_hint">New sales stay pending for 30 days (return window). After that you can convert to real money.</p>
+          <p class="eaz-eazc-earn__royalty" data-t="creator.eazc_earn.royalty_footer">Your creator share starts at 10% of net profit and can rise to 40% in Creator Journey → Royalties.</p>
+        </article>
       </div>
-
-      <p class="eaz-eazc-earn__royalty" data-t="creator.eazc_earn.royalty_footer">Your creator share starts at 10% of net profit and can rise to 40% in Creator Journey → Royalties.</p>
     </div>
   </div>
 </dialog>

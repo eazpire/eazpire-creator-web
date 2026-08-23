@@ -22,10 +22,48 @@
     });
   }
 
+  var EARN_PAGES = {
+    start: 1,
+    products: 1,
+    remix: 1,
+    qi: 1,
+    shop: 1,
+    community: 1,
+    referral: 1,
+    payout: 1
+  };
+
+  function showEarnPage(id) {
+    var dialog = modalEl();
+    if (!dialog) return;
+    if (!EARN_PAGES[id]) id = 'start';
+    dialog.setAttribute('data-earn-active', id);
+    dialog.querySelectorAll('[data-earn-page]').forEach(function (page) {
+      var on = page.getAttribute('data-earn-page') === id;
+      page.classList.toggle('is-active', on);
+      if (on) page.removeAttribute('hidden');
+      else page.setAttribute('hidden', '');
+    });
+    dialog.querySelectorAll('[data-earn-nav]').forEach(function (btn) {
+      var on = btn.getAttribute('data-earn-nav') === id;
+      btn.classList.toggle('is-active', on);
+      if (on) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
+      if (on && typeof btn.scrollIntoView === 'function') {
+        try {
+          btn.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+        } catch (eNav) {}
+      }
+    });
+    var stage = dialog.querySelector('.eaz-eazc-earn__stage');
+    if (stage) stage.scrollTop = 0;
+  }
+
   function openModal() {
     bindDialogDismiss();
     var el = modalEl();
     if (!el) return;
+    showEarnPage('start');
     if (typeof el.showModal === 'function') {
       if (!el.open) el.showModal();
     } else {
@@ -157,6 +195,12 @@
   }
 
   document.addEventListener('click', function (e) {
+    var goto = e.target && e.target.closest && e.target.closest('[data-earn-goto], [data-earn-nav]');
+    if (goto && modalEl() && modalEl().contains(goto)) {
+      e.preventDefault();
+      showEarnPage(goto.getAttribute('data-earn-goto') || goto.getAttribute('data-earn-nav'));
+      return;
+    }
     var info = e.target && e.target.closest && e.target.closest('[data-open-eazc-earn-modal]');
     if (info) {
       e.preventDefault();
