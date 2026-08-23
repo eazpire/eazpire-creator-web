@@ -1530,7 +1530,7 @@ body.creator-mobile-page .creator-mobile-app {
   z-index: 1;
 }
 
-.creator-swipe-viewport.slide-2,
+.creator-swipe-viewport.slide-3,
 .creator-swipe-viewport.slide-4,
 .creator-swipe-viewport.slide-5 {
   bottom: var(--creator-global-footer-height, 44px);

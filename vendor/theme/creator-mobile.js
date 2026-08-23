@@ -718,11 +718,11 @@
     });
 
     if (headerTitle) {
-      if (index === 2 && window.CreationsScreen && typeof window.CreationsScreen.getCurrentTab === 'function') {
+      if (index === 3 && window.CreationsScreen && typeof window.CreationsScreen.getCurrentTab === 'function') {
         headerTitle.textContent = window.CreationsScreen.getCurrentTab() === 'products' ? (window.CreatorMobileI18n?.products || 'Products') : (window.CreatorMobileI18n?.designs || 'Designs');
-      } else if (index === 3 && window.MarketingScreen && typeof window.MarketingScreen.getHeaderTitle === 'function') {
+      } else if (index === 4 && window.MarketingScreen && typeof window.MarketingScreen.getHeaderTitle === 'function') {
         headerTitle.textContent = window.MarketingScreen.getHeaderTitle();
-      } else if (index === 4 && window.AutomationsScreen && typeof window.AutomationsScreen.getHeaderTitle === 'function') {
+      } else if (index === 5 && window.AutomationsScreen && typeof window.AutomationsScreen.getHeaderTitle === 'function') {
         headerTitle.textContent = window.AutomationsScreen.getHeaderTitle();
       } else {
         headerTitle.textContent = SCREEN_LABELS[index] || SCREEN_LABELS[0];
@@ -733,6 +733,10 @@
       item.classList.toggle('creator-drawer__item--active', i === index);
     });
 
+    if (index === 1 && window.EazyResearchPage && typeof window.EazyResearchPage.boot === 'function') {
+      window.EazyResearchPage.boot();
+    }
+
     if (typeof window.refreshCreatorGenEazyUi === 'function') {
       window.refreshCreatorGenEazyUi();
     }
@@ -741,7 +745,7 @@
     }
 
     if (
-      index === 4 &&
+      index === 5 &&
       window.AutomationsScreen &&
       typeof window.AutomationsScreen.refreshList === 'function'
     ) {
@@ -750,7 +754,7 @@
       }, 0);
     }
 
-    if (index === 3) {
+    if (index === 4) {
       setTimeout(function () {
         if (window.ContentCreationHero && typeof window.ContentCreationHero.maybeScheduleAutoPick === 'function') {
           window.ContentCreationHero.maybeScheduleAutoPick();

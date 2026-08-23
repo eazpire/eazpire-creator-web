@@ -3343,6 +3343,17 @@ body.creator-video-motion-info-modal-open {
   min-height: 120px;
 }
 
+.creator-desktop-stage__panel--research {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.creator-desktop-research-host {
+  display: block;
+  height: auto;
+  min-height: 100%;
+}
+
 .creator-desktop-stage__panel--generator {
   overflow-y: auto !important;
   overflow-x: hidden !important;

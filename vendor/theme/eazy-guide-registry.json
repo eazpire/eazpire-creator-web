@@ -1384,6 +1384,31 @@
       }
     ]
   },
+  "chrome.nav-research": {
+    "title": "Research",
+    "summary": "Reprint-safe Amazon.de demand signals from catalog snapshots — reviews and BSR, never invented sales.",
+    "tips": [
+      "Use this page to spot rising reprint-safe products before you generate."
+    ],
+    "pages": [
+      {
+        "category": "Overview",
+        "body": "Research ranks reprint-safe Amazon.de catalog snapshots by reviews, ratings, and BSR over time. Missing values stay empty. The UI never invents unit sales."
+      },
+      {
+        "category": "How to use",
+        "body": "Open Research from the sidebar between Dashboard and Generator. Browse rising products, review growth, and niches, then tap a product for snapshot history."
+      },
+      {
+        "category": "Tip",
+        "body": "Use this page to spot rising reprint-safe products before you generate."
+      },
+      {
+        "category": "Good to know",
+        "body": "Review counts stay empty until Amazon returns them. Rankings hide trademark-blocked products by default."
+      }
+    ]
+  },
   "chrome.nav-generator": {
     "title": "Generator",
     "summary": "Create new AI designs from a prompt and optional reference images.",

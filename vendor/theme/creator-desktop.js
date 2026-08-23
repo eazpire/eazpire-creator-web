@@ -427,6 +427,9 @@
         }, 80);
       }
       syncCreatorGuestDesktopLock(normalized);
+      if (normalized === 'research' && window.CreatorPortalFeatures && typeof window.CreatorPortalFeatures.ensureResearch === 'function') {
+        window.CreatorPortalFeatures.ensureResearch();
+      }
       if (window.CreatorDashboardData && typeof window.CreatorDashboardData.ensureTabLoaded === 'function') {
         window.CreatorDashboardData.ensureTabLoaded(normalized);
       }
@@ -554,25 +557,25 @@
   var DESKTOP_SCREEN_MOUNT = {
     generator: {
       hostId: 'creatorDesktopGeneratorHost',
-      screen: '1',
+      screen: '2',
       sourceId: 'creatorGenerator',
       desktopClass: 'creator-generator--desktop'
     },
     creations: {
       hostId: 'creatorDesktopCreationsHost',
-      screen: '2',
+      screen: '3',
       sourceId: 'creatorCreations',
       desktopClass: 'creator-creations--desktop'
     },
     marketing: {
       hostId: 'creatorDesktopMarketingHost',
-      screen: '3',
+      screen: '4',
       sourceId: 'creatorMarketing',
       desktopClass: 'creator-marketing--desktop'
     },
     automations: {
       hostId: 'creatorDesktopAutomationsHost',
-      screen: '4',
+      screen: '5',
       sourceId: 'creatorAutomations',
       desktopClass: 'creator-automations--desktop'
     }

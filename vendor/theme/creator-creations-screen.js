@@ -4497,7 +4497,7 @@
     var viewport = document.getElementById('creatorMobileSwipeViewport');
     if (viewport) {
       var observer = new MutationObserver(function () {
-        if (viewport.classList.contains('slide-2')) {
+        if (viewport.classList.contains('slide-3')) {
           switchTab(currentTab);
         }
       });
@@ -4508,7 +4508,7 @@
     fetchCreationsSlotLimits();
     bindCreationsSlotInfoClicks();
     bindCreationsChromeScroll();
-    if (viewport && viewport.classList.contains('slide-2')) {
+    if (viewport && viewport.classList.contains('slide-3')) {
       switchTab('designs');
     } else {
       // Desktop: viewport slide-* is not synced with the shell; load when Creations panel is active on bind (e.g. restored layout).

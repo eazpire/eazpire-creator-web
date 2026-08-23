@@ -1143,7 +1143,7 @@
 
     var viewport = document.getElementById('creatorMobileSwipeViewport');
     if (viewport) {
-      if (!viewport.classList.contains('slide-3')) return false;
+      if (!viewport.classList.contains('slide-4')) return false;
       return marketingHeroTabActive();
     }
 

@@ -2905,7 +2905,7 @@
     // Mobile swipe viewport
     var viewport = document.getElementById('creatorMobileSwipeViewport');
     if (viewport && viewport.offsetParent !== null) {
-      if (!viewport.classList.contains('slide-3')) return false;
+      if (!viewport.classList.contains('slide-4')) return false;
       var creation = document.getElementById('creatorMarketingPanelCreation');
       if (!creation || creation.classList.contains('creator-marketing-panel--hidden') || creation.hidden) {
         return false;

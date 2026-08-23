@@ -1750,7 +1750,7 @@
   function eazIsVideoCreationWorkspaceActive() {
     var viewport = document.getElementById('creatorMobileSwipeViewport');
     if (viewport) {
-      if (!viewport.classList.contains('slide-3')) return false;
+      if (!viewport.classList.contains('slide-4')) return false;
       var creation = document.getElementById('creatorMarketingPanelCreation');
       if (creation && creation.classList.contains('creator-marketing-panel--hidden')) return false;
       if (document.querySelector('.cmkt-card--child.is-active[data-mkt-for="content-creation"][data-mkt-child="videos"]')) {

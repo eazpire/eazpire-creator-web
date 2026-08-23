@@ -241,7 +241,7 @@
 
     function shouldLoadMobile() {
       return viewport && panelPublishMobile &&
-        viewport.classList.contains('slide-3') &&
+        viewport.classList.contains('slide-4') &&
         !panelPublishMobile.classList.contains('creator-marketing-panel--hidden');
     }
 

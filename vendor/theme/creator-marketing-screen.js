@@ -646,7 +646,7 @@
     var viewport = document.getElementById('creatorMobileSwipeViewport');
     if (viewport) {
       var observer = new MutationObserver(function () {
-        if (viewport.classList.contains('slide-3')) {
+        if (viewport.classList.contains('slide-4')) {
           syncRootAttrs();
           updateHeaderTitle();
           bumpEazyHeaderUi();
@@ -658,7 +658,7 @@
     function applyHash() {
       var h = (window.location.hash || '').replace(/^#/, '');
       if (h === 'promotions' && typeof window.__creatorGoTo === 'function') {
-        window.__creatorGoTo(3);
+        window.__creatorGoTo(4);
         expandParent('promotions', { force: true, collapseIfSame: false });
       }
     }

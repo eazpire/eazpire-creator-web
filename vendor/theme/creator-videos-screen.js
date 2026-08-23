@@ -77,7 +77,7 @@
   function isMarketingVideosWorkspaceActive() {
     var viewport = document.getElementById('creatorMobileSwipeViewport');
     if (viewport) {
-      if (!viewport.classList.contains('slide-3')) return false;
+      if (!viewport.classList.contains('slide-4')) return false;
       var pub = document.getElementById('creatorMarketingPanelPublish');
       if (pub && pub.classList.contains('creator-marketing-panel--hidden')) return false;
       var vid = document.querySelector('[data-content="videos"].is-active');
