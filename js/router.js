@@ -101,11 +101,86 @@
     document.title = title + " · Eazpire Creator";
   }
 
-  function syncThemeShell(name) {
-    var slide = SLIDE_INDEX[name];
-    if (typeof slide === "number" && typeof global.__creatorGoTo === "function") {
-      global.__creatorGoTo(slide);
+  function isDesktopCreatorViewport() {
+    try {
+      return !!(global.matchMedia && global.matchMedia("(min-width: 992px)").matches);
+    } catch (_mqErr) {
+      return false;
     }
+  }
+
+  function applyDesktopPanels(name) {
+    name = String(name || "").toLowerCase();
+    if (!name) return false;
+    var panel = document.querySelector('[data-desktop-screen="' + name + '"]');
+    if (!panel) return false;
+    document.querySelectorAll("[data-desktop-switch]").forEach(function (link) {
+      var on = String(link.getAttribute("data-desktop-switch") || "").toLowerCase() === name;
+      link.classList.toggle("is-active", on);
+      if (link.hasAttribute("aria-selected")) {
+        link.setAttribute("aria-selected", on ? "true" : "false");
+      }
+    });
+    document.querySelectorAll("[data-desktop-screen]").forEach(function (el) {
+      var on = String(el.getAttribute("data-desktop-screen") || "").toLowerCase() === name;
+      el.classList.toggle("is-active", on);
+      el.hidden = !on;
+      el.setAttribute("aria-hidden", on ? "false" : "true");
+    });
+    var hero = document.getElementById("creatorDesktopHero");
+    if (hero) hero.setAttribute("data-desktop-active-screen", name);
+    return true;
+  }
+
+  function patchDesktopShellNav() {
+    var shell = global.CreatorDesktopShell;
+    if (!shell || typeof shell.switchScreen !== "function" || shell.__eazResearchNavPatched) return;
+    var orig = shell.switchScreen;
+    shell.switchScreen = function (nextScreen) {
+      var requested = String(nextScreen || "").toLowerCase();
+      orig.call(shell, nextScreen);
+      if (!requested) return;
+      var active = "";
+      try {
+        if (typeof shell.getActiveScreen === "function") {
+          active = String(shell.getActiveScreen() || "").toLowerCase();
+        }
+      } catch (_activeErr) {}
+      if (active === requested) return;
+      if (!applyDesktopPanels(requested)) return;
+      if (
+        requested === "research" &&
+        global.CreatorPortalFeatures &&
+        typeof global.CreatorPortalFeatures.ensureResearch === "function"
+      ) {
+        global.CreatorPortalFeatures.ensureResearch();
+      }
+      syncFromShellScreen(requested, { replace: false });
+    };
+    shell.__eazResearchNavPatched = true;
+  }
+
+  function scheduleDesktopNavPatch() {
+    var tries = 0;
+    function tick() {
+      patchDesktopShellNav();
+      if (global.CreatorDesktopShell && global.CreatorDesktopShell.__eazResearchNavPatched) return;
+      tries += 1;
+      if (tries < 80) global.setTimeout(tick, 50);
+    }
+    tick();
+  }
+
+  function syncThemeShell(name) {
+    // Desktop uses named panels. Mobile goTo is index-based and must not run on
+    // desktop or an older 5-screen goTo(1) can fire Generator/Dashboard instead.
+    if (!isDesktopCreatorViewport()) {
+      var slide = SLIDE_INDEX[name];
+      if (typeof slide === "number" && typeof global.__creatorGoTo === "function") {
+        global.__creatorGoTo(slide);
+      }
+    }
+    patchDesktopShellNav();
     if (global.CreatorDesktopShell && typeof global.CreatorDesktopShell.switchScreen === "function") {
       global.CreatorDesktopShell.switchScreen(name);
     }
@@ -216,6 +291,7 @@
   function initFromLocation() {
     bindNav();
     bindShellScreenUrlSync();
+    scheduleDesktopNavPatch();
     migrateLegacyHashToPath();
     var route = readPathRoute();
     showScreen(route, { replace: true, skipUrl: true });

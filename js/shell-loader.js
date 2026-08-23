@@ -9,7 +9,8 @@
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for footer EAZV -> Creator Settings (EAZ tab) fix (never falls back to sales modal).
-  var RUNTIME_V = "19-boot-theme-bg-20260822";
+  // Must stay in lockstep with index.html `shell-loader.js?v=` so browsers drop the 7-day vendor cache.
+  var RUNTIME_V = "eazy-research-desktop-20260823";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 
@@ -42,7 +43,7 @@
   }
 
   async function fetchPartial(name) {
-    var res = await fetchWithTimeout("/partials/" + name, 12000);
+    var res = await fetchWithTimeout("/partials/" + name + "?v=" + RUNTIME_V, 12000);
     if (!res.ok) throw new Error("Failed to load partial " + name);
     return res.text();
   }

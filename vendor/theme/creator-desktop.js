@@ -387,8 +387,25 @@
     var touchStartY = 0;
     var touchSwitched = false;
 
+    function desktopPanelExists(name) {
+      if (!name) return false;
+      try {
+        return !!document.querySelector('[data-desktop-screen="' + name + '"]');
+      } catch (_panelQueryErr) {
+        return false;
+      }
+    }
+
     function switchScreen(nextScreen) {
       var normalized = String(nextScreen || '').toLowerCase();
+      if (desktopPanelExists(normalized)) {
+        allowed[normalized] = true;
+        if (order.indexOf(normalized) === -1) {
+          var generatorIdx = order.indexOf('generator');
+          if (generatorIdx >= 0) order.splice(generatorIdx, 0, normalized);
+          else order.push(normalized);
+        }
+      }
       if (!allowed[normalized]) normalized = 'dashboard';
       activeScreen = normalized;
       setActiveNav(activeScreen);
