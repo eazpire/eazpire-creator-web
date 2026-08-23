@@ -543,13 +543,13 @@
     });
   }
 
-  /** Login gate on Generator stays in #creatorGenerator; screens 2–4 use panel-level overlay. Dashboard (0) stays open. */
+  /** Login gate on Generator stays in #creatorGenerator; Research + screens 3–5 use panel overlay. Dashboard (0) stays open. */
   function syncCreatorGuestNavLocksMobile() {
     removeMobileGuestNavLocks();
     if (!viewport || !track) return;
     var guestStrict = window.__CREATOR_IS_LOGGED_IN === false && !window.__DEV_BYPASS;
     if (!guestStrict) return;
-    if (currentIndex === 0 || currentIndex === 1 || currentIndex === 2) return;
+    if (currentIndex === 0 || currentIndex === 2) return;
     var section = document.querySelector('.creator-screen[data-screen="' + currentIndex + '"]');
     if (!section) return;
     section.appendChild(buildCreatorGuestLockOverlay());

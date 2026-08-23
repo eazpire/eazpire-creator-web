@@ -238,12 +238,12 @@
       });
   }
 
-  /** Generator uses #creatorGenerator lock from creator-mobile bypass; skips duplicate panel overlay. */
+  /** Generator uses #creatorGenerator lock from creator-mobile bypass; skips duplicate panel overlay. Dashboard stays open. */
   function syncCreatorGuestDesktopLock(screen) {
     removeDesktopGuestNavLocks();
     if (!creatorGuestBypassDesktop()) return;
     var scr = String(screen || 'dashboard').toLowerCase();
-    if (scr === 'dashboard' || scr === 'research' || scr === 'generator') return;
+    if (scr === 'dashboard' || scr === 'generator') return;
     var panel = document.querySelector('.creator-desktop-stage__panel[data-desktop-screen="' + scr + '"]');
     if (!panel || typeof window.buildCreatorGuestLockOverlay !== 'function') return;
     panel.appendChild(window.buildCreatorGuestLockOverlay());
