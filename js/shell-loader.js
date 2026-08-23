@@ -8,9 +8,9 @@
 
   var CREATOR_LOGO =
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
-  // Bumped for footer EAZV -> Creator Settings (EAZ tab) fix (never falls back to sales modal).
+  // Bumped for eazy Research polish (modal + watchlist; drop reprint checkbox / drawer).
   // Must stay in lockstep with index.html `shell-loader.js?v=` so browsers drop the 7-day vendor cache.
-  var RUNTIME_V = "creator-gen-lock-20260823";
+  var RUNTIME_V = "eazy-research-polish-20260824";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 

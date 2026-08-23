@@ -17,7 +17,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "creator-gen-lock-20260823";
+  var PORTAL_ASSET_V = "eazy-research-polish-20260824";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -558,8 +558,12 @@
     state.research = (async function () {
       loadCss(asset("eazy-research.css"));
       var host = document.getElementById("creatorDesktopResearchHost");
-      if (host && !host.querySelector("[data-eazy-research]")) {
-        await injectPartial("creator-mobile-research.html", host);
+      if (host) {
+        var injected = host.querySelector('[data-partial="creator-mobile-research.html"]');
+        if (!injected || injected.getAttribute("data-partial-v") !== PORTAL_ASSET_V) {
+          host.innerHTML = "";
+          await injectPartial("creator-mobile-research.html", host);
+        }
       }
       await loadScript(asset("eazy-research.js"));
       if (global.EazyResearchPage && typeof global.EazyResearchPage.boot === "function") {
