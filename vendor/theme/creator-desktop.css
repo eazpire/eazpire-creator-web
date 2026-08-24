@@ -713,7 +713,7 @@ body.creator-mobile-page .creator-desktop-app {
     opacity: 1;
   }
 
-  /* Creations Design/Products filter: shop-style collapsible rail beside the menu */
+  /* Creations Design/Products filter: shop-style collapsible rail beside the menu (desktop chrome). */
   .creator-desktop-filter-wrap {
     display: flex;
     flex-direction: row;
