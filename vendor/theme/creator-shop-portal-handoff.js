@@ -72,6 +72,10 @@
       encodeURIComponent(String(exchangeToken || ""));
     var next = readNextParam();
     if (next) url += "&next=" + encodeURIComponent(next);
+    try {
+      var retry = new URLSearchParams(window.location.search || "").get("retry");
+      if (retry) url += "&retry=" + encodeURIComponent(retry);
+    } catch (e) {}
     return url;
   }
 
