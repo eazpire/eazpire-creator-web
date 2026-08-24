@@ -256,6 +256,7 @@
         asset("creator-phone-upload-modal.js"),
         asset("my-creations-upload-source-modal.js"),
         asset("creator-design-merge-modal.js"),
+        asset("creator-mobile-filter-modal.js"),
       ]);
 
       if (global.__CreatorLazyModals && typeof global.__CreatorLazyModals.ensureCreationsBundle === "function") {
@@ -266,6 +267,11 @@
         if (typeof global.CreationsScreen.switchTab === "function") global.CreationsScreen.switchTab("designs");
         if (typeof global.CreationsScreen.loadDesigns === "function") await global.CreationsScreen.loadDesigns(true);
       }
+
+      try {
+        document.dispatchEvent(new CustomEvent("creator-filter-modal-ready"));
+        global.dispatchEvent(new CustomEvent("creator-filter-modal-ready"));
+      } catch (_readyErr) {}
     })();
 
     try {
