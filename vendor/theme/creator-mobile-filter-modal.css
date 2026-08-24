@@ -649,4 +649,74 @@
   .creator-filter-modal.is-desktop-docked .creator-filter-modal__tabs {
     display: none !important;
   }
+
+  #creatorDesktopFilterSidebar .creator-filter-modal__parents,
+  .creator-filter-modal.is-desktop-docked .creator-filter-modal__parents {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-parent__summary,
+  .creator-filter-modal.is-desktop-docked .creator-filter-parent__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 18px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-parent__summary::-webkit-details-marker,
+  .creator-filter-modal.is-desktop-docked .creator-filter-parent__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-parent[open] .creator-filter-parent__caret,
+  .creator-filter-modal.is-desktop-docked .creator-filter-parent[open] .creator-filter-parent__caret {
+    transform: rotate(180deg);
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-parent__caret,
+  .creator-filter-modal.is-desktop-docked .creator-filter-parent__caret {
+    display: inline-flex;
+    transition: transform 0.18s ease;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-modal__panel,
+  #creatorDesktopFilterSidebar .creator-filter-modal__panel.is-active,
+  .creator-filter-modal.is-desktop-docked .creator-filter-modal__panel,
+  .creator-filter-modal.is-desktop-docked .creator-filter-modal__panel.is-active {
+    display: block !important;
+    flex: 0 0 auto;
+    overflow: visible;
+    min-height: 0;
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-modal__body,
+  .creator-filter-modal.is-desktop-docked .creator-filter-modal__body {
+    overflow: visible;
+    flex: none;
+  }
+}
+
+.creator-filter-parent__summary {
+  display: none;
+}
+
+.creator-filter-modal.is-hide-product-filters [data-filter-parent="product"],
+.creator-filter-modal.is-hide-product-filters .creator-filter-modal__tab[data-tab="product"] {
+  display: none !important;
 }

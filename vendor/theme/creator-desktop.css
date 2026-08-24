@@ -957,11 +957,12 @@ body.creator-mobile-page .creator-desktop-app {
     min-height: 0;
   }
 
+  .creator-desktop-filter-sidebar .creator-filter-modal.is-desktop-docked .creator-filter-modal__panel,
   .creator-desktop-filter-sidebar .creator-filter-modal.is-desktop-docked .creator-filter-modal__panel.is-active {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
+    display: block !important;
+    flex: 0 0 auto;
     min-height: 0;
+    overflow: visible;
   }
 
   .creator-desktop-filter-sidebar .filter-group {

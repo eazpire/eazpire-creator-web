@@ -1983,6 +1983,7 @@
     stopNotifPolling();
     stopJobsPolling();
     closeSidebar();
+    try { markCurrentUserFeedSeen(); } catch (e) {}
     try { document.body.dispatchEvent(new CustomEvent("creator-chat-close")); } catch (e) {}
   }
 
@@ -2912,6 +2913,7 @@
       if (!_panelOpen) openPanel();
       switchView("jobs");
       startJobsPolling();
+      if (jobId) markUserFeedSeen(getUserId(), [], [jobId]);
       if (typeof animateEazyToActiveJobs === "function") setTimeout(animateEazyToActiveJobs, 600);
     });
 
@@ -3011,61 +3013,30 @@
 
     setTimeout(resumeGenCompleted, 1500);
 
-    // Auto-open: on real page load, if user did not manually close this session, open chat when there are active jobs or unread notifications
+    // Auto-open once per new User job or User notification (seen IDs persist across visits).
     setTimeout(function () {
       try {
-        if (sessionStorage.getItem("creator_chat_manual_close") === "1") return;
         var ownerId = getUserId();
         if (!ownerId) return;
-        var path = window.location.pathname || "";
-        var onCreatorDashboard =
-          path.indexOf("/pages/creator-dashboard") !== -1 ||
-          path.indexOf("/pages/creator-overview") !== -1;
-        var onShopHome = path === "/" || path === "";
-        // Shop homepage: skip auto-open network storm (list-jobs + notif count) — user opens chat manually.
-        if (onShopHome) return;
+        if (_panelOpen) return;
 
-        // Restore active save job: after reload, show jobs view so user can see save progress
-        try {
-          var stored = localStorage.getItem(SAVE_PERSIST_KEY);
-          if (stored) {
-            var parsed = JSON.parse(stored);
-            var persistJobId = parsed && parsed.jobId ? String(parsed.jobId) : "";
-            var persistTs = parsed && typeof parsed.ts === "number" ? parsed.ts : 0;
-            if (persistJobId && persistTs && (Date.now() - persistTs) < 900000) {
-              _saveActiveJobId = persistJobId;
-              if (!_panelOpen) openPanel();
-              switchView("jobs");
-              startJobsPolling();
-              loadActiveJobs();
-              return;
-            }
-          }
-        } catch (_) {}
-
-        var notifPromise = fetch(API_BASE + "?op=get-notification-count&owner_id=" + encodeURIComponent(ownerId), { credentials: "include" })
-          .then(function (r) { return r.json(); })
-          .then(function (d) { return (d && typeof d.unread_count === "number") ? d.unread_count : 0; })
-          .catch(function () { return 0; });
-        var jobsPromise = onCreatorDashboard
-          ? Promise.resolve(0)
-          : fetch(API_BASE + "?op=list-jobs&owner_id=" + encodeURIComponent(ownerId) + "&limit=20", { credentials: "include" })
-              .then(function (r) { return r.json(); })
-              .then(function (d) {
-                var items = d.items || d.jobs || [];
-                return items.filter(function (j) { return !j.done || j.saving; }).length;
-              })
-              .catch(function () { return 0; });
-        Promise.all([notifPromise, jobsPromise]).then(function (res) {
-          var unreadCount = res[0];
-          var activeCount = res[1];
-          if (!onCreatorDashboard && activeCount > 0) {
-            if (!_panelOpen) openPanel();
-            switchView("jobs");
-          } else if (unreadCount > 0) {
-            if (!_panelOpen) openPanel();
-            switchView("notifications");
-          }
+        Promise.all([
+          fetch(API_BASE + "?op=get-notifications&owner_id=" + encodeURIComponent(ownerId), { credentials: "include" })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { return d && Array.isArray(d.notifications) ? d.notifications : []; })
+            .catch(function () { return []; }),
+          fetch(API_BASE + "?op=list-jobs&owner_id=" + encodeURIComponent(ownerId) + "&limit=50", { credentials: "include" })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              var items = d.items || d.jobs || [];
+              return items.filter(function (j) {
+                if (typeof j.active === "boolean") return j.active;
+                return !j.done || (j.saving && j.saved !== true);
+              });
+            })
+            .catch(function () { return []; })
+        ]).then(function (res) {
+          maybeAutoOpenUserFeed({ notifs: res[0], jobs: res[1] });
         });
       } catch (e) {}
     }, 800);
@@ -3580,6 +3551,110 @@
   var _creatorCodeBubbleSeenKey = "eazy_creator_code_bubble_seen";
   var CREATOR_CODE_NOTIF_PREFIX = "creator_code_";
   var SIDEBAR_KEY = "eazy_sidebar_open";
+  var SEEN_FEED_KEY = "eazy_seen_user_feed_v1";
+
+  function loadSeenUserFeed(ownerId) {
+    var empty = { notifs: {}, jobs: {} };
+    if (!ownerId) return empty;
+    try {
+      var all = JSON.parse(localStorage.getItem(SEEN_FEED_KEY) || "{}") || {};
+      var rec = all[ownerId];
+      if (!rec || typeof rec !== "object") return empty;
+      return {
+        notifs: rec.notifs && typeof rec.notifs === "object" ? rec.notifs : {},
+        jobs: rec.jobs && typeof rec.jobs === "object" ? rec.jobs : {}
+      };
+    } catch (e) {
+      return empty;
+    }
+  }
+
+  function saveSeenUserFeed(ownerId, rec) {
+    if (!ownerId || !rec) return;
+    try {
+      var all = JSON.parse(localStorage.getItem(SEEN_FEED_KEY) || "{}") || {};
+      function prune(map) {
+        var keys = Object.keys(map || {});
+        if (keys.length <= 250) return map || {};
+        keys.sort(function (a, b) { return (Number(map[a]) || 0) - (Number(map[b]) || 0); });
+        var keep = keys.slice(keys.length - 200);
+        var next = {};
+        keep.forEach(function (k) { next[k] = map[k]; });
+        return next;
+      }
+      all[ownerId] = {
+        notifs: prune(rec.notifs),
+        jobs: prune(rec.jobs)
+      };
+      localStorage.setItem(SEEN_FEED_KEY, JSON.stringify(all));
+    } catch (e) {}
+  }
+
+  function markUserFeedSeen(ownerId, notifIds, jobIds) {
+    if (!ownerId) return;
+    var rec = loadSeenUserFeed(ownerId);
+    var now = Date.now();
+    (notifIds || []).forEach(function (id) {
+      if (id) rec.notifs[String(id)] = now;
+    });
+    (jobIds || []).forEach(function (id) {
+      if (id) rec.jobs[String(id)] = now;
+    });
+    saveSeenUserFeed(ownerId, rec);
+  }
+
+  function notifIdOf(n) {
+    return String((n && (n.notification_id || n.id)) || "");
+  }
+
+  function jobIdOf(j) {
+    return String((j && (j.job_id || j.id)) || "");
+  }
+
+  function markCurrentUserFeedSeen() {
+    var ownerId = getUserId();
+    if (!ownerId) return;
+    // Only the tab the user actually looked at — other unseen User items can still auto-open later.
+    if (_activeView === "notifications" && _notifFeedScope === "user") {
+      markUserFeedSeen(ownerId, (_notifDataUser || []).map(notifIdOf).filter(Boolean), []);
+      return;
+    }
+    if (_activeView === "jobs" && _jobsFeedScope === "user") {
+      markUserFeedSeen(ownerId, [], (_jobsData || []).map(jobIdOf).filter(Boolean));
+    }
+  }
+
+  function maybeAutoOpenUserFeed(opts) {
+    opts = opts || {};
+    if (_panelOpen) return false;
+    if (window.EazyGuide && window.EazyGuide.isActive && window.EazyGuide.isActive()) return false;
+    var ownerId = getUserId();
+    if (!ownerId) return false;
+    var seen = loadSeenUserFeed(ownerId);
+    var unseenJobs = (opts.jobs || []).filter(function (j) {
+      var id = jobIdOf(j);
+      return id && !seen.jobs[id];
+    });
+    var unseenNotifs = (opts.notifs || []).filter(function (n) {
+      var id = notifIdOf(n);
+      return id && !n.is_read && !seen.notifs[id];
+    });
+    if (unseenJobs.length) {
+      markUserFeedSeen(ownerId, [], unseenJobs.map(jobIdOf));
+      if (!_panelOpen) openPanel();
+      _jobsFeedScope = "user";
+      switchView("jobs");
+      return true;
+    }
+    if (unseenNotifs.length) {
+      markUserFeedSeen(ownerId, unseenNotifs.map(notifIdOf), []);
+      if (!_panelOpen) openPanel();
+      _notifFeedScope = "user";
+      switchView("notifications");
+      return true;
+    }
+    return false;
+  }
 
   function openSidebar() {
     var sidebar = document.getElementById("creator-chat-sidebar");
@@ -5023,7 +5098,7 @@
     var scopeUnread = _notifFeedScope === "user" ? u : s;
     var markRow = document.getElementById("creator-chat-notif-markall-row");
     if (markRow) {
-      markRow.hidden = _notifFilter !== "unread" || scopeUnread <= 0;
+      markRow.hidden = scopeUnread <= 0;
     }
   }
 
@@ -5049,6 +5124,9 @@
         updateNotifBadge();
         stripNotificationsFromChat();
         if (_activeView === "notifications") renderNotificationsInView();
+        if (!_panelOpen) {
+          maybeAutoOpenUserFeed({ jobs: _jobsFeedScope === "user" ? _jobsData : [], notifs: _notifDataUser });
+        }
       })
       .catch(function () {
         _notifDataUser = [];
@@ -5822,55 +5900,31 @@
           return !j.done || (j.saving && j.saved !== true);
         });
         regularJobs = mergeActiveVideoJobs(mergeActiveHeroJobs(regularJobs));
-
-        // Load active publish sessions and convert to job format
-        loadPublishJobs(ownerId).then(function (publishJobs) {
-          _jobsData = regularJobs.concat(publishJobs);
-          if (_saveActiveJobId) {
-            var saveJob = _jobsData.find(function (j) { return String(j.job_id || j.id || "") === String(_saveActiveJobId); });
-            if (saveJob && (saveJob.saved === true || (saveJob.done && !saveJob.saving))) {
-              _saveActiveJobId = null;
-              try { localStorage.removeItem(SAVE_PERSIST_KEY); } catch (e) {}
-            }
+        _jobsData = regularJobs;
+        if (_saveActiveJobId) {
+          var saveJob = _jobsData.find(function (j) { return String(j.job_id || j.id || "") === String(_saveActiveJobId); });
+          if (saveJob && (saveJob.saved === true || (saveJob.done && !saveJob.saving))) {
+            _saveActiveJobId = null;
+            try { localStorage.removeItem(SAVE_PERSIST_KEY); } catch (e) {}
           }
-          refreshEazyUploadStateFromJobs();
-          renderJobs();
-          updateJobsBadge();
-          var currentActiveJobs = _jobsData.length;
-          if (_lastActiveJobsCount > 0 && currentActiveJobs === 0) {
-            if (_panelOpen) {
-              loadNotifications();
-              setTimeout(function () {
-                switchView("notifications");
-                renderNotificationsInView();
-              }, 400);
-            }
+        }
+        refreshEazyUploadStateFromJobs();
+        renderJobs();
+        updateJobsBadge();
+        if (!_panelOpen) {
+          maybeAutoOpenUserFeed({ jobs: regularJobs, notifs: _notifDataUser });
+        }
+        var currentActiveJobs = _jobsData.length;
+        if (_lastActiveJobsCount > 0 && currentActiveJobs === 0) {
+          if (_panelOpen) {
+            loadNotifications();
+            setTimeout(function () {
+              switchView("notifications");
+              renderNotificationsInView();
+            }, 400);
           }
-          _lastActiveJobsCount = currentActiveJobs;
-        }).catch(function () {
-          _jobsData = mergeActiveVideoJobs(mergeActiveHeroJobs(regularJobs));
-          if (_saveActiveJobId) {
-            var saveJob = _jobsData.find(function (j) { return String(j.job_id || j.id || "") === String(_saveActiveJobId); });
-            if (saveJob && (saveJob.saved === true || (saveJob.done && !saveJob.saving))) {
-              _saveActiveJobId = null;
-              try { localStorage.removeItem(SAVE_PERSIST_KEY); } catch (e) {}
-            }
-          }
-          refreshEazyUploadStateFromJobs();
-          renderJobs();
-          updateJobsBadge();
-          var currentActiveJobs = _jobsData.length;
-          if (_lastActiveJobsCount > 0 && currentActiveJobs === 0) {
-            if (_panelOpen) {
-              loadNotifications();
-              setTimeout(function () {
-                switchView("notifications");
-                renderNotificationsInView();
-              }, 400);
-            }
-          }
-          _lastActiveJobsCount = currentActiveJobs;
-        });
+        }
+        _lastActiveJobsCount = currentActiveJobs;
       })
       .catch(function () {
         refreshEazyUploadStateFromJobs();
@@ -5987,10 +6041,13 @@
   function systemJobKindLabel(kindRaw) {
     var k = String(kindRaw || "system_publish");
     if (k === "automation_design")
-      return i18n(
-        "chat_job_kind_automation_design",
-        "Scheduled design automation"
-      );
+      return i18n("chat_job_kind_automation_design", "Scheduled design automation");
+    if (k === "amazon_publish")
+      return i18n("chat_job_kind_amazon_publish", "Amazon publish");
+    if (k === "amazon_unpublish")
+      return i18n("chat_job_kind_amazon_unpublish", "Amazon unpublish");
+    if (k === "auto_hero")
+      return i18n("chat_job_kind_auto_hero", "Automatic hero image");
     return i18n("chat_job_kind_system_publish", "Automatic publishing");
   }
 

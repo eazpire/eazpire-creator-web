@@ -1710,6 +1710,13 @@
     setCreationsChromeFromDelta(dy);
   }
 
+  function eventFromCreationsFilterSidebar(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest(
+      '#creatorDesktopFilterWrap, .creator-desktop-filter-wrap, #creatorDesktopFilterSidebar, .creator-desktop-filter-sidebar'
+    );
+  }
+
   function bindCreationsChromeScroll() {
     var root = document.getElementById('creatorCreations');
     if (!root) {
@@ -1726,6 +1733,7 @@
     root.addEventListener(
       'wheel',
       function (e) {
+        if (eventFromCreationsFilterSidebar(e.target)) return;
         if (e.deltaY) setCreationsChromeFromDelta(e.deltaY);
       },
       { passive: true }
@@ -1733,6 +1741,10 @@
     root.addEventListener(
       'touchstart',
       function (e) {
+        if (eventFromCreationsFilterSidebar(e.target)) {
+          lastTouchY = null;
+          return;
+        }
         lastTouchY = e.touches && e.touches[0] ? e.touches[0].clientY : null;
       },
       { passive: true }
@@ -1740,6 +1752,7 @@
     root.addEventListener(
       'touchmove',
       function (e) {
+        if (eventFromCreationsFilterSidebar(e.target)) return;
         var y = e.touches && e.touches[0] ? e.touches[0].clientY : null;
         if (lastTouchY != null && y != null) {
           setCreationsChromeFromDelta(lastTouchY - y);
@@ -1754,6 +1767,7 @@
         var t = e.target;
         if (!t || t === document || t === document.documentElement || t === document.body) return;
         if (!root.contains(t)) return;
+        if (eventFromCreationsFilterSidebar(t)) return;
         onCreationsChromeScroll(t);
       },
       true

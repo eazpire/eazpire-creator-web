@@ -730,6 +730,8 @@ body.creator-mobile-page .creator-mobile-app {
 .creator-header__dots {
   display: flex;
   gap: 8px;
+  justify-content: center;
+  width: 100%;
 }
 
 .creator-header__title {
@@ -1587,7 +1589,13 @@ body.creator-video-character-modal-open .creator-swipe-viewport {
   padding-bottom: 0;
 }
 
-.creator-screen[data-screen="3"],
+.creator-screen[data-screen="3"] {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .creator-screen[data-screen="4"],
 .creator-screen[data-screen="5"] {
   padding: var(--creator-header-to-content, 16px) 0 0;

@@ -209,6 +209,22 @@
             matches = fvs.some(function (fv) { return normalizeValue(meta.subtopic) === normalizeValue(fv); });
           }
           break;
+        case 'quality_rating':
+          var qr = (typeof window.normalizeQualityRatingClient === 'function')
+            ? window.normalizeQualityRatingClient(design.quality_rating || meta.quality_rating)
+            : (function () {
+                var s = String(design.quality_rating || meta.quality_rating || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+                if (s === 'no_go' || s === 'nogo' || s === 'no') return 'no_go';
+                if (s === 'good') return 'good';
+                if (s === 'awesome' || s === 'perfect') return 'awesome';
+                return null;
+              })();
+          matches = fvs.some(function (fv) {
+            var want = normalizeValue(fv);
+            if (want === 'none' || want === 'no_rating' || want === 'unrated') return !qr;
+            return qr && normalizeValue(qr) === want;
+          });
+          break;
         case 'personalizable':
           var pv = meta.personalizable || (meta.custom && meta.custom.personalizable) || '';
           matches = fvs.includes('yes') ? normalizeValue(pv) === 'yes' : normalizeValue(pv) !== 'yes';
@@ -334,6 +350,31 @@
     }
   }
 
+  function getCreationsActivityFilter() {
+    try {
+      if (window.CreationsScreen && typeof window.CreationsScreen.getActivityFilter === 'function') {
+        return String(window.CreationsScreen.getActivityFilter() || 'active');
+      }
+    } catch (_e) {}
+    return 'active';
+  }
+
+  function syncProductFilterVisibility() {
+    modal = getModal();
+    if (!modal) return;
+    var hide = getCreationsActivityFilter() === 'inactive';
+    modal.classList.toggle('is-hide-product-filters', hide);
+    if (!hide) return;
+    var productTab = modal.querySelector('.creator-filter-modal__tab[data-tab="product"]');
+    var designTab = modal.querySelector('.creator-filter-modal__tab[data-tab="design"]');
+    var productPanel = modal.querySelector('#creator-filter-panel-product');
+    var designPanel = modal.querySelector('#creator-filter-panel-design');
+    if (productTab) productTab.classList.remove('is-active');
+    if (designTab) designTab.classList.add('is-active');
+    if (productPanel && !isDesktopFilterDocked()) productPanel.classList.remove('is-active');
+    if (designPanel) designPanel.classList.add('is-active');
+  }
+
   function closeFilterModal() {
     modal = getModal();
     if (!modal) return;
@@ -406,6 +447,13 @@
       if (designPanel) designPanel.classList.add('is-active');
       if (productPanel) productPanel.classList.remove('is-active');
     }
+
+    if (isDesktopFilterDocked()) {
+      if (designPanel) designPanel.classList.add('is-active');
+      if (productPanel) productPanel.classList.add('is-active');
+    }
+
+    syncProductFilterVisibility();
 
     populateTopicsSubtopics();
     loadProductTypes();
@@ -802,6 +850,9 @@
     updateFilterCounts();
     updateFilterBadge();
     updateFilteredCount();
+  });
+  window.addEventListener('creator-creations-activity-filter', function () {
+    syncProductFilterVisibility();
   });
 
   window.openFilterModal = openFilterModal;
