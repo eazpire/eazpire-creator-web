@@ -27,26 +27,10 @@
   var SHOP_HANDOFF_PATH = "/pages/creator-handoff";
 
   function resumeShopSessionIfGuest(data) {
-    try {
-      var params = new URLSearchParams(global.location.search);
-      if (params.get("auth_error") || params.get("sso") === "0" || global.__EAZ_SSO_BLOCK__) return false;
-      if (data && data.logged_in) return false;
-      var until = 0;
-      try {
-        until = Number(sessionStorage.getItem(SSO_GUARD_KEY) || "0");
-      } catch (e) {}
-      if (until && Date.now() < until) return false;
-      try {
-        sessionStorage.setItem(SSO_GUARD_KEY, String(Date.now() + 45000));
-      } catch (e2) {}
-      var shop = String((data && data.shop_url) || "https://www.eazpire.com").replace(/\/$/, "");
-      var next = global.location.pathname + global.location.search + global.location.hash;
-      if (!next || next.indexOf("/auth/") === 0) next = "/";
-      global.location.replace(shop + SHOP_HANDOFF_PATH + "?next=" + encodeURIComponent(next));
-      return true;
-    } catch (err) {
-      return false;
-    }
+    // Shop → Creator login is shop-initiated (header switch / /pages/creator-handoff).
+    // Auto-bouncing every guest HTML visit to the shop dumped Creator Smoke and
+    // Research onto Shopify login, and fed the retry=1 reload loop.
+    return false;
   }
 
   function applyBootstrapAuth(data) {
