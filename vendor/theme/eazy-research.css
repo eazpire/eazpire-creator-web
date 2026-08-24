@@ -1,5 +1,5 @@
 .eazy-research {
-  --erz-filter-width: 272px;
+  --erz-filter-width: 248px;
   --erz-filter-collapsed: var(--creator-desktop-menu-rail-width, 24px);
   position: relative;
   display: flex;
@@ -11,6 +11,15 @@
   overflow: hidden;
   padding: 0;
   color: #f4f1ff;
+}
+
+/* Research owns scrolling. Ancestors must not compete or restore window/panel scroll. */
+.creator-desktop-stage__panel--research,
+.creator-desktop-stage__panel--research.is-active,
+.creator-desktop-research-host,
+.creator-screen:has(> .eazy-research),
+.creator-screen:has(.eazy-research) {
+  overflow: hidden !important;
 }
 
 .eazy-research__intro {
@@ -34,6 +43,7 @@
   flex: 0 0 auto;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   max-height: 100%;
   align-self: stretch;
   overflow: hidden;
@@ -164,10 +174,12 @@
 .eazy-research__filters {
   box-sizing: border-box;
   width: var(--erz-filter-width);
-  max-width: min(36vw, 300px);
+  max-width: min(36vw, 280px);
   flex: 0 0 var(--erz-filter-width);
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  max-height: 100%;
   align-self: stretch;
   overflow-x: hidden;
   overflow-y: auto;
@@ -176,7 +188,7 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   overflow-anchor: none;
-  padding: 10px 10px 16px;
+  padding: 8px 8px 14px;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   background:
     radial-gradient(120% 80% at 0% 0%, rgba(147, 112, 219, 0.08), transparent 55%),
@@ -204,8 +216,8 @@
 }
 
 .eazy-research__filters-heading {
-  margin: 14px 0 6px;
-  font-size: 0.72rem;
+  margin: 10px 0 4px;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -213,8 +225,8 @@
 }
 
 .eazy-research__filters-hint {
-  margin: 0 0 8px;
-  font-size: 0.75rem;
+  margin: 0 0 4px;
+  font-size: 0.68rem;
   opacity: 0.68;
 }
 
@@ -236,6 +248,7 @@
 .eazy-research__grid-scroll {
   flex: 1 1 auto;
   min-height: 0;
+  height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -290,9 +303,9 @@
 .eazy-research__search input,
 .eazy-research__select select {
   width: 100%;
-  height: 36px;
-  min-height: 36px;
-  max-height: 36px;
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(8, 10, 26, 0.92);
@@ -301,6 +314,7 @@
   font-size: 0.78rem;
   padding: 0 10px;
   appearance: none;
+  scroll-margin: 0;
 }
 
 .eazy-research__views,
@@ -309,7 +323,7 @@
   width: 100%;
   flex: none;
   min-width: 0;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
 }
 
 .eazy-research__sort {
@@ -321,9 +335,9 @@
 .eazy-research__analyze {
   flex: 0 0 auto;
   box-sizing: border-box;
-  height: 36px;
-  min-height: 36px;
-  max-height: 36px;
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
   padding: 0 12px;
   border-radius: 10px;
   border: none;
@@ -358,20 +372,20 @@
 .eazy-research__tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
 }
 
 .eazy-research__chip,
 .eazy-research__tabs button {
-  min-height: 28px;
-  height: 28px;
-  padding: 0 9px;
+  min-height: 24px;
+  height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.04);
   color: inherit;
   font: inherit;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -380,6 +394,38 @@
 .eazy-research__tabs button.is-active {
   background: rgba(124, 92, 255, 0.32);
   border-color: rgba(167, 139, 250, 0.7);
+}
+
+.eazy-research__switch {
+  display: flex;
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 10, 26, 0.72);
+  overflow: hidden;
+}
+
+.eazy-research__switch-opt {
+  flex: 1 1 50%;
+  min-height: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.eazy-research__switch-opt + .eazy-research__switch-opt {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.eazy-research__switch-opt.is-active {
+  background: rgba(124, 92, 255, 0.38);
+  color: #fff;
 }
 
 .eazy-research__grid-cards {
@@ -801,9 +847,16 @@
   .eazy-research__stage {
     flex: 1 1 auto;
     min-height: 0;
+    overflow: hidden;
+    padding: 8px 8px 20px;
+  }
+
+  .eazy-research__grid-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 8px 8px 20px;
   }
 
   .eazy-research__toolbar {

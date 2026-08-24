@@ -38,45 +38,53 @@
     return isFinite(n) ? n : 0;
   }
 
+  /**
+   * Repair an engine reset only. Writing scrollTop on every render cancels native
+   * scrolling and snaps the rail/grid back to the captured value (often 0).
+   */
   function restoreScrollTop(el, top) {
     if (!el) return 0;
-    el.scrollTop = Math.max(0, Number(top) || 0);
-    return el.scrollTop;
+    var captured = Math.max(0, Number(top) || 0);
+    var now = captureScrollTop(el);
+    if (now === 0 && captured > 0) el.scrollTop = captured;
+    return captureScrollTop(el);
+  }
+
+  function scrollerRefs(root) {
+    if (!root) return { filters: null, grid: null, stage: null };
+    if (root.__erzScroll && root.__erzScroll.filters && root.__erzScroll.grid) {
+      return root.__erzScroll;
+    }
+    root.__erzScroll = {
+      filters: root.querySelector("[data-erz-filters]"),
+      grid: root.querySelector("[data-erz-grid-scroll]"),
+      stage: root.querySelector("[data-erz-stage]"),
+    };
+    return root.__erzScroll;
   }
 
   function captureResearchScroll(root) {
+    var refs = scrollerRefs(root);
     return {
-      filters: captureScrollTop(root && root.querySelector("[data-erz-filters]")),
-      stage: captureScrollTop(
-        root && (
-          root.querySelector("[data-erz-grid-scroll]") ||
-          root.querySelector("#erz-grid-scroll") ||
-          root.querySelector("[data-erz-stage]")
-        )
-      ),
+      filters: captureScrollTop(refs.filters),
+      grid: captureScrollTop(refs.grid),
+      stage: captureScrollTop(refs.stage),
     };
   }
 
   function restoreResearchScroll(root, saved) {
     if (!root || !saved) return saved;
-    restoreScrollTop(root.querySelector("[data-erz-filters]"), saved.filters);
-    restoreScrollTop(
-      root.querySelector("[data-erz-grid-scroll]") ||
-        root.querySelector("#erz-grid-scroll") ||
-        root.querySelector("[data-erz-stage]"),
-      saved.stage
-    );
+    var refs = scrollerRefs(root);
+    restoreScrollTop(refs.filters, saved.filters);
+    restoreScrollTop(refs.grid, saved.grid);
+    restoreScrollTop(refs.stage, saved.stage);
     return saved;
   }
 
   function withResearchScroll(root, mutate) {
     var saved = captureResearchScroll(root);
     if (typeof mutate === "function") mutate();
-    restoreResearchScroll(root, saved);
-    if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(function () { restoreResearchScroll(root, saved); });
-    }
-    return saved;
+    return restoreResearchScroll(root, saved);
   }
 
   function t(key, fallback) {
@@ -450,13 +458,15 @@
         return el.getAttribute("data-erz-niche") === keys[i];
       });
     if (!same) {
-      wrap.innerHTML = all.map(function (n) {
-        var key = n.niche_key || n.key || "all";
-        var on = key === "all" ? allOn : selectedTopics().indexOf(key) !== -1;
-        return '<button type="button" class="eazy-research__chip' + (on ? " is-active" : "") +
-          '" data-erz-niche="' + esc(key) + '" aria-pressed="' + (on ? "true" : "false") + '">' +
-          esc(n.label || key) + "</button>";
-      }).join("");
+      withResearchScroll(root, function () {
+        wrap.innerHTML = all.map(function (n) {
+          var key = n.niche_key || n.key || "all";
+          var on = key === "all" ? allOn : selectedTopics().indexOf(key) !== -1;
+          return '<button type="button" class="eazy-research__chip' + (on ? " is-active" : "") +
+            '" data-erz-niche="' + esc(key) + '" aria-pressed="' + (on ? "true" : "false") + '">' +
+            esc(n.label || key) + "</button>";
+        }).join("");
+      });
     } else {
       Array.prototype.forEach.call(existing, function (btn) {
         var key = btn.getAttribute("data-erz-niche") || "all";
@@ -505,17 +515,21 @@
     if (!grid) return;
     var showSkeleton = (state.loading && !state.products.length) || (state.analyzing && !state.products.length);
     if (showSkeleton) {
-      grid.innerHTML = Array.from({ length: 8 }).map(function () {
-        return '<div class="eazy-research-card is-skeleton" aria-hidden="true"></div>';
-      }).join("");
-      grid.removeAttribute("data-erz-sig");
+      withResearchScroll(root, function () {
+        grid.innerHTML = Array.from({ length: 8 }).map(function () {
+          return '<div class="eazy-research-card is-skeleton" aria-hidden="true"></div>';
+        }).join("");
+        grid.removeAttribute("data-erz-sig");
+      });
       if (empty) empty.hidden = true;
       return;
     }
     var rows = filterClient(state.products);
     if (!rows.length) {
-      grid.innerHTML = "";
-      grid.removeAttribute("data-erz-sig");
+      withResearchScroll(root, function () {
+        grid.innerHTML = "";
+        grid.removeAttribute("data-erz-sig");
+      });
       if (empty) {
         empty.hidden = false;
         empty.textContent = state.view === "watched"
@@ -529,8 +543,10 @@
     if (empty) empty.hidden = true;
     var sig = rows.map(function (p) { return watchId(p) + (isWatched(p) ? "#1" : "#0"); }).join("|");
     if (grid.getAttribute("data-erz-sig") === sig) return;
-    grid.innerHTML = rows.map(productCard).join("");
-    grid.setAttribute("data-erz-sig", sig);
+    withResearchScroll(root, function () {
+      grid.innerHTML = rows.map(productCard).join("");
+      grid.setAttribute("data-erz-sig", sig);
+    });
   }
 
   function renderStatus(root) {
@@ -554,21 +570,19 @@
   }
 
   function render(root) {
-    withResearchScroll(root, function () {
-      renderChips(root);
-      renderFacets(root);
-      renderGrid(root);
-      renderStatus(root);
-      var viewSelect = root.querySelector("[data-erz-view-select]");
-      if (viewSelect && viewSelect.value !== state.view) viewSelect.value = state.view;
-      root.querySelectorAll("[data-erz-view]").forEach(function (btn) {
-        var on = btn.getAttribute("data-erz-view") === state.view;
-        btn.classList.toggle("is-active", on);
-        btn.setAttribute("aria-checked", on ? "true" : "false");
-        btn.setAttribute("aria-selected", on ? "true" : "false");
-      });
-      syncAnalyzeButton(root);
+    renderChips(root);
+    renderFacets(root);
+    renderGrid(root);
+    renderStatus(root);
+    var viewSelect = root.querySelector("[data-erz-view-select]");
+    if (viewSelect && viewSelect.value !== state.view) viewSelect.value = state.view;
+    root.querySelectorAll("[data-erz-view]").forEach(function (btn) {
+      var on = btn.getAttribute("data-erz-view") === state.view;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+      btn.setAttribute("aria-selected", on ? "true" : "false");
     });
+    syncAnalyzeButton(root);
   }
 
   function statRow(label, value) {
@@ -664,7 +678,7 @@
 
   function applySearchProducts(root, products) {
     state.products = Array.isArray(products) ? products : [];
-    withResearchScroll(root, function () { renderGrid(root); });
+    renderGrid(root);
   }
 
   async function pollSearch(root) {
@@ -735,7 +749,7 @@
     var first = !state.products.length;
     if (first) {
       state.loading = true;
-      withResearchScroll(root, function () { renderGrid(root); });
+      renderGrid(root);
     }
     var params = {
       reprint_ok: 1,
@@ -754,7 +768,7 @@
       var status = root.querySelector("[data-erz-status]");
       if (status) status.textContent = t("creator.research.error", "Research data could not be loaded.");
       if (first) state.products = [];
-      withResearchScroll(root, function () { renderGrid(root); });
+      renderGrid(root);
       return;
     }
     state.preview = Boolean(data.preview);
@@ -841,9 +855,7 @@
       q.addEventListener("input", function () {
         state.q = q.value || "";
         clearTimeout(qTimer);
-        qTimer = setTimeout(function () {
-          withResearchScroll(root, function () { renderGrid(root); });
-        }, 180);
+        qTimer = setTimeout(function () { renderGrid(root); }, 180);
       });
       q.addEventListener("keydown", function (ev) {
         if (ev.key === "Enter") {
@@ -856,7 +868,7 @@
     if (sort) {
       sort.addEventListener("change", function () {
         state.sort = sort.value || "review_growth";
-        withResearchScroll(root, function () { renderGrid(root); });
+        renderGrid(root);
       });
     }
     var viewSelect = root.querySelector("[data-erz-view-select]");
@@ -915,7 +927,8 @@
       var langBtn = ev.target.closest("[data-erz-lang]");
       if (langBtn) {
         var lang = langBtn.getAttribute("data-erz-lang") || "";
-        state.language = state.language === lang ? "" : lang;
+        if (!lang || lang === "all") state.language = "";
+        else state.language = state.language === lang ? "" : lang;
         render(root);
         return;
       }
@@ -970,6 +983,7 @@
   function mount(root) {
     if (!root || root.dataset.erzBound === "1") return;
     root.dataset.erzBound = "1";
+    scrollerRefs(root);
     state.watched = loadWatched();
     bind(root);
     bindModal(root);
@@ -990,7 +1004,10 @@
     });
     document.addEventListener("eazCreatorContextReady", function () {
       document.querySelectorAll("[data-eazy-research]").forEach(function (el) {
-        el.dataset.erzBound = "";
+        if (el.dataset.erzBound === "1") {
+          syncAnalyzeButton(el);
+          return;
+        }
         mount(el);
       });
     });
@@ -1013,5 +1030,6 @@
       if (typeof mutate === "function") mutate();
       return restoreScrollTop(el, top);
     },
+    scrollerRefs: scrollerRefs,
   };
 })(typeof window !== "undefined" ? window : globalThis);
