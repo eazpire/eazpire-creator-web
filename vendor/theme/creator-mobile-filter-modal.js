@@ -50,6 +50,14 @@
     return preferred;
   }
 
+  function getAllCreatorsLabel() {
+    var node = modal || getModal();
+    var trigger = node ? node.querySelector('#creator-filter-modal-creator-trigger') : null;
+    var fromAttr = trigger && trigger.getAttribute('data-all-label');
+    if (fromAttr && String(fromAttr).trim()) return String(fromAttr).trim();
+    return 'All Creators';
+  }
+
   function normalizeValue(value) {
     if (value === null || value === undefined) return '';
     return String(value).toLowerCase().trim();
@@ -328,7 +336,7 @@
     var creatorTrigger = modal.querySelector('#creator-filter-modal-creator-trigger');
     var creatorLabel = modal.querySelector('#creator-filter-modal-creator-label');
     if (creatorTrigger) creatorTrigger.setAttribute('data-selected-creator', '');
-    if (creatorLabel) creatorLabel.textContent = 'Alle Creator';
+    if (creatorLabel) creatorLabel.textContent = getAllCreatorsLabel();
 
     currentFilters.design = {};
     currentFilters.product = {};
@@ -489,7 +497,7 @@
     allBtn.type = 'button';
     allBtn.className = 'creator-filter-creator-modal__option' + (currentVal === '' ? ' is-selected' : '');
     allBtn.dataset.value = '';
-    allBtn.innerHTML = '<span>Alle Creator</span><span class="creator-filter-creator-modal__count">(' + allDesigns.length + ')</span>';
+    allBtn.innerHTML = '<span>' + getAllCreatorsLabel() + '</span><span class="creator-filter-creator-modal__count">(' + allDesigns.length + ')</span>';
     listEl.appendChild(allBtn);
 
     var notAssignedLabel = (window.CreatorMobileI18n && window.CreatorMobileI18n.creationsCreatorNotAssigned) || 'Not assigned';
@@ -550,7 +558,7 @@
     if (trigger) trigger.setAttribute('data-selected-creator', value || '');
     if (labelEl) {
       var labelText = (label || '').replace(/\s*\(\d+\)\s*$/, '').trim();
-      labelEl.textContent = labelText || 'Alle Creator';
+      labelEl.textContent = labelText || getAllCreatorsLabel();
     }
     closeCreatorModal();
     updateFilterCounts();
@@ -709,7 +717,8 @@
   }
 
   function updateFilteredCount() {
-    var countEl = document.getElementById('creator-filter-modal-filtered-count');
+    modal = modal || getModal();
+    var countEl = modal ? modal.querySelector('#creator-filter-modal-filtered-count') : document.getElementById('creator-filter-modal-filtered-count');
     if (!countEl || !modal) return;
     var source = modal.dataset.source || 'designs';
     var count = 0;
@@ -720,8 +729,9 @@
         count = (window.CreationsScreen.getFilteredProducts() || []).length;
       }
     } catch (_e) {}
-    var designsLabel = (window.CreatorMobileI18n && window.CreatorMobileI18n.mobileDesigns) || 'designs';
-    var productsLabel = (window.CreatorMobileI18n && window.CreatorMobileI18n.mobileProducts) || 'products';
+    var i18n = window.CreatorMobileI18n || {};
+    var designsLabel = i18n.mobileDesigns || i18n.designs || 'designs';
+    var productsLabel = i18n.mobileProducts || i18n.products || 'products';
     countEl.textContent = source === 'designs' ? count + ' ' + designsLabel : count + ' ' + productsLabel;
   }
 
@@ -808,7 +818,7 @@
           if (opt) {
             var labelSpan = opt.querySelector('span:first-child');
             var label = labelSpan ? labelSpan.textContent : (opt.textContent || '').replace(/\s*\(\d+\)\s*$/, '').trim();
-            selectCreator(opt.dataset.value || '', label || 'Alle Creator');
+            selectCreator(opt.dataset.value || '', label || getAllCreatorsLabel());
           }
         });
       }

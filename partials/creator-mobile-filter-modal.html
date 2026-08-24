@@ -14,15 +14,35 @@
       <button type="button" class="creator-filter-modal__close" id="creator-filter-modal-close" aria-label="Close">×</button>
     </div>
 
+    <div class="creator-filter-modal__chrome">
+      <div class="creator-filter-modal__chrome-header">
+        <button
+          type="button"
+          class="creator-filter-modal__creator-trigger"
+          id="creator-filter-modal-creator-trigger"
+          data-selected-creator=""
+          data-all-label="All Creators"
+          aria-haspopup="dialog"
+        >
+          <span id="creator-filter-modal-creator-label">All Creators</span>
+          <span class="creator-filter-modal__creator-trigger-chevron">▾</span>
+        </button>
+      </div>
+      <div class="creator-filter-modal__chrome-sub">
+        <span class="creator-filter-modal__filtered-count" id="creator-filter-modal-filtered-count" aria-live="polite"></span>
+        <button type="button" class="creator-filter-modal__button creator-filter-modal__button--secondary" id="creator-filter-modal-reset">Reset</button>
+      </div>
+    </div>
+
     <div class="creator-filter-modal__tabs">
-      <button type="button" class="creator-filter-modal__tab is-active" data-tab="design">Design filter</button>
-      <button type="button" class="creator-filter-modal__tab" data-tab="product">Product filter</button>
+      <button type="button" class="creator-filter-modal__tab is-active" data-tab="design">Design Filter</button>
+      <button type="button" class="creator-filter-modal__tab" data-tab="product">Product Filter</button>
     </div>
 
     <div class="creator-filter-modal__parents">
     <details class="creator-filter-parent" data-filter-parent="product" open>
       <summary class="creator-filter-parent__summary">
-        <span class="creator-filter-parent__title">Product settings</span>
+        <span class="creator-filter-parent__title">Product Settings</span>
         <span class="creator-filter-parent__caret" aria-hidden="true"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
       </summary>
     <div class="creator-filter-modal__panel" id="creator-filter-panel-product">
@@ -84,7 +104,7 @@
 
     <details class="creator-filter-parent" data-filter-parent="design" open>
       <summary class="creator-filter-parent__summary">
-        <span class="creator-filter-parent__title">Design settings</span>
+        <span class="creator-filter-parent__title">Design Settings</span>
         <span class="creator-filter-parent__caret" aria-hidden="true"><svg width="14" height="14"><use href="#creator-filter-icon-caret"/></svg></span>
       </summary>
     <div class="creator-filter-modal__panel is-active" id="creator-filter-panel-design">
@@ -149,7 +169,7 @@
             <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="quality_rating" data-value="no_go"><span class="filter-option__label">No go</span><span class="filter-option__count" data-count-for="quality_rating:no_go"></span></label>
             <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="quality_rating" data-value="good"><span class="filter-option__label">Good</span><span class="filter-option__count" data-count-for="quality_rating:good"></span></label>
             <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="quality_rating" data-value="awesome"><span class="filter-option__label">Awesome</span><span class="filter-option__count" data-count-for="quality_rating:awesome"></span></label>
-            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="quality_rating" data-value="none"><span class="filter-option__label">Rating none</span><span class="filter-option__count" data-count-for="quality_rating:none"></span></label>
+            <label class="filter-option"><input type="checkbox" class="inspiration-filter-checkbox" data-filter="quality_rating" data-value="none"><span class="filter-option__label">no Rating</span><span class="filter-option__count" data-count-for="quality_rating:none"></span></label>
           </div>
         </div>
 
@@ -243,15 +263,6 @@
       </div>
     </div>
     </details>
-    </div>
-
-    <div class="creator-filter-modal__footer">
-      <button type="button" class="creator-filter-modal__creator-trigger" id="creator-filter-modal-creator-trigger" data-selected-creator="" aria-haspopup="dialog">
-        <span id="creator-filter-modal-creator-label">Alle Creator</span>
-        <span class="creator-filter-modal__creator-trigger-chevron">▾</span>
-      </button>
-      <span class="creator-filter-modal__filtered-count" id="creator-filter-modal-filtered-count" aria-hidden="true"></span>
-      <button type="button" class="creator-filter-modal__button creator-filter-modal__button--secondary" id="creator-filter-modal-reset">Reset</button>
     </div>
   </div>
 </div>

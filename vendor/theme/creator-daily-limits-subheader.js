@@ -86,11 +86,16 @@
       document.body.appendChild(el);
     }
     el.textContent = text;
+    el.classList.remove('is-visible');
+    void el.offsetWidth;
     el.classList.add('is-visible');
     if (el._hideTimer) clearTimeout(el._hideTimer);
+    el._showGen = (el._showGen || 0) + 1;
+    var gen = el._showGen;
     el._hideTimer = setTimeout(function () {
+      if (el._showGen !== gen) return;
       el.classList.remove('is-visible');
-    }, 4200);
+    }, 2600);
   }
 
   function i18n(key, fromRoot) {

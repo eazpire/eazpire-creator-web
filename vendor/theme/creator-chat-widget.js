@@ -5274,33 +5274,51 @@
       var nid = n.notification_id || n.id || ("notif-" + idx);
       _notifParsedMap[nid] = { raw: n, parsed: parsed, category: String(n.event_type || n.category || "").toLowerCase() };
       var display = getNotificationDisplayInfo(n, parsed);
-      var imgSrc = parsed.image_url || parsed.preview_url || parsed.result?.preview_url || parsed.result?.image_url || "";
+      var imgSrc =
+        n.card_preview_url ||
+        parsed.card_preview_url ||
+        parsed.product_image_url ||
+        parsed.image_url ||
+        parsed.preview_url ||
+        parsed.result?.preview_url ||
+        parsed.result?.image_url ||
+        "";
       var cat = (n.category || "").toLowerCase();
       var hasSystemAction = cat === "system" && !!(parsed.design_id || parsed.job_id || parsed.preview_url || parsed.session_id);
       var hasCreatorCodeAction = isCreatorCodeNotificationCategory(cat);
       var hasPublishAssistAction = isPublishAssistNotificationCategory(cat);
       var hasAction = hasCreatorCodeAction || hasPublishAssistAction || hasSystemAction || (cat !== "system" && (cat === "generated" || cat === "saved" || cat === "uploaded" || cat === "merged" || cat === "hero_image" || cat === "published" || cat === "publish" || cat === "removed_products" || cat === "removed_designs" || cat === "card_collection"));
       var item = document.createElement("div");
-      item.className = "creator-chat__notif-item" + (!n.is_read ? " is-unread" : "") + (hasAction ? " has-action creator-chat__notif-item--shimmer" : "");
+      item.className = "creator-chat__notif-item" + (!n.is_read ? " is-unread" : "") + (hasAction ? " has-action creator-chat__notif-item--shimmer" : "") + " creator-chat__feed-card";
       item.setAttribute("data-notif-id", String(nid));
       item.setAttribute("role", "listitem");
-      var title = truncateNotifTitle(n.title || n.category || i18n("chat_notifications_default_title", "Notification"), 50);
+      var title = truncateNotifTitle(
+        n.card_design_title || parsed.design_title || n.title || n.category || i18n("chat_notifications_default_title", "Notification"),
+        60
+      );
+      var productTitle = n.card_product_title || parsed.product_name || parsed.product_title || "";
       var html = "";
       if (imgSrc) {
-        html += '<div class="creator-chat__notif-preview-img"><img src="' + escapeHtml(imgSrc) + '" alt="" loading="lazy" /></div>';
+        html += '<div class="creator-chat__feed-card-thumb"><img src="' + escapeHtml(imgSrc) + '" alt="" loading="lazy" /></div>';
       }
-      html += '<div class="creator-chat__notif-content">';
-      html += '<div class="creator-chat__notif-title">' + escapeHtml(title) + '</div>';
-      if (display.datetime) html += '<div class="creator-chat__notif-datetime">' + escapeHtml(display.datetime) + '</div>';
-      html += '<div class="creator-chat__notif-badges">';
+      html += '<div class="creator-chat__feed-card-body">';
+      html += '<div class="creator-chat__feed-title-design">' + escapeHtml(title) + "</div>";
+      if (productTitle && String(productTitle).toLowerCase() !== String(title).toLowerCase()) {
+        html += '<div class="creator-chat__feed-title-product">' + escapeHtml(String(productTitle)) + "</div>";
+      }
+      html += '<div class="creator-chat__feed-chips creator-chat__notif-badges">';
+      var typeInfo = i18n("chat_stat_info_type", "What this notification is about.");
       if (display.badgeCategory && display.badgeSubcategory) {
-        html += '<span class="creator-chat__notif-badge ' + escapeHtml(display.badgeClass) + '">' + escapeHtml(display.badgeCategory) + '</span>';
-        html += '<span class="creator-chat__notif-badge creator-chat__notif-badge--subcategory">' + escapeHtml(display.badgeSubcategory) + '</span>';
+        html += '<button type="button" class="creator-chat__feed-chip creator-chat__notif-badge ' + escapeHtml(display.badgeClass) + '" data-stat-info="' + escapeHtml(typeInfo) + '">' + escapeHtml(display.badgeCategory) + "</button>";
+        html += '<button type="button" class="creator-chat__feed-chip creator-chat__notif-badge creator-chat__notif-badge--subcategory" data-stat-info="' + escapeHtml(typeInfo) + '">' + escapeHtml(display.badgeSubcategory) + "</button>";
       } else {
-        html += '<span class="creator-chat__notif-badge ' + escapeHtml(display.badgeClass) + '">' + escapeHtml(display.badgeLabel) + '</span>';
+        html += '<button type="button" class="creator-chat__feed-chip creator-chat__notif-badge ' + escapeHtml(display.badgeClass) + '" data-stat-info="' + escapeHtml(typeInfo) + '">' + escapeHtml(display.badgeLabel) + "</button>";
       }
-      html += '</div>';
-      html += '</div>';
+      if (display.datetime) {
+        html += '<button type="button" class="creator-chat__feed-chip" data-stat-info="' + escapeHtml(i18n("chat_stat_info_when", "When this notification arrived.")) + '">📅 ' + escapeHtml(display.datetime) + "</button>";
+      }
+      html += "</div></div>";
+      html += '<div class="creator-chat__feed-card-stat-info" role="status"></div>';
       item.innerHTML = html;
       if (hasAction) {
         item.addEventListener("click", function (e) {
@@ -5322,6 +5340,7 @@
       }
       list.appendChild(item);
     });
+    bindFeedCardStatClicks(list);
   }
 
   function isCreatorPage() {
@@ -5832,9 +5851,9 @@
           });
           var seen = {};
           rows = rows.filter(function (row) {
-            var sid = String(row.session_id || "");
-            if (!sid || seen[sid]) return false;
-            seen[sid] = true;
+            var cid = String(row.card_id || (row.session_id || "") + ":" + (row.card_product_key || row.product_key || ""));
+            if (!cid || seen[cid]) return false;
+            seen[cid] = true;
             return true;
           });
           rows.sort(function (a, b) {
@@ -5848,28 +5867,32 @@
               typeof row.effective_message === "string" && row.effective_message.trim()
                 ? row.effective_message.trim()
                 : "";
+            var cardId = String(row.card_id || row.session_id || "");
             return {
-              job_id: "sysjob_" + row.session_id,
+              job_id: "sysjob_" + cardId.replace(/[^\w:.-]+/g, "_"),
               session_id: row.session_id,
-              title: row.title || i18n("chat_system_publish_job", "System publish"),
-              prompt: row.title,
+              title: row.card_design_title || row.title || i18n("chat_system_publish_job", "System publish"),
+              prompt: row.card_design_title || row.title,
+              product_name: row.card_product_title || "",
               progress: prog,
               done: false,
               status: row.status,
-              message:
-                effMsg || row.error_message || row.summary || row.status || "",
-              started_at: row.created_at,
+              message: row.card_error_friendly || "",
+              started_at: row.card_started_at || row.created_at,
               is_system_job: true,
               design_id: row.design_id,
               system_job_kind: k,
               subtitle_detail:
                 typeof row.subtitle_detail === "string" ? row.subtitle_detail : "",
               preview_url_kv:
-                typeof row.effective_preview_url === "string"
-                  ? row.effective_preview_url
-                  : "",
+                row.card_preview_url ||
+                (typeof row.effective_preview_url === "string" ? row.effective_preview_url : ""),
               automation_meta:
-                typeof row.meta === "object" && row.meta !== null ? row.meta : {}
+                typeof row.meta === "object" && row.meta !== null ? row.meta : {},
+              card_phases: Array.isArray(row.card_phases) ? row.card_phases : [],
+              card_eta_at: row.card_eta_at || null,
+              card_marketplace: Array.isArray(row.card_marketplace) ? row.card_marketplace : [],
+              card_show_progress: false
             };
           });
           renderJobs();
@@ -6066,44 +6089,10 @@
 
   function getJobStatusLabel(j) {
     if (j.is_system_job) {
-      var progSys = typeof j.progress === "number" ? j.progress : 0;
       var ss = String(j.status || "").toLowerCase();
-      var msgLc = String(j.message || "").toLowerCase();
-
-      var doneLike =
-        ss === "completed" ||
-        progSys >= 100 ||
-        msgLc.indexOf("gespeichert") >= 0 ||
-        msgLc.indexOf("saved") >= 0;
-
-      var failLike =
-        ss === "failed" ||
-        ss === "cancelled" ||
-        progSys <= 0 && (msgLc.indexOf("fehl") >= 0 || msgLc.indexOf("fail") >= 0);
-
-      if (doneLike && !failLike)
-        return i18n("chat_job_status_done", "Done");
-      if (failLike && msgLc.indexOf("complete") < 0)
-        return i18n("chat_job_status_failed", "Failed");
-
-      if (
-        ss === "running" ||
-        ss === "queued" ||
-        ss === "pending" ||
-        ss === "starting" ||
-        (progSys > 0 && progSys < 100)
-      ) {
-        var r = i18n("chat_job_status_running", "Running…");
-        var detail = typeof j.message === "string" && j.message.trim() ? j.message.trim() : "";
-        return detail && detail.length < 140 ? detail : r;
-      }
-
-      var fallback =
-        typeof j.message === "string" && j.message.trim()
-          ? j.message.trim()
-          : j.status ||
-            i18n("chat_job_status_running", "Running…");
-      return fallback;
+      if (ss === "failed" || ss === "cancelled") return i18n("chat_job_status_failed", "Failed");
+      if (ss === "completed") return i18n("chat_job_status_done", "Done");
+      return i18n("chat_job_status_running", "Running…");
     }
     if (j.is_publish_job) {
       // Publishing job status
@@ -6139,6 +6128,76 @@
     return map[s] || s;
   }
 
+  function showFeedCardStatInfo(cardEl, text) {
+    if (!cardEl || !text) return;
+    var ov = cardEl.querySelector(".creator-chat__feed-card-stat-info");
+    if (!ov) {
+      ov = document.createElement("div");
+      ov.className = "creator-chat__feed-card-stat-info";
+      ov.setAttribute("role", "status");
+      cardEl.appendChild(ov);
+    }
+    if (cardEl._statInfoTimer) clearTimeout(cardEl._statInfoTimer);
+    cardEl._statInfoGen = (cardEl._statInfoGen || 0) + 1;
+    var gen = cardEl._statInfoGen;
+    ov.textContent = text;
+    ov.classList.remove("is-visible");
+    void ov.offsetWidth;
+    ov.classList.add("is-visible");
+    cardEl._statInfoTimer = setTimeout(function () {
+      if (cardEl._statInfoGen !== gen) return;
+      ov.classList.remove("is-visible");
+    }, 2600);
+  }
+
+  function bindFeedCardStatClicks(root) {
+    if (!root) return;
+    root.querySelectorAll("[data-stat-info]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var card = btn.closest(".creator-chat__feed-card");
+        showFeedCardStatInfo(card, btn.getAttribute("data-stat-info") || "");
+      });
+    });
+  }
+
+  function formatJobClock(ts) {
+    var n = Number(ts);
+    if (!Number.isFinite(n) || n <= 0) return "";
+    try {
+      return new Date(n).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function phaseLabel(id) {
+    var key = "chat_job_phase_" + String(id || "");
+    var fallbacks = {
+      queued: "Queued",
+      printify: "Printify",
+      shopify: "Shop",
+      live: "Live",
+      amazon: "Amazon",
+      removed: "Removed",
+      create: "Create",
+      online: "Online",
+      generate: "Generate",
+      save: "Save"
+    };
+    return i18n(key, fallbacks[id] || String(id || ""));
+  }
+
+  function phaseInfo(id) {
+    return i18n("chat_stat_info_phase_" + String(id || ""), phaseLabel(id));
+  }
+
   function renderJobs() {
     var list = document.getElementById("creator-chat-jobs-list");
     if (!list) return;
@@ -6151,59 +6210,70 @@
     }
 
     list.innerHTML = _jobsData.map(function (j) {
-      var title = j.prompt || j.product_name || j.title || j.action || "Design-Job";
+      var designTitle = j.prompt || j.title || j.action || "Job";
+      var productTitle = j.product_name || "";
       var statusLabel = getJobStatusLabel(j);
       var progress = jobUiProgress(j);
       var wearBadge = isWearClientJob(j)
         ? '<span class="creator-chat__job-device">' + escapeHtml(i18n("chat_job_device_wear", "Wear")) + "</span>"
         : "";
-      var elapsed = (j.started || j.started_at) ? getElapsed(j.started || j.started_at) : "";
-      var imgHtml = "";
-      if (j.image_url || (j.result && j.result.preview_url)) {
-        var srcImg = j.image_url || j.result.preview_url;
-        imgHtml = '<img src="' + escapeHtml(srcImg) + '" alt="" />';
-      } else if (j.preview_url_kv) {
-        imgHtml =
-          '<img src="' + escapeHtml(j.preview_url_kv) + '" alt="" />';
-      }
+      var startedTs = j.started || j.started_at;
+      var elapsed = startedTs ? getElapsed(startedTs) : "";
+      var srcImg = j.preview_url_kv || j.image_url || j.preview_url || (j.result && (j.result.preview_url || j.result.image_url)) || "";
       var jobId = j.job_id || j.id || "";
       var isRunning = !j.is_system_job && progress < 100 && !j.done;
       var runningClass = isRunning ? " creator-chat__job-item--running" : "";
-      var ringPct = Math.min(100, Math.max(0, Math.round(progress)));
-      var iconInner = isRunning
-        ? '<div class="creator-chat__job-ring" style="--pct:' + ringPct + '%" aria-hidden="true"><span class="creator-chat__job-ring__pct">' + ringPct + "%</span></div>"
-        : (imgHtml || '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>');
-      var subDetail =
-        j.is_system_job &&
-        typeof j.subtitle_detail === "string" &&
-        j.subtitle_detail.trim()
-          ? j.subtitle_detail.trim()
-          : "";
-      var kindLine = j.is_system_job ? systemJobKindLabel(j.system_job_kind) : "";
+      var thumb = srcImg
+        ? '<div class="creator-chat__feed-card-thumb"><img src="' + escapeHtml(srcImg) + '" alt="" /></div>'
+        : "";
+      var chips = "";
+      if (j.is_system_job) {
+        chips += '<button type="button" class="creator-chat__feed-chip" data-stat-info="' + escapeHtml(i18n("chat_stat_info_kind", "What this background job is doing.")) + '">⚙ ' + escapeHtml(systemJobKindLabel(j.system_job_kind)) + "</button>";
+      }
+      if (j.is_system_job && Array.isArray(j.card_phases) && j.card_phases.length) {
+        chips += j.card_phases.map(function (ph) {
+          var st = ph && ph.state ? ph.state : "todo";
+          var id = ph && ph.id ? ph.id : "";
+          var mark = st === "done" ? "✓ " : st === "current" ? "● " : "○ ";
+          return '<button type="button" class="creator-chat__phase creator-chat__phase--' + escapeHtml(st) + '" data-stat-info="' + escapeHtml(phaseInfo(id)) + '">' + mark + escapeHtml(phaseLabel(id)) + "</button>";
+        }).join("");
+      }
+      chips += '<button type="button" class="creator-chat__feed-chip" data-stat-info="' + escapeHtml(i18n("chat_stat_info_status", "Current status of this job.")) + '">⚡ ' + escapeHtml(statusLabel) + "</button>";
+      if (startedTs) {
+        chips += '<button type="button" class="creator-chat__feed-chip" data-stat-info="' + escapeHtml(i18n("chat_stat_info_started", "When this job started.")) + '">⏱ ' + escapeHtml(formatJobClock(startedTs)) + "</button>";
+      }
+      if (elapsed) {
+        chips += '<button type="button" class="creator-chat__feed-chip" data-stat-info="' + escapeHtml(i18n("chat_stat_info_elapsed", "How long this job has been running.")) + '">⏳ ' + escapeHtml(elapsed) + "</button>";
+      }
+      if (j.is_system_job && j.card_eta_at) {
+        chips += '<button type="button" class="creator-chat__feed-chip" data-stat-info="' + escapeHtml(i18n("chat_stat_info_eta", "Estimated finish time. This can change.")) + '">📅 ' + escapeHtml(i18n("chat_job_eta", "Ready around")) + " " + escapeHtml(formatJobClock(j.card_eta_at)) + "</button>";
+      }
+      (j.card_marketplace || []).forEach(function (m) {
+        chips += '<button type="button" class="creator-chat__feed-chip" data-stat-info="' + escapeHtml(i18n("chat_stat_info_market", "Amazon marketplace for this listing.")) + '">🛒 ' + escapeHtml(String(m)) + "</button>";
+      });
+      var err = j.is_system_job && j.message && (String(j.status || "").toLowerCase() === "failed")
+        ? '<div class="creator-chat__job-meta">' + escapeHtml(j.message) + "</div>"
+        : "";
+      var progressHtml = j.is_system_job
+        ? ""
+        : '<div class="creator-chat__job-progress"><div class="creator-chat__job-progress-bar" style="width:' + Math.min(100, progress) + '%"></div></div>';
 
-      return '<div class="creator-chat__job-item creator-chat__job-item--clickable' + runningClass + '" data-job-id="' + escapeHtml(jobId) + '">' +
-        '<div class="creator-chat__job-icon">' +
-          iconInner +
-        '</div>' +
-        '<div class="creator-chat__job-body">' +
-          '<div class="creator-chat__job-title">' + escapeHtml(title.length > 50 ? title.slice(0, 50) + "…" : title) + wearBadge + '</div>' +
-          (j.is_system_job
-            ? '<div class="creator-chat__job-sysmeta" style="margin-top:4px;line-height:1.35;font-size:11px;opacity:0.75">' +
-              escapeHtml(kindLine) +
-              (subDetail
-                ? "<br/><span>" + escapeHtml(subDetail.length > 120 ? subDetail.slice(0, 118) + "…" : subDetail) + "</span>"
-                : "") +
-              "</div>"
+      return '<div class="creator-chat__job-item creator-chat__job-item--clickable creator-chat__feed-card' + runningClass + '" data-job-id="' + escapeHtml(jobId) + '">' +
+        thumb +
+        '<div class="creator-chat__feed-card-body">' +
+          '<div class="creator-chat__feed-title-design">' + escapeHtml(designTitle.length > 60 ? designTitle.slice(0, 58) + "…" : designTitle) + wearBadge + "</div>" +
+          (productTitle
+            ? '<div class="creator-chat__feed-title-product">' + escapeHtml(productTitle.length > 60 ? productTitle.slice(0, 58) + "…" : productTitle) + "</div>"
             : "") +
-          '<div class="creator-chat__job-progress"><div class="creator-chat__job-progress-bar" style="width:' + Math.min(100, progress) + '%"></div></div>' +
-          '<div class="creator-chat__job-meta">' +
-            '<span class="creator-chat__job-status">' + escapeHtml(statusLabel) + '</span>' +
-            (elapsed ? ' · ' + elapsed : '') +
-            (progress > 0 ? ' · ' + Math.round(progress) + '%' : '') +
-          '</div>' +
-        '</div>' +
-      '</div>';
+          '<div class="creator-chat__feed-chips">' + chips + "</div>" +
+          progressHtml +
+          err +
+        "</div>" +
+        '<div class="creator-chat__feed-card-stat-info" role="status"></div>' +
+      "</div>";
     }).join("");
+
+    bindFeedCardStatClicks(list);
 
     list.querySelectorAll(".creator-chat__job-item--clickable").forEach(function (el) {
       el.style.cursor = "pointer";
