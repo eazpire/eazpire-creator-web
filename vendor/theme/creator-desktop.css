@@ -3786,9 +3786,10 @@ body.creator-video-motion-info-modal-open {
 }
 
 .creator-desktop-stage__panel--research.is-active {
-  display: flex;
+  display: flex !important;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden !important;
 }
 
 .creator-desktop-research-host {

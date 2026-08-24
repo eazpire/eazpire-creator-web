@@ -2,7 +2,7 @@
   <div class="eazy-research__filters-backdrop" data-erz-filters-backdrop hidden></div>
   <div class="eazy-research__layout">
     <aside class="eazy-research__filters-wrap" data-erz-filters-wrap>
-      <div class="eazy-research__filters" id="eazy-research-filters" data-erz-filters>
+      <div class="eazy-research__filters" id="erz-filters" data-erz-filters>
         <label class="eazy-research__select eazy-research__views">
           <span class="visually-hidden" data-t="creator.research.views">Views</span>
           <select data-erz-view-select>
@@ -12,13 +12,13 @@
             <option value="watched" data-t="creator.research.tab_watched">Watched</option>
           </select>
         </label>
-        <form class="eazy-research__toolbar" data-erz-toolbar>
+        <div class="eazy-research__toolbar" data-erz-toolbar>
           <label class="eazy-research__search">
             <span class="visually-hidden" data-t="creator.research.search_placeholder">Search reprint-safe products</span>
             <input type="search" name="q" autocomplete="off" data-erz-q data-t="creator.research.search_placeholder" placeholder="Search reprint-safe products">
           </label>
           <button type="button" class="eazy-research__analyze" data-erz-analyze data-t="creator.research.analyze">Analyze</button>
-        </form>
+        </div>
         <label class="eazy-research__select eazy-research__sort">
           <span class="visually-hidden" data-t="creator.research.sort_label">Sort</span>
           <select data-erz-sort>
@@ -54,12 +54,21 @@
           <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-pers="standard" data-t="creator.research.personalization_standard">Standard</button>
           <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-pers="personalizable" data-t="creator.research.personalization_personalizable">Personalizable</button>
         </div>
+        <h3 class="eazy-research__filters-heading" data-t="creator.research.audience">Audience</h3>
+        <p class="eazy-research__filters-hint" data-erz-audience-hint data-t="creator.research.audience_all_hint">All audiences</p>
+        <div class="eazy-research__chips" data-erz-audience-group role="list" aria-label="Audience">
+          <button type="button" class="eazy-research__chip" data-erz-audience="all" data-t="creator.research.niche_all">All</button>
+          <button type="button" class="eazy-research__chip" data-erz-audience="men" data-t="creator.research.audience_men">Men</button>
+          <button type="button" class="eazy-research__chip" data-erz-audience="women" data-t="creator.research.audience_women">Women</button>
+          <button type="button" class="eazy-research__chip" data-erz-audience="kids" data-t="creator.research.audience_kids">Kids</button>
+          <button type="button" class="eazy-research__chip" data-erz-audience="toddler" data-t="creator.research.audience_toddler">Toddler</button>
+        </div>
       </div>
       <button
         type="button"
         class="eazy-research__filter-rail"
         data-erz-filter-toggle
-        aria-controls="eazy-research-filters"
+        aria-controls="erz-filters"
         aria-expanded="true"
         aria-label="Collapse filters"
         title="Collapse filters"
@@ -85,8 +94,10 @@
       <div class="eazy-research__banner" data-erz-banner hidden>
         <span data-t="creator.research.preview_banner">Preview data — live snapshots coming</span>
       </div>
-      <div class="eazy-research__grid-cards" data-erz-grid></div>
-      <p class="eazy-research__empty" data-erz-empty hidden></p>
+      <div class="eazy-research__grid-scroll" id="erz-grid-scroll" data-erz-grid-scroll>
+        <div class="eazy-research__grid-cards" data-erz-grid></div>
+        <p class="eazy-research__empty" data-erz-empty hidden></p>
+      </div>
       <footer class="eazy-research__collector" data-erz-status></footer>
     </div>
   </div>

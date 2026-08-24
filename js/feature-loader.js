@@ -17,7 +17,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "research-analyze-search-20260824";
+  var PORTAL_ASSET_V = "research-fix-20260824f";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -554,7 +554,13 @@
   }
 
   async function ensureResearch() {
-    if (state.research) return state.research;
+    if (state.research) {
+      try { await state.research; } catch (_e) { /* retry below */ }
+      if (global.EazyResearchPage && typeof global.EazyResearchPage.boot === "function") {
+        global.EazyResearchPage.boot();
+      }
+      if (state.research) return state.research;
+    }
     state.research = (async function () {
       loadCss(asset("eazy-research.css"));
       var host = document.getElementById("creatorDesktopResearchHost");
