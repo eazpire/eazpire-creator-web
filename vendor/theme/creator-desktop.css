@@ -3841,25 +3841,25 @@ body.creator-video-motion-info-modal-open {
 }
 
 .creator-desktop-stage__panel--research.is-active {
-  display: flex !important;
-  flex-direction: column;
+  display: block !important;
   min-height: 0;
   overflow: hidden !important;
 }
 
 .creator-desktop-research-host {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
+  display: block;
   min-height: 0;
-  height: 0;
   overflow: hidden;
 }
 
+.creator-desktop-research-host > [data-partial],
 .creator-desktop-research-host .eazy-research {
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
   min-height: 0;
-  height: 0;
+  height: auto;
   overflow: hidden !important;
 }
 

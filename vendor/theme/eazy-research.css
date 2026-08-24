@@ -7,19 +7,57 @@
   gap: 0;
   flex: 1 1 auto;
   min-height: 0;
-  height: 0;
+  height: auto;
   overflow: hidden;
   padding: 0;
   color: #f4f1ff;
 }
 
-/* Research owns scrolling. Ancestors must not compete or restore window/panel scroll. */
+/* Research owns scrolling. Stage/panel stay overflow:hidden; inner columns scroll. */
 .creator-desktop-stage__panel--research,
 .creator-desktop-stage__panel--research.is-active,
 .creator-desktop-research-host,
 .creator-screen:has(> .eazy-research),
 .creator-screen:has(.eazy-research) {
   overflow: hidden !important;
+}
+
+/*
+ * Hub injects a static [data-partial] wrapper. height:0 + flex:1 on .eazy-research
+ * collapses to 0px unless every ancestor is a flex box with a definite height.
+ * Fill the already-sized stage panel instead (panel is position:absolute; inset:0).
+ */
+.creator-desktop-research-host {
+  position: absolute;
+  inset: 0;
+  display: block;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.creator-desktop-research-host > [data-partial],
+.creator-desktop-research-host .eazy-research {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+
+/* Mobile Hub/theme: screen is flex + height 100%. Stretch the partial wrapper. */
+.creator-screen > [data-partial]:has(.eazy-research) {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.creator-screen .eazy-research {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
 }
 
 .eazy-research__intro {
@@ -30,9 +68,10 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
   min-height: 0;
   flex: 1 1 auto;
-  height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -45,8 +84,9 @@
   flex: none;
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   max-height: 100%;
+  align-self: stretch;
   overflow: hidden;
   z-index: 4;
 }
@@ -249,8 +289,9 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  height: auto;
   max-height: 100%;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -261,7 +302,6 @@
 .eazy-research__grid-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -783,7 +823,8 @@
   .eazy-research {
     overflow: hidden;
     min-height: 0;
-    height: 100%;
+    height: auto;
+    flex: 1 1 auto;
   }
 
   .eazy-research__layout {
@@ -876,7 +917,6 @@
   .eazy-research__grid-scroll {
     flex: 1 1 auto;
     min-height: 0;
-    height: 0;
     overflow-x: hidden;
     overflow-y: auto;
   }
