@@ -73,6 +73,10 @@
     searchBlocked: 0,
     pollTimer: null,
     watched: [],
+    hasMore: false,
+    loadingMore: false,
+    loadGen: 0,
+    pageSize: 80,
   };
 
   function captureScrollTop(el) {
@@ -415,63 +419,25 @@
     }
   }
 
-  function filterClient(rows) {
-    var out = rows.slice();
-    out = out.filter(function (p) { return p.reprint_ok === true || Number(p.reprint_ok) === 1; });
+  /**
+   * Catalog grid is server-filtered. Client only trims live Analyze results
+   * and the local watchlist — never a larger unfiltered cache.
+   */
+  function visibleProducts() {
     var liveSearch = !!state.searchId;
-    if (state.marketplace && state.marketplace !== "all") {
+    var out = (state.products || []).slice();
+    out = out.filter(function (p) { return p.reprint_ok === true || Number(p.reprint_ok) === 1; });
+    if (liveSearch && state.marketplace && state.marketplace !== "all") {
       out = out.filter(function (p) { return marketplaceHost(p) === state.marketplace; });
     }
-    if (!liveSearch && state.nichesSelected && state.nichesSelected.length) {
-      out = out.filter(function (p) { return state.nichesSelected.indexOf(topicKeyOf(p)) !== -1; });
-    }
-    if (!liveSearch && state.designTypesSelected && state.designTypesSelected.length) {
-      out = out.filter(function (p) {
-        return state.designTypesSelected.indexOf(String(p.design_type || "").toLowerCase()) !== -1;
-      });
-    }
-    if (!liveSearch && state.languagesSelected && state.languagesSelected.length) {
-      out = out.filter(function (p) {
-        return state.languagesSelected.indexOf(String(p.language || "").toLowerCase()) !== -1;
-      });
-    }
-    if (!liveSearch && state.personalizationsSelected && state.personalizationsSelected.length === 1) {
-      out = out.filter(function (p) {
-        var key = Number(p.personalizable) === 1 || p.personalization === "personalizable"
-          ? "personalizable"
-          : "standard";
-        return key === state.personalizationsSelected[0];
-      });
-    }
-    if (!liveSearch && state.audiencesSelected && state.audiencesSelected.length) {
-      out = out.filter(function (p) {
-        return state.audiencesSelected.indexOf(audienceOf(p)) !== -1;
-      });
-    }
-    var q = String(state.q || "").trim().toLowerCase();
-    if (q && !liveSearch) {
-      out = out.filter(function (p) {
-        return [p.title, p.brand, p.asin, p.niche_key, p.marketplace, marketplaceTag(p)].join(" ").toLowerCase().indexOf(q) !== -1;
-      });
-    }
-    if (!liveSearch && state.view === "rising") out = out.filter(function (p) { return p.trend === "rising" || (p.rising_score || 0) > 0; });
-    if (!liveSearch && state.view === "review_growth") out = out.filter(function (p) { return p.review_delta != null && p.review_delta > 0; });
     if (!liveSearch && state.view === "watched") {
       out = out.filter(function (p) { return isWatched(p); });
     }
-    var sort = state.sort;
-    out.sort(function (a, b) {
-      if (state.view === "rising" || sort === "rising") return (b.rising_score || 0) - (a.rising_score || 0);
-      if (sort === "reviews") return (Number(b.latest && b.latest.reviews_count) || 0) - (Number(a.latest && a.latest.reviews_count) || 0);
-      if (sort === "bsr") {
-        var av = a.latest && a.latest.bsr != null ? Number(a.latest.bsr) : Infinity;
-        var bv = b.latest && b.latest.bsr != null ? Number(b.latest.bsr) : Infinity;
-        return av - bv;
-      }
-      if (sort === "newest") return (Number(b.latest && b.latest.captured_at) || 0) - (Number(a.latest && a.latest.captured_at) || 0);
-      return (Number(b.review_delta) || 0) - (Number(a.review_delta) || 0);
-    });
     return out;
+  }
+
+  function filterClient(rows) {
+    return visibleProducts();
   }
 
   function nicheLabel(key) {
@@ -769,7 +735,7 @@
       if (empty) empty.hidden = true;
       return;
     }
-    var rows = filterClient(state.products);
+    var rows = visibleProducts();
     if (!rows.length) {
       withResearchScroll(root, function () {
         grid.innerHTML = "";
@@ -830,7 +796,7 @@
         status.textContent = t("creator.research.analyze_loading", "Analyzing…");
         return;
       }
-      var found = filterClient(state.products).length;
+      var found = visibleProducts().length;
       if (found) {
         status.textContent = t("creator.research.analyze_found", "{n} products found").replace("{n}", String(found));
         return;
@@ -1124,42 +1090,86 @@
     pollSearch(root);
   }
 
-  async function load(root) {
-    if (state.analyzing) return;
-    var first = !state.products.length;
-    if (first) {
-      state.loading = true;
-      renderGrid(root);
-    }
+  function catalogListParams(offset) {
     var params = {
       reprint_ok: 1,
-      limit: 80,
+      limit: state.pageSize || 80,
+      offset: Math.max(0, Number(offset) || 0),
       sort: state.sort,
+      view: state.view === "watched" ? "opportunities" : (state.view || "opportunities"),
     };
+    var q = String(state.q || "").trim();
+    if (q) params.q = q;
     if (state.marketplace && state.marketplace !== "all") params.marketplace = state.marketplace;
     if (selectedTopics().length) params.niche = selectedTopics().join(",");
     if (state.designTypesSelected && state.designTypesSelected.length) params.design_type = state.designTypesSelected.join(",");
     if (state.languagesSelected && state.languagesSelected.length) params.language = state.languagesSelected.join(",");
     if (state.personalizationsSelected && state.personalizationsSelected.length) params.personalization = state.personalizationsSelected.join(",");
     if (state.audiencesSelected && state.audiencesSelected.length) params.audience = state.audiencesSelected.join(",");
-    var data = await api("eazy-research-products", params).catch(function () { return null; });
+    return params;
+  }
+
+  function resetGridScroll(root) {
+    var refs = scrollerRefs(root);
+    if (refs.grid) refs.grid.scrollTop = 0;
+  }
+
+  async function load(root, opts) {
+    opts = opts || {};
+    var append = !!opts.append;
+    if (state.analyzing) return;
+    if (state.searchId) return;
+    if (!append && state.view === "watched") {
+      render(root);
+      return;
+    }
+    if (append && (state.loadingMore || state.loading || !state.hasMore)) return;
+    var offset = append ? state.products.length : 0;
+    state.loadGen += 1;
+    var gen = state.loadGen;
+    if (append) {
+      state.loadingMore = true;
+    } else {
+      state.loading = true;
+      state.hasMore = false;
+      state.products = [];
+      renderGrid(root);
+    }
+    var data = await api("eazy-research-products", catalogListParams(offset)).catch(function () { return null; });
+    if (gen !== state.loadGen) return;
     if (state.analyzing) return;
     state.loading = false;
+    state.loadingMore = false;
     if (!data || !data.ok) {
       var status = root.querySelector("[data-erz-status]");
       if (status) status.textContent = t("creator.research.error", "Research data could not be loaded.");
-      if (first) state.products = [];
+      if (!append) state.products = [];
       renderGrid(root);
       return;
     }
     state.preview = Boolean(data.preview);
-    if (!state.searchId) state.products = data.products || [];
+    var page = data.products || [];
+    if (!state.searchId) {
+      state.products = append ? state.products.concat(page) : page;
+    }
+    state.hasMore = Boolean(data.has_more);
     state.niches = data.niches || [];
     state.facets = data.facets || state.facets;
     state.marketplaces = data.marketplaces || state.marketplaces;
     applyAnalyzeLimits(data.analyze_limits);
     state.lastRun = data.last_run || null;
     render(root);
+    if (!append) resetGridScroll(root);
+  }
+
+  function maybeLoadMore(root) {
+    if (state.analyzing || state.searchId || state.view === "watched") return;
+    if (state.loading || state.loadingMore || !state.hasMore) return;
+    var refs = scrollerRefs(root);
+    var scroller = refs.grid;
+    if (!scroller) return;
+    var remain = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    if (remain < 320) load(root, { append: true });
   }
 
   function isFiltersCollapsedStored() {
@@ -1239,7 +1249,10 @@
       q.addEventListener("input", function () {
         state.q = q.value || "";
         clearTimeout(qTimer);
-        qTimer = setTimeout(function () { renderGrid(root); }, 180);
+        qTimer = setTimeout(function () {
+          if (state.searchId || state.view === "watched") renderGrid(root);
+          else load(root);
+        }, 180);
       });
       q.addEventListener("keydown", function (ev) {
         if (ev.key === "Enter") {
@@ -1252,14 +1265,16 @@
     if (sort) {
       sort.addEventListener("change", function () {
         state.sort = sort.value || "review_growth";
-        renderGrid(root);
+        if (state.searchId || state.view === "watched") renderGrid(root);
+        else load(root);
       });
     }
     var viewSelect = root.querySelector("[data-erz-view-select]");
     if (viewSelect) {
       viewSelect.addEventListener("change", function () {
         state.view = viewSelect.value || "opportunities";
-        render(root);
+        if (state.searchId || state.view === "watched") render(root);
+        else load(root);
       });
     }
     var analyzeBtn = root.querySelector("[data-erz-analyze]");
@@ -1302,27 +1317,32 @@
       if (!tEl) return;
       if (tEl.hasAttribute("data-erz-niche") || (tEl.closest && tEl.closest("[data-erz-chips]"))) {
         state.nichesSelected = readChecked("[data-erz-niche]", "data-erz-niche");
-        render(root);
+        if (state.searchId || state.view === "watched") render(root);
+        else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-type")) {
         state.designTypesSelected = readChecked("[data-erz-type]", "data-erz-type");
-        render(root);
+        if (state.searchId || state.view === "watched") render(root);
+        else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-lang")) {
         state.languagesSelected = readChecked("[data-erz-lang]", "data-erz-lang");
-        render(root);
+        if (state.searchId || state.view === "watched") render(root);
+        else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-pers")) {
         state.personalizationsSelected = readChecked("[data-erz-pers]", "data-erz-pers");
-        render(root);
+        if (state.searchId || state.view === "watched") render(root);
+        else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-audience")) {
         state.audiencesSelected = readChecked("[data-erz-audience]", "data-erz-audience");
-        render(root);
+        if (state.searchId || state.view === "watched") render(root);
+        else load(root);
       }
     });
     root.addEventListener("click", function (ev) {
@@ -1362,7 +1382,8 @@
       var tab = ev.target.closest("[data-erz-view]");
       if (tab) {
         state.view = tab.getAttribute("data-erz-view") || "opportunities";
-        render(root);
+        if (state.searchId || state.view === "watched") render(root);
+        else load(root);
         return;
       }
       var open = ev.target.closest("[data-erz-open]");
@@ -1399,6 +1420,11 @@
     scrollerRefs(root);
     state.watched = loadWatched();
     bind(root);
+    var gridScroll = root.querySelector("[data-erz-grid-scroll]");
+    if (gridScroll && gridScroll.dataset.erzPager !== "1") {
+      gridScroll.dataset.erzPager = "1";
+      gridScroll.addEventListener("scroll", function () { maybeLoadMore(root); });
+    }
     bindModal(root);
     bindDocumentUi();
     syncAnalyzeButton(root);
