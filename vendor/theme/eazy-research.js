@@ -1,7 +1,6 @@
 /**
- * eazy Research creator page — reprint-safe demand signals.
- * Cards/modal: image, title, niche, BSR + category, BSR change, reviews if present.
- * Never invents unit sales. No price or star rating in the UI.
+ * eazy Research creator page — reprint-safe Amazon snapshots.
+ * Cards: image, title, KI topic, language flag, category-rank, BSR. No invented sales.
  */
 (function (global) {
   "use strict";
@@ -11,16 +10,44 @@
   var HEART_SVG =
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
 
+  var LANG_FLAGS = { en: "🇬🇧", de: "🇩🇪", es: "🇪🇸", fr: "🇫🇷", it: "🇮🇹" };
+  var COUNTRY_I18N = {
+    "amazon.de": "creator.research.country_amazon_de",
+    "amazon.co.uk": "creator.research.country_amazon_co_uk",
+    "amazon.fr": "creator.research.country_amazon_fr",
+    "amazon.it": "creator.research.country_amazon_it",
+    "amazon.es": "creator.research.country_amazon_es",
+    "amazon.com": "creator.research.country_amazon_com",
+    "amazon.ca": "creator.research.country_amazon_ca",
+    "amazon.co.jp": "creator.research.country_amazon_co_jp",
+    "amazon.com.au": "creator.research.country_amazon_com_au",
+  };
+  var COUNTRY_FALLBACK = {
+    "amazon.de": "DE · Amazon.de",
+    "amazon.co.uk": "UK · Amazon.co.uk",
+    "amazon.fr": "FR · Amazon.fr",
+    "amazon.it": "IT · Amazon.it",
+    "amazon.es": "ES · Amazon.es",
+    "amazon.com": "US · Amazon.com",
+    "amazon.ca": "CA · Amazon.ca",
+    "amazon.co.jp": "JP · Amazon.co.jp",
+    "amazon.com.au": "AU · Amazon.com.au",
+  };
+
   var state = {
     products: [],
     niches: [],
+    facets: { topics: [], audience: [], personalization: [], design_type: [], language: [] },
+    marketplaces: [],
+    marketplace: "all",
+    analyzeLimits: { used: 0, remaining: 5, limit: 5, busy: false },
     preview: false,
     lastRun: null,
     q: "",
     nichesSelected: [],
-    designType: "",
-    language: "",
-    personalization: "",
+    designTypesSelected: [],
+    languagesSelected: [],
+    personalizationsSelected: [],
     audiencesSelected: [],
     sort: "review_growth",
     reprintOk: true,
@@ -236,7 +263,51 @@
 
   function subNicheOf(p) {
     if (!p) return "";
-    return p.sub_niche || p.sub_niche_key || p.subniche || "";
+    return p.subtopic || p.sub_niche || p.sub_niche_key || p.subniche || "";
+  }
+
+  function topicKeyOf(p) {
+    var topic = String((p && p.topic) || "").trim().toLowerCase();
+    if (topic) return topic;
+    var key = String((p && p.niche_key) || "").trim().toLowerCase();
+    if (key && key !== "user_search") return key;
+    return "";
+  }
+
+  function displayTopicLabels(p) {
+    var out = [];
+    var topic = String((p && p.topic) || "").trim();
+    var sub = String((p && p.subtopic) || "").trim();
+    if (topic) out.push(sub ? topic + " · " + sub : topic);
+    var key = String((p && p.niche_key) || "").trim();
+    if (key && key.toLowerCase() !== "user_search") {
+      var label = nicheLabel(key);
+      var already = topic && (topic.toLowerCase() === key.toLowerCase() || topic.toLowerCase() === String(label).toLowerCase());
+      if (label && !already) out.push(label);
+    }
+    return out;
+  }
+
+  function languageBadge(lang) {
+    var code = String(lang || "").trim().toLowerCase();
+    if (!code || code === "none") return "";
+    var flag = LANG_FLAGS[code] || "";
+    var shown = code.toUpperCase();
+    return flag ? flag + " " + shown : shown;
+  }
+
+  function facetCount(group, key) {
+    var rows = (state.facets && state.facets[group]) || [];
+    var hit = rows.find(function (x) { return String(x.key) === String(key); });
+    return hit ? Number(hit.count) || 0 : 0;
+  }
+
+  function toggleList(list, key) {
+    var next = Array.isArray(list) ? list.slice() : [];
+    var idx = next.indexOf(key);
+    if (idx === -1) next.push(key);
+    else next.splice(idx, 1);
+    return next;
   }
 
   var AUDIENCE_VALUES = ["men", "women", "kids", "toddler"];
@@ -300,21 +371,28 @@
     var out = rows.slice();
     out = out.filter(function (p) { return p.reprint_ok === true || Number(p.reprint_ok) === 1; });
     var liveSearch = !!state.searchId;
+    if (state.marketplace && state.marketplace !== "all") {
+      out = out.filter(function (p) { return marketplaceHost(p) === state.marketplace; });
+    }
     if (!liveSearch && state.nichesSelected && state.nichesSelected.length) {
-      out = out.filter(function (p) { return state.nichesSelected.indexOf(p.niche_key) !== -1; });
+      out = out.filter(function (p) { return state.nichesSelected.indexOf(topicKeyOf(p)) !== -1; });
     }
-    if (!liveSearch && state.designType) {
-      out = out.filter(function (p) { return String(p.design_type || "").toLowerCase() === state.designType; });
+    if (!liveSearch && state.designTypesSelected && state.designTypesSelected.length) {
+      out = out.filter(function (p) {
+        return state.designTypesSelected.indexOf(String(p.design_type || "").toLowerCase()) !== -1;
+      });
     }
-    if (!liveSearch && state.language) {
-      out = out.filter(function (p) { return String(p.language || "").toLowerCase() === state.language; });
+    if (!liveSearch && state.languagesSelected && state.languagesSelected.length) {
+      out = out.filter(function (p) {
+        return state.languagesSelected.indexOf(String(p.language || "").toLowerCase()) !== -1;
+      });
     }
-    if (!liveSearch && state.personalization) {
+    if (!liveSearch && state.personalizationsSelected && state.personalizationsSelected.length === 1) {
       out = out.filter(function (p) {
         var key = Number(p.personalizable) === 1 || p.personalization === "personalizable"
           ? "personalizable"
           : "standard";
-        return key === state.personalization;
+        return key === state.personalizationsSelected[0];
       });
     }
     if (!liveSearch && state.audiencesSelected && state.audiencesSelected.length) {
@@ -403,9 +481,18 @@
     var watchLabel = watched
       ? t("creator.research.watch_remove", "Remove from watchlist")
       : t("creator.research.watch_add", "Add to watchlist");
-    var tag = marketplaceTag(p);
-    var tagHtml = tag
-      ? '<span class="eazy-research-card__market" translate="no">' + esc(tag) + "</span>"
+    var topics = displayTopicLabels(p);
+    var topicHtml = topics.length
+      ? '<div class="eazy-research-card__tags">' + topics.map(function (label) {
+          return "<span>" + esc(label) + "</span>";
+        }).join("") + "</div>"
+      : "";
+    var lang = languageBadge(p.language);
+    var langHtml = lang ? '<div class="eazy-research-card__lang" translate="no">' + esc(lang) + "</div>" : "";
+    var rel = p.relevance_score != null && isFinite(Number(p.relevance_score))
+      ? '<div class="eazy-research-card__relevance" title="' +
+        esc(t("creator.research.relevance_hint", "Score 1–100 from this listing's BSR in its own marketplace category. Not demand or sales.")) +
+        '">' + esc(t("creator.research.relevance", "Category rank") + " " + String(p.relevance_score)) + "</div>"
       : "";
     return (
       '<article class="eazy-research-card" data-asin="' + esc(p.asin) +
@@ -416,12 +503,12 @@
           '" aria-label="' + esc(watchLabel) + '">' + HEART_SVG + "</button>" +
         '<button type="button" class="eazy-research-card__hit" data-erz-open="' + esc(p.asin) +
           '" data-marketplace="' + esc(marketplaceHost(p)) + '">' +
-          '<div class="eazy-research-card__media">' + img + tagHtml + "</div>" +
+          '<div class="eazy-research-card__media">' + img + "</div>" +
           '<div class="eazy-research-card__body">' +
             "<h3>" + esc(p.title || p.asin) + "</h3>" +
-            (p.niche_key
-              ? '<div class="eazy-research-card__tags"><span>' + esc(nicheLabel(p.niche_key)) + "</span></div>"
-              : "") +
+            topicHtml +
+            langHtml +
+            rel +
             '<div class="eazy-research-card__bsr">' + esc(fmtBsr(p)) + "</div>" +
             changeHtml +
             reviewsHtml +
@@ -449,68 +536,104 @@
     return selectedTopics().length === 0;
   }
 
+  function checkRow(attr, key, label, group, selected) {
+    var on = selected.indexOf(key) !== -1;
+    var count = facetCount(group, key);
+    return (
+      '<label class="eazy-research__check' + (on ? " is-on" : "") + '">' +
+        '<input type="checkbox" ' + attr + '="' + esc(key) + '"' + (on ? " checked" : "") + ">" +
+        "<span>" + esc(label) + "</span>" +
+        '<span class="eazy-research__count">' + esc(String(count)) + "</span>" +
+      "</label>"
+    );
+  }
+
   function renderChips(root) {
     var wrap = root.querySelector("[data-erz-chips]");
     if (!wrap) return;
-    var allOn = isAllTopics();
-    var all = [{ niche_key: "all", label: t("creator.research.niche_all", "All") }].concat(state.niches || []);
-    var keys = all.map(function (n) { return n.niche_key || n.key || "all"; });
-    var existing = wrap.querySelectorAll("[data-erz-niche]");
-    var same =
-      existing.length === keys.length &&
-      Array.prototype.every.call(existing, function (el, i) {
-        return el.getAttribute("data-erz-niche") === keys[i];
-      });
-    if (!same) {
-      withResearchScroll(root, function () {
-        wrap.innerHTML = all.map(function (n) {
-          var key = n.niche_key || n.key || "all";
-          var on = key === "all" ? allOn : selectedTopics().indexOf(key) !== -1;
-          return '<button type="button" class="eazy-research__chip' + (on ? " is-active" : "") +
-            '" data-erz-niche="' + esc(key) + '" aria-pressed="' + (on ? "true" : "false") + '">' +
-            esc(n.label || key) + "</button>";
-        }).join("");
-      });
-    } else {
-      Array.prototype.forEach.call(existing, function (btn) {
-        var key = btn.getAttribute("data-erz-niche") || "all";
-        var on = key === "all" ? allOn : selectedTopics().indexOf(key) !== -1;
-        btn.classList.toggle("is-active", on);
-        btn.setAttribute("aria-pressed", on ? "true" : "false");
-      });
+    var selected = selectedTopics();
+    var facetTopics = (state.facets && state.facets.topics) || [];
+    var packMap = {};
+    (state.niches || []).forEach(function (n) {
+      var key = n.niche_key || n.key;
+      if (key) packMap[key] = n.label || key;
+    });
+    var rows = facetTopics.filter(function (f) { return f.key && f.key !== "user_search"; });
+    if (!rows.length) {
+      rows = (state.niches || []).map(function (n) {
+        var key = n.niche_key || n.key;
+        return { key: key, count: facetCount("topics", key), label: n.label || key };
+      }).filter(function (n) { return n.key && n.key !== "user_search"; });
     }
+    var html = rows.map(function (n) {
+      var key = n.key || n.niche_key;
+      var label = n.label || packMap[key] || key;
+      return checkRow("data-erz-niche", key, label, "topics", selected);
+    }).join("");
+    withResearchScroll(root, function () {
+      wrap.innerHTML = html;
+    });
     var hint = root.querySelector("[data-erz-topics-hint]");
-    if (hint) hint.hidden = !allOn;
+    if (hint) hint.hidden = !isAllTopics();
   }
 
-  function renderFacetRadios(root, selector, attr, value) {
-    root.querySelectorAll(selector).forEach(function (btn) {
-      var on = btn.getAttribute(attr) === value;
-      btn.classList.toggle("is-active", on);
-      btn.setAttribute("aria-checked", on ? "true" : "false");
+  function syncChecks(root, selector, attr, selected) {
+    root.querySelectorAll(selector).forEach(function (input) {
+      var key = input.getAttribute(attr) || "";
+      var on = selected.indexOf(key) !== -1;
+      input.checked = on;
+      var row = input.closest(".eazy-research__check");
+      if (row) row.classList.toggle("is-on", on);
     });
+  }
+
+  function renderCounts(root) {
+    root.querySelectorAll("[data-erz-count]").forEach(function (el) {
+      var raw = el.getAttribute("data-erz-count") || "";
+      var parts = raw.split(":");
+      if (parts.length !== 2) return;
+      el.textContent = String(facetCount(parts[0], parts[1]));
+    });
+  }
+
+  function renderCountry(root) {
+    var select = root.querySelector("[data-erz-country]");
+    if (!select) return;
+    var hosts = (state.marketplaces || []).map(function (m) { return m.host; });
+    if (!hosts.length) {
+      hosts = ["amazon.de", "amazon.co.uk", "amazon.fr", "amazon.it", "amazon.es", "amazon.com", "amazon.ca"];
+    }
+    var options = [{ host: "all", label: t("creator.research.country_all", "All countries") }].concat(
+      hosts.map(function (host) {
+        return {
+          host: host,
+          label: t(COUNTRY_I18N[host] || "", COUNTRY_FALLBACK[host] || host),
+        };
+      })
+    );
+    var html = options.map(function (o) {
+      return '<option value="' + esc(o.host) + '"' + (state.marketplace === o.host ? " selected" : "") + ">" +
+        esc(o.label) + "</option>";
+    }).join("");
+    if (select.innerHTML !== html) select.innerHTML = html;
+    if (select.value !== state.marketplace) select.value = state.marketplace || "all";
   }
 
   function renderFacets(root) {
-    renderFacetRadios(root, "[data-erz-type]", "data-erz-type", state.designType);
-    renderFacetRadios(root, "[data-erz-lang]", "data-erz-lang", state.language);
-    renderFacetRadios(root, "[data-erz-pers]", "data-erz-pers", state.personalization);
-    var selected = Array.isArray(state.audiencesSelected) ? state.audiencesSelected : [];
-    var allOn = selected.length === 0;
-    root.querySelectorAll("[data-erz-audience]").forEach(function (btn) {
-      var key = btn.getAttribute("data-erz-audience") || "";
-      var on = key === "all" ? allOn : selected.indexOf(key) !== -1;
-      btn.classList.toggle("is-active", on);
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-    });
+    syncChecks(root, "[data-erz-type]", "data-erz-type", state.designTypesSelected || []);
+    syncChecks(root, "[data-erz-lang]", "data-erz-lang", state.languagesSelected || []);
+    syncChecks(root, "[data-erz-pers]", "data-erz-pers", state.personalizationsSelected || []);
+    syncChecks(root, "[data-erz-audience]", "data-erz-audience", state.audiencesSelected || []);
+    renderCounts(root);
     var typeHint = root.querySelector("[data-erz-type-hint]");
-    if (typeHint) typeHint.hidden = !!state.designType;
+    if (typeHint) typeHint.hidden = !!(state.designTypesSelected && state.designTypesSelected.length);
     var langHint = root.querySelector("[data-erz-lang-hint]");
-    if (langHint) langHint.hidden = !!state.language;
+    if (langHint) langHint.hidden = !!(state.languagesSelected && state.languagesSelected.length);
     var persHint = root.querySelector("[data-erz-pers-hint]");
-    if (persHint) persHint.hidden = !!state.personalization;
+    if (persHint) persHint.hidden = !!(state.personalizationsSelected && state.personalizationsSelected.length);
     var audHint = root.querySelector("[data-erz-audience-hint]");
-    if (audHint) audHint.hidden = !allOn;
+    if (audHint) audHint.hidden = !(state.audiencesSelected && state.audiencesSelected.length === 0);
+    renderCountry(root);
   }
 
   function renderGrid(root) {
@@ -565,7 +688,7 @@
     if (state.view === "watched") {
       return t("creator.research.empty_watched", "No watched products yet. Tap the heart on a product to start tracking it.");
     }
-    if (state.q || !isAllTopics() || state.designType || state.language || state.personalization || (state.audiencesSelected && state.audiencesSelected.length)) {
+    if (state.q || !isAllTopics() || (state.designTypesSelected && state.designTypesSelected.length) || (state.languagesSelected && state.languagesSelected.length) || (state.personalizationsSelected && state.personalizationsSelected.length) || (state.audiencesSelected && state.audiencesSelected.length) || (state.marketplace && state.marketplace !== "all")) {
       return t("creator.research.empty_search", "No reprint-safe products match this search. Try a broader niche such as Coffee or Hiking.");
     }
     return t("creator.research.empty_action", "Pick a topic or type a search to explore reprint-safe products.");
@@ -638,19 +761,48 @@
     var changeRow = change
       ? statRow(t("creator.research.bsr_change", "BSR change"), change.label)
       : "";
-    var niche = p.niche_key ? nicheLabel(p.niche_key) : "";
-    var sub = subNicheOf(p);
-    var nicheLine = [niche, sub].filter(Boolean).join(" · ");
+    var topics = displayTopicLabels(p);
     var tag = marketplaceTag(p);
+    var lang = languageBadge(p.language);
+    var tags = Array.isArray(p.tags) ? p.tags.filter(Boolean) : [];
+    var pers = Number(p.personalizable) === 1 || p.personalization === "personalizable";
+    var rel = p.relevance_score != null && isFinite(Number(p.relevance_score))
+      ? statRow(
+          t("creator.research.relevance", "Category rank"),
+          t("creator.research.relevance_value", "{n}").replace("{n}", String(p.relevance_score))
+        )
+      : "";
+    var designType = p.design_type
+      ? t("creator.quick_inspirations.content_type_" + p.design_type, String(p.design_type).replace(/_/g, " "))
+      : "";
     return (
-      (p.image_url ? '<img src="' + esc(p.image_url) + '" alt="">' : "") +
-      '<h3 id="eazy-research-modal-title">' + esc(p.title || p.asin) + "</h3>" +
-      (tag ? '<p class="eazy-research__meta"><span class="eazy-research-card__market is-inline" translate="no">' + esc(tag) + "</span></p>" : "") +
-      (nicheLine ? '<p class="eazy-research__meta">' + esc(nicheLine) + "</p>" : "") +
-      '<div class="eazy-research-modal__stats">' +
-        statRow(t("creator.research.bsr_label", "BSR"), fmtBsr(p)) +
-        changeRow +
-        reviewsRow +
+      '<div class="eazy-research-modal__layout">' +
+        '<div class="eazy-research-modal__media">' +
+          (p.image_url ? '<img src="' + esc(p.image_url) + '" alt="">' : "") +
+        "</div>" +
+        '<div class="eazy-research-modal__info">' +
+          '<h3 id="eazy-research-modal-title">' + esc(p.title || p.asin) + "</h3>" +
+          '<div class="eazy-research-modal__stats">' +
+            (p.brand ? statRow(t("creator.research.brand", "Brand"), p.brand) : "") +
+            (tag ? statRow(t("creator.research.marketplace", "Marketplace"), tag) : "") +
+            statRow(t("creator.research.bsr_label", "BSR"), fmtBsr(p)) +
+            changeRow +
+            rel +
+            reviewsRow +
+            (topics.length ? statRow(t("creator.research.topic", "Topic"), topics.join(" · ")) : "") +
+            (designType ? statRow(t("creator.research.design_type", "Design type"), designType) : "") +
+            (lang ? statRow(t("creator.research.language", "Language"), lang) : "") +
+            statRow(
+              t("creator.research.custom_design", "Custom Design"),
+              pers ? t("creator.research.yes", "Yes") : t("creator.research.no", "No")
+            ) +
+            (tags.length ? statRow(t("creator.research.tags", "Tags"), tags.join(", ")) : "") +
+            (p.prompt ? statRow(t("creator.research.prompt", "Prompt"), p.prompt) : "") +
+          "</div>" +
+          '<p class="eazy-research-modal__hint">' +
+            esc(t("creator.research.relevance_hint", "Score 1–100 from this listing's BSR in its own marketplace category. Not demand or sales.")) +
+          "</p>" +
+        "</div>" +
       "</div>"
     );
   }
@@ -692,15 +844,30 @@
     if (modal) modal.hidden = true;
   }
 
+  function applyAnalyzeLimits(limits) {
+    if (!limits || typeof limits !== "object") return;
+    state.analyzeLimits = {
+      used: Number(limits.used) || 0,
+      remaining: limits.remaining == null ? 5 : Number(limits.remaining) || 0,
+      limit: Number(limits.limit) || 5,
+      busy: Boolean(limits.busy),
+      retry_after_ms: Number(limits.retry_after_ms) || 0,
+    };
+  }
+
   function syncAnalyzeButton(root) {
     var btn = root.querySelector("[data-erz-analyze]");
     if (!btn) return;
     var logged = isLoggedIn();
+    var lim = state.analyzeLimits || { remaining: 5, limit: 5 };
     btn.disabled = state.analyzing;
     btn.textContent = state.analyzing
       ? t("creator.research.analyze_loading", "Analyzing…")
-      : t("creator.research.analyze", "Analyze");
+      : t("creator.research.analyze_remaining", "Analyze ({remaining}/{limit})")
+          .replace("{remaining}", String(lim.remaining))
+          .replace("{limit}", String(lim.limit));
     if (!logged) btn.setAttribute("title", t("creator.research.analyze_login", "Log in to run a live catalog search."));
+    else if (lim.busy) btn.setAttribute("title", t("creator.research.analyze_busy", "Another Analyze is running. Please wait a few seconds."));
     else btn.removeAttribute("title");
   }
 
@@ -765,15 +932,17 @@
     state.products = [];
     state.loading = false;
     state.nichesSelected = [];
-    state.designType = "";
-    state.language = "";
-    state.personalization = "";
+    state.designTypesSelected = [];
+    state.languagesSelected = [];
+    state.personalizationsSelected = [];
     state.audiencesSelected = [];
     state.view = "opportunities";
     render(root);
+    var body = { q: q };
+    if (state.marketplace && state.marketplace !== "all") body.marketplace = state.marketplace;
     var data = await api("eazy-research-analyze-search", { q: q }, {
       method: "POST",
-      body: { q: q },
+      body: body,
     }).catch(function (err) {
       return (err && err.body) || { ok: false, error: (err && err.status) || "network" };
     });
@@ -782,13 +951,18 @@
       var msg = t("creator.research.analyze_error", "Live catalog search could not start.");
       if (data && data.error === "login_required") msg = t("creator.research.analyze_login", "Log in to run a live catalog search.");
       if (data && data.error === "cooldown") msg = t("creator.research.analyze_cooldown", "Please wait before another live search.");
-      if (data && data.error === "daily_limit") msg = t("creator.research.analyze_daily_limit", "Daily live search limit reached.");
+      if (data && data.error === "daily_limit") msg = t("creator.research.analyze_daily_limit", "Daily live search limit reached (5 per UTC day).");
+      if (data && data.error === "busy") msg = t("creator.research.analyze_busy", "Another Analyze is running. Please wait a few seconds.");
+      if (data && (data.remaining != null || data.daily)) {
+        applyAnalyzeLimits(data.daily || data);
+      }
       var errStatus = root.querySelector("[data-erz-status]");
       if (errStatus) errStatus.textContent = msg;
       render(root);
       return;
     }
     state.searchId = data.search_id || "";
+    applyAnalyzeLimits(data.daily);
     pollSearch(root);
   }
 
@@ -804,10 +978,11 @@
       limit: 80,
       sort: state.sort,
     };
+    if (state.marketplace && state.marketplace !== "all") params.marketplace = state.marketplace;
     if (selectedTopics().length) params.niche = selectedTopics().join(",");
-    if (state.designType) params.design_type = state.designType;
-    if (state.language) params.language = state.language;
-    if (state.personalization) params.personalization = state.personalization;
+    if (state.designTypesSelected && state.designTypesSelected.length) params.design_type = state.designTypesSelected.join(",");
+    if (state.languagesSelected && state.languagesSelected.length) params.language = state.languagesSelected.join(",");
+    if (state.personalizationsSelected && state.personalizationsSelected.length) params.personalization = state.personalizationsSelected.join(",");
     if (state.audiencesSelected && state.audiencesSelected.length) params.audience = state.audiencesSelected.join(",");
     var data = await api("eazy-research-products", params).catch(function () { return null; });
     if (state.analyzing) return;
@@ -822,6 +997,9 @@
     state.preview = Boolean(data.preview);
     if (!state.searchId) state.products = data.products || [];
     state.niches = data.niches || [];
+    state.facets = data.facets || state.facets;
+    state.marketplaces = data.marketplaces || state.marketplaces;
+    applyAnalyzeLimits(data.analyze_limits);
     state.lastRun = data.last_run || null;
     render(root);
   }
@@ -947,6 +1125,47 @@
     if (backdrop) {
       backdrop.addEventListener("click", function () { applyFiltersSheet(root, false); });
     }
+    var country = root.querySelector("[data-erz-country]");
+    if (country) {
+      country.addEventListener("change", function () {
+        state.marketplace = country.value || "all";
+        if (!state.searchId) load(root);
+        else render(root);
+      });
+    }
+    function readChecked(selector, attr) {
+      return Array.prototype.map.call(root.querySelectorAll(selector + ":checked"), function (el) {
+        return el.getAttribute(attr);
+      }).filter(Boolean);
+    }
+    root.addEventListener("change", function (ev) {
+      var tEl = ev.target;
+      if (!tEl) return;
+      if (tEl.hasAttribute("data-erz-niche") || (tEl.closest && tEl.closest("[data-erz-chips]"))) {
+        state.nichesSelected = readChecked("[data-erz-niche]", "data-erz-niche");
+        render(root);
+        return;
+      }
+      if (tEl.hasAttribute("data-erz-type")) {
+        state.designTypesSelected = readChecked("[data-erz-type]", "data-erz-type");
+        render(root);
+        return;
+      }
+      if (tEl.hasAttribute("data-erz-lang")) {
+        state.languagesSelected = readChecked("[data-erz-lang]", "data-erz-lang");
+        render(root);
+        return;
+      }
+      if (tEl.hasAttribute("data-erz-pers")) {
+        state.personalizationsSelected = readChecked("[data-erz-pers]", "data-erz-pers");
+        render(root);
+        return;
+      }
+      if (tEl.hasAttribute("data-erz-audience")) {
+        state.audiencesSelected = readChecked("[data-erz-audience]", "data-erz-audience");
+        render(root);
+      }
+    });
     root.addEventListener("click", function (ev) {
       var watch = ev.target.closest("[data-erz-watch]");
       if (watch) {
@@ -956,42 +1175,6 @@
           asin: watch.getAttribute("data-erz-watch"),
           marketplace: watch.getAttribute("data-marketplace"),
         });
-        render(root);
-        return;
-      }
-      var chip = ev.target.closest("[data-erz-niche]");
-      if (chip) {
-        toggleTopic(chip.getAttribute("data-erz-niche") || "all");
-        render(root);
-        return;
-      }
-      var typeBtn = ev.target.closest("[data-erz-type]");
-      if (typeBtn) {
-        var type = typeBtn.getAttribute("data-erz-type") || "";
-        state.designType = state.designType === type ? "" : type;
-        render(root);
-        return;
-      }
-      var langBtn = ev.target.closest("[data-erz-lang]");
-      if (langBtn) {
-        var lang = langBtn.getAttribute("data-erz-lang") || "";
-        if (!lang || lang === "all") state.language = "";
-        else state.language = state.language === lang ? "" : lang;
-        render(root);
-        return;
-      }
-      var persBtn = ev.target.closest("[data-erz-pers]");
-      if (persBtn) {
-        ev.preventDefault();
-        var pers = persBtn.getAttribute("data-erz-pers") || "";
-        state.personalization = state.personalization === pers ? "" : pers;
-        render(root);
-        return;
-      }
-      var audBtn = ev.target.closest("[data-erz-audience]");
-      if (audBtn) {
-        ev.preventDefault();
-        toggleAudience(audBtn.getAttribute("data-erz-audience") || "all");
         render(root);
         return;
       }

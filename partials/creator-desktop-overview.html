@@ -562,6 +562,12 @@
   <div class="eazy-research__layout">
     <aside class="eazy-research__filters-wrap" data-erz-filters-wrap>
       <div class="eazy-research__filters" data-erz-filters>
+        <label class="eazy-research__select eazy-research__country">
+          <span class="visually-hidden" data-t="creator.research.country">Country</span>
+          <select data-erz-country>
+            <option value="all" data-t="creator.research.country_all">All countries</option>
+          </select>
+        </label>
         <label class="eazy-research__select eazy-research__views">
           <span class="visually-hidden" data-t="creator.research.views">Views</span>
           <select data-erz-view-select>
@@ -589,38 +595,37 @@
         </label>
         <h3 class="eazy-research__filters-heading" data-t="creator.research.topics">Topics</h3>
         <p class="eazy-research__filters-hint" data-erz-topics-hint data-t="creator.research.topics_all_hint">All topics</p>
-        <div class="eazy-research__chips" data-erz-chips role="list"></div>
+        <div class="eazy-research__checks" data-erz-chips role="group"></div>
         <h3 class="eazy-research__filters-heading" data-t="creator.research.audience">Audience</h3>
         <p class="eazy-research__filters-hint" data-erz-audience-hint data-t="creator.research.audience_all_hint">All audiences</p>
-        <div class="eazy-research__chips" data-erz-audience-group role="list" aria-label="Audience">
-          <button type="button" class="eazy-research__chip" data-erz-audience="all" data-t="creator.research.niche_all">All</button>
-          <button type="button" class="eazy-research__chip" data-erz-audience="men" data-t="creator.research.audience_men">Men</button>
-          <button type="button" class="eazy-research__chip" data-erz-audience="women" data-t="creator.research.audience_women">Women</button>
-          <button type="button" class="eazy-research__chip" data-erz-audience="kids" data-t="creator.research.audience_kids">Kids</button>
-          <button type="button" class="eazy-research__chip" data-erz-audience="toddler" data-t="creator.research.audience_toddler">Toddler</button>
+        <div class="eazy-research__checks" data-erz-audience-group role="group" aria-label="Audience">
+          <label class="eazy-research__check"><input type="checkbox" data-erz-audience="men"><span data-t="creator.research.audience_men">Men</span><span class="eazy-research__count" data-erz-count="audience:men">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-audience="women"><span data-t="creator.research.audience_women">Women</span><span class="eazy-research__count" data-erz-count="audience:women">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-audience="kids"><span data-t="creator.research.audience_kids">Kids</span><span class="eazy-research__count" data-erz-count="audience:kids">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-audience="toddler"><span data-t="creator.research.audience_toddler">Toddler</span><span class="eazy-research__count" data-erz-count="audience:toddler">0</span></label>
         </div>
         <h3 class="eazy-research__filters-heading" data-t="creator.research.custom_design">Custom Design</h3>
-        <p class="eazy-research__filters-hint" data-erz-pers-hint data-t="creator.research.custom_design_all_hint">All listings — tap Yes or No, tap again for all</p>
-        <div class="eazy-research__switch" data-erz-pers-group role="radiogroup" aria-label="Custom Design">
-          <button type="button" class="eazy-research__switch-opt" role="radio" aria-checked="false" data-erz-pers="personalizable" data-t="creator.research.custom_design_yes">Yes</button>
-          <button type="button" class="eazy-research__switch-opt" role="radio" aria-checked="false" data-erz-pers="standard" data-t="creator.research.custom_design_no">No</button>
+        <p class="eazy-research__filters-hint" data-erz-pers-hint data-t="creator.research.custom_design_all_hint">Neither or both = all listings</p>
+        <div class="eazy-research__checks" data-erz-pers-group role="group" aria-label="Custom Design">
+          <label class="eazy-research__check"><input type="checkbox" data-erz-pers="personalizable"><span data-t="creator.research.custom_design_yes">Yes</span><span class="eazy-research__count" data-erz-count="personalization:personalizable">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-pers="standard"><span data-t="creator.research.custom_design_no">No</span><span class="eazy-research__count" data-erz-count="personalization:standard">0</span></label>
         </div>
         <h3 class="eazy-research__filters-heading" data-t="creator.research.design_type">Design type</h3>
         <p class="eazy-research__filters-hint" data-erz-type-hint data-t="creator.research.design_type_all_hint">All design types</p>
-        <div class="eazy-research__chips" data-erz-types role="radiogroup" aria-label="Design type">
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-type="design_only" data-t="creator.quick_inspirations.content_type_design_only">Design Only</button>
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-type="text_only" data-t="creator.quick_inspirations.content_type_text_only">Text Only</button>
+        <div class="eazy-research__checks" data-erz-types role="group" aria-label="Design type">
+          <label class="eazy-research__check"><input type="checkbox" data-erz-type="design_only"><span data-t="creator.quick_inspirations.content_type_design_only">Design Only</span><span class="eazy-research__count" data-erz-count="design_type:design_only">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-type="text_only"><span data-t="creator.quick_inspirations.content_type_text_only">Text Only</span><span class="eazy-research__count" data-erz-count="design_type:text_only">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-type="design_text"><span data-t="creator.quick_inspirations.content_type_design_text">Design + Text</span><span class="eazy-research__count" data-erz-count="design_type:design_text">0</span></label>
         </div>
         <h3 class="eazy-research__filters-heading" data-t="creator.research.language">Language</h3>
         <p class="eazy-research__filters-hint" data-erz-lang-hint data-t="creator.research.language_all_hint">All languages</p>
-        <div class="eazy-research__chips" data-erz-langs role="radiogroup" aria-label="Language">
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-lang="" data-t="creator.research.niche_all">All</button>
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-lang="none" data-t="creator.quick_inspirations.language_none">None</button>
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-lang="en" data-t="creator.research.lang_en">English</button>
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-lang="de" data-t="creator.research.lang_de">German</button>
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-lang="es" data-t="creator.research.lang_es">Spanish</button>
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-lang="fr" data-t="creator.research.lang_fr">French</button>
-          <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-lang="it" data-t="creator.research.lang_it">Italian</button>
+        <div class="eazy-research__checks" data-erz-langs role="group" aria-label="Language">
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="none"><span data-t="creator.quick_inspirations.language_none">None</span><span class="eazy-research__count" data-erz-count="language:none">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="en"><span data-t="creator.research.lang_en">English</span><span class="eazy-research__count" data-erz-count="language:en">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="de"><span data-t="creator.research.lang_de">German</span><span class="eazy-research__count" data-erz-count="language:de">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="es"><span data-t="creator.research.lang_es">Spanish</span><span class="eazy-research__count" data-erz-count="language:es">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="fr"><span data-t="creator.research.lang_fr">French</span><span class="eazy-research__count" data-erz-count="language:fr">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="it"><span data-t="creator.research.lang_it">Italian</span><span class="eazy-research__count" data-erz-count="language:it">0</span></label>
         </div>
       </div>
       <button
