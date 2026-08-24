@@ -1386,7 +1386,7 @@
   },
   "chrome.nav-research": {
     "title": "Research",
-    "summary": "Reprint-safe Amazon.de demand signals from catalog snapshots — reviews and BSR, never invented sales.",
+    "summary": "Reprint-safe Amazon demand signals from catalog snapshots — reviews and BSR, never invented sales.",
     "tips": [
       "Use this page to spot rising reprint-safe products before you generate."
     ],

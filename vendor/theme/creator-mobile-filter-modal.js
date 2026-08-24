@@ -307,6 +307,16 @@
     applyFilters(false);
   }
 
+  function isDesktopFilterDocked() {
+    modal = getModal();
+    if (modal && modal.classList.contains('is-desktop-docked')) return true;
+    try {
+      return !!(window.CreatorDesktopCreationsFilter && window.CreatorDesktopCreationsFilter.isDocked());
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function closeFilterModal() {
     modal = getModal();
     if (!modal) return;
@@ -314,6 +324,13 @@
     var active = document.activeElement;
     if (active && modal.contains(active) && typeof active.blur === 'function') {
       active.blur();
+    }
+
+    if (isDesktopFilterDocked()) {
+      if (window.CreatorDesktopCreationsFilter && typeof window.CreatorDesktopCreationsFilter.collapse === 'function') {
+        window.CreatorDesktopCreationsFilter.collapse();
+      }
+      return;
     }
 
     modal.setAttribute('aria-hidden', 'true');
@@ -327,13 +344,28 @@
     modal = getModal();
     if (!modal) return;
 
-    if (modal.parentElement !== document.body) {
+    if (!isDesktopFilterDocked() && modal.parentElement !== document.body) {
       document.body.appendChild(modal);
     }
 
-    modal.setAttribute('aria-hidden', 'false');
-    modal.dataset.source = source;
-    document.body.style.overflow = 'hidden';
+    if (options.desktopDock || isDesktopFilterDocked()) {
+      modal.classList.add('is-desktop-docked');
+      modal.setAttribute('aria-hidden', 'false');
+      modal.setAttribute('aria-modal', 'false');
+      modal.setAttribute('role', 'region');
+      modal.dataset.source = source;
+      document.body.style.overflow = '';
+      if (!options.desktopDock && window.CreatorDesktopCreationsFilter && typeof window.CreatorDesktopCreationsFilter.expand === 'function') {
+        window.CreatorDesktopCreationsFilter.expand();
+      }
+    } else {
+      modal.classList.remove('is-desktop-docked');
+      modal.setAttribute('aria-hidden', 'false');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('role', 'dialog');
+      modal.dataset.source = source;
+      document.body.style.overflow = 'hidden';
+    }
 
     var titleEl = modal.querySelector('#creator-filter-modal-title');
     if (titleEl) titleEl.textContent = source === 'products' ? 'Product Filter' : 'Design Filter';
@@ -599,6 +631,13 @@
     var productsBadge = document.getElementById('creatorProductsFilterBadge');
     if (designsBadge) designsBadge.textContent = designCount > 0 ? String(designCount) : '';
     if (productsBadge) productsBadge.textContent = productCount > 0 ? String(productCount) : '';
+    var railBadge = document.getElementById('creatorDesktopFilterRailBadge');
+    if (railBadge) {
+      var source = (modal && modal.dataset.source) || 'designs';
+      var railCount = source === 'products' ? productCount : designCount;
+      railBadge.textContent = railCount > 0 ? String(railCount) : '';
+      railBadge.hidden = railCount <= 0;
+    }
   }
 
   function updateFilteredCount() {

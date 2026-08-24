@@ -4065,6 +4065,10 @@
 
     if (headerTitle) headerTitle.textContent = tab === 'designs' ? 'Designs' : 'Products';
 
+    try {
+      document.dispatchEvent(new CustomEvent('creator:creations-tab-change', { detail: { tab: tab } }));
+    } catch (_tabEv) {}
+
     if (tab === 'designs') loadDesigns();
     else if (tab === 'products') loadProducts();
   }
