@@ -10,7 +10,20 @@
   var HEART_SVG =
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
 
-  var LANG_FLAGS = { en: "🇬🇧", de: "🇩🇪", es: "🇪🇸", fr: "🇫🇷", it: "🇮🇹" };
+  /* Gleiche Flaggen-Technik wie Footer/Header: flagcdn PNG + runder Glass-Kreis (kein Emoji). */
+  var FLAG_CDN = "https://flagcdn.com/w80/";
+  var LANG_TO_FLAG = { en: "GB", de: "DE", es: "ES", fr: "FR", it: "IT" };
+  var MARKET_TO_FLAG = {
+    "amazon.de": "DE",
+    "amazon.co.uk": "GB",
+    "amazon.fr": "FR",
+    "amazon.it": "IT",
+    "amazon.es": "ES",
+    "amazon.com": "US",
+    "amazon.ca": "CA",
+    "amazon.co.jp": "JP",
+    "amazon.com.au": "AU",
+  };
   var COUNTRY_I18N = {
     "amazon.de": "creator.research.country_amazon_de",
     "amazon.co.uk": "creator.research.country_amazon_co_uk",
@@ -215,6 +228,45 @@
     return MARKET_TAGS[host] || "";
   }
 
+  /** flagcdn ISO: UK-Marktplatz und Sprache en nutzen GB (Union Jack), nie "uk.png". */
+  function flagCountryCode(code) {
+    var cc = String(code || "").trim().toUpperCase();
+    if (!cc) return "";
+    if (cc === "UK") return "GB";
+    return cc;
+  }
+
+  function flagUrl(code) {
+    var cc = flagCountryCode(code).toLowerCase();
+    return cc ? FLAG_CDN + cc + ".png" : "";
+  }
+
+  function flagCircleHtml(code, extraClass) {
+    var url = flagUrl(code);
+    if (!url) return "";
+    var cls = "eazy-research__flag" + (extraClass ? " " + extraClass : "");
+    return '<span class="' + cls + '" style="background-image:url(' + url + ')" aria-hidden="true"></span>';
+  }
+
+  function flagForLanguage(lang) {
+    var code = String(lang || "").trim().toLowerCase();
+    if (!code || code === "none") return "";
+    return LANG_TO_FLAG[code] || "";
+  }
+
+  function flagForMarketplace(host) {
+    return MARKET_TO_FLAG[String(host || "").trim().toLowerCase()] || "";
+  }
+
+  function languageFlagHtml(lang) {
+    var code = String(lang || "").trim().toLowerCase();
+    if (!code) return "";
+    if (code === "none") return esc(t("creator.quick_inspirations.language_none", "None"));
+    var flag = flagForLanguage(code);
+    return (flag ? flagCircleHtml(flag) : "") +
+      '<span class="eazy-research__lang-code" translate="no">' + esc(code.toUpperCase()) + "</span>";
+  }
+
   function watchId(p) {
     var asin = typeof p === "string" ? p : (p && p.asin) || "";
     var host = typeof p === "string" ? "" : marketplaceHost(p);
@@ -289,11 +341,7 @@
   }
 
   function languageBadge(lang) {
-    var code = String(lang || "").trim().toLowerCase();
-    if (!code || code === "none") return "";
-    var flag = LANG_FLAGS[code] || "";
-    var shown = code.toUpperCase();
-    return flag ? flag + " " + shown : shown;
+    return languageFlagHtml(lang);
   }
 
   function facetCount(group, key) {
@@ -437,10 +485,15 @@
     return String(p.bsr_category || "");
   }
 
-  function fmtBsr(p) {
+  function fmtBsrRank(p) {
     var rank = p && p.latest && p.latest.bsr != null ? Number(p.latest.bsr) : null;
-    if (rank == null || !isFinite(rank) || rank <= 0) return t("creator.research.bsr_missing", "No BSR");
-    var rankText = Number(rank).toLocaleString("de-DE");
+    if (rank == null || !isFinite(rank) || rank <= 0) return "";
+    return Number(rank).toLocaleString("de-DE");
+  }
+
+  function fmtBsr(p) {
+    var rankText = fmtBsrRank(p);
+    if (!rankText) return t("creator.research.bsr_missing", "No BSR");
     var cat = bsrCategoryOf(p);
     if (cat) {
       return t("creator.research.bsr_with_category", "BSR {rank} · {category}")
@@ -473,27 +526,49 @@
         "</div>"
       : "";
     var change = bsrChange(p);
-    var changeHtml = change
-      ? '<div class="eazy-research-card__bsr-delta is-' + (change.improved ? "improved" : "worse") + '">' +
-        esc(change.label) + "</div>"
+    var rankText = fmtBsrRank(p);
+    var bsrValue = rankText || t("creator.research.bsr_missing", "No BSR");
+    var deltaHtml = change
+      ? '<span class="eazy-research-card__bsr-delta is-' + (change.improved ? "improved" : "worse") + '">' +
+        (change.improved ? "↑" : "↓") + "</span>"
       : "";
     var watched = isWatched(p);
     var watchLabel = watched
       ? t("creator.research.watch_remove", "Remove from watchlist")
       : t("creator.research.watch_add", "Add to watchlist");
+    var catName = bsrCategoryOf(p);
     var topics = displayTopicLabels(p);
     var topicHtml = topics.length
       ? '<div class="eazy-research-card__tags">' + topics.map(function (label) {
           return "<span>" + esc(label) + "</span>";
         }).join("") + "</div>"
       : "";
-    var lang = languageBadge(p.language);
-    var langHtml = lang ? '<div class="eazy-research-card__lang" translate="no">' + esc(lang) + "</div>" : "";
-    var rel = p.relevance_score != null && isFinite(Number(p.relevance_score))
-      ? '<div class="eazy-research-card__relevance" title="' +
-        esc(t("creator.research.relevance_hint", "Score 1–100 from this listing's BSR in its own marketplace category. Not demand or sales.")) +
-        '">' + esc(t("creator.research.relevance", "Category rank") + " " + String(p.relevance_score)) + "</div>"
+    var catLine = catName
+      ? '<div class="eazy-research-card__category">' + esc(catName) + "</div>"
       : "";
+    var langHtml = languageFlagHtml(p.language);
+    var langRow = langHtml
+      ? '<div class="eazy-research-card__stats-lang">' + langHtml + "</div>"
+      : "";
+    var relScore = p.relevance_score != null && isFinite(Number(p.relevance_score))
+      ? String(p.relevance_score)
+      : "—";
+    var statsHtml =
+      '<div class="eazy-research-card__stats">' +
+        '<div class="eazy-research-card__stats-cols">' +
+          '<div class="eazy-research-card__stat">' +
+            '<span class="eazy-research-card__stat-label">' + esc(t("creator.research.bsr_label", "BSR")) + "</span>" +
+            '<span class="eazy-research-card__stat-value">' + esc(bsrValue) + deltaHtml + "</span>" +
+          "</div>" +
+          '<div class="eazy-research-card__stat eazy-research-card__stat--cat">' +
+            '<span class="eazy-research-card__stat-label">' + esc(t("creator.research.cat_rank", "Cat. rank")) + "</span>" +
+            '<span class="eazy-research-card__stat-value" title="' +
+              esc(t("creator.research.relevance_hint", "Score 1–100 from this listing's BSR in its own marketplace category. Not demand or sales.")) +
+            '"><span class="eazy-research-card__stat-dot" aria-hidden="true"></span>' + esc(relScore) + "</span>" +
+          "</div>" +
+        "</div>" +
+        langRow +
+      "</div>";
     return (
       '<article class="eazy-research-card" data-asin="' + esc(p.asin) +
         '" data-marketplace="' + esc(marketplaceHost(p)) + '">' +
@@ -506,11 +581,9 @@
           '<div class="eazy-research-card__media">' + img + "</div>" +
           '<div class="eazy-research-card__body">' +
             "<h3>" + esc(p.title || p.asin) + "</h3>" +
+            statsHtml +
+            catLine +
             topicHtml +
-            langHtml +
-            rel +
-            '<div class="eazy-research-card__bsr">' + esc(fmtBsr(p)) + "</div>" +
-            changeHtml +
             reviewsHtml +
           "</div>" +
         "</button>" +
@@ -596,6 +669,38 @@
     });
   }
 
+  function setCountryMenuOpen(root, open) {
+    var wrap = root.querySelector("[data-erz-country-wrap]");
+    var btn = root.querySelector("[data-erz-country-btn]");
+    var menu = root.querySelector("[data-erz-country-menu]");
+    if (!wrap || !btn || !menu) return;
+    wrap.classList.toggle("is-open", !!open);
+    menu.hidden = !open;
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function syncCountryButton(root) {
+    var host = state.marketplace || "all";
+    var label = host === "all"
+      ? t("creator.research.country_all", "All countries")
+      : t(COUNTRY_I18N[host] || "", COUNTRY_FALLBACK[host] || host);
+    var labelEl = root.querySelector("[data-erz-country-label]");
+    var flagEl = root.querySelector("[data-erz-country-flag]");
+    if (labelEl) labelEl.textContent = label;
+    var cc = flagForMarketplace(host);
+    if (flagEl) {
+      if (cc) {
+        flagEl.style.backgroundImage = "url(" + flagUrl(cc) + ")";
+        flagEl.classList.remove("is-empty");
+        flagEl.hidden = false;
+      } else {
+        flagEl.style.backgroundImage = "";
+        flagEl.classList.add("is-empty");
+        flagEl.hidden = true;
+      }
+    }
+  }
+
   function renderCountry(root) {
     var select = root.querySelector("[data-erz-country]");
     if (!select) return;
@@ -617,6 +722,19 @@
     }).join("");
     if (select.innerHTML !== html) select.innerHTML = html;
     if (select.value !== state.marketplace) select.value = state.marketplace || "all";
+    var menu = root.querySelector("[data-erz-country-menu]");
+    if (menu) {
+      var menuHtml = options.map(function (o) {
+        var on = (state.marketplace || "all") === o.host;
+        var cc = flagForMarketplace(o.host);
+        return '<button type="button" class="eazy-research__country-opt' + (on ? " is-on" : "") +
+          '" data-erz-country-opt="' + esc(o.host) + '" role="option" aria-selected="' + (on ? "true" : "false") + '">' +
+          (cc ? flagCircleHtml(cc) : '<span class="eazy-research__flag is-empty" aria-hidden="true"></span>') +
+          "<span>" + esc(o.label) + "</span></button>";
+      }).join("");
+      if (menu.innerHTML !== menuHtml) menu.innerHTML = menuHtml;
+    }
+    syncCountryButton(root);
   }
 
   function renderFacets(root) {
@@ -752,6 +870,15 @@
     );
   }
 
+  function statRowHtml(label, html) {
+    return (
+      '<div class="eazy-research-modal__stat">' +
+        '<span class="eazy-research-modal__stat-label">' + esc(label) + "</span>" +
+        '<span class="eazy-research-modal__stat-value eazy-research-modal__stat-value--flags">' + html + "</span>" +
+      "</div>"
+    );
+  }
+
   function detailHtml(p) {
     var reviewsCount = p.latest && p.latest.reviews_count != null ? Number(p.latest.reviews_count) : null;
     var reviewsRow = reviewsCount != null && isFinite(reviewsCount)
@@ -763,7 +890,12 @@
       : "";
     var topics = displayTopicLabels(p);
     var tag = marketplaceTag(p);
-    var lang = languageBadge(p.language);
+    var marketFlag = flagForMarketplace(marketplaceHost(p));
+    var marketHtml = tag
+      ? (marketFlag ? flagCircleHtml(marketFlag) : "") +
+        '<span class="eazy-research__lang-code" translate="no">' + esc(tag) + "</span>"
+      : "";
+    var lang = languageFlagHtml(p.language);
     var tags = Array.isArray(p.tags) ? p.tags.filter(Boolean) : [];
     var pers = Number(p.personalizable) === 1 || p.personalization === "personalizable";
     var rel = p.relevance_score != null && isFinite(Number(p.relevance_score))
@@ -784,14 +916,14 @@
           '<h3 id="eazy-research-modal-title">' + esc(p.title || p.asin) + "</h3>" +
           '<div class="eazy-research-modal__stats">' +
             (p.brand ? statRow(t("creator.research.brand", "Brand"), p.brand) : "") +
-            (tag ? statRow(t("creator.research.marketplace", "Marketplace"), tag) : "") +
+            (marketHtml ? statRowHtml(t("creator.research.marketplace", "Marketplace"), marketHtml) : "") +
             statRow(t("creator.research.bsr_label", "BSR"), fmtBsr(p)) +
             changeRow +
             rel +
             reviewsRow +
             (topics.length ? statRow(t("creator.research.topic", "Topic"), topics.join(" · ")) : "") +
             (designType ? statRow(t("creator.research.design_type", "Design type"), designType) : "") +
-            (lang ? statRow(t("creator.research.language", "Language"), lang) : "") +
+            (lang ? statRowHtml(t("creator.research.language", "Language"), lang) : "") +
             statRow(
               t("creator.research.custom_design", "Custom Design"),
               pers ? t("creator.research.yes", "Yes") : t("creator.research.no", "No")
@@ -1129,6 +1261,7 @@
     if (country) {
       country.addEventListener("change", function () {
         state.marketplace = country.value || "all";
+        setCountryMenuOpen(root, false);
         if (!state.searchId) load(root);
         else render(root);
       });
@@ -1167,6 +1300,28 @@
       }
     });
     root.addEventListener("click", function (ev) {
+      var countryBtn = ev.target.closest("[data-erz-country-btn]");
+      if (countryBtn && root.contains(countryBtn)) {
+        ev.preventDefault();
+        var wrap = root.querySelector("[data-erz-country-wrap]");
+        setCountryMenuOpen(root, !(wrap && wrap.classList.contains("is-open")));
+        return;
+      }
+      var countryOpt = ev.target.closest("[data-erz-country-opt]");
+      if (countryOpt && root.contains(countryOpt)) {
+        ev.preventDefault();
+        var host = countryOpt.getAttribute("data-erz-country-opt") || "all";
+        var select = root.querySelector("[data-erz-country]");
+        state.marketplace = host;
+        if (select) select.value = host;
+        setCountryMenuOpen(root, false);
+        if (!state.searchId) load(root);
+        else render(root);
+        return;
+      }
+      if (!ev.target.closest("[data-erz-country-wrap]")) {
+        setCountryMenuOpen(root, false);
+      }
       var watch = ev.target.closest("[data-erz-watch]");
       if (watch) {
         ev.preventDefault();
@@ -1205,6 +1360,7 @@
     });
     document.addEventListener("keydown", function (ev) {
       if (ev.key === "Escape") {
+        setCountryMenuOpen(root, false);
         applyFiltersSheet(root, false);
         closeDetail(root);
       }

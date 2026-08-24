@@ -562,12 +562,17 @@
   <div class="eazy-research__layout">
     <aside class="eazy-research__filters-wrap" data-erz-filters-wrap>
       <div class="eazy-research__filters" data-erz-filters>
-        <label class="eazy-research__select eazy-research__country">
+        <div class="eazy-research__select eazy-research__country" data-erz-country-wrap>
           <span class="visually-hidden" data-t="creator.research.country">Country</span>
-          <select data-erz-country>
+          <select data-erz-country class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
             <option value="all" data-t="creator.research.country_all">All countries</option>
           </select>
-        </label>
+          <button type="button" class="eazy-research__country-btn" data-erz-country-btn aria-haspopup="listbox" aria-expanded="false">
+            <span class="eazy-research__flag is-empty" data-erz-country-flag aria-hidden="true" hidden></span>
+            <span data-erz-country-label data-t="creator.research.country_all">All countries</span>
+          </button>
+          <div class="eazy-research__country-menu" data-erz-country-menu hidden role="listbox"></div>
+        </div>
         <label class="eazy-research__select eazy-research__views">
           <span class="visually-hidden" data-t="creator.research.views">Views</span>
           <select data-erz-view-select>
@@ -620,12 +625,12 @@
         <h3 class="eazy-research__filters-heading" data-t="creator.research.language">Language</h3>
         <p class="eazy-research__filters-hint" data-erz-lang-hint data-t="creator.research.language_all_hint">All languages</p>
         <div class="eazy-research__checks" data-erz-langs role="group" aria-label="Language">
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="none"><span data-t="creator.quick_inspirations.language_none">None</span><span class="eazy-research__count" data-erz-count="language:none">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="en"><span data-t="creator.research.lang_en">English</span><span class="eazy-research__count" data-erz-count="language:en">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="de"><span data-t="creator.research.lang_de">German</span><span class="eazy-research__count" data-erz-count="language:de">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="es"><span data-t="creator.research.lang_es">Spanish</span><span class="eazy-research__count" data-erz-count="language:es">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="fr"><span data-t="creator.research.lang_fr">French</span><span class="eazy-research__count" data-erz-count="language:fr">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="it"><span data-t="creator.research.lang_it">Italian</span><span class="eazy-research__count" data-erz-count="language:it">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="none"><span class="eazy-research__check-text" data-t="creator.quick_inspirations.language_none">None</span><span class="eazy-research__count" data-erz-count="language:none">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="en"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/gb.png)" aria-hidden="true"></span><span data-t="creator.research.lang_en">English</span></span><span class="eazy-research__count" data-erz-count="language:en">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="de"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/de.png)" aria-hidden="true"></span><span data-t="creator.research.lang_de">German</span></span><span class="eazy-research__count" data-erz-count="language:de">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="es"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/es.png)" aria-hidden="true"></span><span data-t="creator.research.lang_es">Spanish</span></span><span class="eazy-research__count" data-erz-count="language:es">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="fr"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/fr.png)" aria-hidden="true"></span><span data-t="creator.research.lang_fr">French</span></span><span class="eazy-research__count" data-erz-count="language:fr">0</span></label>
+          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="it"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/it.png)" aria-hidden="true"></span><span data-t="creator.research.lang_it">Italian</span></span><span class="eazy-research__count" data-erz-count="language:it">0</span></label>
         </div>
       </div>
       <button
