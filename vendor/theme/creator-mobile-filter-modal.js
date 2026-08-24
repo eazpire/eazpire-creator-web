@@ -344,9 +344,6 @@
     }
 
     if (isDesktopCreationsSidebarMode() || isDesktopFilterDocked()) {
-      if (window.CreatorDesktopCreationsFilter && typeof window.CreatorDesktopCreationsFilter.collapse === 'function') {
-        window.CreatorDesktopCreationsFilter.collapse();
-      }
       document.body.style.overflow = '';
       return;
     }

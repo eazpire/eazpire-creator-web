@@ -713,31 +713,47 @@ body.creator-mobile-page .creator-desktop-app {
     opacity: 1;
   }
 
-  /* Creations Design/Products filter: shop-style collapsible rail beside the menu (desktop chrome). */
+  /* Creations filter: same in-flow collapse as Research (wrap width + absolute rail). */
   .creator-desktop-filter-wrap {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    flex: 0 0 auto;
-    min-height: 0;
-    align-self: stretch;
+    display: block;
     position: relative;
-    z-index: 2;
+    box-sizing: border-box;
+    width: calc(var(--creator-desktop-filter-width) + var(--creator-desktop-menu-rail-width));
+    flex: none;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    align-self: stretch;
+    overflow: hidden;
+    z-index: 4;
+    transition: width 0.28s ease;
   }
 
   .creator-desktop-filter-wrap[hidden] {
     display: none !important;
   }
 
+  .creator-desktop-filter-wrap.is-collapsed {
+    width: var(--creator-desktop-menu-rail-width);
+  }
+
   .creator-desktop-filter-sidebar {
-    width: var(--creator-desktop-filter-width);
-    flex: 0 0 var(--creator-desktop-filter-width);
+    box-sizing: border-box;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: var(--creator-desktop-menu-rail-width);
+    width: auto;
+    max-width: none;
     min-width: 0;
     min-height: 0;
-    align-self: stretch;
+    height: auto;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     background:
       radial-gradient(120% 80% at 0% 0%, rgba(147, 112, 219, 0.08), transparent 55%),
@@ -747,22 +763,27 @@ body.creator-mobile-page .creator-desktop-app {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     opacity: 1;
-    transition: width 0.2s ease, flex-basis 0.2s ease, opacity 0.2s ease;
+    transition: width 0.28s ease, max-width 0.28s ease, opacity 0.2s ease, padding 0.28s ease;
   }
 
   .creator-desktop-filter-wrap.is-collapsed .creator-desktop-filter-sidebar {
+    right: 0;
     width: 0;
-    flex-basis: 0;
-    min-width: 0;
+    max-width: 0;
     opacity: 0;
-    border-right: none;
+    overflow: hidden;
+    border-right-color: transparent;
     pointer-events: none;
   }
 
   .creator-desktop-filter-rail {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
     width: var(--creator-desktop-menu-rail-width);
     min-width: var(--creator-desktop-menu-rail-width);
-    flex: 0 0 var(--creator-desktop-menu-rail-width);
     margin: 0;
     padding: 0;
     border: none;
@@ -774,14 +795,13 @@ body.creator-mobile-page .creator-desktop-app {
     display: flex;
     flex-direction: column;
     align-items: center;
-    align-self: stretch;
-    position: relative;
     color: rgba(255, 255, 255, 0.62);
     appearance: none;
     -webkit-appearance: none;
     font: inherit;
     user-select: none;
     -webkit-user-select: none;
+    pointer-events: auto;
     transition: background 0.2s ease;
   }
 
@@ -897,6 +917,7 @@ body.creator-mobile-page .creator-desktop-app {
     border-radius: 8px;
   }
 
+  #creatorDesktopFilterSidebar .creator-filter-modal,
   .creator-desktop-filter-sidebar .creator-filter-modal.is-desktop-docked {
     position: static !important;
     inset: auto !important;
@@ -908,11 +929,13 @@ body.creator-mobile-page .creator-desktop-app {
     max-width: none;
     padding: 0;
     pointer-events: auto;
-    z-index: auto !important;
+    z-index: 1 !important;
   }
 
+  #creatorDesktopFilterSidebar .creator-filter-modal__backdrop,
   .creator-desktop-filter-sidebar .creator-filter-modal.is-desktop-docked .creator-filter-modal__backdrop {
-    display: none;
+    display: none !important;
+    pointer-events: none !important;
   }
 
   .creator-desktop-filter-sidebar .creator-filter-modal.is-desktop-docked .creator-filter-modal__dialog {
@@ -3053,13 +3076,15 @@ body.creator-mobile-page .creator-desktop-app {
   }
 
   .creator-creations {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
   }
 
   .creator-creations > .creator-desktop-filter-wrap {
-    display: flex !important;
-    height: auto;
+    display: block !important;
+    height: 100%;
     align-self: stretch;
     min-height: 0;
   }
@@ -3085,6 +3110,11 @@ body.creator-mobile-page .creator-desktop-app {
   .creator-desktop-hero {
     min-height: 330px;
     padding: 30px 28px;
+  }
+
+  .creator-desktop-hero[data-desktop-active-screen="research"],
+  .creator-desktop-hero[data-desktop-active-screen="creations"] {
+    padding: 0;
   }
 
   .creator-desktop-hero__title {
@@ -3801,7 +3831,8 @@ body.creator-video-motion-info-modal-open {
   min-height: 120px;
 }
 
-.creator-desktop-hero[data-desktop-active-screen="research"] {
+.creator-desktop-hero[data-desktop-active-screen="research"],
+.creator-desktop-hero[data-desktop-active-screen="creations"] {
   padding: 0;
 }
 
@@ -3946,30 +3977,47 @@ body.creator-video-motion-info-modal-open {
 }
 
 .creator-desktop-stage__panel--creations {
-  overflow: hidden;
+  overflow: hidden !important;
+}
+
+.creator-desktop-stage__panel--creations.is-active {
+  display: flex !important;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden !important;
 }
 
 .creator-desktop-creations-host {
-  height: 100%;
-  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 0;
   width: 100%;
   padding: 0;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
 .creator-desktop-creations-host .creator-creations {
-  height: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
   min-height: 0;
+  height: 0;
   overflow: hidden;
-  flex-direction: row;
-  align-items: stretch;
 }
 
 .creator-desktop-creations-host .creator-desktop-filter-wrap {
-  display: flex !important;
+  display: block !important;
+  height: 100%;
 }
 
 .creator-desktop-creations-host .creator-creations-body {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   padding: 8px 14px 0;
   box-sizing: border-box;
 }

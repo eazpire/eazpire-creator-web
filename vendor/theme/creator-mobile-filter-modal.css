@@ -620,6 +620,7 @@
   #creatorDesktopFilterSidebar .creator-filter-modal__backdrop,
   .creator-filter-modal.is-desktop-docked .creator-filter-modal__backdrop {
     display: none !important;
+    pointer-events: none !important;
   }
 
   #creatorDesktopFilterSidebar .creator-filter-modal__dialog,

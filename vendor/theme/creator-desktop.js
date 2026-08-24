@@ -398,6 +398,8 @@
     var wrap = document.getElementById('creatorDesktopFilterWrap');
     var rail = document.getElementById('creatorDesktopFilterRail');
     if (!wrap) return;
+    wrap.hidden = false;
+    wrap.removeAttribute('hidden');
     wrap.classList.toggle('is-collapsed', !!collapsed);
     if (rail) {
       rail.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
@@ -474,19 +476,23 @@
     undockCreatorFilterModal();
   }
 
-  function initDesktopCreationsFilter() {
+  function toggleDesktopCreationsFilterFromRail(ev) {
+    var target = ev && ev.target;
+    var rail = target && target.closest ? target.closest('#creatorDesktopFilterRail') : null;
+    if (!rail) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation();
     var wrap = document.getElementById('creatorDesktopFilterWrap');
-    var rail = document.getElementById('creatorDesktopFilterRail');
-    if (!wrap || !rail) return;
-    if (rail.getAttribute('data-bound') !== '1') {
-      rail.setAttribute('data-bound', '1');
-      rail.addEventListener('click', function () {
-        applyDesktopCreationsFilterCollapsed(!wrap.classList.contains('is-collapsed'));
-      });
-    }
-    applyDesktopCreationsFilterCollapsed(isDesktopCreationsFilterCollapsedStored());
+    if (!wrap) return;
+    dockCreatorFilterModal();
+    applyDesktopCreationsFilterCollapsed(!wrap.classList.contains('is-collapsed'));
+  }
+
+  function initDesktopCreationsFilter() {
     if (!initDesktopCreationsFilter._eventsBound) {
       initDesktopCreationsFilter._eventsBound = true;
+      document.addEventListener('click', toggleDesktopCreationsFilterFromRail, true);
       document.addEventListener('creator:shell-screen-change', function (ev) {
         var screen = ev && ev.detail && ev.detail.screen;
         syncDesktopCreationsFilterForScreen(screen);
@@ -509,6 +515,7 @@
         refreshDockedCreatorFilter(tab === 'products' ? 'products' : 'designs');
       });
     }
+    applyDesktopCreationsFilterCollapsed(isDesktopCreationsFilterCollapsedStored());
     window.CreatorDesktopCreationsFilter = {
       isDocked: function () {
         var modal = getCreatorFilterModalEl();
