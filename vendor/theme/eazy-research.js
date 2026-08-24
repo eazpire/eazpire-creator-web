@@ -20,6 +20,7 @@
     nichesSelected: [],
     designType: "",
     language: "",
+    personalization: "",
     sort: "review_growth",
     reprintOk: true,
     view: "opportunities",
@@ -171,6 +172,14 @@
     }
     if (state.language) {
       out = out.filter(function (p) { return String(p.language || "").toLowerCase() === state.language; });
+    }
+    if (state.personalization) {
+      out = out.filter(function (p) {
+        var key = Number(p.personalizable) === 1 || p.personalization === "personalizable"
+          ? "personalizable"
+          : "standard";
+        return key === state.personalization;
+      });
     }
     var q = String(state.q || "").trim().toLowerCase();
     if (q) {
@@ -326,10 +335,13 @@
   function renderFacets(root) {
     renderFacetRadios(root, "[data-erz-type]", "data-erz-type", state.designType);
     renderFacetRadios(root, "[data-erz-lang]", "data-erz-lang", state.language);
+    renderFacetRadios(root, "[data-erz-pers]", "data-erz-pers", state.personalization);
     var typeHint = root.querySelector("[data-erz-type-hint]");
     if (typeHint) typeHint.hidden = !!state.designType;
     var langHint = root.querySelector("[data-erz-lang-hint]");
     if (langHint) langHint.hidden = !!state.language;
+    var persHint = root.querySelector("[data-erz-pers-hint]");
+    if (persHint) persHint.hidden = !!state.personalization;
   }
 
   function renderGrid(root) {
@@ -350,7 +362,7 @@
         empty.hidden = false;
         empty.textContent = state.view === "watched"
           ? t("creator.research.empty_watched", "No watched products yet. Tap the heart on a product to start tracking it.")
-          : (state.q || !isAllTopics() || state.designType || state.language)
+          : (state.q || !isAllTopics() || state.designType || state.language || state.personalization)
             ? t("creator.research.empty_search", "No reprint-safe products match this search. Try a broader niche such as Coffee or Hiking.")
             : t("creator.research.empty_action", "Pick a topic or type a search to explore reprint-safe products.");
       }
@@ -476,6 +488,7 @@
     if (selectedTopics().length) params.niche = selectedTopics().join(",");
     if (state.designType) params.design_type = state.designType;
     if (state.language) params.language = state.language;
+    if (state.personalization) params.personalization = state.personalization;
     var data = await api("eazy-research-products", params).catch(function () { return null; });
     state.loading = false;
     if (!data || !data.ok) {
@@ -610,6 +623,13 @@
       if (langBtn) {
         var lang = langBtn.getAttribute("data-erz-lang") || "";
         state.language = state.language === lang ? "" : lang;
+        render(root);
+        return;
+      }
+      var persBtn = ev.target.closest("[data-erz-pers]");
+      if (persBtn) {
+        var pers = persBtn.getAttribute("data-erz-pers") || "";
+        state.personalization = state.personalization === pers ? "" : pers;
         render(root);
         return;
       }
