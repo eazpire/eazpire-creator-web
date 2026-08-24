@@ -374,9 +374,9 @@
 
   function isDesktopCreationsFilterCollapsedStored() {
     try {
-      return localStorage.getItem(DESKTOP_FILTER_COLLAPSED_KEY) !== '0';
+      return localStorage.getItem(DESKTOP_FILTER_COLLAPSED_KEY) === '1';
     } catch (_e) {
-      return true;
+      return false;
     }
   }
 
@@ -455,58 +455,73 @@
   }
 
   function setDesktopCreationsFilterVisible(visible) {
-    var wrap = document.getElementById('creatorDesktopFilterWrap');
-    if (!wrap) return;
     if (visible && isDesktopCreatorViewport()) {
-      wrap.hidden = false;
       dockCreatorFilterModal();
       applyDesktopCreationsFilterCollapsed(isDesktopCreationsFilterCollapsedStored());
       refreshDockedCreatorFilter();
-    } else {
-      wrap.hidden = true;
-      undockCreatorFilterModal();
+      return;
     }
+    undockCreatorFilterModal();
   }
 
   function syncDesktopCreationsFilterForScreen(screen) {
-    setDesktopCreationsFilterVisible(screen === 'creations' && isDesktopCreatorViewport());
+    if (isDesktopCreatorViewport()) {
+      dockCreatorFilterModal();
+      applyDesktopCreationsFilterCollapsed(isDesktopCreationsFilterCollapsedStored());
+      if (screen === 'creations') refreshDockedCreatorFilter();
+      return;
+    }
+    undockCreatorFilterModal();
   }
 
   function initDesktopCreationsFilter() {
     var wrap = document.getElementById('creatorDesktopFilterWrap');
     var rail = document.getElementById('creatorDesktopFilterRail');
-    if (!wrap || !rail || rail.getAttribute('data-bound') === '1') return;
-    rail.setAttribute('data-bound', '1');
+    if (!wrap || !rail) return;
+    if (rail.getAttribute('data-bound') !== '1') {
+      rail.setAttribute('data-bound', '1');
+      rail.addEventListener('click', function () {
+        applyDesktopCreationsFilterCollapsed(!wrap.classList.contains('is-collapsed'));
+      });
+    }
     applyDesktopCreationsFilterCollapsed(isDesktopCreationsFilterCollapsedStored());
-    rail.addEventListener('click', function () {
-      applyDesktopCreationsFilterCollapsed(!wrap.classList.contains('is-collapsed'));
-    });
-    document.addEventListener('creator:shell-screen-change', function (ev) {
-      var screen = ev && ev.detail && ev.detail.screen;
-      syncDesktopCreationsFilterForScreen(screen);
-    });
-    document.addEventListener('creator:shell-layout-change', function (ev) {
-      var desktop = !!(ev && ev.detail && ev.detail.desktop);
-      var screen =
-        window.CreatorDesktopShell && typeof window.CreatorDesktopShell.getActiveScreen === 'function'
-          ? window.CreatorDesktopShell.getActiveScreen()
-          : '';
-      if (!desktop) {
-        setDesktopCreationsFilterVisible(false);
-        return;
-      }
-      syncDesktopCreationsFilterForScreen(screen);
-    });
-    document.addEventListener('creator:creations-tab-change', function (ev) {
-      if (wrap.hidden) return;
-      var tab = ev && ev.detail && ev.detail.tab;
-      refreshDockedCreatorFilter(tab === 'products' ? 'products' : 'designs');
-    });
+    if (!initDesktopCreationsFilter._eventsBound) {
+      initDesktopCreationsFilter._eventsBound = true;
+      document.addEventListener('creator:shell-screen-change', function (ev) {
+        var screen = ev && ev.detail && ev.detail.screen;
+        syncDesktopCreationsFilterForScreen(screen);
+      });
+      document.addEventListener('creator:shell-layout-change', function (ev) {
+        var desktop = !!(ev && ev.detail && ev.detail.desktop);
+        var screen =
+          window.CreatorDesktopShell && typeof window.CreatorDesktopShell.getActiveScreen === 'function'
+            ? window.CreatorDesktopShell.getActiveScreen()
+            : '';
+        if (!desktop) {
+          undockCreatorFilterModal();
+          return;
+        }
+        syncDesktopCreationsFilterForScreen(screen);
+      });
+      document.addEventListener('creator:creations-tab-change', function (ev) {
+        if (!isDesktopCreatorViewport()) return;
+        var tab = ev && ev.detail && ev.detail.tab;
+        refreshDockedCreatorFilter(tab === 'products' ? 'products' : 'designs');
+      });
+    }
     window.CreatorDesktopCreationsFilter = {
       isDocked: function () {
         var modal = getCreatorFilterModalEl();
-        return !!(modal && modal.classList.contains('is-desktop-docked') && wrap && !wrap.hidden);
+        var slot = document.getElementById('creatorDesktopFilterSidebar');
+        return !!(
+          isDesktopCreatorViewport() &&
+          modal &&
+          slot &&
+          modal.parentNode === slot &&
+          modal.classList.contains('is-desktop-docked')
+        );
       },
+      dock: dockCreatorFilterModal,
       expand: function () {
         applyDesktopCreationsFilterCollapsed(false);
       },
@@ -515,6 +530,7 @@
       },
       syncVisible: syncDesktopCreationsFilterForScreen
     };
+    if (isDesktopCreatorViewport()) dockCreatorFilterModal();
   }
 
   function initDesktopShellSwitch() {
@@ -839,6 +855,8 @@
 
     if (key === 'creations') {
       configureDesktopCreationsViewModes();
+      dockCreatorFilterModal();
+      applyDesktopCreationsFilterCollapsed(isDesktopCreationsFilterCollapsedStored());
     }
     if (key === 'automations' && window.AutomationsScreen && typeof window.AutomationsScreen.switchMainTab === 'function') {
       window.AutomationsScreen.switchMainTab('design-generator');

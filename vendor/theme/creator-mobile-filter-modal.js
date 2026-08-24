@@ -9,7 +9,19 @@
   var currentFilters = { design: {}, product: {} };
   var hasWarnedDuplicateModal = false;
 
+  function isDesktopCreationsSidebarMode() {
+    try {
+      if (!window.matchMedia('(min-width: 992px)').matches) return false;
+    } catch (_mq) {
+      return false;
+    }
+    return !!document.getElementById('creatorDesktopFilterSidebar');
+  }
+
   function getModal() {
+    var docked = document.querySelector('#creatorDesktopFilterSidebar #creator-filter-modal');
+    if (docked) return docked;
+
     var nodes = document.querySelectorAll('#creator-filter-modal');
     if (!nodes || !nodes.length) return null;
     if (nodes.length === 1) return nodes[0];
@@ -308,8 +320,13 @@
   }
 
   function isDesktopFilterDocked() {
+    if (isDesktopCreationsSidebarMode()) {
+      modal = getModal();
+      var slot = document.getElementById('creatorDesktopFilterSidebar');
+      if (modal && slot && modal.parentNode === slot) return true;
+    }
     modal = getModal();
-    if (modal && modal.classList.contains('is-desktop-docked')) return true;
+    if (modal && modal.classList.contains('is-desktop-docked') && isDesktopCreationsSidebarMode()) return true;
     try {
       return !!(window.CreatorDesktopCreationsFilter && window.CreatorDesktopCreationsFilter.isDocked());
     } catch (_e) {
@@ -326,10 +343,11 @@
       active.blur();
     }
 
-    if (isDesktopFilterDocked()) {
+    if (isDesktopCreationsSidebarMode() || isDesktopFilterDocked()) {
       if (window.CreatorDesktopCreationsFilter && typeof window.CreatorDesktopCreationsFilter.collapse === 'function') {
         window.CreatorDesktopCreationsFilter.collapse();
       }
+      document.body.style.overflow = '';
       return;
     }
 
@@ -344,11 +362,13 @@
     modal = getModal();
     if (!modal) return;
 
-    if (!isDesktopFilterDocked() && modal.parentElement !== document.body) {
-      document.body.appendChild(modal);
-    }
-
-    if (options.desktopDock || isDesktopFilterDocked()) {
+    if (isDesktopCreationsSidebarMode()) {
+      if (window.CreatorDesktopCreationsFilter && typeof window.CreatorDesktopCreationsFilter.dock === 'function') {
+        window.CreatorDesktopCreationsFilter.dock();
+        modal = getModal() || modal;
+      }
+      var slot = document.getElementById('creatorDesktopFilterSidebar');
+      if (slot && modal.parentNode !== slot) slot.appendChild(modal);
       modal.classList.add('is-desktop-docked');
       modal.setAttribute('aria-hidden', 'false');
       modal.setAttribute('aria-modal', 'false');
@@ -359,6 +379,9 @@
         window.CreatorDesktopCreationsFilter.expand();
       }
     } else {
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
       modal.classList.remove('is-desktop-docked');
       modal.setAttribute('aria-hidden', 'false');
       modal.setAttribute('aria-modal', 'true');

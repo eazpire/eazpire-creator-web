@@ -599,3 +599,53 @@
     to { transform: translateX(-100%); opacity: 0; }
   }
 }
+
+@media (min-width: 992px) {
+  #creatorDesktopFilterSidebar .creator-filter-modal,
+  .creator-filter-modal.is-desktop-docked {
+    position: static !important;
+    inset: auto !important;
+    z-index: 1 !important;
+    display: flex !important;
+    justify-content: stretch;
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    padding: 0;
+    pointer-events: auto;
+    background: transparent;
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-modal__backdrop,
+  .creator-filter-modal.is-desktop-docked .creator-filter-modal__backdrop {
+    display: none !important;
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-modal__dialog,
+  .creator-filter-modal.is-desktop-docked .creator-filter-modal__dialog {
+    position: relative !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    animation: none !important;
+    background: transparent;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  #creatorDesktopFilterSidebar .creator-filter-modal__header,
+  #creatorDesktopFilterSidebar .creator-filter-modal__tabs,
+  .creator-filter-modal.is-desktop-docked .creator-filter-modal__header,
+  .creator-filter-modal.is-desktop-docked .creator-filter-modal__tabs {
+    display: none !important;
+  }
+}

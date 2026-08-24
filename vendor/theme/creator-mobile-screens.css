@@ -461,6 +461,17 @@
   overflow: hidden;
   position: relative;
 }
+.creator-creations > .creator-desktop-filter-wrap {
+  display: none;
+}
+.creator-creations-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
 .creator-creations.is-chrome-hidden .creator-creations-tabs,
 .creator-creations.is-chrome-hidden .creator-creations-slots,
 .creator-creations.is-chrome-hidden .creator-creations-toolbar {
