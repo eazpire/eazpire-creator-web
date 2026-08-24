@@ -10,7 +10,7 @@
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for Research guest Login-to-Continue overlay (same as Creations/Marketing/Automations).
   // Must stay in lockstep with index.html `shell-loader.js?v=` so browsers drop the 7-day vendor cache.
-  var RUNTIME_V = "research-flags-20260824a";
+  var RUNTIME_V = "research-modal-portal-20260824a";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 

@@ -939,8 +939,34 @@
     );
   }
 
+  /**
+   * Hub chrome (header z-index 150, daily-limits 145, footer 150) is a sibling of
+   * `.creator-desktop-main` (z-index 120, overflow:hidden). Research also lives in
+   * overflow:hidden hosts (stage panel, [data-partial], .eazy-research). A local
+   * z-index of 220 only stacks inside that context — move the modal to body.
+   */
+  function findResearchModal(root) {
+    if (document.body) {
+      var kids = document.body.children;
+      for (var i = 0; i < kids.length; i++) {
+        if (kids[i].hasAttribute && kids[i].hasAttribute("data-erz-modal")) return kids[i];
+      }
+    }
+    if (root) {
+      var nested = root.querySelector("[data-erz-modal]");
+      if (nested) return nested;
+    }
+    return document.querySelector("[data-erz-modal]");
+  }
+
+  function portalResearchModal(modal) {
+    if (!modal || !document.body) return modal;
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    return modal;
+  }
+
   async function openDetail(root, asin, marketplace) {
-    var modal = root.querySelector("[data-erz-modal]");
+    var modal = portalResearchModal(findResearchModal(root));
     var box = modal && modal.querySelector("[data-erz-detail]");
     if (!modal || !box) return;
     modal.hidden = false;
@@ -972,7 +998,7 @@
   }
 
   function closeDetail(root) {
-    var modal = (root && root.querySelector("[data-erz-modal]")) || document.querySelector("[data-erz-modal]");
+    var modal = findResearchModal(root);
     if (modal) modal.hidden = true;
   }
 
@@ -1351,7 +1377,7 @@
   }
 
   function bindModal(root) {
-    var modal = root.querySelector("[data-erz-modal]");
+    var modal = portalResearchModal(findResearchModal(root));
     if (!modal || modal.dataset.erzBound === "1") return;
     modal.dataset.erzBound = "1";
     modal.addEventListener("click", function (ev) {

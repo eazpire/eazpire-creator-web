@@ -997,10 +997,12 @@
 
 .eazy-research-modal[hidden] { display: none; }
 
+/* On document.body. Must beat Hub header/footer (150), daily-limits (145),
+   mascot (220), and Eazy snap (5000). Local z-index inside Research cannot. */
 .eazy-research-modal {
   position: fixed;
   inset: 0;
-  z-index: 220;
+  z-index: 10040;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1008,7 +1010,7 @@
 }
 
 .eazy-research-modal__backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(8, 6, 24, 0.78);
   backdrop-filter: blur(8px);
