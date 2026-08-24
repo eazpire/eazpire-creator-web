@@ -28,6 +28,9 @@
     loading: false,
     analyzing: false,
     searchId: "",
+    searchEmptyReason: "",
+    searchAmazonReturned: 0,
+    searchBlocked: 0,
     pollTimer: null,
     watched: [],
   };
@@ -296,16 +299,17 @@
   function filterClient(rows) {
     var out = rows.slice();
     out = out.filter(function (p) { return p.reprint_ok === true || Number(p.reprint_ok) === 1; });
-    if (state.nichesSelected && state.nichesSelected.length) {
+    var liveSearch = !!state.searchId;
+    if (!liveSearch && state.nichesSelected && state.nichesSelected.length) {
       out = out.filter(function (p) { return state.nichesSelected.indexOf(p.niche_key) !== -1; });
     }
-    if (state.designType) {
+    if (!liveSearch && state.designType) {
       out = out.filter(function (p) { return String(p.design_type || "").toLowerCase() === state.designType; });
     }
-    if (state.language) {
+    if (!liveSearch && state.language) {
       out = out.filter(function (p) { return String(p.language || "").toLowerCase() === state.language; });
     }
-    if (state.personalization) {
+    if (!liveSearch && state.personalization) {
       out = out.filter(function (p) {
         var key = Number(p.personalizable) === 1 || p.personalization === "personalizable"
           ? "personalizable"
@@ -313,20 +317,20 @@
         return key === state.personalization;
       });
     }
-    if (state.audiencesSelected && state.audiencesSelected.length) {
+    if (!liveSearch && state.audiencesSelected && state.audiencesSelected.length) {
       out = out.filter(function (p) {
         return state.audiencesSelected.indexOf(audienceOf(p)) !== -1;
       });
     }
     var q = String(state.q || "").trim().toLowerCase();
-    if (q && !state.searchId) {
+    if (q && !liveSearch) {
       out = out.filter(function (p) {
         return [p.title, p.brand, p.asin, p.niche_key, p.marketplace, marketplaceTag(p)].join(" ").toLowerCase().indexOf(q) !== -1;
       });
     }
-    if (state.view === "rising") out = out.filter(function (p) { return p.trend === "rising" || (p.rising_score || 0) > 0; });
-    if (state.view === "review_growth") out = out.filter(function (p) { return p.review_delta != null && p.review_delta > 0; });
-    if (state.view === "watched") {
+    if (!liveSearch && state.view === "rising") out = out.filter(function (p) { return p.trend === "rising" || (p.rising_score || 0) > 0; });
+    if (!liveSearch && state.view === "review_growth") out = out.filter(function (p) { return p.review_delta != null && p.review_delta > 0; });
+    if (!liveSearch && state.view === "watched") {
       out = out.filter(function (p) { return isWatched(p); });
     }
     var sort = state.sort;
@@ -532,11 +536,7 @@
       });
       if (empty) {
         empty.hidden = false;
-        empty.textContent = state.view === "watched"
-          ? t("creator.research.empty_watched", "No watched products yet. Tap the heart on a product to start tracking it.")
-          : (state.q || !isAllTopics() || state.designType || state.language || state.personalization || (state.audiencesSelected && state.audiencesSelected.length))
-            ? t("creator.research.empty_search", "No reprint-safe products match this search. Try a broader niche such as Coffee or Hiking.")
-            : t("creator.research.empty_action", "Pick a topic or type a search to explore reprint-safe products.");
+        empty.textContent = emptyGridCopy();
       }
       return;
     }
@@ -547,6 +547,28 @@
       grid.innerHTML = rows.map(productCard).join("");
       grid.setAttribute("data-erz-sig", sig);
     });
+  }
+
+  function emptyGridCopy() {
+    if (state.searchId && !state.analyzing) {
+      if (state.searchEmptyReason === "catalog_empty") {
+        return t("creator.research.analyze_no_amazon", "Amazon catalog had no matches for this search. Try a more specific term such as vegan t-shirt.");
+      }
+      if (state.searchEmptyReason === "filtered_reprint") {
+        return t("creator.research.analyze_no_reprint", "Amazon returned {n} products, but none are reprint-safe.")
+          .replace("{n}", String(state.searchAmazonReturned || 0));
+      }
+      if (state.searchEmptyReason === "error") {
+        return t("creator.research.analyze_error", "Live catalog search could not start.");
+      }
+    }
+    if (state.view === "watched") {
+      return t("creator.research.empty_watched", "No watched products yet. Tap the heart on a product to start tracking it.");
+    }
+    if (state.q || !isAllTopics() || state.designType || state.language || state.personalization || (state.audiencesSelected && state.audiencesSelected.length)) {
+      return t("creator.research.empty_search", "No reprint-safe products match this search. Try a broader niche such as Coffee or Hiking.");
+    }
+    return t("creator.research.empty_action", "Pick a topic or type a search to explore reprint-safe products.");
   }
 
   function renderStatus(root) {
@@ -560,6 +582,19 @@
       status.textContent = t("creator.research.collector_ok", "Collector · preview") +
         " · " + count +
         (ago ? " · " + ago : "");
+      return;
+    }
+    if (state.searchId) {
+      if (state.analyzing) {
+        status.textContent = t("creator.research.analyze_loading", "Analyzing…");
+        return;
+      }
+      var found = filterClient(state.products).length;
+      if (found) {
+        status.textContent = t("creator.research.analyze_found", "{n} products found").replace("{n}", String(found));
+        return;
+      }
+      status.textContent = emptyGridCopy();
       return;
     }
     var last = state.lastRun;
@@ -687,12 +722,14 @@
     if (!state.analyzing || !state.searchId) return;
     if (data && data.ok) {
       applySearchProducts(root, data.products || []);
+      state.searchEmptyReason = data.empty_reason || "";
+      state.searchAmazonReturned = Number(data.amazon_returned) || 0;
+      state.searchBlocked = Number(data.blocked) || 0;
       if (data.done || data.status === "done" || data.status === "error") {
         state.analyzing = false;
         stopSearchPoll();
         if (data.status === "error") {
-          var status = root.querySelector("[data-erz-status]");
-          if (status) status.textContent = t("creator.research.analyze_error", "Live catalog search could not start.");
+          state.searchEmptyReason = "error";
         }
         render(root);
         return;
@@ -711,6 +748,8 @@
     }
     var qEl = root.querySelector("[data-erz-q]");
     var q = String((qEl && qEl.value) || state.q || "").trim();
+    var placeholder = String((qEl && qEl.getAttribute("placeholder")) || "").trim();
+    if (placeholder && q.toLowerCase() === placeholder.toLowerCase()) q = "";
     state.q = q;
     if (!q) {
       var emptyStatus = root.querySelector("[data-erz-status]");
@@ -720,8 +759,17 @@
     stopSearchPoll();
     state.analyzing = true;
     state.searchId = "";
+    state.searchEmptyReason = "running";
+    state.searchAmazonReturned = 0;
+    state.searchBlocked = 0;
     state.products = [];
     state.loading = false;
+    state.nichesSelected = [];
+    state.designType = "";
+    state.language = "";
+    state.personalization = "";
+    state.audiencesSelected = [];
+    state.view = "opportunities";
     render(root);
     var data = await api("eazy-research-analyze-search", { q: q }, {
       method: "POST",
