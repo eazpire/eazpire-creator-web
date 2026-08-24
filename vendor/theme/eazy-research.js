@@ -1,6 +1,7 @@
 /**
  * eazy Research creator page — reprint-safe demand signals.
- * Reviews / rating only in the product modal. Never invents unit sales.
+ * Cards/modal: image, title, niche, BSR + category, BSR change, reviews if present.
+ * Never invents unit sales. No price or star rating in the UI.
  */
 (function (global) {
   "use strict";
@@ -54,21 +55,6 @@
       .replace(/"/g, "&quot;");
   }
 
-  function fmtDelta(n) {
-    if (n == null || !isFinite(Number(n))) return null;
-    var v = Number(n);
-    return (v > 0 ? "+" : "") + v;
-  }
-
-  function fmtPrice(p) {
-    if (p == null || p.price == null || !isFinite(Number(p.price))) return t("creator.research.price_na", "Price n/a");
-    try {
-      return new Intl.NumberFormat("de-DE", { style: "currency", currency: p.currency || "EUR" }).format(Number(p.price));
-    } catch (_e) {
-      return "€" + Number(p.price).toFixed(2);
-    }
-  }
-
   function timeAgo(ts) {
     var n = Number(ts);
     if (!n) return "";
@@ -77,12 +63,6 @@
     var hours = Math.round(mins / 60);
     if (hours < 48) return hours + "h";
     return Math.round(hours / 24) + "d";
-  }
-
-  function stars(rating) {
-    var r = Number(rating);
-    if (!isFinite(r)) return "—";
-    return r.toFixed(1) + " ★";
   }
 
   function amazonUrl(asin) {
@@ -117,12 +97,6 @@
     var next = state.watched.filter(function (x) { return x !== id; });
     if (next.length === state.watched.length) next.push(id);
     saveWatched(next);
-  }
-
-  function formatWindow(win) {
-    var m = String(win || "").trim().match(/^(\d+)\s*d$/i);
-    if (m) return t("creator.research.window_days", "{n} days").replace("{n}", m[1]);
-    return String(win || "").trim();
   }
 
   function subNicheOf(p) {
@@ -184,20 +158,51 @@
     return (n && (n.label || n.niche_key)) || key || "";
   }
 
+  function bsrCategoryOf(p) {
+    if (!p) return "";
+    if (p.latest && p.latest.bsr_category) return String(p.latest.bsr_category);
+    return String(p.bsr_category || "");
+  }
+
+  function fmtBsr(p) {
+    var rank = p && p.latest && p.latest.bsr != null ? Number(p.latest.bsr) : null;
+    if (rank == null || !isFinite(rank) || rank <= 0) return t("creator.research.bsr_missing", "No BSR");
+    var rankText = Number(rank).toLocaleString("de-DE");
+    var cat = bsrCategoryOf(p);
+    if (cat) {
+      return t("creator.research.bsr_with_category", "BSR {rank} · {category}")
+        .replace("{rank}", rankText)
+        .replace("{category}", cat);
+    }
+    return t("creator.research.bsr_label", "BSR") + " " + rankText;
+  }
+
+  function bsrChange(p) {
+    var delta = p && p.bsr_delta;
+    if (delta == null || !isFinite(Number(delta)) || Number(delta) === 0) return null;
+    var improved = p.bsr_improved === true || Number(delta) < 0;
+    return {
+      improved: improved,
+      label: improved
+        ? t("creator.research.bsr_change_improved", "↑ Improved")
+        : t("creator.research.bsr_change_worse", "↓ Worse"),
+    };
+  }
+
   function productCard(p) {
     var img = p.image_url
       ? '<img src="' + esc(p.image_url) + '" alt="" loading="lazy">'
       : '<div class="eazy-research-card__ph">' + esc(t("creator.research.unknown", "Unknown")) + "</div>";
-    var reviews = p.latest && p.latest.reviews_count != null ? p.latest.reviews_count : "—";
-    var bsr = p.latest && p.latest.bsr != null
-      ? t("creator.research.bsr_label", "BSR") + " " + Number(p.latest.bsr).toLocaleString("de-DE")
-      : t("creator.research.bsr_missing", "No BSR");
-    var delta = fmtDelta(p.review_delta);
-    var deltaHtml = delta
-      ? '<span class="eazy-research-card__delta is-' + esc(p.trend || "unknown") + '">' +
-        esc(delta) + " " + t("creator.research.reviews", "reviews") +
-        (p.review_delta_window ? " / " + esc(formatWindow(p.review_delta_window)) : "") +
-        "</span>"
+    var reviewsCount = p.latest && p.latest.reviews_count != null ? Number(p.latest.reviews_count) : null;
+    var reviewsHtml = reviewsCount != null && isFinite(reviewsCount)
+      ? '<div class="eazy-research-card__reviews">' +
+        esc(t("creator.research.reviews_count", "{count} reviews").replace("{count}", String(reviewsCount))) +
+        "</div>"
+      : "";
+    var change = bsrChange(p);
+    var changeHtml = change
+      ? '<div class="eazy-research-card__bsr-delta is-' + (change.improved ? "improved" : "worse") + '">' +
+        esc(change.label) + "</div>"
       : "";
     var watched = isWatched(p.asin);
     var watchLabel = watched
@@ -212,17 +217,12 @@
           '<div class="eazy-research-card__media">' + img + "</div>" +
           '<div class="eazy-research-card__body">' +
             "<h3>" + esc(p.title || p.asin) + "</h3>" +
-            '<div class="eazy-research-card__metrics">' +
-              "<span>" + esc(stars(p.latest && p.latest.rating)) + " · " + esc(String(reviews)) + "</span>" +
-              deltaHtml +
-            "</div>" +
-            '<div class="eazy-research-card__meta">' +
-              "<span>" + esc(bsr) + "</span>" +
-              "<span>" + esc(fmtPrice(p)) + "</span>" +
-            "</div>" +
             (p.niche_key
               ? '<div class="eazy-research-card__tags"><span>' + esc(nicheLabel(p.niche_key)) + "</span></div>"
               : "") +
+            '<div class="eazy-research-card__bsr">' + esc(fmtBsr(p)) + "</div>" +
+            changeHtml +
+            reviewsHtml +
           "</div>" +
         "</button>" +
         '<details class="eazy-research-card__menu">' +
@@ -320,17 +320,13 @@
   }
 
   function detailHtml(p) {
-    var reviews = p.latest && p.latest.reviews_count != null ? String(p.latest.reviews_count) : "—";
-    var rating = p.latest && p.latest.rating != null && isFinite(Number(p.latest.rating))
-      ? stars(p.latest.rating)
-      : "—";
-    var delta = fmtDelta(p.review_delta);
-    var windowLabel = formatWindow(p.review_delta_window || "7d");
-    var deltaRow = delta
-      ? statRow(
-          t("creator.research.reviews_last_window", "Reviews last {window}").replace("{window}", windowLabel),
-          delta
-        )
+    var reviewsCount = p.latest && p.latest.reviews_count != null ? Number(p.latest.reviews_count) : null;
+    var reviewsRow = reviewsCount != null && isFinite(reviewsCount)
+      ? statRow(t("creator.research.reviews_total", "Reviews total"), String(reviewsCount))
+      : "";
+    var change = bsrChange(p);
+    var changeRow = change
+      ? statRow(t("creator.research.bsr_change", "BSR change"), change.label)
       : "";
     var niche = p.niche_key ? nicheLabel(p.niche_key) : "";
     var sub = subNicheOf(p);
@@ -340,9 +336,9 @@
       '<h3 id="eazy-research-modal-title">' + esc(p.title || p.asin) + "</h3>" +
       (nicheLine ? '<p class="eazy-research__meta">' + esc(nicheLine) + "</p>" : "") +
       '<div class="eazy-research-modal__stats">' +
-        statRow(t("creator.research.reviews_total", "Reviews total"), reviews) +
-        deltaRow +
-        statRow(t("creator.research.rating_avg", "Average rating"), rating) +
+        statRow(t("creator.research.bsr_label", "BSR"), fmtBsr(p)) +
+        changeRow +
+        reviewsRow +
       "</div>"
     );
   }
@@ -363,7 +359,13 @@
     if (local) {
       if (p.review_delta == null && local.review_delta != null) p.review_delta = local.review_delta;
       if (!p.review_delta_window && local.review_delta_window) p.review_delta_window = local.review_delta_window;
+      if (p.bsr_delta == null && local.bsr_delta != null) p.bsr_delta = local.bsr_delta;
+      if (p.bsr_improved == null && local.bsr_improved != null) p.bsr_improved = local.bsr_improved;
+      if (!p.bsr_category && local.bsr_category) p.bsr_category = local.bsr_category;
       if (!p.niche_key && local.niche_key) p.niche_key = local.niche_key;
+      if (p.latest && local.latest && !p.latest.bsr_category && local.latest.bsr_category) {
+        p.latest.bsr_category = local.latest.bsr_category;
+      }
     }
     box.innerHTML = detailHtml(p);
   }

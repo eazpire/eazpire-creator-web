@@ -204,17 +204,39 @@
   opacity: 0.88;
 }
 
-.eazy-research-card__delta {
+.eazy-research-card__bsr {
+  margin-top: 6px;
+  font-size: 0.92rem;
   font-weight: 700;
+  letter-spacing: 0.01em;
+  opacity: 1;
+}
+
+.eazy-research-card__bsr-delta,
+.eazy-research-card__reviews {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.eazy-research-card__bsr-delta.is-improved,
+.eazy-research-card__delta {
   color: #7dffa8;
 }
 
+.eazy-research-card__bsr-delta.is-worse,
 .eazy-research-card__delta.is-falling { color: #ff8d85; }
 .eazy-research-card__delta.is-flat,
 .eazy-research-card__delta.is-unknown { color: #d7d0ea; }
 
+.eazy-research-card__reviews {
+  font-weight: 600;
+  opacity: 0.88;
+}
+
 .eazy-research-card__tags {
-  margin-top: 8px;
+  margin-top: 2px;
+  margin-bottom: 2px;
   justify-content: flex-start;
 }
 
