@@ -587,21 +587,31 @@
   <div class="eazy-research__layout">
     <aside class="eazy-research__filters-wrap" data-erz-filters-wrap>
       <div class="eazy-research__filters" id="eazy-research-filters" data-erz-filters>
+        <label class="eazy-research__select eazy-research__views">
+          <span class="visually-hidden" data-t="creator.research.views">Views</span>
+          <select data-erz-view-select>
+            <option value="opportunities" data-t="creator.research.tab_opportunities">Opportunities</option>
+            <option value="rising" data-t="creator.research.tab_rising">Rising</option>
+            <option value="review_growth" data-t="creator.research.tab_review_growth">Review growth</option>
+            <option value="watched" data-t="creator.research.tab_watched">Watched</option>
+          </select>
+        </label>
         <form class="eazy-research__toolbar" data-erz-toolbar>
           <label class="eazy-research__search">
             <span class="visually-hidden" data-t="creator.research.search_placeholder">Search reprint-safe products</span>
             <input type="search" name="q" autocomplete="off" data-erz-q data-t="creator.research.search_placeholder" placeholder="Search reprint-safe products">
           </label>
-          <label class="eazy-research__select">
-            <span class="visually-hidden" data-t="creator.research.sort_label">Sort</span>
-            <select data-erz-sort>
-              <option value="review_growth" data-t="creator.research.sort_review_growth">Review growth</option>
-              <option value="reviews" data-t="creator.research.sort_reviews">Reviews</option>
-              <option value="bsr" data-t="creator.research.sort_bsr">BSR</option>
-              <option value="newest" data-t="creator.research.sort_newest">Newest snapshot</option>
-            </select>
-          </label>
+          <button type="button" class="eazy-research__analyze" data-erz-analyze data-t="creator.research.analyze">Analyze</button>
         </form>
+        <label class="eazy-research__select eazy-research__sort">
+          <span class="visually-hidden" data-t="creator.research.sort_label">Sort</span>
+          <select data-erz-sort>
+            <option value="review_growth" data-t="creator.research.sort_review_growth">Review growth</option>
+            <option value="reviews" data-t="creator.research.sort_reviews">Reviews</option>
+            <option value="bsr" data-t="creator.research.sort_bsr">BSR</option>
+            <option value="newest" data-t="creator.research.sort_newest">Newest snapshot</option>
+          </select>
+        </label>
         <h3 class="eazy-research__filters-heading" data-t="creator.research.topics">Topics</h3>
         <p class="eazy-research__filters-hint" data-erz-topics-hint data-t="creator.research.topics_all_hint">All topics</p>
         <div class="eazy-research__chips" data-erz-chips role="list"></div>
@@ -628,13 +638,6 @@
           <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-pers="standard" data-t="creator.research.personalization_standard">Standard</button>
           <button type="button" class="eazy-research__chip" role="radio" aria-checked="false" data-erz-pers="personalizable" data-t="creator.research.personalization_personalizable">Personalizable</button>
         </div>
-        <h3 class="eazy-research__filters-heading" data-t="creator.research.views">Views</h3>
-        <div class="eazy-research__tabs" data-erz-tabs role="radiogroup" aria-label="Views">
-          <button type="button" class="is-active" role="radio" aria-checked="true" data-erz-view="opportunities" data-t="creator.research.tab_opportunities">Opportunities</button>
-          <button type="button" role="radio" aria-checked="false" data-erz-view="rising" data-t="creator.research.tab_rising">Rising</button>
-          <button type="button" role="radio" aria-checked="false" data-erz-view="review_growth" data-t="creator.research.tab_review_growth">Review growth</button>
-          <button type="button" role="radio" aria-checked="false" data-erz-view="watched" data-t="creator.research.tab_watched">Watched</button>
-        </div>
       </div>
       <button
         type="button"
@@ -659,7 +662,7 @@
       </button>
     </aside>
 
-    <div class="eazy-research__stage">
+    <div class="eazy-research__stage" data-erz-stage>
       <div class="eazy-research__mobile-bar">
         <button type="button" class="eazy-research__mobile-toggle" data-erz-filters-open data-t="creator.research.filter_open">Open filters</button>
       </div>

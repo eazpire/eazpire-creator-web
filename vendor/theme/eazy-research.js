@@ -25,8 +25,47 @@
     reprintOk: true,
     view: "opportunities",
     loading: false,
+    analyzing: false,
+    searchId: "",
+    pollTimer: null,
     watched: [],
   };
+
+  function captureScrollTop(el) {
+    if (!el) return 0;
+    var n = Number(el.scrollTop);
+    return isFinite(n) ? n : 0;
+  }
+
+  function restoreScrollTop(el, top) {
+    if (!el) return 0;
+    el.scrollTop = Math.max(0, Number(top) || 0);
+    return el.scrollTop;
+  }
+
+  function captureResearchScroll(root) {
+    return {
+      filters: captureScrollTop(root && root.querySelector("[data-erz-filters]")),
+      stage: captureScrollTop(root && root.querySelector("[data-erz-stage]")),
+    };
+  }
+
+  function restoreResearchScroll(root, saved) {
+    if (!root || !saved) return saved;
+    restoreScrollTop(root.querySelector("[data-erz-filters]"), saved.filters);
+    restoreScrollTop(root.querySelector("[data-erz-stage]"), saved.stage);
+    return saved;
+  }
+
+  function withResearchScroll(root, mutate) {
+    var saved = captureResearchScroll(root);
+    if (typeof mutate === "function") mutate();
+    restoreResearchScroll(root, saved);
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(function () { restoreResearchScroll(root, saved); });
+    }
+    return saved;
+  }
 
   function t(key, fallback) {
     if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.t === "function") {
@@ -40,15 +79,35 @@
     return fallback;
   }
 
-  function api(op, params) {
+  function api(op, params, options) {
     params = params || {};
-    if (typeof global.creatorApiFetch === "function") return global.creatorApiFetch(op, params);
+    options = options || {};
+    if (typeof global.creatorApiFetch === "function") {
+      return global.creatorApiFetch(op, params, options);
+    }
     var url = new URL("/apps/creator-dispatch", global.location.origin);
     url.searchParams.set("op", op);
     Object.keys(params).forEach(function (k) {
       if (params[k] != null && params[k] !== "") url.searchParams.set(k, String(params[k]));
     });
-    return fetch(url.toString(), { credentials: "include" }).then(function (r) { return r.json(); });
+    var fetchOpts = { credentials: "include" };
+    if (options.method) fetchOpts.method = options.method;
+    if (options.body != null) {
+      fetchOpts.headers = { "Content-Type": "application/json" };
+      fetchOpts.body = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
+    }
+    return fetch(url.toString(), fetchOpts).then(function (r) { return r.json(); });
+  }
+
+  function isLoggedIn() {
+    if (global.CreatorAuth && typeof global.CreatorAuth.isLoggedIn === "function") {
+      try { if (global.CreatorAuth.isLoggedIn()) return true; } catch (_e) { /* ignore */ }
+    }
+    var oid =
+      (global.__creatorOwnerId && String(global.__creatorOwnerId).trim()) ||
+      (global.CREATOR_API_CONFIG && global.CREATOR_API_CONFIG.OWNER_ID) ||
+      "";
+    return !!oid;
   }
 
   function esc(s) {
@@ -182,7 +241,7 @@
       });
     }
     var q = String(state.q || "").trim().toLowerCase();
-    if (q) {
+    if (q && !state.searchId) {
       out = out.filter(function (p) {
         return [p.title, p.brand, p.asin, p.niche_key, p.marketplace, marketplaceTag(p)].join(" ").toLowerCase().indexOf(q) !== -1;
       });
@@ -313,13 +372,29 @@
     if (!wrap) return;
     var allOn = isAllTopics();
     var all = [{ niche_key: "all", label: t("creator.research.niche_all", "All") }].concat(state.niches || []);
-    wrap.innerHTML = all.map(function (n) {
-      var key = n.niche_key || n.key || "all";
-      var on = key === "all" ? allOn : selectedTopics().indexOf(key) !== -1;
-      return '<button type="button" class="eazy-research__chip' + (on ? " is-active" : "") +
-        '" data-erz-niche="' + esc(key) + '" aria-pressed="' + (on ? "true" : "false") + '">' +
-        esc(n.label || key) + "</button>";
-    }).join("");
+    var keys = all.map(function (n) { return n.niche_key || n.key || "all"; });
+    var existing = wrap.querySelectorAll("[data-erz-niche]");
+    var same =
+      existing.length === keys.length &&
+      Array.prototype.every.call(existing, function (el, i) {
+        return el.getAttribute("data-erz-niche") === keys[i];
+      });
+    if (!same) {
+      wrap.innerHTML = all.map(function (n) {
+        var key = n.niche_key || n.key || "all";
+        var on = key === "all" ? allOn : selectedTopics().indexOf(key) !== -1;
+        return '<button type="button" class="eazy-research__chip' + (on ? " is-active" : "") +
+          '" data-erz-niche="' + esc(key) + '" aria-pressed="' + (on ? "true" : "false") + '">' +
+          esc(n.label || key) + "</button>";
+      }).join("");
+    } else {
+      Array.prototype.forEach.call(existing, function (btn) {
+        var key = btn.getAttribute("data-erz-niche") || "all";
+        var on = key === "all" ? allOn : selectedTopics().indexOf(key) !== -1;
+        btn.classList.toggle("is-active", on);
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
     var hint = root.querySelector("[data-erz-topics-hint]");
     if (hint) hint.hidden = !allOn;
   }
@@ -348,16 +423,19 @@
     var grid = root.querySelector("[data-erz-grid]");
     var empty = root.querySelector("[data-erz-empty]");
     if (!grid) return;
-    if (state.loading) {
+    var showSkeleton = (state.loading && !state.products.length) || (state.analyzing && !state.products.length);
+    if (showSkeleton) {
       grid.innerHTML = Array.from({ length: 8 }).map(function () {
         return '<div class="eazy-research-card is-skeleton" aria-hidden="true"></div>';
       }).join("");
+      grid.removeAttribute("data-erz-sig");
       if (empty) empty.hidden = true;
       return;
     }
     var rows = filterClient(state.products);
     if (!rows.length) {
       grid.innerHTML = "";
+      grid.removeAttribute("data-erz-sig");
       if (empty) {
         empty.hidden = false;
         empty.textContent = state.view === "watched"
@@ -369,7 +447,10 @@
       return;
     }
     if (empty) empty.hidden = true;
+    var sig = rows.map(function (p) { return watchId(p) + (isWatched(p) ? "#1" : "#0"); }).join("|");
+    if (grid.getAttribute("data-erz-sig") === sig) return;
     grid.innerHTML = rows.map(productCard).join("");
+    grid.setAttribute("data-erz-sig", sig);
   }
 
   function renderStatus(root) {
@@ -393,15 +474,20 @@
   }
 
   function render(root) {
-    renderChips(root);
-    renderFacets(root);
-    renderGrid(root);
-    renderStatus(root);
-    root.querySelectorAll("[data-erz-view]").forEach(function (btn) {
-      var on = btn.getAttribute("data-erz-view") === state.view;
-      btn.classList.toggle("is-active", on);
-      btn.setAttribute("aria-checked", on ? "true" : "false");
-      btn.setAttribute("aria-selected", on ? "true" : "false");
+    withResearchScroll(root, function () {
+      renderChips(root);
+      renderFacets(root);
+      renderGrid(root);
+      renderStatus(root);
+      var viewSelect = root.querySelector("[data-erz-view-select]");
+      if (viewSelect && viewSelect.value !== state.view) viewSelect.value = state.view;
+      root.querySelectorAll("[data-erz-view]").forEach(function (btn) {
+        var on = btn.getAttribute("data-erz-view") === state.view;
+        btn.classList.toggle("is-active", on);
+        btn.setAttribute("aria-checked", on ? "true" : "false");
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      syncAnalyzeButton(root);
     });
   }
 
@@ -477,9 +563,99 @@
     if (modal) modal.hidden = true;
   }
 
-  async function load(root) {
-    state.loading = true;
+  function syncAnalyzeButton(root) {
+    var btn = root.querySelector("[data-erz-analyze]");
+    if (!btn) return;
+    var logged = isLoggedIn();
+    btn.disabled = !logged || state.analyzing;
+    btn.textContent = state.analyzing
+      ? t("creator.research.analyze_loading", "Analyzing…")
+      : t("creator.research.analyze", "Analyze");
+    if (!logged) btn.setAttribute("title", t("creator.research.analyze_login", "Log in to run a live catalog search."));
+    else btn.removeAttribute("title");
+  }
+
+  function stopSearchPoll() {
+    if (state.pollTimer) {
+      clearTimeout(state.pollTimer);
+      state.pollTimer = null;
+    }
+  }
+
+  function applySearchProducts(root, products) {
+    state.products = Array.isArray(products) ? products : [];
+    withResearchScroll(root, function () { renderGrid(root); });
+  }
+
+  async function pollSearch(root) {
+    if (!state.searchId || !state.analyzing) return;
+    var data = await api("eazy-research-search-status", { search_id: state.searchId }).catch(function () { return null; });
+    if (!state.analyzing || !state.searchId) return;
+    if (data && data.ok) {
+      applySearchProducts(root, data.products || []);
+      if (data.done || data.status === "done" || data.status === "error") {
+        state.analyzing = false;
+        stopSearchPoll();
+        if (data.status === "error") {
+          var status = root.querySelector("[data-erz-status]");
+          if (status) status.textContent = t("creator.research.analyze_error", "Live catalog search could not start.");
+        }
+        render(root);
+        return;
+      }
+    }
+    state.pollTimer = setTimeout(function () { pollSearch(root); }, 900);
+  }
+
+  async function startAnalyze(root) {
+    if (state.analyzing) return;
+    if (!isLoggedIn()) {
+      var status = root.querySelector("[data-erz-status]");
+      if (status) status.textContent = t("creator.research.analyze_login", "Log in to run a live catalog search.");
+      return;
+    }
+    var qEl = root.querySelector("[data-erz-q]");
+    var q = String((qEl && qEl.value) || state.q || "").trim();
+    state.q = q;
+    if (!q) {
+      var emptyStatus = root.querySelector("[data-erz-status]");
+      if (emptyStatus) emptyStatus.textContent = t("creator.research.analyze_empty_query", "Type a search before Analyze.");
+      return;
+    }
+    stopSearchPoll();
+    state.analyzing = true;
+    state.searchId = "";
+    state.products = [];
+    state.loading = false;
     render(root);
+    var data = await api("eazy-research-analyze-search", {}, {
+      method: "POST",
+      body: { q: q },
+    }).catch(function (err) {
+      return (err && err.body) || { ok: false, error: "network" };
+    });
+    if (!data || !data.ok) {
+      state.analyzing = false;
+      var msg = t("creator.research.analyze_error", "Live catalog search could not start.");
+      if (data && data.error === "login_required") msg = t("creator.research.analyze_login", "Log in to run a live catalog search.");
+      if (data && data.error === "cooldown") msg = t("creator.research.analyze_cooldown", "Please wait before another live search.");
+      if (data && data.error === "daily_limit") msg = t("creator.research.analyze_daily_limit", "Daily live search limit reached.");
+      var errStatus = root.querySelector("[data-erz-status]");
+      if (errStatus) errStatus.textContent = msg;
+      render(root);
+      return;
+    }
+    state.searchId = data.search_id || "";
+    pollSearch(root);
+  }
+
+  async function load(root) {
+    if (state.analyzing) return;
+    var first = !state.products.length;
+    if (first) {
+      state.loading = true;
+      withResearchScroll(root, function () { renderGrid(root); });
+    }
     var params = {
       reprint_ok: 1,
       limit: 80,
@@ -490,16 +666,17 @@
     if (state.language) params.language = state.language;
     if (state.personalization) params.personalization = state.personalization;
     var data = await api("eazy-research-products", params).catch(function () { return null; });
+    if (state.analyzing) return;
     state.loading = false;
     if (!data || !data.ok) {
       var status = root.querySelector("[data-erz-status]");
       if (status) status.textContent = t("creator.research.error", "Research data could not be loaded.");
-      state.products = [];
-      renderGrid(root);
+      if (first) state.products = [];
+      withResearchScroll(root, function () { renderGrid(root); });
       return;
     }
     state.preview = Boolean(data.preview);
-    state.products = data.products || [];
+    if (!state.searchId) state.products = data.products || [];
     state.niches = data.niches || [];
     state.lastRun = data.last_run || null;
     render(root);
@@ -560,22 +737,38 @@
     var qTimer = null;
     var toolbar = root.querySelector("[data-erz-toolbar]");
     if (toolbar) {
-      toolbar.addEventListener("submit", function (ev) { ev.preventDefault(); });
+      toolbar.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        startAnalyze(root);
+      });
     }
     var q = root.querySelector("[data-erz-q]");
     if (q) {
       q.addEventListener("input", function () {
         state.q = q.value || "";
         clearTimeout(qTimer);
-        qTimer = setTimeout(function () { renderGrid(root); }, 180);
+        qTimer = setTimeout(function () {
+          withResearchScroll(root, function () { renderGrid(root); });
+        }, 180);
       });
     }
     var sort = root.querySelector("[data-erz-sort]");
     if (sort) {
       sort.addEventListener("change", function () {
         state.sort = sort.value || "review_growth";
-        renderGrid(root);
+        withResearchScroll(root, function () { renderGrid(root); });
       });
+    }
+    var viewSelect = root.querySelector("[data-erz-view-select]");
+    if (viewSelect) {
+      viewSelect.addEventListener("change", function () {
+        state.view = viewSelect.value || "opportunities";
+        render(root);
+      });
+    }
+    var analyzeBtn = root.querySelector("[data-erz-analyze]");
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener("click", function () { startAnalyze(root); });
     }
     applyFiltersCollapsed(root, isFiltersCollapsedStored());
     applyFiltersSheet(root, false);
@@ -682,5 +875,13 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
-  global.EazyResearchPage = { boot: boot, load: load };
+  global.EazyResearchPage = {
+    boot: boot,
+    load: load,
+    preserveScrollTop: function (el, mutate) {
+      var top = captureScrollTop(el);
+      if (typeof mutate === "function") mutate();
+      return restoreScrollTop(el, top);
+    },
+  };
 })(typeof window !== "undefined" ? window : globalThis);

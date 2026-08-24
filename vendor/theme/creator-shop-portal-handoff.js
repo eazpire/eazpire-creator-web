@@ -1,5 +1,7 @@
 /**
  * Shop → creator.eazpire.com session handoff (exchange token, no visible bridge page).
+ * Prefetched tickets expire after 2 minutes; reuse at most 60s so the switch never
+ * lands on /auth/complete with a stale token.
  */
 (function () {
   "use strict";
@@ -8,6 +10,7 @@
   var PORTAL_HOME = CREATOR_ORIGIN + "/";
   var BRIDGE_PATH = "/pages/creator-handoff";
   var ISSUE_TIMEOUT_MS = 20000;
+  var TOKEN_REUSE_MS = 60000;
 
   function dispatchBase() {
     if (
@@ -49,12 +52,27 @@
     return PORTAL_HOME;
   }
 
+  function readNextParam() {
+    try {
+      var next = new URLSearchParams(window.location.search || "").get("next");
+      if (!next) return "";
+      next = String(next);
+      if (next.charAt(0) !== "/" || next.charAt(1) === "/") return "";
+      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(next)) return "";
+      return next;
+    } catch (e) {
+      return "";
+    }
+  }
+
   function completeUrl(exchangeToken) {
-    return (
+    var url =
       CREATOR_ORIGIN +
       "/auth/complete?exchange_token=" +
-      encodeURIComponent(String(exchangeToken || ""))
-    );
+      encodeURIComponent(String(exchangeToken || ""));
+    var next = readNextParam();
+    if (next) url += "&next=" + encodeURIComponent(next);
+    return url;
   }
 
   function formatIssueError(issue) {
@@ -67,6 +85,14 @@
 
   var inflightIssue = null;
   var inflightCid = "";
+  var inflightAt = 0;
+
+  function resultIsFresh(result) {
+    if (!result || !result.ok || !result.url) return false;
+    var issuedAt = Number(result.issuedAt || inflightAt || 0);
+    if (!issuedAt) return false;
+    return Date.now() - issuedAt < TOKEN_REUSE_MS;
+  }
 
   function fetchExchangeToken(customerId) {
     var cid = readCustomerId(customerId);
@@ -91,19 +117,22 @@
 
     return fetch(issueUrl.toString(), fetchOpts)
       .then(function (issueRes) {
-        return issueRes.json().catch(function () {
-          return {};
-        }).then(function (issue) {
-          if (!issueRes.ok || !issue.ok || !issue.exchange_token) {
-            return {
-              ok: false,
-              error: formatIssueError(issue),
-              reason: issue.reason || "",
-              loginUrl: storefrontLoginUrl(),
-            };
-          }
-          return { ok: true, url: completeUrl(issue.exchange_token) };
-        });
+        return issueRes
+          .json()
+          .catch(function () {
+            return {};
+          })
+          .then(function (issue) {
+            if (!issueRes.ok || !issue.ok || !issue.exchange_token) {
+              return {
+                ok: false,
+                error: formatIssueError(issue),
+                reason: issue.reason || "",
+                loginUrl: storefrontLoginUrl(),
+              };
+            }
+            return { ok: true, url: completeUrl(issue.exchange_token), issuedAt: Date.now() };
+          });
       })
       .catch(function (err) {
         var name = err && err.name ? String(err.name) : "";
@@ -119,20 +148,23 @@
       });
   }
 
-  function issueExchangeToken(customerId, opts) {
-    opts = opts || {};
+  function issueExchangeToken(customerId) {
     var cid = readCustomerId(customerId);
     if (!cid) {
       return Promise.resolve({ ok: false, error: "not_logged_in", loginUrl: storefrontLoginUrl() });
     }
-    if (inflightIssue && inflightCid === cid) {
+    if (inflightIssue && inflightCid === cid && Date.now() - inflightAt < TOKEN_REUSE_MS) {
       return inflightIssue;
     }
     inflightCid = cid;
+    inflightAt = Date.now();
     inflightIssue = fetchExchangeToken(cid).then(function (result) {
       if (!(result && result.ok && result.url)) {
         inflightIssue = null;
         inflightCid = "";
+        inflightAt = 0;
+      } else if (!result.issuedAt) {
+        result.issuedAt = inflightAt;
       }
       return result;
     });
@@ -140,15 +172,26 @@
   }
 
   function takeInflightIssue() {
+    if (!inflightIssue || Date.now() - inflightAt >= TOKEN_REUSE_MS) {
+      inflightIssue = null;
+      inflightCid = "";
+      inflightAt = 0;
+      return null;
+    }
     var pending = inflightIssue;
     inflightIssue = null;
     inflightCid = "";
+    inflightAt = 0;
     return pending;
   }
 
   function prefetchExchangeToken(opts) {
     opts = opts || {};
     return issueExchangeToken(opts.customerId);
+  }
+
+  function loggedInFallbackUrl() {
+    return BRIDGE_PATH + (readNextParam() ? "?next=" + encodeURIComponent(readNextParam()) : "");
   }
 
   function resolveTargetUrl(opts) {
@@ -159,28 +202,30 @@
     }
     var consume = opts.consume !== false;
     var pending = consume ? takeInflightIssue() || issueExchangeToken(cid) : issueExchangeToken(cid);
+
     function toUrl(result) {
-      if (result && result.ok && result.url) return result.url;
+      if (resultIsFresh(result)) return result.url;
       if (result && result.error === "not_logged_in") return storefrontLoginUrl();
       return null;
     }
-    return pending.then(function (result) {
-      var url = toUrl(result);
-      if (url) {
-        if (consume) {
-          inflightIssue = null;
-          inflightCid = "";
-        }
-        return url;
-      }
-      inflightIssue = null;
-      inflightCid = "";
-      return fetchExchangeToken(cid).then(function (retry) {
-        var retryUrl = toUrl(retry);
-        if (retryUrl) return retryUrl;
-        return storefrontLoginUrl();
+
+    return Promise.resolve(pending)
+      .then(function (result) {
+        var url = toUrl(result);
+        if (url) return url;
+        inflightIssue = null;
+        inflightCid = "";
+        inflightAt = 0;
+        return fetchExchangeToken(cid).then(function (retry) {
+          var retryUrl = toUrl(retry);
+          if (retryUrl) return retryUrl;
+          if (retry && retry.error === "not_logged_in") return storefrontLoginUrl();
+          return loggedInFallbackUrl();
+        });
+      })
+      .catch(function () {
+        return loggedInFallbackUrl();
       });
-    });
   }
 
   function navigateToPortal(opts) {
@@ -194,6 +239,7 @@
   window.EazCreatorPortalHandoff = {
     CREATOR_ORIGIN: CREATOR_ORIGIN,
     BRIDGE_PATH: BRIDGE_PATH,
+    TOKEN_REUSE_MS: TOKEN_REUSE_MS,
     portalHomeUrl: portalHomeUrl,
     storefrontLoginUrl: storefrontLoginUrl,
     readCustomerId: readCustomerId,

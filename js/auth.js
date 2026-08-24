@@ -23,7 +23,34 @@
     if (ownerLabel) ownerLabel.textContent = state.loggedIn ? "Creator #" + state.ownerId : "Creator";
   }
 
+  var SSO_GUARD_KEY = "eaz_creator_sso_guard";
+  var SHOP_HANDOFF_PATH = "/pages/creator-handoff";
+
+  function resumeShopSessionIfGuest(data) {
+    try {
+      var params = new URLSearchParams(global.location.search);
+      if (params.get("auth_error") || params.get("sso") === "0" || global.__EAZ_SSO_BLOCK__) return false;
+      if (data && data.logged_in) return false;
+      var until = 0;
+      try {
+        until = Number(sessionStorage.getItem(SSO_GUARD_KEY) || "0");
+      } catch (e) {}
+      if (until && Date.now() < until) return false;
+      try {
+        sessionStorage.setItem(SSO_GUARD_KEY, String(Date.now() + 45000));
+      } catch (e2) {}
+      var shop = String((data && data.shop_url) || "https://www.eazpire.com").replace(/\/$/, "");
+      var next = global.location.pathname + global.location.search + global.location.hash;
+      if (!next || next.indexOf("/auth/") === 0) next = "/";
+      global.location.replace(shop + SHOP_HANDOFF_PATH + "?next=" + encodeURIComponent(next));
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
   function applyBootstrapAuth(data) {
+    if (resumeShopSessionIfGuest(data && data.ok ? data : null)) return;
     if (!data || !data.ok) return;
     bootstrapApplied = true;
     setAuth(!!data.logged_in, data.owner_id || null);
@@ -58,6 +85,7 @@
         params.delete("auth_error");
         var nextErr = global.location.pathname + (params.toString() ? "?" + params.toString() : "");
         global.history.replaceState({}, "", nextErr);
+        global.__EAZ_SSO_BLOCK__ = true;
         showToast("Sign-in failed", err.replace(/_/g, " "));
       }
     } catch (e) {}
@@ -165,6 +193,7 @@
   global.CreatorPortalAuth = {
     init: init,
     refreshSession: refreshSession,
+    resumeShopSessionIfGuest: resumeShopSessionIfGuest,
     applyBootstrapAuth: applyBootstrapAuth,
     login: login,
     logout: logout,

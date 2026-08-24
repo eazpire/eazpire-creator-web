@@ -308,6 +308,9 @@
       var parallel = await Promise.all([bootstrapPromise, shellPromise]);
       var bootData = parallel[0];
       if (bootData) applyBootstrap(bootData);
+      else if (global.CreatorPortalAuth && typeof global.CreatorPortalAuth.resumeShopSessionIfGuest === "function") {
+        global.CreatorPortalAuth.resumeShopSessionIfGuest(null);
+      }
 
       // Seed chrome early so runtime scripts can skip duplicate network calls.
       if (bootData && bootData.chrome) {
