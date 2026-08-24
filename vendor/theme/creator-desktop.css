@@ -3777,6 +3777,10 @@ body.creator-video-motion-info-modal-open {
   min-height: 120px;
 }
 
+.creator-desktop-hero[data-desktop-active-screen="research"] {
+  padding: 0;
+}
+
 .creator-desktop-stage__panel--research {
   overflow: hidden !important;
 }
@@ -3784,11 +3788,19 @@ body.creator-video-motion-info-modal-open {
 .creator-desktop-stage__panel--research.is-active {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .creator-desktop-research-host {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.creator-desktop-research-host .eazy-research {
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;

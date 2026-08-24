@@ -1572,6 +1572,15 @@ body.creator-video-character-modal-open .creator-swipe-viewport {
   -webkit-overflow-scrolling: touch;
 }
 
+.creator-screen[data-screen="1"] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
 .creator-screen[data-screen="2"] {
   padding-left: 0;
   padding-right: 0;
