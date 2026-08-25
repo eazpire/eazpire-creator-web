@@ -1,7 +1,7 @@
 /**
  * Shop → creator.eazpire.com session handoff (exchange token, no visible bridge page).
- * Prefetched tickets expire after 2 minutes; reuse at most 60s so the switch never
- * lands on /auth/complete with a stale token.
+ * Prefetched tickets expire after 2 minutes; reuse at most 8s so a long shop
+ * visit never lands on /auth/complete with a stale token.
  */
 (function () {
   "use strict";
@@ -10,7 +10,7 @@
   var PORTAL_HOME = CREATOR_ORIGIN + "/";
   var BRIDGE_PATH = "/pages/creator-handoff";
   var ISSUE_TIMEOUT_MS = 20000;
-  var TOKEN_REUSE_MS = 60000;
+  var TOKEN_REUSE_MS = 8000;
 
   function dispatchBase() {
     if (
@@ -70,12 +70,8 @@
       CREATOR_ORIGIN +
       "/auth/complete?exchange_token=" +
       encodeURIComponent(String(exchangeToken || ""));
-    var next = readNextParam();
-    if (next) url += "&next=" + encodeURIComponent(next);
-    try {
-      var retry = new URLSearchParams(window.location.search || "").get("retry");
-      if (retry) url += "&retry=" + encodeURIComponent(retry);
-    } catch (e) {}
+    var next = readNextParam() || "/dashboard";
+    url += "&next=" + encodeURIComponent(next);
     return url;
   }
 
@@ -195,7 +191,8 @@
   }
 
   function loggedInFallbackUrl() {
-    return BRIDGE_PATH + (readNextParam() ? "?next=" + encodeURIComponent(readNextParam()) : "");
+    var next = readNextParam() || "/dashboard";
+    return BRIDGE_PATH + "?next=" + encodeURIComponent(next);
   }
 
   function resolveTargetUrl(opts) {

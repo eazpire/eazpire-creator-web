@@ -41,6 +41,23 @@
     if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
       global.CreatorPortalThemeBridge.notifyContextReady();
     }
+    try {
+      if (global.__EAZ_SSO_BLOCK__) return;
+      if (global.__EAZ_AUTH_OK__ && !data.logged_in) {
+        global.CreatorPortalApi.me().then(function (me) {
+          if (me && me.logged_in) {
+            setAuth(true, me.owner_id);
+            if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+              global.CreatorPortalThemeBridge.notifyContextReady();
+            }
+            return;
+          }
+          if (sessionStorage.getItem(SSO_GUARD_KEY)) return;
+          sessionStorage.setItem(SSO_GUARD_KEY, String(Date.now()));
+          global.location.replace("https://www.eazpire.com/pages/creator-handoff?next=" + encodeURIComponent("/dashboard"));
+        }).catch(function () {});
+      }
+    } catch (e) {}
   }
 
   function showToast(title, text) {
@@ -60,17 +77,20 @@
     try {
       var params = new URLSearchParams(global.location.search);
       if (params.get("auth") === "ok") {
+        global.__EAZ_AUTH_OK__ = true;
         params.delete("auth");
+        params.delete("sso");
         var next = global.location.pathname + (params.toString() ? "?" + params.toString() : "");
         global.history.replaceState({}, "", next);
         showToast("Signed in", "Welcome to Eazpire Creator.");
-      } else if (params.get("auth_error")) {
-        var err = params.get("auth_error");
+      } else if (params.get("auth_error") || params.get("sso") === "0") {
+        var err = params.get("auth_error") || "sign_in_failed";
         params.delete("auth_error");
+        params.delete("sso");
         var nextErr = global.location.pathname + (params.toString() ? "?" + params.toString() : "");
         global.history.replaceState({}, "", nextErr);
         global.__EAZ_SSO_BLOCK__ = true;
-        showToast("Sign-in failed", err.replace(/_/g, " "));
+        showToast("Sign-in failed", String(err).replace(/_/g, " "));
       }
     } catch (e) {}
   }
