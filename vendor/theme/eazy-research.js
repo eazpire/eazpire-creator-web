@@ -143,6 +143,28 @@
     return restoreResearchScroll(root, saved);
   }
 
+  /**
+   * Hub keeps two Research trees: desktop host + mobile swipe screen.
+   * Shared `state` + one catalog fetch; every bound copy must be painted
+   * or desktop stays on leftover skeletons while the hidden mobile grid fills.
+   */
+  function boundResearchRoots() {
+    return Array.prototype.slice.call(document.querySelectorAll("[data-eazy-research]")).filter(function (el) {
+      return el && el.dataset.erzBound === "1" && el.isConnected;
+    });
+  }
+
+  function eachBoundRoot(fn) {
+    boundResearchRoots().forEach(fn);
+  }
+
+  function primaryResearchRoot() {
+    var host = document.getElementById("creatorDesktopResearchHost");
+    var desktop = host && host.querySelector("[data-eazy-research]");
+    if (desktop && desktop.dataset.erzBound === "1" && desktop.isConnected) return desktop;
+    return boundResearchRoots()[0] || null;
+  }
+
   function t(key, fallback) {
     if (global.CreatorPortalI18n && typeof global.CreatorPortalI18n.t === "function") {
       var v = global.CreatorPortalI18n.t(key);
@@ -766,7 +788,7 @@
     applyFilterFolds(root);
   }
 
-  function renderGrid(root) {
+  function renderGridOne(root) {
     var grid = root.querySelector("[data-erz-grid]");
     var empty = root.querySelector("[data-erz-empty]");
     if (!grid) return;
@@ -800,6 +822,10 @@
       grid.innerHTML = rows.map(function (p, i) { return productCard(p, i); }).join("");
       grid.setAttribute("data-erz-sig", sig);
     });
+  }
+
+  function renderGrid(_root) {
+    eachBoundRoot(renderGridOne);
   }
 
   function emptyGridCopy() {
@@ -857,10 +883,10 @@
       : t("creator.research.empty", "No Amazon snapshots yet. Official catalog collection runs in the background.");
   }
 
-  function render(root) {
+  function renderOne(root) {
     renderChips(root);
     renderFacets(root);
-    renderGrid(root);
+    renderGridOne(root);
     renderStatus(root);
     var viewSelect = root.querySelector("[data-erz-view-select]");
     if (viewSelect && viewSelect.value !== state.view) viewSelect.value = state.view;
@@ -871,6 +897,10 @@
       btn.setAttribute("aria-selected", on ? "true" : "false");
     });
     syncAnalyzeButton(root);
+  }
+
+  function render(_root) {
+    eachBoundRoot(renderOne);
   }
 
   function statRow(label, value) {
@@ -1155,9 +1185,11 @@
     return params;
   }
 
-  function resetGridScroll(root) {
-    var refs = scrollerRefs(root);
-    if (refs.grid) refs.grid.scrollTop = 0;
+  function resetGridScroll(_root) {
+    eachBoundRoot(function (root) {
+      var refs = scrollerRefs(root);
+      if (refs.grid) refs.grid.scrollTop = 0;
+    });
   }
 
   async function load(root, opts) {
@@ -1549,8 +1581,9 @@
     bindModal(root);
     bindDocumentUi();
     syncAnalyzeButton(root);
-    load(root);
   }
+
+  var catalogLoadStarted = false;
 
   var docUiBound = false;
   function bindDocumentUi() {
@@ -1563,18 +1596,21 @@
       if (host) startAnalyze(host);
     });
     document.addEventListener("eazCreatorContextReady", function () {
-      document.querySelectorAll("[data-eazy-research]").forEach(function (el) {
-        if (el.dataset.erzBound === "1") {
-          syncAnalyzeButton(el);
-          return;
-        }
-        mount(el);
-      });
+      boot();
     });
   }
 
   function boot() {
     document.querySelectorAll("[data-eazy-research]").forEach(mount);
+    if (!catalogLoadStarted) {
+      var root = primaryResearchRoot();
+      if (root) {
+        catalogLoadStarted = true;
+        load(root);
+      }
+    } else {
+      render();
+    }
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
