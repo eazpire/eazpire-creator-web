@@ -7,6 +7,15 @@
 
   var WATCH_KEY = "eazy-research-watched";
   var FILTER_COLLAPSE_KEY = "eazy-research-filters-collapsed";
+  /* true = Abschnitt offen. Topics bleibt offen, der Rest startet zugeklappt. */
+  var FILTER_FOLDS_KEY = "eazy-research-filter-folds";
+  var FILTER_FOLD_DEFAULTS = {
+    topics: true,
+    audience: false,
+    custom_design: false,
+    design_type: false,
+    language: false,
+  };
   var HEART_SVG =
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
 
@@ -718,6 +727,7 @@
     var audHint = root.querySelector("[data-erz-audience-hint]");
     if (audHint) audHint.hidden = !(state.audiencesSelected && state.audiencesSelected.length === 0);
     renderCountry(root);
+    applyFilterFolds(root);
   }
 
   function renderGrid(root) {
@@ -1187,6 +1197,72 @@
     return t(key, fromDom || fallback);
   }
 
+  function loadFilterFolds() {
+    var out = {};
+    Object.keys(FILTER_FOLD_DEFAULTS).forEach(function (key) {
+      out[key] = FILTER_FOLD_DEFAULTS[key];
+    });
+    try {
+      var raw = global.localStorage && global.localStorage.getItem(FILTER_FOLDS_KEY);
+      if (!raw) return out;
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return out;
+      Object.keys(FILTER_FOLD_DEFAULTS).forEach(function (key) {
+        if (typeof parsed[key] === "boolean") out[key] = parsed[key];
+      });
+    } catch (_e) { /* guest storage may be blocked */ }
+    return out;
+  }
+
+  function saveFilterFolds(folds) {
+    try {
+      if (global.localStorage) global.localStorage.setItem(FILTER_FOLDS_KEY, JSON.stringify(folds));
+    } catch (_e) { /* guest storage may be blocked */ }
+  }
+
+  function foldSelectedCount(id) {
+    if (id === "topics") return selectedTopics().length;
+    if (id === "audience") return (state.audiencesSelected || []).length;
+    if (id === "custom_design") return (state.personalizationsSelected || []).length;
+    if (id === "design_type") return (state.designTypesSelected || []).length;
+    if (id === "language") return (state.languagesSelected || []).length;
+    return 0;
+  }
+
+  function applyFilterFolds(root) {
+    if (!root) return;
+    var folds = loadFilterFolds();
+    root.querySelectorAll("[data-erz-fold]").forEach(function (section) {
+      var id = section.getAttribute("data-erz-fold") || "";
+      if (!Object.prototype.hasOwnProperty.call(FILTER_FOLD_DEFAULTS, id)) return;
+      var open = !!folds[id];
+      section.classList.toggle("is-collapsed", !open);
+      var btn = section.querySelector("[data-erz-fold-toggle]");
+      var body = section.querySelector("[data-erz-fold-body]");
+      if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (body) body.hidden = !open;
+      var hint = section.querySelector("[data-erz-fold-hint]");
+      var count = foldSelectedCount(id);
+      if (hint) {
+        if (!open && count > 0) {
+          hint.hidden = false;
+          hint.textContent = t("creator.research.filter_selected", "{count} selected").replace("{count}", String(count));
+        } else {
+          hint.hidden = true;
+          hint.textContent = "";
+        }
+      }
+    });
+  }
+
+  function toggleFilterFold(root, id) {
+    if (!id || !Object.prototype.hasOwnProperty.call(FILTER_FOLD_DEFAULTS, id)) return;
+    var folds = loadFilterFolds();
+    folds[id] = !folds[id];
+    saveFilterFolds(folds);
+    applyFilterFolds(root);
+  }
+
   function applyFiltersCollapsed(root, collapsed) {
     var wrap = root.querySelector("[data-erz-filters-wrap]");
     var rail = root.querySelector("[data-erz-filter-toggle]");
@@ -1282,7 +1358,16 @@
       analyzeBtn.addEventListener("click", function () { startAnalyze(root); });
     }
     applyFiltersCollapsed(root, isFiltersCollapsedStored());
+    applyFilterFolds(root);
     applyFiltersSheet(root, false);
+    root.addEventListener("click", function (ev) {
+      var btn = ev.target && ev.target.closest && ev.target.closest("[data-erz-fold-toggle]");
+      if (!btn || !root.contains(btn)) return;
+      var section = btn.closest("[data-erz-fold]");
+      if (!section) return;
+      ev.preventDefault();
+      toggleFilterFold(root, section.getAttribute("data-erz-fold"));
+    });
     var rail = root.querySelector("[data-erz-filter-toggle]");
     if (rail) {
       rail.addEventListener("click", function () {

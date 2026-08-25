@@ -562,76 +562,118 @@
   <div class="eazy-research__layout">
     <aside class="eazy-research__filters-wrap" data-erz-filters-wrap>
       <div class="eazy-research__filters" data-erz-filters>
-        <div class="eazy-research__select eazy-research__country" data-erz-country-wrap>
-          <span class="visually-hidden" data-t="creator.research.country">Country</span>
-          <select data-erz-country class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
-            <option value="all" data-t="creator.research.country_all">All countries</option>
-          </select>
-          <button type="button" class="eazy-research__country-btn" data-erz-country-btn aria-haspopup="listbox" aria-expanded="false">
-            <span class="eazy-research__flag is-empty" data-erz-country-flag aria-hidden="true" hidden></span>
-            <span data-erz-country-label data-t="creator.research.country_all">All countries</span>
-          </button>
-          <div class="eazy-research__country-menu" data-erz-country-menu hidden role="listbox"></div>
-        </div>
-        <label class="eazy-research__select eazy-research__views">
-          <span class="visually-hidden" data-t="creator.research.views">Views</span>
-          <select data-erz-view-select>
-            <option value="opportunities" data-t="creator.research.tab_opportunities">Opportunities</option>
-            <option value="rising" data-t="creator.research.tab_rising">Rising</option>
-            <option value="review_growth" data-t="creator.research.tab_review_growth">Review growth</option>
-            <option value="watched" data-t="creator.research.tab_watched">Watched</option>
-          </select>
-        </label>
-        <div class="eazy-research__toolbar" data-erz-toolbar>
-          <label class="eazy-research__search">
-            <span class="visually-hidden" data-t="creator.research.search_placeholder">Search reprint-safe products</span>
-            <input type="search" name="q" autocomplete="off" data-erz-q data-t-placeholder="creator.research.search_placeholder" placeholder="Search reprint-safe products">
+        <div class="eazy-research__filters-pin">
+          <div class="eazy-research__select eazy-research__country" data-erz-country-wrap>
+            <span class="visually-hidden" data-t="creator.research.country">Country</span>
+            <select data-erz-country class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
+              <option value="all" data-t="creator.research.country_all">All countries</option>
+            </select>
+            <button type="button" class="eazy-research__country-btn" data-erz-country-btn aria-haspopup="listbox" aria-expanded="false">
+              <span class="eazy-research__flag is-empty" data-erz-country-flag aria-hidden="true" hidden></span>
+              <span data-erz-country-label data-t="creator.research.country_all">All countries</span>
+            </button>
+            <div class="eazy-research__country-menu" data-erz-country-menu hidden role="listbox"></div>
+          </div>
+          <label class="eazy-research__select eazy-research__views">
+            <span class="visually-hidden" data-t="creator.research.views">Views</span>
+            <select data-erz-view-select>
+              <option value="opportunities" data-t="creator.research.tab_opportunities">Opportunities</option>
+              <option value="rising" data-t="creator.research.tab_rising">Rising</option>
+              <option value="review_growth" data-t="creator.research.tab_review_growth">Review growth</option>
+              <option value="watched" data-t="creator.research.tab_watched">Watched</option>
+            </select>
           </label>
-          <button type="button" class="eazy-research__analyze" data-erz-analyze data-t="creator.research.analyze">Analyze</button>
+          <div class="eazy-research__toolbar" data-erz-toolbar>
+            <label class="eazy-research__search">
+              <span class="visually-hidden" data-t="creator.research.search_placeholder">Search reprint-safe products</span>
+              <input type="search" name="q" autocomplete="off" data-erz-q data-t-placeholder="creator.research.search_placeholder" placeholder="Search reprint-safe products">
+            </label>
+            <button type="button" class="eazy-research__analyze" data-erz-analyze data-t="creator.research.analyze">Analyze</button>
+          </div>
+          <label class="eazy-research__select eazy-research__sort">
+            <span class="visually-hidden" data-t="creator.research.sort_label">Sort</span>
+            <select data-erz-sort>
+              <option value="review_growth" data-t="creator.research.sort_review_growth">Review growth</option>
+              <option value="reviews" data-t="creator.research.sort_reviews">Reviews</option>
+              <option value="bsr" data-t="creator.research.sort_bsr">BSR</option>
+              <option value="newest" data-t="creator.research.sort_newest">Newest snapshot</option>
+            </select>
+          </label>
         </div>
-        <label class="eazy-research__select eazy-research__sort">
-          <span class="visually-hidden" data-t="creator.research.sort_label">Sort</span>
-          <select data-erz-sort>
-            <option value="review_growth" data-t="creator.research.sort_review_growth">Review growth</option>
-            <option value="reviews" data-t="creator.research.sort_reviews">Reviews</option>
-            <option value="bsr" data-t="creator.research.sort_bsr">BSR</option>
-            <option value="newest" data-t="creator.research.sort_newest">Newest snapshot</option>
-          </select>
-        </label>
-        <h3 class="eazy-research__filters-heading" data-t="creator.research.topics">Topics</h3>
-        <p class="eazy-research__filters-hint" data-erz-topics-hint data-t="creator.research.topics_all_hint">All topics</p>
-        <div class="eazy-research__checks" data-erz-chips role="group"></div>
-        <h3 class="eazy-research__filters-heading" data-t="creator.research.audience">Audience</h3>
-        <p class="eazy-research__filters-hint" data-erz-audience-hint data-t="creator.research.audience_all_hint">All audiences</p>
-        <div class="eazy-research__checks" data-erz-audience-group role="group" aria-label="Audience">
-          <label class="eazy-research__check"><input type="checkbox" data-erz-audience="men"><span data-t="creator.research.audience_men">Men</span><span class="eazy-research__count" data-erz-count="audience:men">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-audience="women"><span data-t="creator.research.audience_women">Women</span><span class="eazy-research__count" data-erz-count="audience:women">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-audience="kids"><span data-t="creator.research.audience_kids">Kids</span><span class="eazy-research__count" data-erz-count="audience:kids">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-audience="toddler"><span data-t="creator.research.audience_toddler">Toddler</span><span class="eazy-research__count" data-erz-count="audience:toddler">0</span></label>
-        </div>
-        <h3 class="eazy-research__filters-heading" data-t="creator.research.custom_design">Custom Design</h3>
-        <p class="eazy-research__filters-hint" data-erz-pers-hint data-t="creator.research.custom_design_all_hint">Neither or both = all listings</p>
-        <div class="eazy-research__checks" data-erz-pers-group role="group" aria-label="Custom Design">
-          <label class="eazy-research__check"><input type="checkbox" data-erz-pers="personalizable"><span data-t="creator.research.custom_design_yes">Yes</span><span class="eazy-research__count" data-erz-count="personalization:personalizable">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-pers="standard"><span data-t="creator.research.custom_design_no">No</span><span class="eazy-research__count" data-erz-count="personalization:standard">0</span></label>
-        </div>
-        <h3 class="eazy-research__filters-heading" data-t="creator.research.design_type">Design type</h3>
-        <p class="eazy-research__filters-hint" data-erz-type-hint data-t="creator.research.design_type_all_hint">All design types</p>
-        <div class="eazy-research__checks" data-erz-types role="group" aria-label="Design type">
-          <label class="eazy-research__check"><input type="checkbox" data-erz-type="design_only"><span data-t="creator.quick_inspirations.content_type_design_only">Design Only</span><span class="eazy-research__count" data-erz-count="design_type:design_only">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-type="text_only"><span data-t="creator.quick_inspirations.content_type_text_only">Text Only</span><span class="eazy-research__count" data-erz-count="design_type:text_only">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-type="design_text"><span data-t="creator.quick_inspirations.content_type_design_text">Design + Text</span><span class="eazy-research__count" data-erz-count="design_type:design_text">0</span></label>
-        </div>
-        <h3 class="eazy-research__filters-heading" data-t="creator.research.language">Language</h3>
-        <p class="eazy-research__filters-hint" data-erz-lang-hint data-t="creator.research.language_all_hint">All languages</p>
-        <div class="eazy-research__checks" data-erz-langs role="group" aria-label="Language">
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="none"><span class="eazy-research__check-text" data-t="creator.quick_inspirations.language_none">None</span><span class="eazy-research__count" data-erz-count="language:none">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="en"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/gb.png)" aria-hidden="true"></span><span data-t="creator.research.lang_en">English</span></span><span class="eazy-research__count" data-erz-count="language:en">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="de"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/de.png)" aria-hidden="true"></span><span data-t="creator.research.lang_de">German</span></span><span class="eazy-research__count" data-erz-count="language:de">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="es"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/es.png)" aria-hidden="true"></span><span data-t="creator.research.lang_es">Spanish</span></span><span class="eazy-research__count" data-erz-count="language:es">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="fr"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/fr.png)" aria-hidden="true"></span><span data-t="creator.research.lang_fr">French</span></span><span class="eazy-research__count" data-erz-count="language:fr">0</span></label>
-          <label class="eazy-research__check"><input type="checkbox" data-erz-lang="it"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/it.png)" aria-hidden="true"></span><span data-t="creator.research.lang_it">Italian</span></span><span class="eazy-research__count" data-erz-count="language:it">0</span></label>
-        </div>
+        <section class="eazy-research__fold" data-erz-fold="topics">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="true" aria-controls="erz-fold-body-topics">
+            <span class="eazy-research__filters-heading" data-t="creator.research.topics">Topics</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-topics" data-erz-fold-body>
+            <p class="eazy-research__filters-hint" data-erz-topics-hint data-t="creator.research.topics_all_hint">All topics</p>
+            <div class="eazy-research__checks" data-erz-chips role="group"></div>
+          </div>
+        </section>
+        <section class="eazy-research__fold is-collapsed" data-erz-fold="audience">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="false" aria-controls="erz-fold-body-audience">
+            <span class="eazy-research__filters-heading" data-t="creator.research.audience">Audience</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-audience" data-erz-fold-body hidden>
+            <p class="eazy-research__filters-hint" data-erz-audience-hint data-t="creator.research.audience_all_hint">All audiences</p>
+            <div class="eazy-research__checks" data-erz-audience-group role="group" aria-label="Audience">
+              <label class="eazy-research__check"><input type="checkbox" data-erz-audience="men"><span data-t="creator.research.audience_men">Men</span><span class="eazy-research__count" data-erz-count="audience:men">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-audience="women"><span data-t="creator.research.audience_women">Women</span><span class="eazy-research__count" data-erz-count="audience:women">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-audience="kids"><span data-t="creator.research.audience_kids">Kids</span><span class="eazy-research__count" data-erz-count="audience:kids">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-audience="toddler"><span data-t="creator.research.audience_toddler">Toddler</span><span class="eazy-research__count" data-erz-count="audience:toddler">0</span></label>
+            </div>
+          </div>
+        </section>
+        <section class="eazy-research__fold is-collapsed" data-erz-fold="custom_design">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="false" aria-controls="erz-fold-body-custom-design">
+            <span class="eazy-research__filters-heading" data-t="creator.research.custom_design">Custom Design</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-custom-design" data-erz-fold-body hidden>
+            <p class="eazy-research__filters-hint" data-erz-pers-hint data-t="creator.research.custom_design_all_hint">Neither or both = all listings</p>
+            <div class="eazy-research__checks" data-erz-pers-group role="group" aria-label="Custom Design">
+              <label class="eazy-research__check"><input type="checkbox" data-erz-pers="personalizable"><span data-t="creator.research.custom_design_yes">Yes</span><span class="eazy-research__count" data-erz-count="personalization:personalizable">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-pers="standard"><span data-t="creator.research.custom_design_no">No</span><span class="eazy-research__count" data-erz-count="personalization:standard">0</span></label>
+            </div>
+          </div>
+        </section>
+        <section class="eazy-research__fold is-collapsed" data-erz-fold="design_type">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="false" aria-controls="erz-fold-body-design-type">
+            <span class="eazy-research__filters-heading" data-t="creator.research.design_type">Design type</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-design-type" data-erz-fold-body hidden>
+            <p class="eazy-research__filters-hint" data-erz-type-hint data-t="creator.research.design_type_all_hint">All design types</p>
+            <div class="eazy-research__checks" data-erz-types role="group" aria-label="Design type">
+              <label class="eazy-research__check"><input type="checkbox" data-erz-type="design_only"><span data-t="creator.quick_inspirations.content_type_design_only">Design Only</span><span class="eazy-research__count" data-erz-count="design_type:design_only">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-type="text_only"><span data-t="creator.quick_inspirations.content_type_text_only">Text Only</span><span class="eazy-research__count" data-erz-count="design_type:text_only">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-type="design_text"><span data-t="creator.quick_inspirations.content_type_design_text">Design + Text</span><span class="eazy-research__count" data-erz-count="design_type:design_text">0</span></label>
+            </div>
+          </div>
+        </section>
+        <section class="eazy-research__fold is-collapsed" data-erz-fold="language">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="false" aria-controls="erz-fold-body-language">
+            <span class="eazy-research__filters-heading" data-t="creator.research.language">Language</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-language" data-erz-fold-body hidden>
+            <p class="eazy-research__filters-hint" data-erz-lang-hint data-t="creator.research.language_all_hint">All languages</p>
+            <div class="eazy-research__checks" data-erz-langs role="group" aria-label="Language">
+              <label class="eazy-research__check"><input type="checkbox" data-erz-lang="none"><span class="eazy-research__check-text" data-t="creator.quick_inspirations.language_none">None</span><span class="eazy-research__count" data-erz-count="language:none">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-lang="en"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/gb.png)" aria-hidden="true"></span><span data-t="creator.research.lang_en">English</span></span><span class="eazy-research__count" data-erz-count="language:en">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-lang="de"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/de.png)" aria-hidden="true"></span><span data-t="creator.research.lang_de">German</span></span><span class="eazy-research__count" data-erz-count="language:de">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-lang="es"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/es.png)" aria-hidden="true"></span><span data-t="creator.research.lang_es">Spanish</span></span><span class="eazy-research__count" data-erz-count="language:es">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-lang="fr"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/fr.png)" aria-hidden="true"></span><span data-t="creator.research.lang_fr">French</span></span><span class="eazy-research__count" data-erz-count="language:fr">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-lang="it"><span class="eazy-research__check-text"><span class="eazy-research__flag" style="background-image:url(https://flagcdn.com/w80/it.png)" aria-hidden="true"></span><span data-t="creator.research.lang_it">Italian</span></span><span class="eazy-research__count" data-erz-count="language:it">0</span></label>
+            </div>
+          </div>
+        </section>
       </div>
       <button
         type="button"
