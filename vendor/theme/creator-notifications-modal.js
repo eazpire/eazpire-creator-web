@@ -1092,7 +1092,7 @@
                 ? notification.data
                 : safeParse(notification.data);
             const ts = toTs(notification);
-            const isReadVal = notification.is_read === true || notification.is_read === 1 || notification.is_read === "1";
+            const isReadVal = notification.is_read === true || notification.is_read === 1 || notification.is_read === "1" || String(notification.is_read).toLowerCase() === "true";
             const nid = String(notification.notification_id || notification.id || "").trim();
             if (!nid) return;
             items.push({

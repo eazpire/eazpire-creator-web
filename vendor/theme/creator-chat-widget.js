@@ -3637,7 +3637,7 @@
     });
     var unseenNotifs = (opts.notifs || []).filter(function (n) {
       var id = notifIdOf(n);
-      return id && !n.is_read && !seen.notifs[id];
+      return id && !notifIsRead(n) && !seen.notifs[id];
     });
     if (unseenJobs.length) {
       markUserFeedSeen(ownerId, [], unseenJobs.map(jobIdOf));
@@ -4888,6 +4888,7 @@
     } else if (name === "notifications") {
       loadNotifications();
       renderNotificationsInView();
+      updateNotifFeedChrome();
       startNotifPolling();
     } else if (name === "jobs") {
       loadActiveJobs();
@@ -5068,19 +5069,24 @@
     return mergeSystemNotificationLists(_notifDataSystemCreator, _notifDataSystemShop);
   }
 
+  function notifIsRead(n) {
+    var v = n && n.is_read;
+    return v === true || v === 1 || v === "1" || String(v).toLowerCase() === "true";
+  }
+
   function unreadUserNotifs() {
-    return (_notifDataUser || []).filter(function (n) { return !n.is_read; }).length;
+    return (_notifDataUser || []).filter(function (n) { return !notifIsRead(n); }).length;
   }
 
   function unreadSystemNotifs() {
     return mergeSystemNotificationLists(_notifDataSystemCreator, _notifDataSystemShop).filter(function (n) {
-      return !n.is_read;
+      return !notifIsRead(n);
     }).length;
   }
 
   function totalUnreadNotifs() {
     function cnt(arr) {
-      return (arr || []).filter(function (n) { return !n.is_read; }).length;
+      return (arr || []).filter(function (n) { return !notifIsRead(n); }).length;
     }
     return cnt(_notifDataUser) + cnt(_notifDataSystemCreator) + cnt(_notifDataSystemShop);
   }
@@ -5098,7 +5104,7 @@
     var scopeUnread = _notifFeedScope === "user" ? u : s;
     var markRow = document.getElementById("creator-chat-notif-markall-row");
     if (markRow) {
-      markRow.hidden = scopeUnread <= 0;
+      markRow.hidden = _notifFilter !== "unread" || scopeUnread <= 0;
     }
   }
 
@@ -5109,21 +5115,24 @@
     }
 
     Promise.all([
-      fetch(API_BASE + "?op=get-notifications&owner_id=" + encodeURIComponent(ownerId), { credentials: "include" }).then(function (r) { return r.json(); }),
-      fetch(API_BASE + "?op=get-system-notifications&owner_id=" + encodeURIComponent(ownerId) + "&audience=creator", { credentials: "include" }).then(function (r) { return r.json(); }),
-      fetch(API_BASE + "?op=get-system-notifications&owner_id=" + encodeURIComponent(ownerId) + "&audience=shop", { credentials: "include" }).then(function (r) { return r.json(); })
+      fetch(API_BASE + "?op=get-notifications&owner_id=" + encodeURIComponent(ownerId), { credentials: "include" }).then(function (r) { return r.json(); }).catch(function () { return {}; }),
+      fetch(API_BASE + "?op=get-system-notifications&owner_id=" + encodeURIComponent(ownerId) + "&audience=creator", { credentials: "include" }).then(function (r) { return r.json(); }).catch(function () { return {}; }),
+      fetch(API_BASE + "?op=get-system-notifications&owner_id=" + encodeURIComponent(ownerId) + "&audience=shop", { credentials: "include" }).then(function (r) { return r.json(); }).catch(function () { return {}; })
     ])
       .then(function (results) {
-        var du = results[0];
-        var dsc = results[1];
-        var dsh = results[2];
-        _notifDataUser = du.ok && Array.isArray(du.notifications) ? du.notifications : [];
-        _notifDataSystemCreator = dsc.ok && Array.isArray(dsc.notifications) ? dsc.notifications : [];
-        _notifDataSystemShop = dsh.ok && Array.isArray(dsh.notifications) ? dsh.notifications : [];
+        var du = results[0] || {};
+        var dsc = results[1] || {};
+        var dsh = results[2] || {};
+        _notifDataUser = Array.isArray(du.notifications) ? du.notifications : [];
+        _notifDataSystemCreator = Array.isArray(dsc.notifications) ? dsc.notifications : [];
+        _notifDataSystemShop = Array.isArray(dsh.notifications) ? dsh.notifications : [];
         maybeShowCreatorCodeMascotBubble();
         updateNotifBadge();
         stripNotificationsFromChat();
-        if (_activeView === "notifications") renderNotificationsInView();
+        if (_activeView === "notifications") {
+          renderNotificationsInView();
+          updateNotifFeedChrome();
+        }
         if (!_panelOpen) {
           maybeAutoOpenUserFeed({ jobs: _jobsFeedScope === "user" ? _jobsData : [], notifs: _notifDataUser });
         }
@@ -5133,6 +5142,10 @@
         _notifDataSystemCreator = [];
         _notifDataSystemShop = [];
         updateNotifBadge();
+        if (_activeView === "notifications") {
+          renderNotificationsInView();
+          updateNotifFeedChrome();
+        }
       });
   }
 
@@ -5221,9 +5234,9 @@
 
     var seen = loadCreatorCodeBubbleSeenIds();
     var unread = [].concat(
-      _notifDataUser.filter(function (n) { return !n.is_read; }),
-      _notifDataSystemCreator.filter(function (n) { return !n.is_read; }),
-      _notifDataSystemShop.filter(function (n) { return !n.is_read; })
+      _notifDataUser.filter(function (n) { return !notifIsRead(n); }),
+      _notifDataSystemCreator.filter(function (n) { return !notifIsRead(n); }),
+      _notifDataSystemShop.filter(function (n) { return !notifIsRead(n); })
     );
 
     var candidate = null;
@@ -5257,7 +5270,7 @@
     if (!list) return;
     var filter = _notifFilter;
     var items = getActiveNotifListForView().filter(function (n) {
-      return filter === "unread" ? !n.is_read : n.is_read;
+      return filter === "unread" ? !notifIsRead(n) : notifIsRead(n);
     });
     _notifParsedMap = {};
     var emptyUnread = i18n("chat_notifications_none_unread", "No unread notifications");
@@ -5269,19 +5282,22 @@
     }
     list.innerHTML = "";
     items.forEach(function (n, idx) {
+      try {
       var parsed = {};
       try { parsed = typeof n.data === "string" ? JSON.parse(n.data) : (n.data || {}); } catch (e) {}
+      if (!parsed || typeof parsed !== "object") parsed = {};
       var nid = n.notification_id || n.id || ("notif-" + idx);
       _notifParsedMap[nid] = { raw: n, parsed: parsed, category: String(n.event_type || n.category || "").toLowerCase() };
       var display = getNotificationDisplayInfo(n, parsed);
+      var resultObj = parsed.result && typeof parsed.result === "object" ? parsed.result : {};
       var imgSrc =
         n.card_preview_url ||
         parsed.card_preview_url ||
         parsed.product_image_url ||
         parsed.image_url ||
         parsed.preview_url ||
-        parsed.result?.preview_url ||
-        parsed.result?.image_url ||
+        resultObj.preview_url ||
+        resultObj.image_url ||
         "";
       var cat = (n.category || "").toLowerCase();
       var hasSystemAction = cat === "system" && !!(parsed.design_id || parsed.job_id || parsed.preview_url || parsed.session_id);
@@ -5289,7 +5305,7 @@
       var hasPublishAssistAction = isPublishAssistNotificationCategory(cat);
       var hasAction = hasCreatorCodeAction || hasPublishAssistAction || hasSystemAction || (cat !== "system" && (cat === "generated" || cat === "saved" || cat === "uploaded" || cat === "merged" || cat === "hero_image" || cat === "published" || cat === "publish" || cat === "removed_products" || cat === "removed_designs" || cat === "card_collection"));
       var item = document.createElement("div");
-      item.className = "creator-chat__notif-item" + (!n.is_read ? " is-unread" : "") + (hasAction ? " has-action creator-chat__notif-item--shimmer" : "") + " creator-chat__feed-card";
+      item.className = "creator-chat__notif-item" + (!notifIsRead(n) ? " is-unread" : "") + (hasAction ? " has-action creator-chat__notif-item--shimmer" : "") + " creator-chat__feed-card";
       item.setAttribute("data-notif-id", String(nid));
       item.setAttribute("role", "listitem");
       var title = truncateNotifTitle(
@@ -5299,10 +5315,10 @@
       var productTitle = n.card_product_title || parsed.product_name || parsed.product_title || "";
       var html = "";
       if (imgSrc) {
-        html += '<div class="creator-chat__feed-card-thumb"><img src="' + escapeHtml(imgSrc) + '" alt="" loading="lazy" /></div>';
+        html += '<div class="creator-chat__feed-card-thumb"><img src="' + escapeHtml(String(imgSrc)) + '" alt="" loading="lazy" /></div>';
       }
       html += '<div class="creator-chat__feed-card-body">';
-      html += '<div class="creator-chat__feed-title-design">' + escapeHtml(title) + "</div>";
+      html += '<div class="creator-chat__feed-title-design">' + escapeHtml(String(title || "")) + "</div>";
       if (productTitle && String(productTitle).toLowerCase() !== String(title).toLowerCase()) {
         html += '<div class="creator-chat__feed-title-product">' + escapeHtml(String(productTitle)) + "</div>";
       }
@@ -5325,8 +5341,7 @@
           e.preventDefault();
           e.stopPropagation();
           console.log("[CreatorChat] Notification clicked:", { category: cat, nid: nid, hasModalEntry: !!_notifParsedMap[nid] });
-          var isUnread = !n.is_read;
-          if (isUnread) markNotificationRead(nid);
+          if (!notifIsRead(n)) markNotificationRead(nid);
           if (hasCreatorCodeAction) {
             openCreatorCodesFromNotification(parsed);
             return;
@@ -5339,6 +5354,9 @@
         });
       }
       list.appendChild(item);
+      } catch (cardErr) {
+        console.warn("[CreatorChat] skipped notification card", cardErr);
+      }
     });
     bindFeedCardStatClicks(list);
   }
@@ -5841,13 +5859,13 @@
         "?op=list-system-jobs&active_only=1&owner_id=" + encodeURIComponent(ownerId) +
         "&limit=50&audience=";
       Promise.all([
-        fetch(API_BASE + sysQ + "creator", { credentials: "include" }).then(function (r) { return r.json(); }),
-        fetch(API_BASE + sysQ + "shop", { credentials: "include" }).then(function (r) { return r.json(); })
+        fetch(API_BASE + sysQ + "creator", { credentials: "include" }).then(function (r) { return r.json(); }).catch(function () { return {}; }),
+        fetch(API_BASE + sysQ + "shop", { credentials: "include" }).then(function (r) { return r.json(); }).catch(function () { return {}; })
       ])
         .then(function (results) {
           var rows = [];
           results.forEach(function (data) {
-            if (data.ok && Array.isArray(data.items)) rows = rows.concat(data.items);
+            if (data && Array.isArray(data.items)) rows = rows.concat(data.items);
           });
           var seen = {};
           rows = rows.filter(function (row) {
