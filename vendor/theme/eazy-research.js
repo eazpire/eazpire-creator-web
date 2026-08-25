@@ -85,7 +85,7 @@
     hasMore: false,
     loadingMore: false,
     loadGen: 0,
-    pageSize: 80,
+    pageSize: 32,
   };
 
   function captureScrollTop(el) {
@@ -490,9 +490,45 @@
     };
   }
 
-  function productCard(p) {
-    var img = p.image_url
-      ? '<img src="' + esc(p.image_url) + '" alt="" loading="lazy">'
+  function amazonThumbUrl(url, edge) {
+    var raw = String(url || "").trim();
+    if (!raw) return "";
+    var size = edge || 320;
+    try {
+      var parsed = new URL(raw);
+      var host = String(parsed.hostname || "").toLowerCase();
+      if (
+        host.indexOf("media-amazon.com") === -1 &&
+        host.indexOf("ssl-images-amazon.com") === -1 &&
+        host.indexOf("images-amazon.com") === -1
+      ) {
+        return raw;
+      }
+      var sized = "._AC_UL" + size + "_";
+      if (/\._[^./]+(?=\.[a-zA-Z]+$)/.test(parsed.pathname)) {
+        parsed.pathname = parsed.pathname.replace(/\._[^./]+(?=\.[a-zA-Z]+$)/, sized);
+      } else if (/\.(jpe?g|png|webp|gif)$/i.test(parsed.pathname)) {
+        parsed.pathname = parsed.pathname.replace(/(\.[a-zA-Z]+)$/, sized + "$1");
+      }
+      return parsed.toString();
+    } catch (_e) {
+      return raw;
+    }
+  }
+
+  function cardImageSrc(p) {
+    if (!p) return "";
+    if (p.image_thumb_url) return p.image_thumb_url;
+    return amazonThumbUrl(p.image_url, 320) || p.image_url || "";
+  }
+
+  function productCard(p, index) {
+    var src = cardImageSrc(p);
+    var eager = (Number(index) || 0) < 6;
+    var img = src
+      ? '<img src="' + esc(src) + '" alt=""' +
+        (eager ? ' fetchpriority="high" decoding="async"' : ' loading="lazy" decoding="async"') +
+        ">"
       : '<div class="eazy-research-card__ph">' + esc(t("creator.research.unknown", "Unknown")) + "</div>";
     var reviewsCount = p.latest && p.latest.reviews_count != null ? Number(p.latest.reviews_count) : null;
     var reviewsHtml = reviewsCount != null && isFinite(reviewsCount)
@@ -761,7 +797,7 @@
     var sig = rows.map(function (p) { return watchId(p) + (isWatched(p) ? "#1" : "#0"); }).join("|");
     if (grid.getAttribute("data-erz-sig") === sig) return;
     withResearchScroll(root, function () {
-      grid.innerHTML = rows.map(productCard).join("");
+      grid.innerHTML = rows.map(function (p, i) { return productCard(p, i); }).join("");
       grid.setAttribute("data-erz-sig", sig);
     });
   }
@@ -1163,9 +1199,9 @@
       state.products = append ? state.products.concat(page) : page;
     }
     state.hasMore = Boolean(data.has_more);
-    state.niches = data.niches || [];
-    state.facets = data.facets || state.facets;
-    state.marketplaces = data.marketplaces || state.marketplaces;
+    if (data.niches) state.niches = data.niches;
+    if (data.facets) state.facets = data.facets;
+    if (data.marketplaces) state.marketplaces = data.marketplaces;
     applyAnalyzeLimits(data.analyze_limits);
     state.lastRun = data.last_run || null;
     render(root);
