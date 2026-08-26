@@ -134,7 +134,25 @@
     } else refStrength = null;
 
     var prompt = (s.prompt && String(s.prompt).trim()) || null;
-    if (!prompt && !imageUrl) prompt = ''; // allow empty prompt if image present; backend may still require one
+    var designDescriptions = [];
+    var rawDesigns = Array.isArray(s.designDescriptions)
+      ? s.designDescriptions
+      : (Array.isArray(s.design_descriptions) ? s.design_descriptions : []);
+    rawDesigns.forEach(function (d, i) {
+      if (!d) return;
+      if (typeof d === 'string') {
+        var st = d.trim();
+        if (st) designDescriptions.push({ label: String.fromCharCode(65 + i), text: st });
+        return;
+      }
+      var text = String(d.text || d.prompt || d.design_prompt || '').trim();
+      if (!text) return;
+      designDescriptions.push({
+        label: (d.label && String(d.label).trim()) || String.fromCharCode(65 + i),
+        text: text
+      });
+    });
+    if (!prompt && !imageUrl && !designDescriptions.length) prompt = ''; // allow empty prompt if image or T2I design present
 
     var generatorMode = (s.generatorMode && String(s.generatorMode).trim()) || 'design';
     generatorMode = generatorMode.toLowerCase().replace(/-/g, '_');
@@ -163,6 +181,7 @@
       language: language,
       reference_strength: refStrength,
       reference_images: withLabels,
+      design_descriptions: designDescriptions,
       owner_id: (s.owner_id && String(s.owner_id).trim()) || null,
       generator_mode: generatorMode
     };

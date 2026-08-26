@@ -518,11 +518,15 @@
       return parts.join('\n');
     }
 
-    function fillPromptFromAnalysis(analysis) {
-      var textarea = document.getElementById('genPrompt');
-      var text = buildT2iPrompt(analysis);
-      if (!textarea || !text) return;
-      if (!String(textarea.value || '').trim()) textarea.value = text;
+    function collectT2iDesignDescriptions(images) {
+      var out = [];
+      (images || []).forEach(function (item, index) {
+        if (!item || !(item.researchMode === 't2i' || item.skipAttach)) return;
+        var text = buildT2iPrompt(item.analysis);
+        if (!text) return;
+        out.push({ label: String.fromCharCode(65 + index), text: text });
+      });
+      return out;
     }
 
     function readResearchHandoff() {
@@ -546,7 +550,6 @@
       var payload = readResearchHandoff();
       if (!payload) return;
       pendingResearchHandoff = payload;
-      fillPromptFromAnalysis(payload.analysis);
       var url = payload.image_url && String(payload.image_url).trim();
       if (!url) {
         clearResearchHandoff();
@@ -594,7 +597,6 @@
             canvasStrokes: null
           }, result);
           selectedImages.push(row);
-          if (row.researchMode === 't2i') fillPromptFromAnalysis(payload.analysis);
           renderSelectedGrid();
           clearResearchHandoff();
         },
@@ -1048,7 +1050,6 @@
           if (mItem && mItem.researchHandoff) {
             mItem.researchMode = modeBtn.getAttribute('data-research-mode') === 't2i' ? 't2i' : 'i2i';
             mItem.skipAttach = mItem.researchMode === 't2i';
-            if (mItem.researchMode === 't2i') fillPromptFromAnalysis(mItem.analysis);
             renderSelectedGrid();
           }
           return;
@@ -1079,17 +1080,39 @@
                       reader.onload = function () {
                         withSimilarityForImageUrl(reader.result, function (picked) {
                           if (!picked) return;
-                          selectedImages[idx] = attachInfluenceFromPicked({ file: result.blob, dataUrl: picked.dataUrl, canvasStrokes: result.strokes || null }, picked);
+                          selectedImages[idx] = attachInfluenceFromPicked({
+                            file: result.blob,
+                            dataUrl: picked.dataUrl,
+                            canvasStrokes: result.strokes || null,
+                            analysis: item.analysis,
+                            researchHandoff: item.researchHandoff,
+                            researchMode: item.researchMode,
+                            skipAttach: item.skipAttach,
+                            originalDataUrl: item.originalDataUrl,
+                            croppedDataUrl: item.croppedDataUrl,
+                            researchView: item.researchView
+                          }, picked);
                           renderSelectedGrid();
                         });
                       };
                       reader.readAsDataURL(result.blob);
                     } else {
-                      withSimilarityForImageUrl(result.image_url, function (picked) {
-                        if (!picked) return;
-                        selectedImages[idx] = attachInfluenceFromPicked({ file: null, dataUrl: picked.dataUrl, canvasStrokes: result.strokes || null }, picked);
-                        renderSelectedGrid();
-                      });
+                        withSimilarityForImageUrl(result.image_url, function (picked) {
+                          if (!picked) return;
+                          selectedImages[idx] = attachInfluenceFromPicked({
+                            file: null,
+                            dataUrl: picked.dataUrl,
+                            canvasStrokes: result.strokes || null,
+                            analysis: item.analysis,
+                            researchHandoff: item.researchHandoff,
+                            researchMode: item.researchMode,
+                            skipAttach: item.skipAttach,
+                            originalDataUrl: item.originalDataUrl,
+                            croppedDataUrl: item.croppedDataUrl,
+                            researchView: item.researchView
+                          }, picked);
+                          renderSelectedGrid();
+                        });
                     }
                   }
                 }
@@ -1733,22 +1756,7 @@
 
       var prompt = (textarea && textarea.value) ? textarea.value.trim() : '';
       var selectedImages = window.__creatorGenSelectedImages || [];
-      if (!prompt) {
-        var t2iItem = selectedImages.find(function (it) {
-          return it && (it.researchMode === 't2i' || it.skipAttach) && it.analysis;
-        });
-        if (t2iItem && t2iItem.analysis) {
-          var a = t2iItem.analysis;
-          var parts = [];
-          if (a.prompt) parts.push(String(a.prompt).trim());
-          if (a.topic) parts.push('Topic: ' + String(a.topic).trim());
-          var tags = Array.isArray(a.tags) ? a.tags.filter(Boolean) : [];
-          if (tags.length) parts.push('Tags: ' + tags.join(', '));
-          if (a.design_type) parts.push('Design type: ' + String(a.design_type).replace(/_/g, ' '));
-          prompt = parts.join('\n');
-          if (textarea && prompt) textarea.value = prompt;
-        }
-      }
+      var designDescriptions = collectT2iDesignDescriptions(selectedImages);
 
       Promise.all(
         selectedImages.map(function (item, index) {
@@ -1784,14 +1792,14 @@
       )
         .then(function (refImagesRaw) {
           var refImages = refImagesRaw.filter(Boolean);
-          continueGenerateWithRefs(prompt, refImages, payloadLib, shopCtx, isShop);
+          continueGenerateWithRefs(prompt, refImages, payloadLib, shopCtx, isShop, designDescriptions);
         })
         .catch(function () {
           window.alert(tCreator('chat.genericErrorRetryLater', 'Something went wrong. Please try again.'));
         });
     }
 
-    function continueGenerateWithRefs(prompt, refImages, payloadLib, shopCtx, isShop) {
+    function continueGenerateWithRefs(prompt, refImages, payloadLib, shopCtx, isShop, designDescriptions) {
       var opts = window.__creatorGenOptionsState || {};
       var bg = (opts.background && typeof opts.background === 'object' && opts.background.mode)
         ? opts.background
@@ -1839,10 +1847,11 @@
           }
         })(),
         referenceImages: refImages,
+        designDescriptions: Array.isArray(designDescriptions) ? designDescriptions : [],
         owner_id: (typeof window.__EAZ_OWNER_ID !== 'undefined' && window.__EAZ_OWNER_ID != null) ? String(window.__EAZ_OWNER_ID) : null
       };
 
-      if (!uiState.prompt && refImages.length === 0) {
+      if (!uiState.prompt && refImages.length === 0 && !(uiState.designDescriptions && uiState.designDescriptions.length)) {
         window.alert(tCreator('pleasePromptOrImage', 'Please enter a prompt or add a reference image.'));
         return;
       }
