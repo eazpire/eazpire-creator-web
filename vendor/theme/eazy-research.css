@@ -231,15 +231,11 @@
   min-height: 0;
   height: auto;
   max-height: none;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   overflow-anchor: none;
-  touch-action: pan-y;
-  padding: 8px 8px 14px;
+  padding: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   background:
     radial-gradient(120% 80% at 0% 0%, rgba(147, 112, 219, 0.08), transparent 55%),
@@ -248,7 +244,21 @@
   transition: width 0.28s ease, max-width 0.28s ease, flex-basis 0.28s ease, opacity 0.2s ease, padding 0.28s ease;
 }
 
-.eazy-research__filters::-webkit-scrollbar {
+.eazy-research__filters-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overflow-anchor: none;
+  touch-action: pan-y;
+  padding: 8px 8px 10px;
+}
+
+.eazy-research__filters-scroll::-webkit-scrollbar {
   width: 0;
   height: 0;
   display: none;
@@ -534,6 +544,128 @@
 
 .eazy-research__sort {
   margin: 0 0 2px;
+  position: relative;
+}
+
+.eazy-research__sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 10, 26, 0.92);
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.eazy-research__sort-icon,
+.eazy-research__sort-arrow {
+  flex: none;
+  opacity: 0.8;
+}
+
+.eazy-research__sort-btn span[data-erz-sort-label] {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eazy-research__sort.is-desc .eazy-research__sort-arrow {
+  transform: rotate(180deg);
+}
+
+.eazy-research__sort-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 12;
+  max-height: 240px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 10, 26, 0.96);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.eazy-research__sort-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.eazy-research__sort-opt:hover,
+.eazy-research__sort-opt.is-on {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.eazy-research__sort-opt-arrow {
+  flex: none;
+  opacity: 0.75;
+}
+
+.eazy-research__sort-opt.is-desc .eazy-research__sort-opt-arrow {
+  transform: rotate(180deg);
+}
+
+.eazy-research__filters-foot {
+  flex: none;
+  z-index: 4;
+  margin: 0;
+  padding: 8px 8px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(12, 14, 32, 0.96), rgba(16, 18, 42, 0.98));
+}
+
+.eazy-research__analyze-selects {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  margin: 0 0 6px;
+}
+
+.eazy-research__filters-foot .eazy-research__country {
+  margin: 0;
+}
+
+.eazy-research__analyze-used {
+  margin: 0 0 6px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  opacity: 0.72;
+  line-height: 1.3;
+}
+
+.eazy-research__analyze-used[hidden] {
+  display: none;
+}
+
+.eazy-research__filters-foot .eazy-research__toolbar {
+  padding: 0;
 }
 
 .eazy-research button.eazy-research__analyze,
@@ -1267,20 +1399,28 @@
     min-height: 0;
     height: auto;
     border-right: 0;
-    padding: 14px 12px 18px;
-    overflow-x: hidden;
-    overflow-y: auto;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .eazy-research__filters-scroll {
+    padding: 14px 12px 10px;
+  }
+
+  .eazy-research__filters-foot {
+    padding: 8px 12px 14px;
   }
 
   .eazy-research__filters-wrap.is-collapsed .eazy-research__filters {
     width: 100%;
     max-width: none;
     flex-basis: auto;
-    padding: 14px 12px 18px;
+    padding: 0;
     opacity: 1;
     pointer-events: auto;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   .eazy-research__filters-backdrop {

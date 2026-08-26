@@ -44,6 +44,21 @@
     "amazon.co.jp": "creator.research.country_amazon_co_jp",
     "amazon.com.au": "creator.research.country_amazon_com_au",
   };
+  var ANALYZE_LANGS = [
+    { id: "en", key: "creator.research.lang_en", fallback: "English", flag: "GB" },
+    { id: "de", key: "creator.research.lang_de", fallback: "German", flag: "DE" },
+    { id: "es", key: "creator.research.lang_es", fallback: "Spanish", flag: "ES" },
+    { id: "fr", key: "creator.research.lang_fr", fallback: "French", flag: "FR" },
+    { id: "it", key: "creator.research.lang_it", fallback: "Italian", flag: "IT" },
+  ];
+  var SORT_OPTIONS = [
+    { id: "review_growth", defDir: "desc" },
+    { id: "reviews", defDir: "desc" },
+    { id: "bsr", defDir: "asc" },
+    { id: "newest", defDir: "desc" },
+  ];
+  var SORT_ARROW_SVG =
+    '<svg class="eazy-research__sort-opt-arrow" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 3v8M4 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var COUNTRY_FALLBACK = {
     "amazon.de": "DE · Amazon.de",
     "amazon.co.uk": "UK · Amazon.co.uk",
@@ -72,8 +87,13 @@
     personalizationsSelected: [],
     audiencesSelected: [],
     sort: "review_growth",
+    sortDir: "desc",
     reprintOk: true,
     view: "opportunities",
+    analyzeMarketplace: "all",
+    analyzeLanguage: "all",
+    analyzeResolvedMarketplace: "",
+    analyzeResolvedLanguage: "",
     loading: false,
     analyzing: false,
     searchId: "",
@@ -112,7 +132,7 @@
       return root.__erzScroll;
     }
     root.__erzScroll = {
-      filters: root.querySelector("[data-erz-filters]"),
+      filters: root.querySelector("[data-erz-filters-scroll]") || root.querySelector("[data-erz-filters]"),
       grid: root.querySelector("[data-erz-grid-scroll]"),
       stage: root.querySelector("[data-erz-stage]"),
     };
@@ -770,6 +790,175 @@
     syncCountryButton(root);
   }
 
+  function marketplaceHosts() {
+    var hosts = (state.marketplaces || []).map(function (m) { return m.host; });
+    if (!hosts.length) {
+      hosts = ["amazon.de", "amazon.co.uk", "amazon.fr", "amazon.it", "amazon.es", "amazon.com", "amazon.ca"];
+    }
+    return hosts;
+  }
+
+  function countryOptionLabel(host) {
+    if (!host || host === "all") return t("creator.research.analyze_all", "All");
+    return t(COUNTRY_I18N[host] || "", COUNTRY_FALLBACK[host] || host);
+  }
+
+  function defaultSortDir(id) {
+    var opt = SORT_OPTIONS.find(function (o) { return o.id === id; });
+    return (opt && opt.defDir) || "desc";
+  }
+
+  function sortDisplayLabel(id, dir) {
+    var d = dir === "asc" ? "asc" : "desc";
+    if (id === "newest") return d === "asc"
+      ? t("creator.research.sort_oldest_first", "Oldest first")
+      : t("creator.research.sort_newest_first", "Newest first");
+    if (id === "reviews") return d === "asc"
+      ? t("creator.research.sort_reviews_low", "Fewest reviews")
+      : t("creator.research.sort_reviews_high", "Most reviews");
+    if (id === "bsr") return d === "asc"
+      ? t("creator.research.sort_bsr_best", "Best BSR")
+      : t("creator.research.sort_bsr_worst", "Highest BSR");
+    return d === "asc"
+      ? t("creator.research.sort_growth_low", "Lowest growth")
+      : t("creator.research.sort_growth_high", "Highest growth");
+  }
+
+  function sortFieldLabel(id) {
+    if (id === "newest") return t("creator.research.sort_newest", "Newest snapshot");
+    if (id === "reviews") return t("creator.research.sort_reviews", "Reviews");
+    if (id === "bsr") return t("creator.research.sort_bsr", "BSR");
+    return t("creator.research.sort_review_growth", "Review growth");
+  }
+
+  function setFlagOn(el, code) {
+    if (!el) return;
+    var cc = flagCountryCode(code);
+    if (cc) {
+      el.style.backgroundImage = "url(" + flagUrl(cc) + ")";
+      el.classList.remove("is-empty");
+      el.hidden = false;
+    } else {
+      el.style.backgroundImage = "";
+      el.classList.add("is-empty");
+      el.hidden = true;
+    }
+  }
+
+  function setMenuOpen(root, prefix, open) {
+    var wrap = root.querySelector("[data-erz-" + prefix + "-wrap]");
+    var btn = root.querySelector("[data-erz-" + prefix + "-btn]");
+    var menu = root.querySelector("[data-erz-" + prefix + "-menu]");
+    if (!wrap || !btn || !menu) return;
+    wrap.classList.toggle("is-open", !!open);
+    menu.hidden = !open;
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function closeAllFilterMenus(root, except) {
+    ["country", "platform", "analyze-lang", "sort"].forEach(function (prefix) {
+      if (prefix !== except) setMenuOpen(root, prefix, false);
+    });
+  }
+
+  function renderFlagSelect(root, prefix, selected, options) {
+    var select = root.querySelector("[data-erz-" + prefix + "]");
+    var menu = root.querySelector("[data-erz-" + prefix + "-menu]");
+    var labelEl = root.querySelector("[data-erz-" + prefix + "-label]");
+    var flagEl = root.querySelector("[data-erz-" + prefix + "-flag]");
+    var current = selected || "all";
+    var html = options.map(function (o) {
+      return '<option value="' + esc(o.id) + '"' + (current === o.id ? " selected" : "") + ">" +
+        esc(o.label) + "</option>";
+    }).join("");
+    if (select && select.innerHTML !== html) select.innerHTML = html;
+    if (select && select.value !== current) select.value = current;
+    if (menu) {
+      var menuHtml = options.map(function (o) {
+        var on = current === o.id;
+        var flag = o.flag
+          ? flagCircleHtml(o.flag)
+          : '<span class="eazy-research__flag is-empty" aria-hidden="true"></span>';
+        return '<button type="button" class="eazy-research__country-opt' + (on ? " is-on" : "") +
+          '" data-erz-' + prefix + '-opt="' + esc(o.id) + '" role="option" aria-selected="' + (on ? "true" : "false") + '">' +
+          flag + "<span>" + esc(o.label) + "</span></button>";
+      }).join("");
+      if (menu.innerHTML !== menuHtml) menu.innerHTML = menuHtml;
+    }
+    var picked = options.find(function (o) { return o.id === current; }) || options[0];
+    if (labelEl && picked) labelEl.textContent = picked.label;
+    setFlagOn(flagEl, picked && picked.flag);
+  }
+
+  function renderPlatform(root) {
+    var options = [{ id: "all", label: t("creator.research.analyze_all", "All"), flag: "" }].concat(
+      marketplaceHosts().map(function (host) {
+        return { id: host, label: countryOptionLabel(host), flag: flagForMarketplace(host) };
+      })
+    );
+    renderFlagSelect(root, "platform", state.analyzeMarketplace, options);
+  }
+
+  function renderAnalyzeLang(root) {
+    var options = [{ id: "all", label: t("creator.research.analyze_all", "All"), flag: "" }].concat(
+      ANALYZE_LANGS.map(function (row) {
+        return { id: row.id, label: t(row.key, row.fallback), flag: row.flag };
+      })
+    );
+    renderFlagSelect(root, "analyze-lang", state.analyzeLanguage, options);
+  }
+
+  function renderAnalyzeUsed(root) {
+    var el = root.querySelector("[data-erz-analyze-used]");
+    if (!el) return;
+    var host = state.analyzeResolvedMarketplace || "";
+    var lang = state.analyzeResolvedLanguage || "";
+    if (!host && !lang) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    var platform = host && host !== "all" ? countryOptionLabel(host) : t("creator.research.analyze_all", "All");
+    var langRow = ANALYZE_LANGS.find(function (row) { return row.id === lang; });
+    var language = langRow ? t(langRow.key, langRow.fallback) : t("creator.research.analyze_all", "All");
+    el.hidden = false;
+    el.textContent = t("creator.research.analyze_used", "{platform} · {language}")
+      .replace("{platform}", platform)
+      .replace("{language}", language);
+  }
+
+  function renderSort(root) {
+    var wrap = root.querySelector("[data-erz-sort-wrap]");
+    var labelEl = root.querySelector("[data-erz-sort-label]");
+    var menu = root.querySelector("[data-erz-sort-menu]");
+    var dir = state.sortDir === "asc" ? "asc" : "desc";
+    if (wrap) wrap.classList.toggle("is-desc", dir === "desc");
+    if (labelEl) labelEl.textContent = sortDisplayLabel(state.sort, dir);
+    if (!menu) return;
+    var html = SORT_OPTIONS.map(function (opt) {
+      var on = state.sort === opt.id;
+      var optDir = on ? dir : opt.defDir;
+      return '<button type="button" class="eazy-research__sort-opt' + (on ? " is-on" : "") +
+        (optDir === "desc" ? " is-desc" : "") +
+        '" data-erz-sort-opt="' + esc(opt.id) + '" role="option" aria-selected="' + (on ? "true" : "false") + '">' +
+        "<span>" + esc(sortFieldLabel(opt.id)) + "</span>" + SORT_ARROW_SVG + "</button>";
+    }).join("");
+    if (menu.innerHTML !== html) menu.innerHTML = html;
+  }
+
+  function applySortChange(root, nextId) {
+    if (state.sort === nextId) {
+      state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+    } else {
+      state.sort = nextId;
+      state.sortDir = defaultSortDir(nextId);
+    }
+    closeAllFilterMenus(root, "");
+    renderSort(root);
+    if (state.searchId || state.view === "watched") renderGrid(root);
+    else load(root);
+  }
+
   function renderFacets(root) {
     syncChecks(root, "[data-erz-type]", "data-erz-type", state.designTypesSelected || []);
     syncChecks(root, "[data-erz-lang]", "data-erz-lang", state.languagesSelected || []);
@@ -785,6 +974,10 @@
     var audHint = root.querySelector("[data-erz-audience-hint]");
     if (audHint) audHint.hidden = !(state.audiencesSelected && state.audiencesSelected.length === 0);
     renderCountry(root);
+    renderPlatform(root);
+    renderAnalyzeLang(root);
+    renderSort(root);
+    renderAnalyzeUsed(root);
     applyFilterFolds(root);
   }
 
@@ -888,14 +1081,6 @@
     renderFacets(root);
     renderGridOne(root);
     renderStatus(root);
-    var viewSelect = root.querySelector("[data-erz-view-select]");
-    if (viewSelect && viewSelect.value !== state.view) viewSelect.value = state.view;
-    root.querySelectorAll("[data-erz-view]").forEach(function (btn) {
-      var on = btn.getAttribute("data-erz-view") === state.view;
-      btn.classList.toggle("is-active", on);
-      btn.setAttribute("aria-checked", on ? "true" : "false");
-      btn.setAttribute("aria-selected", on ? "true" : "false");
-    });
     syncAnalyzeButton(root);
   }
 
@@ -1139,7 +1324,8 @@
     state.view = "opportunities";
     render(root);
     var body = { q: q };
-    if (state.marketplace && state.marketplace !== "all") body.marketplace = state.marketplace;
+    if (state.analyzeMarketplace && state.analyzeMarketplace !== "all") body.marketplace = state.analyzeMarketplace;
+    if (state.analyzeLanguage && state.analyzeLanguage !== "all") body.language = state.analyzeLanguage;
     var data = await api("eazy-research-analyze-search", { q: q }, {
       method: "POST",
       body: body,
@@ -1162,6 +1348,8 @@
       return;
     }
     state.searchId = data.search_id || "";
+    state.analyzeResolvedMarketplace = data.marketplace || "";
+    state.analyzeResolvedLanguage = data.language || "";
     applyAnalyzeLimits(data.daily);
     pollSearch(root);
   }
@@ -1172,6 +1360,7 @@
       limit: state.pageSize || 80,
       offset: Math.max(0, Number(offset) || 0),
       sort: state.sort,
+      dir: state.sortDir || defaultSortDir(state.sort),
       view: state.view === "watched" ? "opportunities" : (state.view || "opportunities"),
     };
     var q = String(state.q || "").trim();
@@ -1405,20 +1594,14 @@
         }
       });
     }
-    var sort = root.querySelector("[data-erz-sort]");
-    if (sort) {
-      sort.addEventListener("change", function () {
-        state.sort = sort.value || "review_growth";
-        if (state.searchId || state.view === "watched") renderGrid(root);
-        else load(root);
-      });
-    }
-    var viewSelect = root.querySelector("[data-erz-view-select]");
-    if (viewSelect) {
-      viewSelect.addEventListener("change", function () {
-        state.view = viewSelect.value || "opportunities";
-        if (state.searchId || state.view === "watched") render(root);
-        else load(root);
+    var sortBtn = root.querySelector("[data-erz-sort-btn]");
+    if (sortBtn) {
+      sortBtn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        var wrap = root.querySelector("[data-erz-sort-wrap]");
+        var open = !(wrap && wrap.classList.contains("is-open"));
+        closeAllFilterMenus(root, open ? "sort" : "");
+        setMenuOpen(root, "sort", open);
       });
     }
     var analyzeBtn = root.querySelector("[data-erz-analyze]");
@@ -1500,26 +1683,73 @@
     });
     root.addEventListener("click", function (ev) {
       var countryBtn = ev.target.closest("[data-erz-country-btn]");
-      if (countryBtn && root.contains(countryBtn)) {
+      if (countryBtn && root.contains(countryBtn) && !ev.target.closest("[data-erz-platform-wrap]") && !ev.target.closest("[data-erz-analyze-lang-wrap]")) {
         ev.preventDefault();
         var wrap = root.querySelector("[data-erz-country-wrap]");
-        setCountryMenuOpen(root, !(wrap && wrap.classList.contains("is-open")));
+        var openCountry = !(wrap && wrap.classList.contains("is-open"));
+        closeAllFilterMenus(root, openCountry ? "country" : "");
+        setCountryMenuOpen(root, openCountry);
         return;
       }
       var countryOpt = ev.target.closest("[data-erz-country-opt]");
-      if (countryOpt && root.contains(countryOpt)) {
+      if (countryOpt && root.contains(countryOpt) && !countryOpt.hasAttribute("data-erz-platform-opt") && !countryOpt.hasAttribute("data-erz-analyze-lang-opt")) {
         ev.preventDefault();
         var host = countryOpt.getAttribute("data-erz-country-opt") || "all";
         var select = root.querySelector("[data-erz-country]");
         state.marketplace = host;
         if (select) select.value = host;
-        setCountryMenuOpen(root, false);
+        closeAllFilterMenus(root, "");
         if (!state.searchId) load(root);
         else render(root);
         return;
       }
-      if (!ev.target.closest("[data-erz-country-wrap]")) {
-        setCountryMenuOpen(root, false);
+      var platformBtn = ev.target.closest("[data-erz-platform-btn]");
+      if (platformBtn && root.contains(platformBtn)) {
+        ev.preventDefault();
+        var pWrap = root.querySelector("[data-erz-platform-wrap]");
+        var openPlat = !(pWrap && pWrap.classList.contains("is-open"));
+        closeAllFilterMenus(root, openPlat ? "platform" : "");
+        setMenuOpen(root, "platform", openPlat);
+        return;
+      }
+      var platformOpt = ev.target.closest("[data-erz-platform-opt]");
+      if (platformOpt && root.contains(platformOpt)) {
+        ev.preventDefault();
+        state.analyzeMarketplace = platformOpt.getAttribute("data-erz-platform-opt") || "all";
+        closeAllFilterMenus(root, "");
+        renderPlatform(root);
+        return;
+      }
+      var langBtn = ev.target.closest("[data-erz-analyze-lang-btn]");
+      if (langBtn && root.contains(langBtn)) {
+        ev.preventDefault();
+        var lWrap = root.querySelector("[data-erz-analyze-lang-wrap]");
+        var openLang = !(lWrap && lWrap.classList.contains("is-open"));
+        closeAllFilterMenus(root, openLang ? "analyze-lang" : "");
+        setMenuOpen(root, "analyze-lang", openLang);
+        return;
+      }
+      var langOpt = ev.target.closest("[data-erz-analyze-lang-opt]");
+      if (langOpt && root.contains(langOpt)) {
+        ev.preventDefault();
+        state.analyzeLanguage = langOpt.getAttribute("data-erz-analyze-lang-opt") || "all";
+        closeAllFilterMenus(root, "");
+        renderAnalyzeLang(root);
+        return;
+      }
+      var sortOpt = ev.target.closest("[data-erz-sort-opt]");
+      if (sortOpt && root.contains(sortOpt)) {
+        ev.preventDefault();
+        applySortChange(root, sortOpt.getAttribute("data-erz-sort-opt") || "review_growth");
+        return;
+      }
+      if (
+        !ev.target.closest("[data-erz-country-wrap]") &&
+        !ev.target.closest("[data-erz-platform-wrap]") &&
+        !ev.target.closest("[data-erz-analyze-lang-wrap]") &&
+        !ev.target.closest("[data-erz-sort-wrap]")
+      ) {
+        closeAllFilterMenus(root, "");
       }
       var watch = ev.target.closest("[data-erz-watch]");
       if (watch) {
@@ -1560,7 +1790,7 @@
     });
     document.addEventListener("keydown", function (ev) {
       if (ev.key === "Escape") {
-        setCountryMenuOpen(root, false);
+        closeAllFilterMenus(root, "");
         applyFiltersSheet(root, false);
         closeDetail(root);
       }

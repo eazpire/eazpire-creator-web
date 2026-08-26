@@ -3,6 +3,7 @@
   <div class="eazy-research__layout">
     <aside class="eazy-research__filters-wrap" data-erz-filters-wrap>
       <div class="eazy-research__filters" data-erz-filters>
+        <div class="eazy-research__filters-scroll" data-erz-filters-scroll>
         <div class="eazy-research__filters-pin">
           <div class="eazy-research__select eazy-research__country" data-erz-country-wrap>
             <span class="visually-hidden" data-t="creator.research.country">Country</span>
@@ -15,31 +16,20 @@
             </button>
             <div class="eazy-research__country-menu" data-erz-country-menu hidden role="listbox"></div>
           </div>
-          <label class="eazy-research__select eazy-research__views">
-            <span class="visually-hidden" data-t="creator.research.views">Views</span>
-            <select data-erz-view-select>
-              <option value="opportunities" data-t="creator.research.tab_opportunities">Opportunities</option>
-              <option value="rising" data-t="creator.research.tab_rising">Rising</option>
-              <option value="review_growth" data-t="creator.research.tab_review_growth">Review growth</option>
-              <option value="watched" data-t="creator.research.tab_watched">Watched</option>
-            </select>
-          </label>
-          <div class="eazy-research__toolbar" data-erz-toolbar>
-            <label class="eazy-research__search">
-              <span class="visually-hidden" data-t="creator.research.search_placeholder">Search reprint-safe products</span>
-              <input type="search" name="q" autocomplete="off" data-erz-q data-t-placeholder="creator.research.search_placeholder" placeholder="Search reprint-safe products">
-            </label>
-            <button type="button" class="eazy-research__analyze" data-erz-analyze data-t="creator.research.analyze">Analyze</button>
-          </div>
-          <label class="eazy-research__select eazy-research__sort">
+          <div class="eazy-research__select eazy-research__sort" data-erz-sort-wrap>
             <span class="visually-hidden" data-t="creator.research.sort_label">Sort</span>
-            <select data-erz-sort>
-              <option value="review_growth" data-t="creator.research.sort_review_growth">Review growth</option>
-              <option value="reviews" data-t="creator.research.sort_reviews">Reviews</option>
-              <option value="bsr" data-t="creator.research.sort_bsr">BSR</option>
-              <option value="newest" data-t="creator.research.sort_newest">Newest snapshot</option>
-            </select>
-          </label>
+            <button type="button" class="eazy-research__sort-btn" data-erz-sort-btn aria-haspopup="listbox" aria-expanded="false">
+              <svg class="eazy-research__sort-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 7h10M4 12h7M4 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M16 8l3-3 3 3M19 5v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-erz-sort-label data-t="creator.research.sort_growth_high">Highest growth</span>
+              <svg class="eazy-research__sort-arrow" data-erz-sort-arrow width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 3v8M4 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="eazy-research__sort-menu" data-erz-sort-menu hidden role="listbox"></div>
+          </div>
         </div>
         <section class="eazy-research__fold" data-erz-fold="topics">
           <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="true" aria-controls="erz-fold-body-topics">
@@ -115,6 +105,41 @@
             </div>
           </div>
         </section>
+        </div>
+        <footer class="eazy-research__filters-foot" data-erz-analyze-foot>
+          <div class="eazy-research__analyze-selects">
+            <div class="eazy-research__select eazy-research__country eazy-research__platform" data-erz-platform-wrap>
+              <span class="visually-hidden" data-t="creator.research.platform">Platform</span>
+              <select data-erz-platform class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
+                <option value="all" data-t="creator.research.analyze_all">All</option>
+              </select>
+              <button type="button" class="eazy-research__country-btn" data-erz-platform-btn aria-haspopup="listbox" aria-expanded="false">
+                <span class="eazy-research__flag is-empty" data-erz-platform-flag aria-hidden="true" hidden></span>
+                <span data-erz-platform-label data-t="creator.research.analyze_all">All</span>
+              </button>
+              <div class="eazy-research__country-menu" data-erz-platform-menu hidden role="listbox"></div>
+            </div>
+            <div class="eazy-research__select eazy-research__country eazy-research__analyze-lang" data-erz-analyze-lang-wrap>
+              <span class="visually-hidden" data-t="creator.research.language">Language</span>
+              <select data-erz-analyze-lang class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
+                <option value="all" data-t="creator.research.analyze_all">All</option>
+              </select>
+              <button type="button" class="eazy-research__country-btn" data-erz-analyze-lang-btn aria-haspopup="listbox" aria-expanded="false">
+                <span class="eazy-research__flag is-empty" data-erz-analyze-lang-flag aria-hidden="true" hidden></span>
+                <span data-erz-analyze-lang-label data-t="creator.research.analyze_all">All</span>
+              </button>
+              <div class="eazy-research__country-menu" data-erz-analyze-lang-menu hidden role="listbox"></div>
+            </div>
+          </div>
+          <p class="eazy-research__analyze-used" data-erz-analyze-used hidden></p>
+          <div class="eazy-research__toolbar" data-erz-toolbar>
+            <label class="eazy-research__search">
+              <span class="visually-hidden" data-t="creator.research.search_placeholder">Search reprint-safe products</span>
+              <input type="search" name="q" autocomplete="off" data-erz-q data-t-placeholder="creator.research.search_placeholder" placeholder="Search reprint-safe products">
+            </label>
+            <button type="button" class="eazy-research__analyze" data-erz-analyze data-t="creator.research.analyze">Analyze</button>
+          </div>
+        </footer>
       </div>
       <button
         type="button"
