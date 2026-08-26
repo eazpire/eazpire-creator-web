@@ -10,7 +10,7 @@
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for Research desktop dual-grid paint (same as feature-loader PORTAL_ASSET_V).
   // Must stay in lockstep with index.html `shell-loader.js?v=` so browsers drop the 7-day vendor cache.
-  var RUNTIME_V = "dashboard-v5-20260826b";
+  var RUNTIME_V = "dashboard-v5-20260826c";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 

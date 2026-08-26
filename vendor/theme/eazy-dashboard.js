@@ -140,6 +140,32 @@
     );
   }
 
+  function cloneJson(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function escHtml(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
+    });
+  }
+
+  function qaIconSvg(id) {
+    var paths = {
+      generator:
+        '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+      designs:
+        '<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="M20 16l-5-5-8 8"/>',
+      products: '<path d="M4 8h16l-1.2 12H5.2L4 8z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/>',
+      content: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8 9h8M8 13h6"/>',
+      automations: '<path d="M13 2 8 13h5l-2 9 9-13h-5l3-7z"/>',
+      research: '<circle cx="11" cy="11" r="6"/><path d="m20 20-3.5-3.5"/>',
+    };
+    return (
+      '<svg viewBox="0 0 24 24" aria-hidden="true">' + (paths[id] || paths.designs) + "</svg>"
+    );
+  }
+
   function quickActionHtml(item) {
     var href = "#";
     var extra = ' data-goto="' + (item.goto || "") + '"';
@@ -151,8 +177,10 @@
       href +
       '"' +
       extra +
-      "><strong>" +
-      t(item.titleKey, item.id) +
+      '><span class="eazy-dashboard__qa-icon">' +
+      qaIconSvg(item.id) +
+      "</span><strong>" +
+      escHtml(t(item.titleKey, item.id)) +
       "</strong></a>"
     );
   }
@@ -237,8 +265,7 @@
       '<button type="button" class="eazy-dashboard__menu-btn" aria-label="' +
       t("creator.dashboard.widget_menu", "Widget menu") +
       '">···</button></div>' +
-      '<div class="eazy-dashboard__body"></div>' +
-      '<span class="eazy-dashboard__resize" data-ed-resize></span>';
+      '<div class="eazy-dashboard__body"></div>';
     el.querySelector(".eazy-dashboard__title").textContent = title;
     if (spec && spec.trackingRequired) el.querySelector(".eazy-dashboard__meta").textContent = t("creator.dashboard.tracking_required", "Tracking required");
     el.querySelector(".eazy-dashboard__body").innerHTML = bodyFor(root, spec || item, payload);
@@ -292,6 +319,29 @@
     });
   }
 
+  function persistSurfaces(root) {
+    var layout = activeLayout(root._edPayload || {});
+    if (!layout || !layout.id) return Promise.resolve();
+    return mutate("update", {
+      id: layout.id,
+      version: layout.version,
+      desktop: layout.desktop,
+      tablet: layout.tablet,
+      mobile: layout.mobile,
+      widgetSettings: layout.widgetSettings,
+    }).then(function (res) {
+      if (res && res.ok && res.layout) {
+        var list = root._edPayload.layouts || [];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].id === res.layout.id) list[i] = res.layout;
+        }
+        paint(root, root._edPayload);
+        return;
+      }
+      if (res && res.error === "version_conflict") reload();
+    });
+  }
+
   function writeWidgets(root, widgets) {
     var payload = root._edPayload;
     var layout = activeLayout(payload);
@@ -299,7 +349,7 @@
     layout[surface] = layout[surface] || { columns: surface === "mobile" ? 4 : surface === "tablet" ? 8 : 12, widgets: [] };
     layout[surface].widgets = widgets;
     paint(root, payload);
-    saveDraft(root);
+    persistSurfaces(root);
   }
 
   function saveDraft(root) {
@@ -309,59 +359,78 @@
     } catch (_e) {}
   }
 
+  function closeWidgetMenu() {
+    var existing = document.getElementById("eazyDashboardWidgetMenu");
+    if (existing) existing.remove();
+  }
+
   function bindWidgetChrome(root) {
     /* Open-all-quests uses .creator-journey-trigger so creator-journey-modal.js opens the existing modal. */
     root.querySelectorAll(".eazy-dashboard__menu-btn").forEach(function (btn) {
       btn.addEventListener("click", function (ev) {
+        ev.preventDefault();
         ev.stopPropagation();
         var widget = btn.closest("[data-ed-id]");
-        openWidgetMenu(root, widget && widget.getAttribute("data-ed-id"));
+        openWidgetMenu(root, widget && widget.getAttribute("data-ed-id"), btn);
       });
     });
     bindDrag(root);
   }
 
-  function openWidgetMenu(root, id) {
-    if (!id) return;
-    var hide = global.confirm ? null : null;
-    var choice = global.prompt(
-      t("creator.dashboard.widget_menu_prompt", "Type hide, reset, or first"),
-      "hide"
-    );
-    if (!choice) return;
-    var widgets = currentWidgets(root);
-    var item = widgets.filter(function (w) {
-      return w.id === id;
-    })[0];
-    if (!item) return;
-    if (choice === "hide") item.visible = false;
-    if (choice === "first") {
-      item.x = 0;
-      item.y = 0;
-    }
-    if (choice === "reset") {
-      var spec = widgetById(root._edPayload.registry, id);
-      var surface = root._edSurface;
-      if (spec && spec.defaultSize && spec.defaultSize[surface]) {
-        item.w = spec.defaultSize[surface].w;
-        item.h = spec.defaultSize[surface].h;
+  function openWidgetMenu(root, id, anchor) {
+    closeWidgetMenu();
+    if (!id || !anchor) return;
+    var menu = document.createElement("div");
+    menu.id = "eazyDashboardWidgetMenu";
+    menu.className = "eazy-dashboard-widget-menu";
+    menu.setAttribute("role", "menu");
+    menu.innerHTML =
+      '<button type="button" role="menuitem" data-ed-menu-customize>' +
+      escHtml(t("creator.dashboard.widget_customize", "Customize")) +
+      '</button><button type="button" role="menuitem" data-ed-menu-hide>' +
+      escHtml(t("creator.dashboard.hide_widget", "Hide")) +
+      "</button>";
+    document.body.appendChild(menu);
+    var rect = anchor.getBoundingClientRect();
+    menu.style.top = rect.bottom + 6 + "px";
+    menu.style.left = Math.max(8, rect.right - 180) + "px";
+    menu.addEventListener("click", function (ev) {
+      if (ev.target.closest("[data-ed-menu-customize]")) {
+        closeWidgetMenu();
+        openManager(root);
+        return;
       }
-    }
-    writeWidgets(root, widgets);
-    void hide;
+      if (ev.target.closest("[data-ed-menu-hide]")) {
+        closeWidgetMenu();
+        var widgets = currentWidgets(root);
+        widgets.forEach(function (w) {
+          if (w.id === id) w.visible = false;
+        });
+        writeWidgets(root, widgets);
+      }
+    });
+    setTimeout(function () {
+      function dismiss(ev) {
+        if (menu.contains(ev.target) || (anchor && anchor.contains(ev.target))) return;
+        closeWidgetMenu();
+        document.removeEventListener("pointerdown", dismiss, true);
+      }
+      document.addEventListener("pointerdown", dismiss, true);
+    }, 0);
   }
 
   function bindDrag(root) {
     var canvas = root.querySelector("[data-ed-canvas]");
+    if (!canvas || canvas._edDragBound) return;
+    canvas._edDragBound = true;
     var dragging = null;
     canvas.addEventListener("pointerdown", function (ev) {
-      if (!root.classList.contains("is-editing")) return;
       var handle = ev.target.closest(".eazy-dashboard__handle");
-      var resize = ev.target.closest("[data-ed-resize]");
-      if (!handle && !resize) return;
+      if (!handle) return;
       var widget = ev.target.closest("[data-ed-id]");
       if (!widget) return;
       ev.preventDefault();
+      closeWidgetMenu();
       var origin = currentWidgets(root).filter(function (w) {
         return w.id === widget.getAttribute("data-ed-id");
       })[0];
@@ -371,13 +440,13 @@
       dragging = {
         el: widget,
         id: origin.id,
-        resize: !!resize,
         startX: ev.clientX,
         startY: ev.clientY,
         colW: (rect.width - GAP * (cols - 1)) / cols,
         origin: Object.assign({}, origin),
         dx: 0,
         dy: 0,
+        cols: cols,
       };
       widget.classList.add("is-dragging");
       try {
@@ -388,32 +457,24 @@
       if (!dragging) return;
       dragging.dx = Math.round((ev.clientX - dragging.startX) / (dragging.colW + GAP));
       dragging.dy = Math.round((ev.clientY - dragging.startY) / (CELL + GAP));
-      var next = Object.assign({}, dragging.origin);
-      if (dragging.resize) {
-        next.w = Math.max(2, dragging.origin.w + dragging.dx);
-        next.h = Math.max(2, dragging.origin.h + dragging.dy);
-      } else {
-        next.x = Math.max(0, dragging.origin.x + dragging.dx);
-        next.y = Math.max(0, dragging.origin.y + dragging.dy);
-      }
-      dragging.el.style.gridColumn = next.x + 1 + " / span " + next.w;
-      dragging.el.style.gridRow = next.y + 1 + " / span " + next.h;
+      var nextX = Math.max(0, Math.min(dragging.cols - dragging.origin.w, dragging.origin.x + dragging.dx));
+      var nextY = Math.max(0, dragging.origin.y + dragging.dy);
+      dragging.el.style.gridColumn = nextX + 1 + " / span " + dragging.origin.w;
+      dragging.el.style.gridRow = nextY + 1 + " / span " + dragging.origin.h;
     });
     canvas.addEventListener("pointerup", function () {
       if (!dragging) return;
+      var moved = dragging.dx || dragging.dy;
       var widgets = currentWidgets(root);
       widgets.forEach(function (w) {
         if (w.id !== dragging.id) return;
-        if (dragging.resize) {
-          w.w = Math.max(2, dragging.origin.w + dragging.dx);
-          w.h = Math.max(2, dragging.origin.h + dragging.dy);
-        } else {
-          w.x = Math.max(0, dragging.origin.x + dragging.dx);
-          w.y = Math.max(0, dragging.origin.y + dragging.dy);
-        }
+        w.x = Math.max(0, Math.min(dragging.cols - dragging.origin.w, dragging.origin.x + dragging.dx));
+        w.y = Math.max(0, dragging.origin.y + dragging.dy);
       });
+      dragging.el.classList.remove("is-dragging");
       dragging = null;
-      writeWidgets(root, widgets);
+      if (moved) writeWidgets(root, widgets);
+      else paint(root, root._edPayload);
     });
   }
 
@@ -424,164 +485,251 @@
     return apiPost("mutate-dashboard-layout", body);
   }
 
+  function qaIdsFromLayout(lay) {
+    var ids = lay && lay.widgetSettings && lay.widgetSettings["quick-actions"] && lay.widgetSettings["quick-actions"].visibleIds;
+    return Array.isArray(ids) && ids.length ? ids.slice() : ["generator", "designs", "content", "automations", "products"];
+  }
+
+  function applyTemplateSurfaces(draft, tpl) {
+    if (!draft || !tpl) return;
+    if (tpl.desktop) draft.desktop = cloneJson(tpl.desktop);
+    if (tpl.tablet) draft.tablet = cloneJson(tpl.tablet);
+    if (tpl.mobile) draft.mobile = cloneJson(tpl.mobile);
+    draft.templateId = tpl.id;
+  }
+
   function openManager(root) {
     var payload = root._edPayload;
+    if (!payload) return;
     var overlay = document.getElementById("eazyDashboardLayoutModal");
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.id = "eazyDashboardLayoutModal";
       overlay.className = "eazy-dashboard-modal";
-      overlay.innerHTML =
-        '<div class="eazy-dashboard-modal__panel" role="dialog" aria-label="' +
-        t("creator.dashboard.layout_manager", "Dashboard layouts") +
-        '"><aside class="eazy-dashboard-modal__side" data-ed-side></aside><div class="eazy-dashboard-modal__main"><div class="eazy-dashboard-modal__main-body" data-ed-main></div><div class="eazy-dashboard-modal__foot"><button type="button" class="eazy-dashboard__toolbar-btn" data-ed-cancel>' +
-        t("creator.common.cancel", "Cancel") +
-        '</button><button type="button" class="eazy-dashboard__toolbar-btn is-on" data-ed-save>' +
-        t("creator.common.save", "Save") +
-        "</button></div></div></div>";
       document.body.appendChild(overlay);
     }
+    overlay.innerHTML =
+      '<div class="eazy-dashboard-modal__panel" role="dialog" aria-modal="true" aria-label="' +
+      escHtml(t("creator.dashboard.layout_manager", "Dashboard layouts")) +
+      '"><header class="eazy-dashboard-modal__head"><h2 class="eazy-dashboard-modal__title">' +
+      escHtml(t("creator.dashboard.customize", "Customize dashboard")) +
+      '</h2><div class="eazy-dashboard-modal__modes"><button type="button" class="eazy-dashboard-modal__mode is-on" data-ed-mode="layout">' +
+      escHtml(t("creator.dashboard.layout_tab", "Dashboard Layout")) +
+      '</button><button type="button" class="eazy-dashboard-modal__mode" data-ed-mode="settings">' +
+      escHtml(t("creator.dashboard.widget_settings_tab", "Widget Settings")) +
+      '</button></div><button type="button" class="eazy-dashboard-modal__close" data-ed-close aria-label="' +
+      escHtml(t("creator.common.close", "Close")) +
+      '">×</button></header><div class="eazy-dashboard-modal__templates" data-ed-templates></div><div class="eazy-dashboard-modal__split"><aside class="eazy-dashboard-modal__side"><div class="eazy-dashboard-modal__side-scroll" data-ed-side></div><div class="eazy-dashboard-modal__side-foot"><button type="button" class="eazy-dashboard__toolbar-btn" data-ed-new>+ ' +
+      escHtml(t("creator.dashboard.new_layout", "New layout")) +
+      '</button></div></aside><div class="eazy-dashboard-modal__main"><div class="eazy-dashboard-modal__main-body" data-ed-main></div><div class="eazy-dashboard-modal__foot"><button type="button" class="eazy-dashboard__toolbar-btn" data-ed-cancel>' +
+      escHtml(t("creator.common.cancel", "Cancel")) +
+      '</button><button type="button" class="eazy-dashboard__toolbar-btn is-on" data-ed-save>' +
+      escHtml(t("creator.common.save", "Save")) +
+      "</button></div></div></div></div>";
     overlay.classList.add("is-open");
-    var selectedId = payload.activeLayoutId;
-    function renderSide() {
-      var side = overlay.querySelector("[data-ed-side]");
-      var html = "<h3>" + t("creator.dashboard.templates", "Templates") + "</h3>";
-      (payload.registry.templates || []).forEach(function (tpl) {
-        html += '<button type="button" class="eazy-dashboard-modal__item" data-ed-tpl="' + tpl.id + '">' + tpl.title + "</button>";
+
+    var source = activeLayout(payload) || (payload.layouts || [])[0] || { title: "My dashboard", desktop: { columns: 12, widgets: [] }, tablet: { columns: 8, widgets: [] }, mobile: { columns: 4, widgets: [] }, widgetSettings: {} };
+    var draft = cloneJson(source);
+    var selectedId = source.id || "__draft__";
+    var isNew = !source.id;
+    var selectedTemplateId = draft.templateId || "";
+    var mode = "layout";
+    var qaIds = qaIdsFromLayout(draft);
+
+    function paintManager() {
+      overlay.querySelectorAll("[data-ed-mode]").forEach(function (btn) {
+        btn.classList.toggle("is-on", btn.getAttribute("data-ed-mode") === mode);
       });
-      html += "<h3>" + t("creator.dashboard.my_layouts", "My layouts") + "</h3>";
+      var tplRow = overlay.querySelector("[data-ed-templates]");
+      var tplHtml = "";
+      (payload.registry.templates || []).forEach(function (tpl) {
+        tplHtml +=
+          '<button type="button" class="eazy-dashboard-modal__tpl' +
+          (tpl.id === selectedTemplateId ? " is-on" : "") +
+          '" data-ed-tpl="' +
+          escHtml(tpl.id) +
+          '">' +
+          escHtml(tpl.title) +
+          "</button>";
+      });
+      tplRow.innerHTML = tplHtml;
+
+      var side = overlay.querySelector("[data-ed-side]");
+      var sideHtml = '<p class="eazy-dashboard-modal__kicker">' + escHtml(t("creator.dashboard.my_layouts", "My layouts")) + "</p>";
       (payload.layouts || []).forEach(function (l) {
-        html +=
+        sideHtml +=
           '<button type="button" class="eazy-dashboard-modal__item' +
           (l.id === selectedId ? " is-on" : "") +
           '" data-ed-lay="' +
-          l.id +
+          escHtml(l.id) +
           '">' +
-          (l.title || l.id) +
-          (l.id === payload.activeLayoutId ? " · " + t("creator.dashboard.active", "Active") : "") +
+          escHtml(l.title || l.id) +
+          (l.id === payload.activeLayoutId ? " · " + escHtml(t("creator.dashboard.active", "Active")) : "") +
           "</button>";
       });
-      html +=
-        '<button type="button" class="eazy-dashboard__toolbar-btn" data-ed-new>+ ' +
-        t("creator.dashboard.new_layout", "New layout") +
-        "</button>";
-      side.innerHTML = html;
-    }
-    function renderMain() {
-      var lay = (payload.layouts || []).filter(function (l) {
-        return l.id === selectedId;
-      })[0];
+      if (isNew) {
+        sideHtml +=
+          '<button type="button" class="eazy-dashboard-modal__item is-on" data-ed-lay="__draft__">' +
+          escHtml(draft.title || t("creator.dashboard.new_layout", "New layout")) +
+          "</button>";
+      }
+      side.innerHTML = sideHtml;
+
       var main = overlay.querySelector("[data-ed-main]");
-      if (!lay) {
-        main.textContent = "";
+      if (mode === "settings") {
+        var qaHtml = '<h3>' + escHtml(t("creator.dashboard.quick_action_items", "Quick Actions items")) + "</h3>";
+        qaHtml += '<div class="eazy-dashboard__qa">';
+        (payload.registry.quickActionItems || []).forEach(function (item) {
+          qaHtml +=
+            '<button type="button" class="eazy-dashboard__qa-item' +
+            (qaIds.indexOf(item.id) >= 0 ? " is-on" : "") +
+            '" data-ed-qa="' +
+            escHtml(item.id) +
+            '"><span class="eazy-dashboard__qa-icon">' +
+            qaIconSvg(item.id) +
+            "</span><strong>" +
+            escHtml(t(item.titleKey, item.id)) +
+            "</strong></button>";
+        });
+        main.innerHTML = qaHtml + "</div>";
         return;
       }
-      var catalog = (payload.registry.widgets || [])
-        .map(function (w) {
-          var used = ((lay[root._edSurface] && lay[root._edSurface].widgets) || []).some(function (x) {
-            return x.id === w.id && x.visible !== false;
-          });
-          if (used) return "";
-          return '<button type="button" data-ed-add="' + w.id + '">' + t(w.titleKey, w.id) + "</button>";
-        })
-        .join("");
-      var qa = (lay.widgetSettings && lay.widgetSettings["quick-actions"] && lay.widgetSettings["quick-actions"].visibleIds) || [];
-      var qaHtml = (payload.registry.quickActionItems || [])
-        .map(function (item) {
-          return (
-            '<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" data-ed-qa="' +
-            item.id +
-            '"' +
-            (qa.indexOf(item.id) >= 0 ? " checked" : "") +
-            "> " +
-            t(item.titleKey, item.id) +
-            "</label>"
-          );
-        })
-        .join("");
-      main.innerHTML =
-        "<p><strong>" +
-        (lay.title || "") +
-        "</strong></p><p>" +
-        (lay.description || "") +
-        "</p><p>" +
-        t("creator.dashboard.hidden_widgets", "Hidden widgets") +
-        '</p><div class="eazy-dashboard-catalog">' +
-        catalog +
-        "</div><p>" +
-        t("creator.dashboard.quick_action_items", "Quick Actions items") +
-        "</p>" +
-        qaHtml;
+
+      var surface = root._edSurface || detectSurface(root);
+      var cols = (draft[surface] && draft[surface].columns) || (surface === "mobile" ? 4 : surface === "tablet" ? 8 : 12);
+      var widgets = (draft[surface] && draft[surface].widgets) || [];
+      var preview = '<p><strong>' + escHtml(draft.title || "") + "</strong></p>";
+      if (draft.description) preview += "<p>" + escHtml(draft.description) + "</p>";
+      preview += '<div class="eazy-dashboard-modal__preview" style="--ed-cols:' + cols + '">';
+      widgets.forEach(function (item) {
+        if (item.visible === false) return;
+        var spec = widgetById(payload.registry, item.id);
+        preview +=
+          '<div class="eazy-dashboard-modal__tile" style="grid-column:' +
+          (item.x + 1) +
+          " / span " +
+          item.w +
+          ";grid-row:" +
+          (item.y + 1) +
+          " / span " +
+          item.h +
+          '"><span class="eazy-dashboard-modal__tile-label">' +
+          escHtml(t((spec && spec.titleKey) || "", item.id)) +
+          "</span></div>";
+      });
+      main.innerHTML = preview + "</div>";
     }
-    renderSide();
-    renderMain();
+
+    paintManager();
     overlay.onclick = function (ev) {
-      if (ev.target === overlay || ev.target.getAttribute("data-ed-cancel") != null) overlay.classList.remove("is-open");
-      var tpl = ev.target.getAttribute("data-ed-tpl");
-      if (tpl && global.confirm(t("creator.dashboard.apply_template_confirm", "Replace this layout with the template?"))) {
+      if (ev.target === overlay || ev.target.closest("[data-ed-cancel], [data-ed-close]")) {
+        overlay.classList.remove("is-open");
+        return;
+      }
+      var modeBtn = ev.target.closest("[data-ed-mode]");
+      if (modeBtn) {
+        mode = modeBtn.getAttribute("data-ed-mode") || "layout";
+        paintManager();
+        return;
+      }
+      var tplBtn = ev.target.closest("[data-ed-tpl]");
+      if (tplBtn) {
+        var tplId = tplBtn.getAttribute("data-ed-tpl");
         var tplDoc = (payload.registry.templates || []).filter(function (x) {
-          return x.id === tpl;
+          return x.id === tplId;
         })[0];
         if (tplDoc) {
-          mutate("update", {
-            id: selectedId,
-            version: activeLayout(payload).version,
-            desktop: tplDoc.desktop,
-            tablet: tplDoc.tablet,
-            mobile: tplDoc.mobile,
-          }).then(reload);
+          applyTemplateSurfaces(draft, tplDoc);
+          selectedTemplateId = tplDoc.id;
+          paintManager();
         }
+        return;
       }
-      var layId = ev.target.getAttribute("data-ed-lay");
-      if (layId) {
-        selectedId = layId;
-        mutate("set-active", { id: layId }).then(reload);
+      var layBtn = ev.target.closest("[data-ed-lay]");
+      if (layBtn) {
+        var layId = layBtn.getAttribute("data-ed-lay");
+        if (layId === "__draft__") {
+          paintManager();
+          return;
+        }
+        var found = (payload.layouts || []).filter(function (l) {
+          return l.id === layId;
+        })[0];
+        if (found) {
+          draft = cloneJson(found);
+          selectedId = found.id;
+          isNew = false;
+          selectedTemplateId = draft.templateId || "";
+          qaIds = qaIdsFromLayout(draft);
+          paintManager();
+        }
+        return;
       }
-      if (ev.target.getAttribute("data-ed-new") != null) {
+      if (ev.target.closest("[data-ed-new]")) {
         var title = global.prompt(t("creator.dashboard.layout_title", "Layout title"), "My dashboard");
-        if (title) mutate("create", { title: title, templateId: "mission-control" }).then(reload);
-      }
-      var addId = ev.target.getAttribute("data-ed-add");
-      if (addId) {
-        var widgets = currentWidgets(root);
-        widgets.push({ id: addId, visible: true, x: 0, y: 99, w: 3, h: 2 });
-        writeWidgets(root, widgets);
-        renderMain();
-      }
-      if (ev.target.getAttribute("data-ed-save") != null) {
-        var lay = activeLayout(payload);
-        var asNew = global.confirm(t("creator.dashboard.save_choice", "OK = overwrite this layout. Cancel = save as a new version."));
-        var body = {
-          id: lay.id,
-          version: lay.version,
-          desktop: lay.desktop,
-          tablet: lay.tablet,
-          mobile: lay.mobile,
-          widgetSettings: lay.widgetSettings,
+        if (!title) return;
+        var seed = (payload.registry.templates || []).filter(function (x) {
+          return x.id === (selectedTemplateId || "mission-control");
+        })[0] || (payload.registry.templates || [])[0];
+        draft = {
+          id: "__draft__",
+          title: title,
+          description: (seed && seed.description) || "",
+          version: 1,
+          templateId: (seed && seed.id) || "mission-control",
+          widgetSettings: { "quick-actions": { visibleIds: qaIds.slice() } },
         };
-        (asNew ? mutate("update", body) : mutate("save-as-new", Object.assign({ title: lay.title + " copy" }, body))).then(function () {
-          overlay.classList.remove("is-open");
-          reload();
-        });
+        applyTemplateSurfaces(draft, seed);
+        selectedId = "__draft__";
+        isNew = true;
+        selectedTemplateId = draft.templateId || "";
+        paintManager();
+        return;
       }
-      var qaEl = ev.target.closest("[data-ed-qa]");
-      if (qaEl) {
-        var qa = qaEl.getAttribute("data-ed-qa");
-        var lay2 = activeLayout(payload);
-        lay2.widgetSettings = lay2.widgetSettings || {};
-        lay2.widgetSettings["quick-actions"] = lay2.widgetSettings["quick-actions"] || { visibleIds: [] };
-        var ids = (lay2.widgetSettings["quick-actions"].visibleIds || []).slice();
-        var checked = qaEl.tagName === "INPUT" ? qaEl.checked : ids.indexOf(qa) < 0;
-        if (checked) {
-          if (ids.indexOf(qa) < 0) ids.push(qa);
-        } else {
-          ids = ids.filter(function (x) {
+      var qaBtn = ev.target.closest("[data-ed-qa]");
+      if (qaBtn) {
+        var qa = qaBtn.getAttribute("data-ed-qa");
+        if (qaIds.indexOf(qa) >= 0) {
+          qaIds = qaIds.filter(function (x) {
             return x !== qa;
           });
+        } else {
+          qaIds = qaIds.concat([qa]);
         }
-        lay2.widgetSettings["quick-actions"].visibleIds = ids;
-        paint(root, payload);
-        renderMain();
+        draft.widgetSettings = draft.widgetSettings || {};
+        draft.widgetSettings["quick-actions"] = { visibleIds: qaIds.slice() };
+        paintManager();
+        return;
+      }
+      if (ev.target.closest("[data-ed-save]")) {
+        var settings = { "quick-actions": { visibleIds: qaIds.slice() } };
+        var body = {
+          desktop: draft.desktop,
+          tablet: draft.tablet,
+          mobile: draft.mobile,
+          widgetSettings: settings,
+        };
+        var done = function () {
+          overlay.classList.remove("is-open");
+          reload();
+        };
+        if (isNew) {
+          mutate(
+            "create",
+            Object.assign(
+              {
+                title: draft.title,
+                templateId: selectedTemplateId || "mission-control",
+                setActive: true,
+              },
+              body
+            )
+          ).then(done);
+          return;
+        }
+        mutate("update", Object.assign({ id: selectedId, version: draft.version }, body)).then(function () {
+          return mutate("set-active", { id: selectedId });
+        }).then(done);
       }
     };
   }
@@ -609,30 +757,10 @@
       });
   }
 
-  function ensureToolbar(root) {
-    if (root.querySelector("[data-ed-toolbar]")) return;
-    var bar = document.createElement("div");
-    bar.className = "eazy-dashboard__toolbar";
-    bar.setAttribute("data-ed-toolbar", "1");
-    bar.innerHTML =
-      '<button type="button" class="eazy-dashboard__toolbar-btn" data-ed-edit>' +
-      t("creator.dashboard.edit_layout", "Edit layout") +
-      '</button><button type="button" class="eazy-dashboard__toolbar-btn" data-ed-manage>' +
-      t("creator.dashboard.customize", "Customize dashboard") +
-      "</button>";
-    root.insertBefore(bar, root.firstChild);
-    bar.querySelector("[data-ed-edit]").addEventListener("click", function () {
-      root.classList.toggle("is-editing");
-      bar.querySelector("[data-ed-edit]").classList.toggle("is-on", root.classList.contains("is-editing"));
-    });
-    bar.querySelector("[data-ed-manage]").addEventListener("click", function () {
-      openManager(root);
-    });
-  }
-
   function boot() {
     document.querySelectorAll("[data-eazy-dashboard]").forEach(function (root) {
-      ensureToolbar(root);
+      var bar = root.querySelector("[data-ed-toolbar]");
+      if (bar) bar.remove();
       bootOne(root);
     });
   }
