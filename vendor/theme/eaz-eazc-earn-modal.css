@@ -175,6 +175,13 @@ html.eaz-switched .eaz-topbar-balances {
   overflow: hidden;
 }
 
+/* Closed <dialog> must not paint or swallow header clicks.
+   position:fixed + inset:0 can override UA display:none in some engines. */
+.eaz-eazc-earn:not([open]) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 .eaz-eazc-earn::backdrop {
   background: rgba(7, 24, 48, 0.72);
 }

@@ -25,7 +25,7 @@
   let networkDays = 30;
   let lastFocusedBeforeOpen = null;
 
-  const overlay = document.getElementById('slmOverlay');
+  let overlay = document.getElementById('slmOverlay');
   const closeBtn = document.getElementById('slmClose');
   const dateFrom = document.getElementById('slmDateFrom');
   const dateTo = document.getElementById('slmDateTo');
@@ -202,6 +202,7 @@
     var ev = (eventOrScreen && typeof eventOrScreen.preventDefault === 'function') ? eventOrScreen : null;
     var screen = (typeof eventOrScreen === 'string' ? eventOrScreen : null) || initialScreen;
     if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    if (!overlay) overlay = document.getElementById('slmOverlay');
     if (!overlay) return;
     lastFocusedBeforeOpen = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     resetToOverview();

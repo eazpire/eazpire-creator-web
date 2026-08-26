@@ -214,8 +214,26 @@
       return;
     }
     var main = e.target && e.target.closest && e.target.closest('[data-eazc-open-balance="1"]');
-    if (main && typeof window.openSalesModal === 'function') {
-      /* creator headers keep existing sales-modal open via their own listeners */
+    if (main) {
+      if (window.EazyGuide && typeof window.EazyGuide.isActive === 'function' && window.EazyGuide.isActive()) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      function openSales() {
+        if (typeof window.openSalesModal === 'function') {
+          window.openSalesModal();
+          return true;
+        }
+        return false;
+      }
+      if (openSales()) return;
+      var portal = window.CreatorPortalFeatures;
+      if (portal && typeof portal.ensureDashboard === 'function') {
+        Promise.resolve(portal.ensureDashboard()).then(function () {
+          openSales();
+        });
+      }
     }
   }, true);
 
