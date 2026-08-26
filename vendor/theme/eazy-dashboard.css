@@ -114,6 +114,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-transform: capitalize;
 }
 
 .eazy-dashboard__meta {
@@ -365,16 +366,25 @@
   margin: 0;
 }
 
+.eazy-dashboard-modal__side-head {
+  display: flex;
+  gap: 4px;
+  padding: 0 8px;
+  border-bottom: 1px solid rgba(255, 157, 0, 0.22);
+  flex-shrink: 0;
+}
+
 .eazy-dashboard-modal__modes {
   display: flex;
   gap: 4px;
 }
 
 .eazy-dashboard-modal__mode {
+  flex: 1;
   border: 0;
   background: transparent;
   color: rgba(243, 244, 246, 0.68);
-  padding: 8px 12px;
+  padding: 10px 8px;
   font-size: 13px;
   cursor: pointer;
   border-bottom: 2px solid transparent;
@@ -410,6 +420,10 @@
   flex-shrink: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 157, 0, 0.35) rgba(255, 255, 255, 0.04);
+}
+
+.eazy-dashboard-modal__templates[hidden] {
+  display: none;
 }
 
 .eazy-dashboard-modal__templates::-webkit-scrollbar {
@@ -482,6 +496,10 @@
   flex-shrink: 0;
 }
 
+.eazy-dashboard-modal__side-foot[hidden] {
+  display: none;
+}
+
 .eazy-dashboard-modal__side-foot .eazy-dashboard__toolbar-btn {
   width: 100%;
 }
@@ -493,6 +511,20 @@
   color: rgba(243, 244, 246, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.eazy-dashboard-modal__row {
+  display: flex;
+  align-items: center;
+}
+
+.eazy-dashboard-modal__row.is-on {
+  background: rgba(255, 157, 0, 0.12);
+}
+
+.eazy-dashboard-modal__row.is-on .eazy-dashboard-modal__item {
+  border-left-color: #ff9d00;
+  color: #ff9d00;
 }
 
 .eazy-dashboard-modal__item {
@@ -508,10 +540,41 @@
   font-size: 13px;
 }
 
+.eazy-dashboard-modal__row .eazy-dashboard-modal__item {
+  flex: 1;
+  min-width: 0;
+}
+
 .eazy-dashboard-modal__item.is-on {
   border-left-color: #ff9d00;
   background: rgba(255, 157, 0, 0.12);
   color: #ff9d00;
+}
+
+.eazy-dashboard-modal__item-more {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  margin-right: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(243, 244, 246, 0.68);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.eazy-dashboard-modal__item-more:hover {
+  background: rgba(255, 157, 0, 0.16);
+  color: #ff9d00;
+}
+
+.eazy-dashboard-modal__placeholder {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(243, 244, 246, 0.68);
+  line-height: 1.45;
 }
 
 .eazy-dashboard-modal__main {

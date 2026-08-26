@@ -150,6 +150,119 @@
     });
   }
 
+  function widgetsCollide(a, b) {
+    if (!a || !b || a.visible === false || b.visible === false) return false;
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  function compactWidgetsVertical(widgets, columns, freezeId) {
+    var cols = columns || 12;
+    var visible = (widgets || [])
+      .filter(function (w) {
+        return w && w.visible !== false;
+      })
+      .map(function (w) {
+        return Object.assign({}, w);
+      });
+    var frozen = freezeId
+      ? visible.filter(function (w) {
+          return w.id === freezeId;
+        })
+      : [];
+    var movable = (
+      freezeId
+        ? visible.filter(function (w) {
+            return w.id !== freezeId;
+          })
+        : visible
+    ).sort(function (a, b) {
+      return a.y - b.y || a.x - b.x;
+    });
+    var placed = frozen.map(function (item) {
+      item.x = Math.max(0, Math.min(Math.max(0, cols - item.w), item.x));
+      item.y = Math.max(0, item.y);
+      return item;
+    });
+    movable.forEach(function (item) {
+      item.x = Math.max(0, Math.min(Math.max(0, cols - item.w), item.x));
+      var y = 0;
+      var fits = false;
+      while (!fits) {
+        var probe = Object.assign({}, item, { y: y });
+        var hit = placed.some(function (p) {
+          return widgetsCollide(probe, p);
+        });
+        if (!hit) {
+          item.y = y;
+          placed.push(item);
+          fits = true;
+        } else {
+          y += 1;
+          if (y > 200) {
+            item.y = y;
+            placed.push(item);
+            fits = true;
+          }
+        }
+      }
+    });
+    var hidden = (widgets || [])
+      .filter(function (w) {
+        return w && w.visible === false;
+      })
+      .map(function (w) {
+        return Object.assign({}, w);
+      });
+    return placed.concat(hidden);
+  }
+
+  /* Dragged widget stays put; others are pushed down, then packed around it. */
+  function resolveWidgetCollisions(widgets, movedId, columns) {
+    var items = (widgets || []).map(function (w) {
+      return Object.assign({}, w);
+    });
+    var moved = null;
+    items.forEach(function (w) {
+      if (w.id === movedId) moved = w;
+    });
+    if (!moved) return items;
+    var cols = columns || 12;
+    moved.x = Math.max(0, Math.min(Math.max(0, cols - moved.w), moved.x));
+    moved.y = Math.max(0, moved.y);
+    var changed = true;
+    var guard = 0;
+    while (changed && guard++ < 200) {
+      changed = false;
+      items.forEach(function (item) {
+        if (item.id === movedId || item.visible === false) return;
+        var blockers = items.filter(function (p) {
+          return p.id !== item.id && widgetsCollide(item, p);
+        });
+        if (!blockers.length) return;
+        var nextY = 0;
+        blockers.forEach(function (b) {
+          nextY = Math.max(nextY, b.y + b.h);
+        });
+        if (item.y !== nextY) {
+          item.y = nextY;
+          changed = true;
+        }
+      });
+    }
+    return compactWidgetsVertical(items, cols, movedId);
+  }
+
+  function applyWidgetGrid(canvas, widgets) {
+    if (!canvas) return;
+    (widgets || []).forEach(function (w) {
+      if (w.visible === false) return;
+      var el = canvas.querySelector('[data-ed-id="' + w.id + '"]');
+      if (!el) return;
+      el.style.gridColumn = w.x + 1 + " / span " + w.w;
+      el.style.gridRow = w.y + 1 + " / span " + w.h;
+    });
+  }
+
   function qaIconSvg(id) {
     var paths = {
       generator:
@@ -431,7 +544,8 @@
       if (!widget) return;
       ev.preventDefault();
       closeWidgetMenu();
-      var origin = currentWidgets(root).filter(function (w) {
+      var snapshot = currentWidgets(root);
+      var origin = snapshot.filter(function (w) {
         return w.id === widget.getAttribute("data-ed-id");
       })[0];
       if (!origin) return;
@@ -444,6 +558,10 @@
         startY: ev.clientY,
         colW: (rect.width - GAP * (cols - 1)) / cols,
         origin: Object.assign({}, origin),
+        snapshot: snapshot.map(function (w) {
+          return Object.assign({}, w);
+        }),
+        resolved: null,
         dx: 0,
         dy: 0,
         cols: cols,
@@ -457,20 +575,21 @@
       if (!dragging) return;
       dragging.dx = Math.round((ev.clientX - dragging.startX) / (dragging.colW + GAP));
       dragging.dy = Math.round((ev.clientY - dragging.startY) / (CELL + GAP));
-      var nextX = Math.max(0, Math.min(dragging.cols - dragging.origin.w, dragging.origin.x + dragging.dx));
-      var nextY = Math.max(0, dragging.origin.y + dragging.dy);
-      dragging.el.style.gridColumn = nextX + 1 + " / span " + dragging.origin.w;
-      dragging.el.style.gridRow = nextY + 1 + " / span " + dragging.origin.h;
-    });
-    canvas.addEventListener("pointerup", function () {
-      if (!dragging) return;
-      var moved = dragging.dx || dragging.dy;
-      var widgets = currentWidgets(root);
-      widgets.forEach(function (w) {
+      var next = dragging.snapshot.map(function (w) {
+        return Object.assign({}, w);
+      });
+      next.forEach(function (w) {
         if (w.id !== dragging.id) return;
         w.x = Math.max(0, Math.min(dragging.cols - dragging.origin.w, dragging.origin.x + dragging.dx));
         w.y = Math.max(0, dragging.origin.y + dragging.dy);
       });
+      dragging.resolved = resolveWidgetCollisions(next, dragging.id, dragging.cols);
+      applyWidgetGrid(canvas, dragging.resolved);
+    });
+    canvas.addEventListener("pointerup", function () {
+      if (!dragging) return;
+      var moved = dragging.dx || dragging.dy;
+      var widgets = dragging.resolved || currentWidgets(root);
       dragging.el.classList.remove("is-dragging");
       dragging = null;
       if (moved) writeWidgets(root, widgets);
@@ -498,9 +617,34 @@
     draft.templateId = tpl.id;
   }
 
+  function closeLayoutMenu() {
+    var existing = document.getElementById("eazyDashboardLayoutMenu");
+    if (existing) existing.remove();
+  }
+
+  function draftWidgetIds(draft) {
+    var ids = [];
+    ["desktop", "tablet", "mobile"].forEach(function (s) {
+      (((draft && draft[s]) || {}).widgets || []).forEach(function (w) {
+        if (w && w.id && ids.indexOf(w.id) === -1) ids.push(w.id);
+      });
+    });
+    return ids;
+  }
+
+  function layoutSurfacesBody(lay) {
+    return {
+      desktop: lay.desktop,
+      tablet: lay.tablet,
+      mobile: lay.mobile,
+      widgetSettings: lay.widgetSettings,
+    };
+  }
+
   function openManager(root) {
     var payload = root._edPayload;
     if (!payload) return;
+    closeLayoutMenu();
     var overlay = document.getElementById("eazyDashboardLayoutModal");
     if (!overlay) {
       overlay = document.createElement("div");
@@ -513,13 +657,13 @@
       escHtml(t("creator.dashboard.layout_manager", "Dashboard layouts")) +
       '"><header class="eazy-dashboard-modal__head"><h2 class="eazy-dashboard-modal__title">' +
       escHtml(t("creator.dashboard.customize", "Customize dashboard")) +
-      '</h2><div class="eazy-dashboard-modal__modes"><button type="button" class="eazy-dashboard-modal__mode is-on" data-ed-mode="layout">' +
-      escHtml(t("creator.dashboard.layout_tab", "Dashboard Layout")) +
-      '</button><button type="button" class="eazy-dashboard-modal__mode" data-ed-mode="settings">' +
-      escHtml(t("creator.dashboard.widget_settings_tab", "Widget Settings")) +
-      '</button></div><button type="button" class="eazy-dashboard-modal__close" data-ed-close aria-label="' +
+      '</h2><button type="button" class="eazy-dashboard-modal__close" data-ed-close aria-label="' +
       escHtml(t("creator.common.close", "Close")) +
-      '">×</button></header><div class="eazy-dashboard-modal__templates" data-ed-templates></div><div class="eazy-dashboard-modal__split"><aside class="eazy-dashboard-modal__side"><div class="eazy-dashboard-modal__side-scroll" data-ed-side></div><div class="eazy-dashboard-modal__side-foot"><button type="button" class="eazy-dashboard__toolbar-btn" data-ed-new>+ ' +
+      '">×</button></header><div class="eazy-dashboard-modal__templates" data-ed-templates></div><div class="eazy-dashboard-modal__split"><aside class="eazy-dashboard-modal__side"><div class="eazy-dashboard-modal__side-head" data-ed-side-modes><button type="button" class="eazy-dashboard-modal__mode is-on" data-ed-mode="layout">' +
+      escHtml(t("creator.dashboard.layout_tab", "Layout")) +
+      '</button><button type="button" class="eazy-dashboard-modal__mode" data-ed-mode="widgets">' +
+      escHtml(t("creator.dashboard.widget_settings_tab", "Widgets")) +
+      '</button></div><div class="eazy-dashboard-modal__side-scroll" data-ed-side></div><div class="eazy-dashboard-modal__side-foot" data-ed-side-foot><button type="button" class="eazy-dashboard__toolbar-btn" data-ed-new>+ ' +
       escHtml(t("creator.dashboard.new_layout", "New layout")) +
       '</button></div></aside><div class="eazy-dashboard-modal__main"><div class="eazy-dashboard-modal__main-body" data-ed-main></div><div class="eazy-dashboard-modal__foot"><button type="button" class="eazy-dashboard__toolbar-btn" data-ed-cancel>' +
       escHtml(t("creator.common.cancel", "Cancel")) +
@@ -533,14 +677,122 @@
     var selectedId = source.id || "__draft__";
     var isNew = !source.id;
     var selectedTemplateId = draft.templateId || "";
+    var selectedSystem = false;
     var mode = "layout";
+    var selectedWidgetId = "quick-actions";
     var qaIds = qaIdsFromLayout(draft);
+
+    function findLayout(id) {
+      return (payload.layouts || []).filter(function (l) {
+        return l.id === id;
+      })[0];
+    }
+
+    function missionControlTemplate() {
+      return (
+        (payload.registry.templates || []).filter(function (x) {
+          return x.id === "mission-control";
+        })[0] || (payload.registry.templates || [])[0]
+      );
+    }
+
+    function afterLayoutList(res, preferId) {
+      if (!res || !res.ok) {
+        if (res && res.error === "last_layout") {
+          global.alert(t("creator.dashboard.last_layout", "Keep at least one layout."));
+        }
+        return;
+      }
+      payload.layouts = res.layouts || payload.layouts;
+      if (res.activeLayoutId) payload.activeLayoutId = res.activeLayoutId;
+      var pickId = preferId || selectedId;
+      var found = pickId && pickId !== "__draft__" ? findLayout(pickId) : null;
+      if (!found) found = (payload.layouts || [])[0] || null;
+      if (found) {
+        draft = cloneJson(found);
+        selectedId = found.id;
+        isNew = false;
+        selectedSystem = false;
+        selectedTemplateId = draft.templateId || "";
+        qaIds = qaIdsFromLayout(draft);
+      }
+      paint(root, payload);
+      paintManager();
+    }
+
+    function openLayoutOverflow(layoutId, anchor) {
+      closeLayoutMenu();
+      if (!layoutId || layoutId === "__draft__" || !anchor) return;
+      var lay = findLayout(layoutId);
+      if (!lay) return;
+      var menu = document.createElement("div");
+      menu.id = "eazyDashboardLayoutMenu";
+      menu.className = "eazy-dashboard-widget-menu";
+      menu.setAttribute("role", "menu");
+      var canRemove = (payload.layouts || []).length > 1;
+      menu.innerHTML =
+        '<button type="button" role="menuitem" data-ed-lay-edit>' +
+        escHtml(t("creator.dashboard.edit", "Edit")) +
+        '</button><button type="button" role="menuitem" data-ed-lay-duplicate>' +
+        escHtml(t("creator.dashboard.duplicate", "Duplicate")) +
+        '</button><button type="button" role="menuitem" data-ed-lay-remove' +
+        (canRemove ? "" : " disabled") +
+        ">" +
+        escHtml(t("creator.dashboard.remove", "Remove")) +
+        "</button>";
+      document.body.appendChild(menu);
+      var rect = anchor.getBoundingClientRect();
+      menu.style.top = rect.bottom + 6 + "px";
+      menu.style.left = Math.max(8, rect.right - 180) + "px";
+      menu.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (ev.target.closest("[data-ed-lay-edit]")) {
+          closeLayoutMenu();
+          var nextTitle = global.prompt(t("creator.dashboard.layout_title", "Layout title"), lay.title || "");
+          if (!nextTitle) return;
+          mutate("update", Object.assign({ id: lay.id, version: lay.version, title: nextTitle }, layoutSurfacesBody(lay))).then(
+            function (res) {
+              afterLayoutList(res, lay.id);
+            }
+          );
+          return;
+        }
+        if (ev.target.closest("[data-ed-lay-duplicate]")) {
+          closeLayoutMenu();
+          mutate("duplicate", { id: lay.id }).then(function (res) {
+            afterLayoutList(res, res && res.layout && res.layout.id);
+          });
+          return;
+        }
+        if (ev.target.closest("[data-ed-lay-remove]")) {
+          closeLayoutMenu();
+          if (!canRemove) {
+            global.alert(t("creator.dashboard.last_layout", "Keep at least one layout."));
+            return;
+          }
+          if (!global.confirm(t("creator.errors.are_you_sure", "Are you sure?"))) return;
+          mutate("delete", { id: lay.id }).then(function (res) {
+            afterLayoutList(res);
+          });
+        }
+      });
+      setTimeout(function () {
+        function dismiss(ev) {
+          if (menu.contains(ev.target) || (anchor && anchor.contains(ev.target))) return;
+          closeLayoutMenu();
+          document.removeEventListener("pointerdown", dismiss, true);
+        }
+        document.addEventListener("pointerdown", dismiss, true);
+      }, 0);
+    }
 
     function paintManager() {
       overlay.querySelectorAll("[data-ed-mode]").forEach(function (btn) {
         btn.classList.toggle("is-on", btn.getAttribute("data-ed-mode") === mode);
       });
       var tplRow = overlay.querySelector("[data-ed-templates]");
+      tplRow.hidden = mode !== "layout";
       var tplHtml = "";
       (payload.registry.templates || []).forEach(function (tpl) {
         tplHtml +=
@@ -554,56 +806,113 @@
       });
       tplRow.innerHTML = tplHtml;
 
+      var foot = overlay.querySelector("[data-ed-side-foot]");
+      if (foot) foot.hidden = mode !== "layout";
+
       var side = overlay.querySelector("[data-ed-side]");
-      var sideHtml = '<p class="eazy-dashboard-modal__kicker">' + escHtml(t("creator.dashboard.my_layouts", "My layouts")) + "</p>";
-      (payload.layouts || []).forEach(function (l) {
+      var sideHtml = "";
+      if (mode === "widgets") {
+        var widgetIds = draftWidgetIds(draft);
+        if (!widgetIds.length) {
+          widgetIds = ((payload.registry && payload.registry.widgets) || []).map(function (w) {
+            return w.id;
+          });
+        }
+        if (!selectedWidgetId || widgetIds.indexOf(selectedWidgetId) === -1) {
+          selectedWidgetId = widgetIds.indexOf("quick-actions") >= 0 ? "quick-actions" : widgetIds[0] || "";
+        }
+        widgetIds.forEach(function (id) {
+          var spec = widgetById(payload.registry, id);
+          sideHtml +=
+            '<button type="button" class="eazy-dashboard-modal__item' +
+            (id === selectedWidgetId ? " is-on" : "") +
+            '" data-ed-widget-pick="' +
+            escHtml(id) +
+            '">' +
+            escHtml(t((spec && spec.titleKey) || "", id)) +
+            "</button>";
+        });
+        side.innerHTML = sideHtml;
+      } else {
+        sideHtml +=
+          '<p class="eazy-dashboard-modal__kicker">' +
+          escHtml(t("creator.dashboard.system_layouts", "System")) +
+          "</p>";
         sideHtml +=
           '<button type="button" class="eazy-dashboard-modal__item' +
-          (l.id === selectedId ? " is-on" : "") +
-          '" data-ed-lay="' +
-          escHtml(l.id) +
-          '">' +
-          escHtml(l.title || l.id) +
-          (l.id === payload.activeLayoutId ? " · " + escHtml(t("creator.dashboard.active", "Active")) : "") +
+          (selectedSystem ? " is-on" : "") +
+          '" data-ed-system-default>' +
+          escHtml(t("creator.dashboard.default_layout", "Default")) +
           "</button>";
-      });
-      if (isNew) {
         sideHtml +=
-          '<button type="button" class="eazy-dashboard-modal__item is-on" data-ed-lay="__draft__">' +
-          escHtml(draft.title || t("creator.dashboard.new_layout", "New layout")) +
-          "</button>";
+          '<p class="eazy-dashboard-modal__kicker">' +
+          escHtml(t("creator.dashboard.my_layouts", "My layouts")) +
+          "</p>";
+        (payload.layouts || []).forEach(function (l) {
+          var on = !selectedSystem && l.id === selectedId;
+          sideHtml +=
+            '<div class="eazy-dashboard-modal__row' +
+            (on ? " is-on" : "") +
+            '"><button type="button" class="eazy-dashboard-modal__item" data-ed-lay="' +
+            escHtml(l.id) +
+            '">' +
+            escHtml(l.title || l.id) +
+            (l.id === payload.activeLayoutId ? " · " + escHtml(t("creator.dashboard.active", "Active")) : "") +
+            '</button><button type="button" class="eazy-dashboard-modal__item-more" data-ed-lay-menu="' +
+            escHtml(l.id) +
+            '" aria-label="' +
+            escHtml(t("creator.dashboard.layout_menu", "Layout menu")) +
+            '">⋯</button></div>';
+        });
+        if (isNew) {
+          sideHtml +=
+            '<div class="eazy-dashboard-modal__row is-on"><button type="button" class="eazy-dashboard-modal__item" data-ed-lay="__draft__">' +
+            escHtml(draft.title || t("creator.dashboard.new_layout", "New layout")) +
+            "</button></div>";
+        }
+        side.innerHTML = sideHtml;
       }
-      side.innerHTML = sideHtml;
 
       var main = overlay.querySelector("[data-ed-main]");
-      if (mode === "settings") {
-        var qaHtml = '<h3>' + escHtml(t("creator.dashboard.quick_action_items", "Quick Actions items")) + "</h3>";
-        qaHtml += '<div class="eazy-dashboard__qa">';
-        (payload.registry.quickActionItems || []).forEach(function (item) {
-          qaHtml +=
-            '<button type="button" class="eazy-dashboard__qa-item' +
-            (qaIds.indexOf(item.id) >= 0 ? " is-on" : "") +
-            '" data-ed-qa="' +
-            escHtml(item.id) +
-            '"><span class="eazy-dashboard__qa-icon">' +
-            qaIconSvg(item.id) +
-            "</span><strong>" +
-            escHtml(t(item.titleKey, item.id)) +
-            "</strong></button>";
-        });
-        main.innerHTML = qaHtml + "</div>";
+      if (mode === "widgets") {
+        var spec = widgetById(payload.registry, selectedWidgetId);
+        var heading = t((spec && spec.titleKey) || "", selectedWidgetId);
+        if (selectedWidgetId === "quick-actions") {
+          var qaHtml = "<h3>" + escHtml(t("creator.dashboard.quick_action_items", "Quick Actions items")) + "</h3>";
+          qaHtml += '<div class="eazy-dashboard__qa">';
+          (payload.registry.quickActionItems || []).forEach(function (item) {
+            qaHtml +=
+              '<button type="button" class="eazy-dashboard__qa-item' +
+              (qaIds.indexOf(item.id) >= 0 ? " is-on" : "") +
+              '" data-ed-qa="' +
+              escHtml(item.id) +
+              '"><span class="eazy-dashboard__qa-icon">' +
+              qaIconSvg(item.id) +
+              "</span><strong>" +
+              escHtml(t(item.titleKey, item.id)) +
+              "</strong></button>";
+          });
+          main.innerHTML = qaHtml + "</div>";
+          return;
+        }
+        main.innerHTML =
+          "<h3>" +
+          escHtml(heading) +
+          '</h3><p class="eazy-dashboard-modal__placeholder">' +
+          escHtml(t("creator.dashboard.widget_settings_placeholder", "Settings for this widget come later.")) +
+          "</p>";
         return;
       }
 
       var surface = root._edSurface || detectSurface(root);
       var cols = (draft[surface] && draft[surface].columns) || (surface === "mobile" ? 4 : surface === "tablet" ? 8 : 12);
       var widgets = (draft[surface] && draft[surface].widgets) || [];
-      var preview = '<p><strong>' + escHtml(draft.title || "") + "</strong></p>";
+      var preview = "<p><strong>" + escHtml(selectedSystem ? t("creator.dashboard.default_layout", "Default") : draft.title || "") + "</strong></p>";
       if (draft.description) preview += "<p>" + escHtml(draft.description) + "</p>";
       preview += '<div class="eazy-dashboard-modal__preview" style="--ed-cols:' + cols + '">';
       widgets.forEach(function (item) {
         if (item.visible === false) return;
-        var spec = widgetById(payload.registry, item.id);
+        var wspec = widgetById(payload.registry, item.id);
         preview +=
           '<div class="eazy-dashboard-modal__tile" style="grid-column:' +
           (item.x + 1) +
@@ -614,7 +923,7 @@
           " / span " +
           item.h +
           '"><span class="eazy-dashboard-modal__tile-label">' +
-          escHtml(t((spec && spec.titleKey) || "", item.id)) +
+          escHtml(t((wspec && wspec.titleKey) || "", item.id)) +
           "</span></div>";
       });
       main.innerHTML = preview + "</div>";
@@ -623,13 +932,38 @@
     paintManager();
     overlay.onclick = function (ev) {
       if (ev.target === overlay || ev.target.closest("[data-ed-cancel], [data-ed-close]")) {
+        closeLayoutMenu();
         overlay.classList.remove("is-open");
+        return;
+      }
+      var menuBtn = ev.target.closest("[data-ed-lay-menu]");
+      if (menuBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openLayoutOverflow(menuBtn.getAttribute("data-ed-lay-menu"), menuBtn);
         return;
       }
       var modeBtn = ev.target.closest("[data-ed-mode]");
       if (modeBtn) {
         mode = modeBtn.getAttribute("data-ed-mode") || "layout";
         paintManager();
+        return;
+      }
+      var pickBtn = ev.target.closest("[data-ed-widget-pick]");
+      if (pickBtn) {
+        selectedWidgetId = pickBtn.getAttribute("data-ed-widget-pick") || selectedWidgetId;
+        paintManager();
+        return;
+      }
+      var sysBtn = ev.target.closest("[data-ed-system-default]");
+      if (sysBtn) {
+        var defTpl = missionControlTemplate();
+        if (defTpl) {
+          applyTemplateSurfaces(draft, defTpl);
+          selectedTemplateId = defTpl.id;
+          selectedSystem = true;
+          paintManager();
+        }
         return;
       }
       var tplBtn = ev.target.closest("[data-ed-tpl]");
@@ -641,6 +975,7 @@
         if (tplDoc) {
           applyTemplateSurfaces(draft, tplDoc);
           selectedTemplateId = tplDoc.id;
+          selectedSystem = false;
           paintManager();
         }
         return;
@@ -649,16 +984,16 @@
       if (layBtn) {
         var layId = layBtn.getAttribute("data-ed-lay");
         if (layId === "__draft__") {
+          selectedSystem = false;
           paintManager();
           return;
         }
-        var found = (payload.layouts || []).filter(function (l) {
-          return l.id === layId;
-        })[0];
+        var found = findLayout(layId);
         if (found) {
           draft = cloneJson(found);
           selectedId = found.id;
           isNew = false;
+          selectedSystem = false;
           selectedTemplateId = draft.templateId || "";
           qaIds = qaIdsFromLayout(draft);
           paintManager();
@@ -668,9 +1003,10 @@
       if (ev.target.closest("[data-ed-new]")) {
         var title = global.prompt(t("creator.dashboard.layout_title", "Layout title"), "My dashboard");
         if (!title) return;
-        var seed = (payload.registry.templates || []).filter(function (x) {
-          return x.id === (selectedTemplateId || "mission-control");
-        })[0] || (payload.registry.templates || [])[0];
+        var seed =
+          (payload.registry.templates || []).filter(function (x) {
+            return x.id === (selectedTemplateId || "mission-control");
+          })[0] || (payload.registry.templates || [])[0];
         draft = {
           id: "__draft__",
           title: title,
@@ -682,6 +1018,7 @@
         applyTemplateSurfaces(draft, seed);
         selectedId = "__draft__";
         isNew = true;
+        selectedSystem = false;
         selectedTemplateId = draft.templateId || "";
         paintManager();
         return;
@@ -710,6 +1047,7 @@
           widgetSettings: settings,
         };
         var done = function () {
+          closeLayoutMenu();
           overlay.classList.remove("is-open");
           reload();
         };
@@ -727,9 +1065,11 @@
           ).then(done);
           return;
         }
-        mutate("update", Object.assign({ id: selectedId, version: draft.version }, body)).then(function () {
-          return mutate("set-active", { id: selectedId });
-        }).then(done);
+        mutate("update", Object.assign({ id: selectedId, version: draft.version }, body))
+          .then(function () {
+            return mutate("set-active", { id: selectedId });
+          })
+          .then(done);
       }
     };
   }
@@ -768,5 +1108,10 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
-  global.EazyDashboard = { boot: boot, reload: reload };
+  global.EazyDashboard = {
+    boot: boot,
+    reload: reload,
+    resolveWidgetCollisions: resolveWidgetCollisions,
+    widgetsCollide: widgetsCollide,
+  };
 })(typeof window !== "undefined" ? window : globalThis);
