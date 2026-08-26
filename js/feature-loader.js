@@ -17,7 +17,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "dashboard-v5-20260826d";
+  var PORTAL_ASSET_V = "live-gen-dock-20260826b";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -144,6 +144,7 @@
       "/vendor/theme/creator-canvas-sketch-modal.css",
       "/vendor/theme/creator-inspiration-modal.css",
       "/vendor/theme/creator-design-studio-modal.css",
+      "/vendor/theme/creator-generate-live-dock.css",
     ].forEach(loadCss);
   }
 
@@ -323,6 +324,8 @@
         asset("creator-phone-upload-modal.js"),
         asset("eaz-screenshot-capture.js"),
         asset("eaz-clipboard-image.js"),
+        asset("creator-generate-settings-history.js"),
+        asset("creator-generate-live-dock.js"),
         asset("creator-generator.js"),
       ]);
 

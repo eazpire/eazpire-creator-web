@@ -198,7 +198,7 @@
     }).then(function (data) {
       var jobId = (data && data.jobId && String(data.jobId).trim()) || null;
       if (!jobId) throw new Error('Server did not return a job ID');
-      return { jobId: jobId };
+      return { jobId: jobId, live_stream: !!(data && data.live_stream) };
     });
   }
 

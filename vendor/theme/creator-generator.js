@@ -712,6 +712,95 @@
       });
     });
 
+    function applyHistoryEntry(item) {
+      if (!item) return;
+      var ta = document.getElementById('genPrompt');
+      if (ta) {
+        ta.value = item.prompt || '';
+        try { ta.dispatchEvent(new Event('input', { bubbles: true })); } catch (_eH) {}
+      }
+      applyDesignTypeFromDetail({ designType: item.designType });
+      var targetEl = document.getElementById('genTargetProductVal');
+      if (targetEl && item.targetProduct) {
+        var topt = TARGET_PRODUCT_OPTIONS.find(function (o) { return o.value === item.targetProduct; });
+        targetEl.dataset.value = item.targetProduct;
+        if (topt) targetEl.textContent = topt.label;
+      }
+      var modeEl = document.getElementById('genModeVal');
+      if (modeEl && item.generatorMode) {
+        modeEl.dataset.value = item.generatorMode;
+        modeEl.textContent = modeOptionLabel(item.generatorMode);
+        modeEl.setAttribute('data-t', item.generatorMode === 'quick_inspirations' ? 'creator.generator.mode_quick_inspirations' : 'creator.generator.mode_design');
+      }
+      window.__creatorGenOptionsState = {
+        ratio: item.ratio || 'portrait',
+        content_type: item.contentType || 'design-text',
+        contentType: item.contentType || 'design-text',
+        styles: Array.isArray(item.styles) ? item.styles : [],
+        stylesSelected: Array.isArray(item.styles) ? item.styles : [],
+        design_colors: Array.isArray(item.designColors) ? item.designColors : [],
+        designColors: Array.isArray(item.designColors) ? item.designColors : [],
+        background: item.background && typeof item.background === 'object' ? item.background : { mode: 'transparent' },
+        language: item.language && typeof item.language === 'object' ? item.language : { mode: 'as-design' },
+        reference_strength: item.referenceStrength != null ? item.referenceStrength : null
+      };
+      selectedImages.length = 0;
+      (item.refs || []).forEach(function (r) {
+        if (!r || !r.url) return;
+        selectedImages.push({
+          file: null,
+          dataUrl: r.url,
+          similarity: typeof r.similarity === 'number' ? r.similarity : 0.6,
+          source: r.source || null,
+          quickInspirationId: r.quickInspirationId || null,
+          inspiration_mode: r.inspiration_mode || null
+        });
+      });
+      renderSelectedGrid();
+    }
+
+    function initHistoryPill() {
+      var btn = document.getElementById('genHistory');
+      var menu = document.getElementById('genHistoryMenu');
+      if (!btn || !menu || !window.CreatorGenerateSettingsHistory) return;
+      function closeMenu() { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+      function openMenu() {
+        var hist = window.CreatorGenerateSettingsHistory;
+        var list = hist.list();
+        menu.innerHTML = '';
+        if (!list.length) {
+          var empty = document.createElement('div');
+          empty.className = 'cgl-history-empty';
+          empty.textContent = tCreator('liveGenHistoryEmpty', 'No previous settings yet');
+          empty.style.padding = '8px 10px';
+          empty.style.fontSize = '13px';
+          menu.appendChild(empty);
+        } else {
+          list.forEach(function (item) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = hist.label(item);
+            b.addEventListener('click', function () {
+              applyHistoryEntry(item);
+              closeMenu();
+            });
+            menu.appendChild(b);
+          });
+        }
+        menu.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (menu.hidden) openMenu(); else closeMenu();
+      });
+      document.addEventListener('click', function (e) {
+        if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) closeMenu();
+      });
+    }
+    initHistoryPill();
+
     function applyShopRegenerateJob(job) {
       if (!job || !job.generator_ui_snapshot) return;
       var snap = job.generator_ui_snapshot;
@@ -1693,6 +1782,24 @@
       if (confirmConfirm) {
         confirmConfirm.onclick = function () {
           closeConfirmModal();
+          if (window.CreatorGenerateSettingsHistory && typeof window.CreatorGenerateSettingsHistory.push === 'function') {
+            try {
+              window.CreatorGenerateSettingsHistory.push({
+                prompt: uiState.prompt,
+                designType: uiState.designType,
+                targetProduct: uiState.targetProduct,
+                generatorMode: uiState.generatorMode,
+                ratio: uiState.ratio,
+                contentType: uiState.contentType,
+                styles: uiState.styles,
+                designColors: uiState.designColors,
+                background: uiState.background,
+                language: uiState.language,
+                referenceStrength: uiState.referenceStrength,
+                refs: window.__creatorGenSelectedImages || []
+              });
+            } catch (_hist) {}
+          }
           clearGeneratorForm();
           triggerLocked = true;
           if (btn) btn.disabled = true;
@@ -1703,14 +1810,37 @@
           var p = lastGeneratePayload;
           var shopKey = lastShopProductKey;
           var isQiMode = p && String(p.generator_mode || '') === 'quick_inspirations';
+          var pendingDockId = null;
+          if (!isQiMode && window.CreatorGenerateLiveDock && typeof window.CreatorGenerateLiveDock.attachPending === 'function') {
+            pendingDockId = window.CreatorGenerateLiveDock.attachPending({ prompt: (p && p.prompt) || '' });
+          }
           var submitPromise =
             shopKey && !isQiMode && typeof payloadLib.submitShopDesignGenerateJob === 'function'
               ? payloadLib.submitShopDesignGenerateJob(p, shopKey, ownerId, { apiBase: DISPATCH_URL })
               : payloadLib.submitGenerateJob(p, { apiBase: DISPATCH_URL });
           submitPromise
             .then(function (res) {
-              if (window.CreatorChat && typeof window.CreatorChat.openJobs === 'function') {
-                window.CreatorChat.openJobs({ focusJobId: res.jobId });
+              if (res && res.live_stream && window.CreatorGenerateLiveDock && !isQiMode) {
+                if (pendingDockId && typeof window.CreatorGenerateLiveDock.promote === 'function') {
+                  window.CreatorGenerateLiveDock.promote(pendingDockId, {
+                    jobId: res.jobId,
+                    prompt: (p && p.prompt) || '',
+                    liveStream: true
+                  });
+                } else if (typeof window.CreatorGenerateLiveDock.attach === 'function') {
+                  window.CreatorGenerateLiveDock.attach({
+                    jobId: res.jobId,
+                    prompt: (p && p.prompt) || '',
+                    liveStream: true
+                  });
+                }
+              } else {
+                if (pendingDockId && window.CreatorGenerateLiveDock && typeof window.CreatorGenerateLiveDock.drop === 'function') {
+                  window.CreatorGenerateLiveDock.drop(pendingDockId);
+                }
+                if (window.CreatorChat && typeof window.CreatorChat.openJobs === 'function') {
+                  window.CreatorChat.openJobs({ focusJobId: res.jobId });
+                }
               }
               try {
                 if (isQiMode) {
@@ -1735,6 +1865,9 @@
               }, 8000);
             })
             .catch(function (err) {
+              if (pendingDockId && window.CreatorGenerateLiveDock && typeof window.CreatorGenerateLiveDock.drop === 'function') {
+                window.CreatorGenerateLiveDock.drop(pendingDockId);
+              }
               var msg = (err && err.message) || tCreator('chat.genericErrorRetryLater', 'Something went wrong. Please try again.');
               window.alert(msg);
             })
