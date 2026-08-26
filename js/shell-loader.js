@@ -10,7 +10,7 @@
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for Research desktop dual-grid paint (same as feature-loader PORTAL_ASSET_V).
   // Must stay in lockstep with index.html `shell-loader.js?v=` so browsers drop the 7-day vendor cache.
-  var RUNTIME_V = "handoff-20260826";
+  var RUNTIME_V = "dashboard-v5-20260826b";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 
@@ -334,6 +334,7 @@
       loadScript("/vendor/theme/creator-footer-eaz-ui.js"),
       loadScript("/vendor/theme/creator-theme-background.js"),
       loadScript("/vendor/theme/creator-dashboard-data.js"),
+      loadScript("/vendor/theme/eazy-dashboard.js"),
       loadScript("/vendor/theme/creator-daily-limits-subheader.js"),
     ]);
     await Promise.all([

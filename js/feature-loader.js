@@ -17,7 +17,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "research-analyze-footer-20260826";
+  var PORTAL_ASSET_V = "dashboard-v5-20260826b";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -523,6 +523,7 @@
       loadCss("/vendor/theme/creator-journey-modal.css");
       loadCss("/vendor/theme/creator-level-panel.css");
       loadCss("/vendor/theme/creator-level-celebration.css");
+      loadCss("/vendor/theme/eazy-dashboard.css");
 
       await Promise.all([
         injectPartial("creator-sales-modal.html"),
@@ -536,6 +537,7 @@
         asset("sales-modal.js"),
         asset("creator-journey-modal.js"),
         asset("creator-level-celebration.js"),
+        asset("eazy-dashboard.js"),
       ]);
 
       global.CreatorCelebrationI18n = global.CreatorCelebrationI18n || {

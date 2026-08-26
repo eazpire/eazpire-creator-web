@@ -468,92 +468,9 @@
           data-level-9="Legend"
           data-level-10="Creator"
         ></div>
-        <section class="creator-desktop-grid">
-          <article class="creator-desktop-card creator-desktop-card--journey">
-            <h2 data-t="creator.overview.onboarding_title">Your Creator Journey</h2>
-            <div class="creator-desktop-journey__bar">
-              <span id="creator-desktop-journey-fill"></span>
-            </div>
-            <div class="creator-desktop-journey__tabs" role="tablist" aria-label="Your Creator Journey">
-              <button type="button" class="creator-desktop-journey-tab creator-desktop-journey-tab--active" role="tab" aria-selected="true" data-desktop-journey-tab="open" id="creator-desktop-journey-tab-open">
-                <span data-t="creator.overview.tab_open">Open</span> <span id="creator-desktop-journey-open-count">0</span>
-              </button>
-              <button type="button" class="creator-desktop-journey-tab" role="tab" aria-selected="false" data-desktop-journey-tab="completed" id="creator-desktop-journey-tab-completed">
-                <span data-t="creator.overview.tab_completed">Completed</span> <span id="creator-desktop-journey-completed-count">0</span>
-              </button>
-            </div>
-            <ul class="creator-desktop-journey__tasks creator-desktop-journey__list" id="creator-desktop-journey-open-list">
-              <li data-t="creator.overview.loading_todos">Loading your journey...</li>
-            </ul>
-            <ul class="creator-desktop-journey__tasks creator-desktop-journey__list creator-desktop-journey__list--hidden" id="creator-desktop-journey-completed-list"></ul>
-            <div id="creator-desktop-journey-guest-cta" class="creator-desktop-journey__guest-cta" hidden>
-              <p data-t="creator.overview.guest_cta_text">Don't have an account yet?</p>
-              <a href="https://www.eazpire.com/account/register" data-t="creator.overview.guest_cta_register">Create free account</a>
-            </div>
-            </article>
-
-          <article class="creator-desktop-card creator-desktop-card--overview">
-            <h2 data-t="creator.mobile.overview">Overview</h2>
-            <div class="creator-stats-grid creator-desktop-stats-grid">
-              <article class="creator-stat-card creator-stat-card--designs creator-stat-card--clickable" role="button" tabindex="0" data-goto="3" data-creations-tab="designs">
-                <div class="creator-stat-card__icon creator-stat-card__icon--designs">🎨</div>
-                <span class="creator-stat-card__label" data-t="creator.overview.designs_label">Designs</span>
-                <div class="creator-stat-card__dual">
-                  <span class="creator-stat-card__dual-label" data-t="creator.overview.designs_generated">Generated</span>
-                  <span class="creator-stat-card__dual-value" id="creator-desktop-stat-designs-generated">–</span>
-                  <span class="creator-stat-card__dual-label" data-t="creator.overview.designs_uploaded">Uploaded</span>
-                  <span class="creator-stat-card__dual-value" id="creator-desktop-stat-designs-uploaded">–</span>
-                </div>
-              </article>
-
-              <article class="creator-stat-card creator-stat-card--products creator-stat-card--clickable" role="button" tabindex="0" data-goto="3" data-creations-tab="products">
-                <div class="creator-stat-card__icon creator-stat-card__icon--products">📦</div>
-                <span class="creator-stat-card__label" data-t="creator.overview.products_label">Products</span>
-                <div class="creator-stat-card__dual">
-                  <span class="creator-stat-card__dual-label" data-t="creator.overview.products_online">Online</span>
-                  <span class="creator-stat-card__dual-value" id="creator-desktop-stat-products-online">–</span>
-                  <span class="creator-stat-card__dual-label" data-t="creator.overview.products_offline">Offline</span>
-                  <span class="creator-stat-card__dual-value" id="creator-desktop-stat-products-offline">–</span>
-                </div>
-              </article>
-
-              <article class="creator-stat-card creator-stat-card--heroes creator-stat-card--clickable" role="button" tabindex="0" data-goto="4" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
-                <div class="creator-stat-card__icon creator-stat-card__icon--heroes">🖼️</div>
-                <span class="creator-stat-card__label" data-t="creator.overview.hero_images_label">Hero Images</span>
-                <div class="creator-stat-card__dual">
-                  <span class="creator-stat-card__dual-label" data-t="creator.overview.designs_generated">Generated</span>
-                  <span class="creator-stat-card__dual-value" id="creator-desktop-stat-heroes-generated">–</span>
-                  <span class="creator-stat-card__dual-label" data-t="creator.overview.products_online">Online</span>
-                  <span class="creator-stat-card__dual-value" id="creator-desktop-stat-heroes-online">–</span>
-                </div>
-              </article>
-            </div>
-          </article>
-
-          <article class="creator-desktop-card creator-desktop-card--actions">
-            <h2 data-t="creator.overview.quick_actions">Quick Actions</h2>
-            <a href="#" class="creator-desktop-action" data-goto="2">
-              <span class="creator-desktop-action__title" data-t="creator.overview.action_generator_title">Design Generator</span>
-              <span class="creator-desktop-action__desc" data-t="creator.overview.action_generator_desc">Create new design</span>
-            </a>
-            <a href="#" class="creator-desktop-action" data-goto="3" data-creations-tab="designs">
-              <span class="creator-desktop-action__title" data-t="creator.overview.action_designs_title">My Designs</span>
-              <span class="creator-desktop-action__desc" data-t="creator.overview.action_designs_desc">Manage designs</span>
-            </a>
-            <a href="#" class="creator-desktop-action" data-goto="4" data-marketing-subtab="content-creation" data-marketing-content="hero-images">
-              <span class="creator-desktop-action__title" data-t="creator.overview.action_content_title">Content Creation</span>
-              <span class="creator-desktop-action__desc" data-t="creator.overview.action_content_desc">Create Hero Images</span>
-            </a>
-            <a href="#" class="creator-desktop-action" data-goto="5" data-automations-maintab="design-generator">
-              <span class="creator-desktop-action__title" data-t="creator.overview.action_automations_title">Automations</span>
-              <span class="creator-desktop-action__desc" data-t="creator.overview.action_automations_desc">Schedule design generation</span>
-            </a>
-            <a href="#" class="creator-desktop-action" data-goto="3" data-creations-tab="products">
-              <span class="creator-desktop-action__title" data-t="creator.overview.action_products_title">My Products</span>
-              <span class="creator-desktop-action__desc" data-t="creator.overview.action_products_desc">Manage products</span>
-            </a>
-          </article>
-        </section>
+                <div class="eazy-dashboard" data-eazy-dashboard data-ed-surface="desktop" data-ed-prefix="creator-desktop">
+          <div class="eazy-dashboard__canvas" data-ed-canvas></div>
+        </div>
       </section>
 
       <section class="creator-desktop-stage__panel creator-desktop-stage__panel--research" id="creatorDesktopPanelResearch" data-desktop-screen="research" role="tabpanel" aria-labelledby="creatorDesktopNavResearch" aria-label="Research" hidden>

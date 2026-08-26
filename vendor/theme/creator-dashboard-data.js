@@ -75,6 +75,19 @@
     setText('creator-desktop-stat-products-online', loc(prodsOn));
     setText('creator-desktop-stat-products-offline', loc(prodsOff));
     setText('creator-desktop-stat-heroes-online', loc(heroesOn));
+    if (data.sales) {
+      if (data.sales.eazpire != null) {
+        setText('creator-desktop-stat-sales-eazpire', loc(Number(data.sales.eazpire) || 0));
+        setText('creator-mobile-stat-sales-eazpire', loc(Number(data.sales.eazpire) || 0));
+      }
+      if (data.sales.amazon == null) {
+        setText('creator-desktop-stat-sales-amazon', '–');
+        setText('creator-mobile-stat-sales-amazon', '–');
+      } else {
+        setText('creator-desktop-stat-sales-amazon', loc(Number(data.sales.amazon) || 0));
+        setText('creator-mobile-stat-sales-amazon', loc(Number(data.sales.amazon) || 0));
+      }
+    }
 
     setText('creator-mobile-stat-designs-generated', loc(gen));
     setText('creator-mobile-stat-designs-uploaded', loc(upl));
