@@ -17,8 +17,12 @@
     innovative: 0.05
   };
   var MODE_ORDER = ['faithful', 'inspired', 'creative', 'innovative'];
-  /** Amazon garment mocks: center-chest print area (see generatorHandoff.js). */
-  var PRINT_AREA = { x: 0.28, y: 0.18, w: 0.44, h: 0.38 };
+  /** Fallback-Brustzone (größer als das alte 28/18/44/38). Artwork-Erkennung: printAreaCrop.js */
+  var PRINT_AREA = { x: 0.2, y: 0.12, w: 0.6, h: 0.56 };
+  var ARTWORK_PAD = 0.1;
+  var EDGE_MARGIN = 0.12;
+  var GARMENT_THRESHOLD = 48;
+  var MIN_ARTWORK_FRAC = 0.0035;
   var researchHandoff = false;
   var currentView = 'cropped';
   var currentGenMode = 'i2i';
@@ -446,14 +450,129 @@
     ctx.restore();
   }
 
+  function printAreaNorm() {
+    if (cropState && cropState.printNorm) return cropState.printNorm;
+    return PRINT_AREA;
+  }
+
   function printAreaSel(ox, oy, dw, dh) {
+    var pa = printAreaNorm();
     var sel = {
-      x: ox + dw * PRINT_AREA.x,
-      y: oy + dh * PRINT_AREA.y,
-      w: dw * PRINT_AREA.w,
-      h: dh * PRINT_AREA.h
+      x: ox + dw * pa.x,
+      y: oy + dh * pa.y,
+      w: dw * pa.w,
+      h: dh * pa.h
     };
     return clampSel(sel, ox, oy, dw, dh);
+  }
+
+  /**
+   * Druck-Erkennung auf dem Mock: Shirt-Stoff ist einheitlich; Druck hat
+   * Kontrast. Rand/Silhouette ignorieren, Bounding-Box + 10 % Padding.
+   * Keep in sync with src/features/eazyResearch/printAreaCrop.js
+   */
+  function detectArtworkRectLocal(width, height, rgba) {
+    var W = width | 0;
+    var H = height | 0;
+    if (W < 8 || H < 8 || !rgba || rgba.length < W * H * 4) return null;
+    function px(x, y) {
+      var i = (y * W + x) * 4;
+      return [rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]];
+    }
+    function dist(a, b) {
+      var dr = a[0] - b[0];
+      var dg = a[1] - b[1];
+      var db = a[2] - b[2];
+      return Math.sqrt(dr * dr + dg * dg + db * db);
+    }
+    function median(values) {
+      if (!values.length) return 128;
+      var s = values.slice().sort(function (a, b) { return a - b; });
+      return s[(s.length / 2) | 0];
+    }
+    var x0 = Math.round(W * EDGE_MARGIN);
+    var x1 = Math.round(W * (1 - EDGE_MARGIN));
+    var y0 = Math.round(H * 0.12);
+    var y1 = Math.round(H * 0.78);
+    if (x1 - x0 < 4 || y1 - y0 < 4) return null;
+    var rs = [];
+    var gs = [];
+    var bs = [];
+    var leftXa = Math.round(W * 0.12);
+    var leftXb = Math.round(W * 0.22);
+    var rightXa = Math.round(W * 0.78);
+    var rightXb = Math.round(W * 0.88);
+    var sy0 = Math.round(H * 0.28);
+    var sy1 = Math.round(H * 0.55);
+    var y;
+    var x;
+    var p;
+    for (y = sy0; y < sy1; y++) {
+      for (x = leftXa; x < leftXb; x++) {
+        p = px(x, y);
+        if (p[3] < 16) continue;
+        rs.push(p[0]); gs.push(p[1]); bs.push(p[2]);
+      }
+      for (x = rightXa; x < rightXb; x++) {
+        p = px(x, y);
+        if (p[3] < 16) continue;
+        rs.push(p[0]); gs.push(p[1]); bs.push(p[2]);
+      }
+    }
+    if (rs.length < 20) return null;
+    var garment = [median(rs), median(gs), median(bs)];
+    var minX = W;
+    var minY = H;
+    var maxX = 0;
+    var maxY = 0;
+    var count = 0;
+    for (y = y0; y < y1; y++) {
+      for (x = x0; x < x1; x++) {
+        p = px(x, y);
+        if (p[3] < 16) continue;
+        if (dist(p, garment) <= GARMENT_THRESHOLD) continue;
+        count++;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+    var searchArea = (x1 - x0) * (y1 - y0);
+    if (count < Math.max(24, searchArea * MIN_ARTWORK_FRAC)) return null;
+    if (maxX < minX || maxY < minY) return null;
+    var bw = maxX - minX + 1;
+    var bh = maxY - minY + 1;
+    var padX = Math.round(bw * ARTWORK_PAD);
+    var padY = Math.round(bh * ARTWORK_PAD);
+    var rx = Math.max(0, Math.min(minX - padX, W - 2));
+    var ry = Math.max(0, Math.min(minY - padY, H - 2));
+    var rw = Math.max(2, Math.min(bw + padX * 2, W - rx));
+    var rh = Math.max(2, Math.min(bh + padY * 2, H - ry));
+    return { x: rx, y: ry, w: rw, h: rh };
+  }
+
+  function detectPrintNormFromImage(img) {
+    try {
+      var nw = img.naturalWidth || img.width;
+      var nh = img.naturalHeight || img.height;
+      if (!nw || !nh) return null;
+      var scale = Math.min(1, 160 / nw);
+      var sw = Math.max(8, Math.round(nw * scale));
+      var sh = Math.max(8, Math.round(nh * scale));
+      var c = document.createElement('canvas');
+      c.width = sw;
+      c.height = sh;
+      var ctx = c.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(img, 0, 0, sw, sh);
+      var data = ctx.getImageData(0, 0, sw, sh).data;
+      var r = detectArtworkRectLocal(sw, sh, data);
+      if (!r) return null;
+      return { x: r.x / sw, y: r.y / sh, w: r.w / sw, h: r.h / sh };
+    } catch (eDet) {
+      return null;
+    }
   }
 
   function applyViewToCrop() {
@@ -694,6 +813,7 @@
       ch: 0,
       dpr: 1,
       sel: { x: 0, y: 0, w: 0, h: 0 },
+      printNorm: researchHandoff ? (detectPrintNormFromImage(img) || PRINT_AREA) : PRINT_AREA,
       resizeObs: null,
       pointerCleanup: null
     };

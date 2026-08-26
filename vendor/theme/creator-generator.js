@@ -633,27 +633,30 @@
         var cropLabel = genLabel('creator.generator.view_cropped', 'Cropped');
         var i2iLabel = genLabel('creator.generator.mode_image_to_image', 'Image to Image');
         var t2iLabel = genLabel('creator.generator.mode_text_to_image', 'Text to Image');
-        var researchChrome = item.researchHandoff
+        var modeSwitch = item.researchHandoff
+          ? '<div class="gen-selected-images__mode-switch" role="group">' +
+              '<button type="button" data-research-mode="i2i" data-index="' + index + '"' +
+                (item.researchMode !== 't2i' ? ' class="is-on"' : '') + '>' + i2iLabel + '</button>' +
+              '<button type="button" data-research-mode="t2i" data-index="' + index + '"' +
+                (item.researchMode === 't2i' ? ' class="is-on"' : '') + '>' + t2iLabel + '</button>' +
+            '</div>'
+          : '';
+        var viewerChrome = item.researchHandoff
           ? '<div class="gen-selected-images__view-switch" role="group">' +
               '<button type="button" data-research-view="original" data-index="' + index + '"' +
                 (item.researchView === 'original' ? ' class="is-on"' : '') + '>' + origLabel + '</button>' +
               '<button type="button" data-research-view="cropped" data-index="' + index + '"' +
                 (item.researchView !== 'original' ? ' class="is-on"' : '') + '>' + cropLabel + '</button>' +
             '</div>' +
-            '<div class="gen-selected-images__mode-switch" role="group">' +
-              '<button type="button" data-research-mode="i2i" data-index="' + index + '"' +
-                (item.researchMode !== 't2i' ? ' class="is-on"' : '') + '>' + i2iLabel + '</button>' +
-              '<button type="button" data-research-mode="t2i" data-index="' + index + '"' +
-                (item.researchMode === 't2i' ? ' class="is-on"' : '') + '>' + t2iLabel + '</button>' +
-            '</div>' +
             (item.researchMode === 't2i'
               ? '<span class="gen-selected-images__t2i-veil"><span>' + t2iLabel + '</span></span>'
               : '')
           : '';
         wrap.innerHTML =
+          modeSwitch +
           '<span class="gen-selected-images__thumb" data-index="' + index + '" role="button" tabindex="0">' +
           '<img src="' + item.dataUrl + '" alt="">' +
-          researchChrome +
+          viewerChrome +
           '<button type="button" class="gen-selected-images__draw" data-index="' + index + '" aria-label="' + drawLabel + '" title="' + drawLabel + '">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></button>' +
           '<button type="button" class="gen-selected-images__remove" data-index="' + index + '" aria-label="Remove">' +

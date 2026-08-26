@@ -260,7 +260,6 @@
 }
 .gen-selected-images__view-switch,
 .gen-selected-images__mode-switch {
-  position: absolute;
   z-index: 3;
   display: flex;
   border-radius: 999px;
@@ -269,13 +268,14 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
 .gen-selected-images__view-switch {
+  position: absolute;
   top: 6px;
   left: 6px;
 }
 .gen-selected-images__mode-switch {
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  align-self: center;
+  margin-bottom: 4px;
 }
 .gen-selected-images__view-switch button,
 .gen-selected-images__mode-switch button {
@@ -309,9 +309,6 @@
   font-weight: 700;
   text-align: center;
   padding: 4px 8px;
-}
-  width: 14px;
-  height: 14px;
 }
 .creator-gen-card {
   background: rgba(35, 38, 52, 0.8);

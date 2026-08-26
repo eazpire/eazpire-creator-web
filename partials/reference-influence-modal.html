@@ -197,16 +197,16 @@
   <div class="creator-base-modal__body reference-influence-modal__body">
     <div class="reference-influence-modal__layout">
       <div class="reference-influence-modal__preview-col">
+        <div class="reference-influence-modal__gen-mode-switch" id="reference-influence-gen-mode-switch" hidden role="group">
+          <button type="button" data-ref-gen-mode="i2i" class="is-on">Image to Image</button>
+          <button type="button" data-ref-gen-mode="t2i">Text to Image</button>
+        </div>
         <div class="reference-influence-modal__preview-wrap" id="reference-influence-preview-wrap">
           <canvas id="reference-influence-crop-canvas" class="reference-influence-modal__crop-canvas" aria-hidden="true"></canvas>
           <img id="reference-influence-preview" class="reference-influence-modal__preview" alt="" />
           <div class="reference-influence-modal__view-switch" id="reference-influence-view-switch" hidden role="group" aria-label="Original">
             <button type="button" data-ref-view="original">Original</button>
             <button type="button" data-ref-view="cropped" class="is-on">Cropped</button>
-          </div>
-          <div class="reference-influence-modal__gen-mode-switch" id="reference-influence-gen-mode-switch" hidden role="group">
-            <button type="button" data-ref-gen-mode="i2i" class="is-on">Image to Image</button>
-            <button type="button" data-ref-gen-mode="t2i">Text to Image</button>
           </div>
           <div class="reference-influence-modal__t2i-veil" id="reference-influence-t2i-veil" hidden>
             <span>Text to Image</span>
@@ -383,7 +383,9 @@
     min-width: 0;
     padding: 16px 12px 16px 20px;
     display: flex;
+    flex-direction: column;
     align-items: stretch;
+    gap: 10px;
   }
   .reference-influence-modal__controls-col {
     flex: 1 1 52%;
@@ -430,7 +432,6 @@
   }
   .reference-influence-modal__view-switch,
   .reference-influence-modal__gen-mode-switch {
-    position: absolute;
     z-index: 3;
     display: flex;
     gap: 0;
@@ -440,13 +441,14 @@
     border: 1px solid rgba(255, 255, 255, 0.18);
   }
   .reference-influence-modal__view-switch {
+    position: absolute;
     top: 10px;
     left: 10px;
   }
   .reference-influence-modal__gen-mode-switch {
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: relative;
+    align-self: center;
+    flex-shrink: 0;
   }
   .reference-influence-modal__view-switch[hidden],
   .reference-influence-modal__gen-mode-switch[hidden],
@@ -745,6 +747,7 @@
     .reference-influence-modal__preview-col {
       flex: 0 0 auto;
       padding: 12px 16px 8px;
+      gap: 8px;
     }
     .reference-influence-modal__preview-wrap {
       max-height: min(42vw, 220px);
