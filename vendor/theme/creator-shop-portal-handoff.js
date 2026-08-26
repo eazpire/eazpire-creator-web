@@ -1,16 +1,31 @@
 /**
- * Shop → creator.eazpire.com session handoff (exchange token, no visible bridge page).
- * Prefetched tickets expire after 2 minutes; reuse at most 8s so a long shop
- * visit never lands on /auth/complete with a stale token.
+ * Shop → creator.eazpire.com session handoff.
+ * Shop switch always navigates to /pages/creator-handoff (same-origin Shopify
+ * session). The bridge issues a ticket and opens /auth/complete. Tickets from
+ * the bridge are reused at most 8s.
  */
 (function () {
   "use strict";
 
   var CREATOR_ORIGIN = "https://creator.eazpire.com";
+  var SHOP_ORIGIN = "https://www.eazpire.com";
   var PORTAL_HOME = CREATOR_ORIGIN + "/";
   var BRIDGE_PATH = "/pages/creator-handoff";
   var ISSUE_TIMEOUT_MS = 20000;
   var TOKEN_REUSE_MS = 8000;
+
+  function onShopHost() {
+    try {
+      var host = String(window.location.hostname || "").toLowerCase();
+      return host === "www.eazpire.com" || host === "eazpire.com" || host === "allyoucanpink.myshopify.com";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function shopPath(path) {
+    return onShopHost() ? path : SHOP_ORIGIN + path;
+  }
 
   function dispatchBase() {
     if (
@@ -45,7 +60,7 @@
   }
 
   function storefrontLoginUrl() {
-    return "/customer_authentication/login?return_to=" + encodeURIComponent(BRIDGE_PATH);
+    return shopPath("/customer_authentication/login?return_to=" + encodeURIComponent(BRIDGE_PATH));
   }
 
   function portalHomeUrl() {
@@ -192,41 +207,19 @@
 
   function loggedInFallbackUrl() {
     var next = readNextParam() || "/dashboard";
-    return BRIDGE_PATH + "?next=" + encodeURIComponent(next);
+    return shopPath(BRIDGE_PATH + "?next=" + encodeURIComponent(next));
   }
 
+  // Shop switch always lands on the same-origin bridge. Jumping straight to
+  // /auth/complete from www dropped the Creator cookie (Safari bounce tracking)
+  // or skipped complete entirely and opened creator.eazpire.com as a guest.
   function resolveTargetUrl(opts) {
     opts = opts || {};
     var cid = readCustomerId(opts.customerId);
     if (!cid) {
       return Promise.resolve(storefrontLoginUrl());
     }
-    var consume = opts.consume !== false;
-    var pending = consume ? takeInflightIssue() || issueExchangeToken(cid) : issueExchangeToken(cid);
-
-    function toUrl(result) {
-      if (resultIsFresh(result)) return result.url;
-      if (result && result.error === "not_logged_in") return storefrontLoginUrl();
-      return null;
-    }
-
-    return Promise.resolve(pending)
-      .then(function (result) {
-        var url = toUrl(result);
-        if (url) return url;
-        inflightIssue = null;
-        inflightCid = "";
-        inflightAt = 0;
-        return fetchExchangeToken(cid).then(function (retry) {
-          var retryUrl = toUrl(retry);
-          if (retryUrl) return retryUrl;
-          if (retry && retry.error === "not_logged_in") return storefrontLoginUrl();
-          return loggedInFallbackUrl();
-        });
-      })
-      .catch(function () {
-        return loggedInFallbackUrl();
-      });
+    return Promise.resolve(loggedInFallbackUrl());
   }
 
   function navigateToPortal(opts) {

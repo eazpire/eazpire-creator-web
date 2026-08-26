@@ -88,10 +88,12 @@
     var customerId = root.dataset.customerId || "";
 
     function resolveCreatorTarget() {
-      if (global.EazCreatorPortalHandoff && customerId) {
+      if (global.EazCreatorPortalHandoff && typeof global.EazCreatorPortalHandoff.resolveTargetUrl === "function") {
         return global.EazCreatorPortalHandoff.resolveTargetUrl({ customerId: customerId });
       }
-      return creatorPortalUrl;
+      return customerId
+        ? "https://www.eazpire.com/pages/creator-handoff?next=" + encodeURIComponent("/dashboard")
+        : "https://www.eazpire.com/customer_authentication/login?return_to=" + encodeURIComponent("/pages/creator-handoff");
     }
 
     var creatorPaths = (root.dataset.creatorPaths || "/dashboard,/research,/generator,/creations,/marketing,/automations")

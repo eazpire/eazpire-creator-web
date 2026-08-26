@@ -24,40 +24,73 @@
   }
 
   var SSO_GUARD_KEY = "eaz_creator_sso_guard";
-  var SHOP_HANDOFF_PATH = "/pages/creator-handoff";
+  var SHOP_HANDOFF_URL =
+    "https://www.eazpire.com/pages/creator-handoff?next=" + encodeURIComponent("/dashboard");
 
-  function resumeShopSessionIfGuest(data) {
-    // Shop → Creator login is shop-initiated (header switch / /pages/creator-handoff).
-    // Auto-bouncing every guest HTML visit to the shop dumped Creator Smoke and
-    // Research onto Shopify login, and fed the retry=1 reload loop.
+  function hasSsoGuard() {
+    try {
+      if (sessionStorage.getItem(SSO_GUARD_KEY)) return true;
+    } catch (e) {}
+    try {
+      if (/(?:^|;\s*)eaz_sso_guard=(?:1|true)(?:;|$)/i.test(document.cookie || "")) return true;
+    } catch (e) {}
     return false;
   }
 
-  function applyBootstrapAuth(data) {
-    if (resumeShopSessionIfGuest(data && data.ok ? data : null)) return;
-    if (!data || !data.ok) return;
-    bootstrapApplied = true;
-    setAuth(!!data.logged_in, data.owner_id || null);
-    if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
-      global.CreatorPortalThemeBridge.notifyContextReady();
-    }
+  function shouldRecoverFromShop(data) {
+    if (data && data.logged_in) return false;
+    if (global.__EAZ_SSO_BLOCK__) return false;
+    if (hasSsoGuard()) return false;
+    return !!(global.__EAZ_AUTH_OK__ || global.__EAZ_FROM_SHOP__);
+  }
+
+  function goToShopHandoff() {
     try {
-      if (global.__EAZ_SSO_BLOCK__) return;
-      if (global.__EAZ_AUTH_OK__ && !data.logged_in) {
-        global.CreatorPortalApi.me().then(function (me) {
+      sessionStorage.setItem(SSO_GUARD_KEY, String(Date.now()));
+    } catch (e) {}
+    global.location.replace(SHOP_HANDOFF_URL);
+  }
+
+  function recoverShopSessionAfterGuestBootstrap() {
+    var api = global.CreatorPortalApi;
+    if (api && typeof api.me === "function") {
+      api
+        .me()
+        .then(function (me) {
           if (me && me.logged_in) {
+            bootstrapApplied = true;
             setAuth(true, me.owner_id);
             if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
               global.CreatorPortalThemeBridge.notifyContextReady();
             }
             return;
           }
-          if (sessionStorage.getItem(SSO_GUARD_KEY)) return;
-          sessionStorage.setItem(SSO_GUARD_KEY, String(Date.now()));
-          global.location.replace("https://www.eazpire.com/pages/creator-handoff?next=" + encodeURIComponent("/dashboard"));
-        }).catch(function () {});
-      }
-    } catch (e) {}
+          goToShopHandoff();
+        })
+        .catch(function () {
+          goToShopHandoff();
+        });
+      return;
+    }
+    goToShopHandoff();
+  }
+
+  // Only recover after a shop switch (auth=ok / from_shop). Direct visits stay guest.
+  function resumeShopSessionIfGuest(data) {
+    if (!shouldRecoverFromShop(data && data.ok ? data : data)) return false;
+    recoverShopSessionAfterGuestBootstrap();
+    return true;
+  }
+
+  function applyBootstrapAuth(data) {
+    var session = data && data.ok ? data : null;
+    if (resumeShopSessionIfGuest(session || { ok: true, logged_in: false })) return;
+    if (!session) return;
+    bootstrapApplied = true;
+    setAuth(!!session.logged_in, session.owner_id || null);
+    if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+      global.CreatorPortalThemeBridge.notifyContextReady();
+    }
   }
 
   function showToast(title, text) {
@@ -76,13 +109,17 @@
   function handleAuthQuery() {
     try {
       var params = new URLSearchParams(global.location.search);
-      if (params.get("auth") === "ok") {
-        global.__EAZ_AUTH_OK__ = true;
+      var authOk = params.get("auth") === "ok";
+      var fromShop = params.get("from_shop") === "1";
+      if (authOk || fromShop) {
+        if (authOk) global.__EAZ_AUTH_OK__ = true;
+        if (fromShop) global.__EAZ_FROM_SHOP__ = true;
         params.delete("auth");
         params.delete("sso");
+        params.delete("from_shop");
         var next = global.location.pathname + (params.toString() ? "?" + params.toString() : "");
         global.history.replaceState({}, "", next);
-        showToast("Signed in", "Welcome to Eazpire Creator.");
+        if (authOk) showToast("Signed in", "Welcome to Eazpire Creator.");
       } else if (params.get("auth_error") || params.get("sso") === "0") {
         var err = params.get("auth_error") || "sign_in_failed";
         params.delete("auth_error");
@@ -98,8 +135,12 @@
   async function refreshSession(opts) {
     opts = opts || {};
     // Skip duplicate /auth/me when bootstrap already applied session (including guest).
+    // After a shop switch, still re-check once if bootstrap said guest.
     if (opts.skipIfKnown && bootstrapApplied) {
-      return { logged_in: state.loggedIn, owner_id: state.ownerId };
+      var expectShopSession = !!(global.__EAZ_AUTH_OK__ || global.__EAZ_FROM_SHOP__) && !global.__EAZ_SSO_BLOCK__;
+      if (!(expectShopSession && !state.loggedIn)) {
+        return { logged_in: state.loggedIn, owner_id: state.ownerId };
+      }
     }
     try {
       var me = await global.CreatorPortalApi.me();
