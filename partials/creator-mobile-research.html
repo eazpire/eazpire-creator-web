@@ -1,6 +1,10 @@
 <div class="eazy-research" data-eazy-research="1">
+  <div class="eazy-research__tabs" role="tablist" data-erz-tabs>
+    <button type="button" class="eazy-research__tab is-on" data-erz-tab="ideas" role="tab" aria-selected="true" data-t="creator.research.tab_design_ideas">Design Ideas</button>
+    <button type="button" class="eazy-research__tab" data-erz-tab="trends" role="tab" aria-selected="false" data-t="creator.research.tab_trends">Trends</button>
+  </div>
   <div class="eazy-research__filters-backdrop" data-erz-filters-backdrop hidden></div>
-  <div class="eazy-research__layout">
+  <div class="eazy-research__layout" data-erz-pane="ideas">
     <aside class="eazy-research__filters-wrap" data-erz-filters-wrap>
       <div class="eazy-research__filters" data-erz-filters>
         <div class="eazy-research__filters-scroll" data-erz-filters-scroll>
@@ -105,6 +109,23 @@
             </div>
           </div>
         </section>
+        <section class="eazy-research__fold is-collapsed" data-erz-fold="opportunity">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="false" aria-controls="erz-fold-body-opportunity">
+            <span class="eazy-research__filters-heading" data-t="creator.research.opportunity">Opportunity</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-opportunity" data-erz-fold-body hidden>
+            <p class="eazy-research__filters-hint" data-t="creator.research.opportunity_all_hint">All opportunity ratings. Empty when Google has no data — never invented.</p>
+            <div class="eazy-research__checks" data-erz-opportunity-group role="group" aria-label="Opportunity">
+              <label class="eazy-research__check"><input type="checkbox" data-erz-opportunity="very_high"><span data-t="creator.research.opportunity_very_high">Very high</span><span class="eazy-research__count" data-erz-count="opportunity:very_high">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-opportunity="high"><span data-t="creator.research.opportunity_high">High</span><span class="eazy-research__count" data-erz-count="opportunity:high">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-opportunity="medium"><span data-t="creator.research.opportunity_medium">Medium</span><span class="eazy-research__count" data-erz-count="opportunity:medium">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-opportunity="low"><span data-t="creator.research.opportunity_low">Low</span><span class="eazy-research__count" data-erz-count="opportunity:low">0</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-opportunity="very_low"><span data-t="creator.research.opportunity_very_low">Very low</span><span class="eazy-research__count" data-erz-count="opportunity:very_low">0</span></label>
+            </div>
+          </div>
+        </section>
         </div>
         <footer class="eazy-research__filters-foot" data-erz-analyze-foot>
           <div class="eazy-research__analyze-selects">
@@ -178,11 +199,154 @@
     </div>
   </div>
 
+  <div class="eazy-research__layout" data-erz-pane="trends" hidden>
+    <aside class="eazy-research__filters-wrap" data-erz-trends-filters-wrap>
+      <div class="eazy-research__filters" data-erz-trends-filters>
+        <div class="eazy-research__filters-scroll" data-erz-trends-filters-scroll>
+        <div class="eazy-research__filters-pin">
+          <div class="eazy-research__select eazy-research__country" data-erz-trends-geo-wrap>
+            <span class="visually-hidden" data-t="creator.research.country">Country</span>
+            <select data-erz-trends-geo class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
+              <option value="ALL" data-t="creator.research.country_all">All countries</option>
+            </select>
+            <button type="button" class="eazy-research__country-btn" data-erz-trends-geo-btn aria-haspopup="dialog" aria-expanded="false">
+              <span class="eazy-research__flag is-empty" data-erz-trends-geo-flag aria-hidden="true" hidden></span>
+              <span data-erz-trends-geo-label data-t="creator.research.country_all">All countries</span>
+            </button>
+          </div>
+          <div class="eazy-research__select eazy-research__sort" data-erz-trends-sort-wrap>
+            <span class="visually-hidden" data-t="creator.research.sort_label">Sort</span>
+            <button type="button" class="eazy-research__sort-btn" data-erz-trends-sort-btn aria-haspopup="listbox" aria-expanded="false">
+              <svg class="eazy-research__sort-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 7h10M4 12h7M4 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M16 8l3-3 3 3M19 5v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-erz-trends-sort-label data-t="creator.research.sort_volume">Search volume</span>
+              <svg class="eazy-research__sort-arrow" data-erz-trends-sort-arrow width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 3v8M4 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="eazy-research__sort-menu" data-erz-trends-sort-menu hidden role="listbox"></div>
+          </div>
+        </div>
+        <section class="eazy-research__fold" data-erz-fold="trends_topics">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="true" aria-controls="erz-fold-body-trends-topics">
+            <span class="eazy-research__filters-heading" data-t="creator.research.topics">Topics</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-trends-topics" data-erz-fold-body>
+            <p class="eazy-research__filters-hint" data-t="creator.research.topics_all_hint">All topics</p>
+            <div class="eazy-research__checks" data-erz-trends-topics role="group"></div>
+          </div>
+        </section>
+        <section class="eazy-research__fold is-collapsed" data-erz-fold="trends_type">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="false" aria-controls="erz-fold-body-trends-type">
+            <span class="eazy-research__filters-heading" data-t="creator.research.product_type">Product type</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-trends-type" data-erz-fold-body hidden>
+            <p class="eazy-research__filters-hint" data-t="creator.research.product_type_all_hint">In-house tags on search queries. Google does not classify product type.</p>
+            <div class="eazy-research__checks" data-erz-trends-types role="group">
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-type="tshirt"><span data-t="creator.research.product_type_tshirt">T-shirts</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-type="hoodie"><span data-t="creator.research.product_type_hoodie">Hoodies</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-type="mug"><span data-t="creator.research.product_type_mug">Mugs</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-type="doormat"><span data-t="creator.research.product_type_doormat">Doormats</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-type="tote"><span data-t="creator.research.product_type_tote">Tote bags</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-type="poster"><span data-t="creator.research.product_type_poster">Posters</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-type="sticker"><span data-t="creator.research.product_type_sticker">Stickers</span></label>
+            </div>
+          </div>
+        </section>
+        <section class="eazy-research__fold is-collapsed" data-erz-fold="trends_time">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="false" aria-controls="erz-fold-body-trends-time">
+            <span class="eazy-research__filters-heading" data-t="creator.research.time">Time</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-trends-time" data-erz-fold-body hidden>
+            <p class="eazy-research__filters-hint" data-t="creator.research.time_hint">Keyword Planner publishes a 12-month average and a last-month series. There is no 24-hour search volume.</p>
+            <div class="eazy-research__checks" data-erz-trends-time-group role="radiogroup">
+              <label class="eazy-research__check"><input type="radio" name="erz-trends-time" data-erz-trends-time="avg_12m" checked><span data-t="creator.research.time_avg_12m">12-month average</span></label>
+              <label class="eazy-research__check"><input type="radio" name="erz-trends-time" data-erz-trends-time="last_month"><span data-t="creator.research.time_last_month">Last month</span></label>
+              <label class="eazy-research__check"><input type="radio" name="erz-trends-time" data-erz-trends-time="rising"><span data-t="creator.research.time_rising">Rising</span></label>
+              <label class="eazy-research__check"><input type="radio" name="erz-trends-time" data-erz-trends-time="stable"><span data-t="creator.research.time_stable">Stable</span></label>
+              <label class="eazy-research__check"><input type="radio" name="erz-trends-time" data-erz-trends-time="falling"><span data-t="creator.research.time_falling">Falling</span></label>
+            </div>
+          </div>
+        </section>
+        <section class="eazy-research__fold is-collapsed" data-erz-fold="trends_volume">
+          <button type="button" class="eazy-research__fold-toggle" data-erz-fold-toggle aria-expanded="false" aria-controls="erz-fold-body-trends-volume">
+            <span class="eazy-research__filters-heading" data-t="creator.research.volume">Search volume</span>
+            <span class="eazy-research__fold-hint" data-erz-fold-hint hidden></span>
+            <svg class="eazy-research__fold-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="eazy-research__fold-body" id="erz-fold-body-trends-volume" data-erz-fold-body hidden>
+            <p class="eazy-research__filters-hint" data-t="creator.research.volume_all_hint">Google Keyword Planner 12-month average. Not 24-hour data.</p>
+            <div class="eazy-research__checks" data-erz-trends-volume-group role="group">
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-volume="very_high"><span data-t="creator.research.volume_very_high">Very high</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-volume="high"><span data-t="creator.research.volume_high">High</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-volume="medium"><span data-t="creator.research.volume_medium">Medium</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-volume="low"><span data-t="creator.research.volume_low">Low</span></label>
+              <label class="eazy-research__check"><input type="checkbox" data-erz-trends-volume="very_low"><span data-t="creator.research.volume_very_low">Very low</span></label>
+            </div>
+          </div>
+        </section>
+        </div>
+        <footer class="eazy-research__filters-foot" data-erz-trends-foot>
+          <div class="eazy-research__analyze-selects">
+            <div class="eazy-research__select eazy-research__country" data-erz-trends-search-geo-wrap>
+              <span class="visually-hidden" data-t="creator.research.country">Country</span>
+              <select data-erz-trends-search-geo class="eazy-research__country-native" tabindex="-1" aria-hidden="true"></select>
+              <button type="button" class="eazy-research__country-btn" data-erz-trends-search-geo-btn aria-haspopup="dialog" aria-expanded="false">
+                <span class="eazy-research__flag is-empty" data-erz-trends-search-geo-flag aria-hidden="true" hidden></span>
+                <span data-erz-trends-search-geo-label data-t="creator.research.analyze_all">All</span>
+              </button>
+            </div>
+            <div class="eazy-research__select eazy-research__country" data-erz-trends-search-lang-wrap>
+              <span class="visually-hidden" data-t="creator.research.language">Language</span>
+              <select data-erz-trends-search-lang class="eazy-research__country-native" tabindex="-1" aria-hidden="true"></select>
+              <button type="button" class="eazy-research__country-btn" data-erz-trends-search-lang-btn aria-haspopup="dialog" aria-expanded="false">
+                <span class="eazy-research__flag is-empty" data-erz-trends-search-lang-flag aria-hidden="true" hidden></span>
+                <span data-erz-trends-search-lang-label data-t="creator.research.analyze_all">All</span>
+              </button>
+            </div>
+          </div>
+          <p class="eazy-research__analyze-used" data-erz-trends-used hidden></p>
+          <div class="eazy-research__toolbar">
+            <label class="eazy-research__search">
+              <span class="visually-hidden" data-t="creator.research.trends_search_placeholder">Search a topic or keyword</span>
+              <input type="search" autocomplete="off" data-erz-trends-q data-t-placeholder="creator.research.trends_search_placeholder" placeholder="Search a topic or keyword">
+            </label>
+            <button type="button" class="eazy-research__analyze" data-erz-trends-search data-t="creator.research.trends_search">Search</button>
+          </div>
+        </footer>
+      </div>
+    </aside>
+    <div class="eazy-research__stage" data-erz-trends-stage>
+      <div class="eazy-research__grid-scroll" data-erz-trends-scroll>
+        <p class="eazy-research__filters-hint" data-t="creator.research.trends_note">Estimated monthly searches from Google Keyword Planner. Not Amazon unit sales.</p>
+        <div class="eazy-research__kw-table" data-erz-trends-table></div>
+        <p class="eazy-research__empty" data-erz-trends-empty hidden></p>
+      </div>
+    </div>
+  </div>
+
   <div class="eazy-research-modal" data-erz-modal hidden>
     <div class="eazy-research-modal__backdrop" data-erz-close></div>
     <div class="eazy-research-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="eazy-research-modal-title">
       <button type="button" class="eazy-research-modal__close" data-erz-close aria-label="Close product">×</button>
       <div data-erz-detail></div>
+    </div>
+  </div>
+
+  <div class="eazy-research-picker" data-erz-picker hidden>
+    <div class="eazy-research-picker__backdrop" data-erz-picker-close></div>
+    <div class="eazy-research-picker__dialog" role="dialog" aria-modal="true" aria-labelledby="eazy-research-picker-title">
+      <button type="button" class="eazy-research-picker__close" data-erz-picker-close aria-label="Close" aria-label="Close">×</button>
+      <h3 class="eazy-research-picker__title" id="eazy-research-picker-title" data-erz-picker-title></h3>
+      <div class="eazy-research-picker__list" data-erz-picker-list role="listbox"></div>
     </div>
   </div>
 </div>

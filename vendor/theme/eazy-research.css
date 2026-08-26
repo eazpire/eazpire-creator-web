@@ -64,6 +64,37 @@
   display: none;
 }
 
+.eazy-research__tabs {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  z-index: 2;
+}
+
+.eazy-research__tab {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(8, 10, 26, 0.72);
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.eazy-research__tab.is-on {
+  background: rgba(124, 92, 255, 0.28);
+  border-color: rgba(124, 92, 255, 0.55);
+}
+
+.eazy-research__layout[hidden],
+.eazy-research [data-erz-pane][hidden] {
+  display: none !important;
+}
+
 .eazy-research__layout {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1254,6 +1285,185 @@
 }
 
 .eazy-research-modal [data-erz-detail] {
+  min-height: 0;
+}
+
+.eazy-research-picker[hidden] { display: none; }
+
+.eazy-research-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 10045;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.eazy-research-picker__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 24, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.eazy-research-picker__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  max-height: min(72vh, 560px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #120c22;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  padding: 16px 16px 12px;
+  color: #f4f1ff;
+}
+
+.eazy-research-picker__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.eazy-research-picker__title {
+  margin: 0 40px 12px 0;
+  font-size: 1rem;
+}
+
+.eazy-research-picker__list {
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eazy-research-picker__opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.eazy-research-picker__opt:hover,
+.eazy-research-picker__opt.is-on {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.eazy-research__kw-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 16px;
+}
+
+.eazy-research__kw-head,
+.eazy-research__kw-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.9fr) 88px 72px 72px 88px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.eazy-research__kw-head {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.eazy-research__kw-row {
+  background: rgba(8, 10, 26, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
+}
+
+.eazy-research__kw-sort {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.eazy-research__bucket {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.eazy-research__bucket.is-high,
+.eazy-research__bucket.is-very_high {
+  background: rgba(46, 204, 113, 0.18);
+  color: #8dffc0;
+}
+
+.eazy-research__bucket.is-medium {
+  background: rgba(255, 215, 176, 0.14);
+  color: #ffd7b0;
+}
+
+.eazy-research-card__opp {
+  margin: 6px 0 0;
+}
+
+.eazy-research__topic-vol {
+  margin-left: auto;
+  opacity: 0.8;
+}
+
+@media (max-width: 900px) {
+  .eazy-research__kw-head {
+    display: none;
+  }
+  .eazy-research__kw-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "kw vol"
+      "topic trend"
+      "comp type";
+  }
+  .eazy-research__kw-row > :nth-child(1) { grid-area: kw; }
+  .eazy-research__kw-row > :nth-child(2) { grid-area: topic; }
+  .eazy-research__kw-row > :nth-child(3) { grid-area: vol; }
+  .eazy-research__kw-row > :nth-child(4) { grid-area: trend; }
+  .eazy-research__kw-row > :nth-child(5) { grid-area: comp; }
+  .eazy-research__kw-row > :nth-child(6) { grid-area: type; }
+}
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;

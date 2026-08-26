@@ -15,6 +15,7 @@
     custom_design: false,
     design_type: false,
     language: false,
+    opportunity: false,
   };
   var HEART_SVG =
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
@@ -57,6 +58,24 @@
     { id: "bsr", defDir: "asc" },
     { id: "newest", defDir: "desc" },
   ];
+  var TREND_GEOS = [
+    { id: "ALL", key: "creator.research.country_all", fallback: "All countries", flag: "" },
+    { id: "DE", key: "creator.research.geo_DE", fallback: "Germany", flag: "DE" },
+    { id: "US", key: "creator.research.geo_US", fallback: "United States", flag: "US" },
+    { id: "GB", key: "creator.research.geo_GB", fallback: "United Kingdom", flag: "GB" },
+    { id: "FR", key: "creator.research.geo_FR", fallback: "France", flag: "FR" },
+    { id: "IT", key: "creator.research.geo_IT", fallback: "Italy", flag: "IT" },
+    { id: "ES", key: "creator.research.geo_ES", fallback: "Spain", flag: "ES" },
+    { id: "CA", key: "creator.research.geo_CA", fallback: "Canada", flag: "CA" },
+    { id: "AU", key: "creator.research.geo_AU", fallback: "Australia", flag: "AU" },
+  ];
+  var TREND_SORT_OPTIONS = [
+    { id: "volume", defDir: "desc" },
+    { id: "keyword", defDir: "asc" },
+    { id: "competition", defDir: "desc" },
+    { id: "trend", defDir: "desc" },
+  ];
+  var PRODUCT_TYPE_KEYS = ["tshirt", "hoodie", "mug", "doormat", "tote", "poster", "sticker"];
   var SORT_ARROW_SVG =
     '<svg class="eazy-research__sort-opt-arrow" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 3v8M4 6l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var COUNTRY_FALLBACK = {
@@ -86,6 +105,8 @@
     languagesSelected: [],
     personalizationsSelected: [],
     audiencesSelected: [],
+    opportunitySelected: [],
+    tab: "ideas",
     sort: "review_growth",
     sortDir: "desc",
     reprintOk: true,
@@ -106,6 +127,27 @@
     loadingMore: false,
     loadGen: 0,
     pageSize: 32,
+    trends: {
+      geo: "ALL",
+      language: "all",
+      topics: [],
+      productTypes: [],
+      volume: [],
+      time: "avg_12m",
+      sort: "volume",
+      sortDir: "desc",
+      q: "",
+      searchGeo: "ALL",
+      searchLang: "all",
+      topicsList: [],
+      keywords: [],
+      configured: true,
+      loading: false,
+      searchId: "",
+      searching: false,
+      hasMore: false,
+    },
+    trendsLimits: { used: 0, remaining: 5, limit: 5, busy: false },
   };
 
   function captureScrollTop(el) {
@@ -195,6 +237,17 @@
       if (v2) return v2;
     }
     return fallback;
+  }
+
+  function bucketLabel(key) {
+    var map = {
+      very_low: t("creator.research.volume_very_low", "Very low"),
+      low: t("creator.research.volume_low", "Low"),
+      medium: t("creator.research.volume_medium", "Medium"),
+      high: t("creator.research.volume_high", "High"),
+      very_high: t("creator.research.volume_very_high", "Very high"),
+    };
+    return map[key] || key;
   }
 
   function api(op, params, options) {
@@ -622,6 +675,11 @@
         "</div>" +
         langRow +
       "</div>";
+    var oppHtml = p.opportunity_bucket
+      ? '<div class="eazy-research-card__opp"><span class="eazy-research__bucket is-' + esc(p.opportunity_bucket) + '">' +
+        esc(t("creator.research.opportunity", "Opportunity") + " · " + bucketLabel(p.opportunity_bucket)) +
+        "</span></div>"
+      : "";
     return (
       '<article class="eazy-research-card" data-asin="' + esc(p.asin) +
         '" data-marketplace="' + esc(marketplaceHost(p)) + '">' +
@@ -635,6 +693,7 @@
           '<div class="eazy-research-card__body">' +
             "<h3>" + esc(p.title || p.asin) + "</h3>" +
             statsHtml +
+            oppHtml +
             catLine +
             topicHtml +
             reviewsHtml +
@@ -964,6 +1023,7 @@
     syncChecks(root, "[data-erz-lang]", "data-erz-lang", state.languagesSelected || []);
     syncChecks(root, "[data-erz-pers]", "data-erz-pers", state.personalizationsSelected || []);
     syncChecks(root, "[data-erz-audience]", "data-erz-audience", state.audiencesSelected || []);
+    syncChecks(root, "[data-erz-opportunity]", "data-erz-opportunity", state.opportunitySelected || []);
     renderCounts(root);
     var typeHint = root.querySelector("[data-erz-type-hint]");
     if (typeHint) typeHint.hidden = !!(state.designTypesSelected && state.designTypesSelected.length);
@@ -1157,9 +1217,10 @@
             ) +
             (tags.length ? statRow(t("creator.research.tags", "Tags"), tags.join(", ")) : "") +
             (p.prompt ? statRow(t("creator.research.prompt", "Prompt"), p.prompt) : "") +
+            (p.opportunity_bucket ? statRow(t("creator.research.opportunity", "Opportunity"), bucketLabel(p.opportunity_bucket)) : "") +
           "</div>" +
           '<p class="eazy-research-modal__hint">' +
-            esc(t("creator.research.relevance_hint", "Score 1–100 from this listing's BSR in its own marketplace category. Not demand or sales.")) +
+            esc(t("creator.research.opportunity_hint", "Google search interest versus Amazon listing density for this topic. A bucket, not sales.")) +
           "</p>" +
         "</div>" +
       "</div>"
@@ -1190,6 +1251,244 @@
     if (!modal || !document.body) return modal;
     if (modal.parentNode !== document.body) document.body.appendChild(modal);
     return modal;
+  }
+
+  function findPicker(root) {
+    if (document.body) {
+      var kids = document.body.children;
+      for (var i = 0; i < kids.length; i++) {
+        if (kids[i].hasAttribute && kids[i].hasAttribute("data-erz-picker")) return kids[i];
+      }
+    }
+    return (root && root.querySelector("[data-erz-picker]")) || document.querySelector("[data-erz-picker]");
+  }
+
+  function closePicker(root) {
+    var picker = findPicker(root);
+    if (!picker) return;
+    picker.hidden = true;
+    picker.__erzPick = null;
+  }
+
+  function openPicker(root, title, options, selected, onPick) {
+    var picker = portalResearchModal(findPicker(root));
+    if (!picker) return;
+    var titleEl = picker.querySelector("[data-erz-picker-title]");
+    var list = picker.querySelector("[data-erz-picker-list]");
+    if (titleEl) titleEl.textContent = title || "";
+    if (list) {
+      list.innerHTML = (options || []).map(function (o) {
+        var on = String(o.id) === String(selected);
+        var flag = o.flag
+          ? flagCircleHtml(o.flag)
+          : '<span class="eazy-research__flag is-empty" aria-hidden="true"></span>';
+        return '<button type="button" class="eazy-research-picker__opt' + (on ? " is-on" : "") +
+          '" data-erz-picker-opt="' + esc(o.id) + '" role="option" aria-selected="' + (on ? "true" : "false") + '">' +
+          flag + "<span>" + esc(o.label) + "</span></button>";
+      }).join("");
+    }
+    picker.__erzPick = onPick;
+    picker.hidden = false;
+  }
+
+  function countryPickerOptions() {
+    var hosts = marketplaceHosts();
+    return [{ id: "all", label: t("creator.research.country_all", "All countries"), flag: "" }].concat(
+      hosts.map(function (host) {
+        return { id: host, label: t(COUNTRY_I18N[host] || "", COUNTRY_FALLBACK[host] || host), flag: flagForMarketplace(host) };
+      })
+    );
+  }
+
+  function analyzeLangPickerOptions() {
+    return [{ id: "all", label: t("creator.research.analyze_all", "All"), flag: "" }].concat(
+      ANALYZE_LANGS.map(function (row) {
+        return { id: row.id, label: t(row.key, row.fallback), flag: row.flag };
+      })
+    );
+  }
+
+  function trendGeoPickerOptions() {
+    return TREND_GEOS.map(function (row) {
+      return { id: row.id, label: t(row.key, row.fallback), flag: row.flag };
+    });
+  }
+
+  function setTab(root, tab) {
+    state.tab = tab === "trends" ? "trends" : "ideas";
+    root.querySelectorAll("[data-erz-tab]").forEach(function (btn) {
+      var on = btn.getAttribute("data-erz-tab") === state.tab;
+      btn.classList.toggle("is-on", on);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    var ideas = root.querySelector('[data-erz-pane="ideas"]');
+    var trends = root.querySelector('[data-erz-pane="trends"]');
+    if (ideas) ideas.hidden = state.tab !== "ideas";
+    if (trends) trends.hidden = state.tab !== "trends";
+    if (state.tab === "trends") loadTrends(root);
+  }
+
+  function trendsTimeParams() {
+    var time = state.trends.time || "avg_12m";
+    if (time === "last_month") return { period: "last_month", trend: "" };
+    if (time === "rising" || time === "stable" || time === "falling") return { period: "avg_12m", trend: time };
+    return { period: "avg_12m", trend: "" };
+  }
+
+  function trendsListParams(offset) {
+    var tp = trendsTimeParams();
+    var params = {
+      geo: state.trends.geo || "ALL",
+      language: state.trends.language || "all",
+      period: tp.period,
+      sort: state.trends.sort || "volume",
+      dir: state.trends.sortDir || "desc",
+      limit: 40,
+      offset: Math.max(0, Number(offset) || 0),
+    };
+    if (tp.trend) params.trend = tp.trend;
+    if (state.trends.topics.length) params.topic = state.trends.topics.join(",");
+    if (state.trends.productTypes.length) params.product_type = state.trends.productTypes.join(",");
+    if (state.trends.volume.length) params.volume = state.trends.volume.join(",");
+    if (state.trends.searchId) params.search_id = state.trends.searchId;
+    return params;
+  }
+
+  function renderTrendGeos(root) {
+    renderFlagSelect(root, "trends-geo", state.trends.geo, trendGeoPickerOptions());
+    renderFlagSelect(root, "trends-search-geo", state.trends.searchGeo, trendGeoPickerOptions());
+    renderFlagSelect(root, "trends-search-lang", state.trends.searchLang, analyzeLangPickerOptions());
+  }
+
+  function renderTrendTopics(root) {
+    var wrap = root.querySelector("[data-erz-trends-topics]");
+    if (!wrap) return;
+    wrap.innerHTML = (state.trends.topicsList || []).map(function (row) {
+      var on = state.trends.topics.indexOf(row.key) !== -1;
+      var vol = row.volume_bucket
+        ? '<span class="eazy-research__topic-vol eazy-research__bucket is-' + esc(row.volume_bucket) + '">' + esc(bucketLabel(row.volume_bucket)) + "</span>"
+        : "";
+      return '<label class="eazy-research__check' + (on ? " is-on" : "") + '"><input type="checkbox" data-erz-trends-topic="' +
+        esc(row.key) + '"' + (on ? " checked" : "") + "><span>" + esc(row.label || row.key) + "</span>" + vol + "</label>";
+    }).join("");
+  }
+
+  function renderTrendKeywords(root) {
+    var table = root.querySelector("[data-erz-trends-table]");
+    var empty = root.querySelector("[data-erz-trends-empty]");
+    if (!table) return;
+    var rows = state.trends.keywords || [];
+    if (state.trends.loading && !rows.length) {
+      table.innerHTML = '<p class="eazy-research__filters-hint">' + esc(t("creator.research.loading", "Loading...")) + "</p>";
+      if (empty) empty.hidden = true;
+      return;
+    }
+    if (!rows.length) {
+      table.innerHTML = "";
+      if (empty) {
+        empty.hidden = false;
+        empty.textContent = state.trends.configured === false
+          ? t("creator.research.trends_unconfigured", "Google Keyword Planner is not connected yet.")
+          : t("creator.research.trends_empty", "No Keyword Planner rows yet. Official Google Ads cache fills in the background.");
+      }
+      return;
+    }
+    if (empty) empty.hidden = true;
+    var head =
+      '<div class="eazy-research__kw-head">' +
+        '<button type="button" class="eazy-research__kw-sort" data-erz-trends-col="keyword">' + esc(t("creator.research.trends_col_keyword", "Keyword")) + "</button>" +
+        "<span>" + esc(t("creator.research.trends_col_topic", "Topic")) + "</span>" +
+        '<button type="button" class="eazy-research__kw-sort" data-erz-trends-col="volume">' + esc(t("creator.research.trends_col_volume", "Volume")) + "</button>" +
+        '<button type="button" class="eazy-research__kw-sort" data-erz-trends-col="trend">' + esc(t("creator.research.trends_col_trend", "Trend")) + "</button>" +
+        '<button type="button" class="eazy-research__kw-sort" data-erz-trends-col="competition">' + esc(t("creator.research.trends_col_competition", "Competition")) + "</button>" +
+        "<span>" + esc(t("creator.research.trends_col_type", "Product")) + "</span>" +
+      "</div>";
+    table.innerHTML = head + rows.map(function (row) {
+      return '<div class="eazy-research__kw-row">' +
+        "<span>" + esc(row.keyword || "") + "</span>" +
+        "<span>" + esc((row.topic_key || "").replace(/_/g, " ")) + "</span>" +
+        '<span class="eazy-research__bucket is-' + esc(row.volume_bucket || "") + '">' + esc(bucketLabel(row.volume_bucket) || "—") + "</span>" +
+        "<span>" + esc(row.trend || "—") + "</span>" +
+        "<span>" + esc(row.competition || "—") + "</span>" +
+        "<span>" + esc(row.product_type || "") + "</span>" +
+      "</div>";
+    }).join("");
+  }
+
+  function syncTrendsSearchButton(root) {
+    var btn = root.querySelector("[data-erz-trends-search]");
+    if (!btn) return;
+    var lim = state.trendsLimits || { remaining: 5, limit: 5 };
+    btn.disabled = state.trends.searching;
+    btn.textContent = state.trends.searching
+      ? t("creator.research.analyze_loading", "Analyzing…")
+      : t("creator.research.analyze_remaining", "Analyze ({remaining}/{limit})")
+          .replace("{remaining}", String(lim.remaining))
+          .replace("{limit}", String(lim.limit))
+          .replace("Analyze", t("creator.research.trends_search", "Search"));
+  }
+
+  async function loadTrends(root) {
+    state.trends.loading = true;
+    renderTrendKeywords(root);
+    var topicsData = await api("eazy-research-trends-topics", {
+      geo: state.trends.geo,
+      language: state.trends.language,
+      product_type: state.trends.productTypes.join(","),
+    }).catch(function () { return null; });
+    if (topicsData && topicsData.ok) {
+      state.trends.topicsList = topicsData.topics || [];
+      state.trends.configured = topicsData.configured !== false;
+      applyTrendsLimits(topicsData.trends_limits);
+    }
+    var kwData = await api("eazy-research-trends-keywords", trendsListParams(0)).catch(function () { return null; });
+    state.trends.loading = false;
+    if (kwData && kwData.ok) {
+      state.trends.keywords = kwData.keywords || [];
+      state.trends.configured = kwData.configured !== false;
+      applyTrendsLimits(kwData.trends_limits);
+    } else {
+      state.trends.keywords = [];
+    }
+    renderTrendGeos(root);
+    renderTrendTopics(root);
+    renderTrendKeywords(root);
+    syncTrendsSearchButton(root);
+  }
+
+  async function startTrendsSearch(root) {
+    if (!isLoggedIn()) return;
+    var input = root.querySelector("[data-erz-trends-q]");
+    var q = ((input && input.value) || state.trends.q || "").trim();
+    if (!q) return;
+    state.trends.searching = true;
+    syncTrendsSearchButton(root);
+    var data = await api("eazy-research-trends-search", {}, {
+      method: "POST",
+      body: { q: q, geo: state.trends.searchGeo, language: state.trends.searchLang },
+    }).catch(function () { return null; });
+    if (!data || !data.ok) {
+      state.trends.searching = false;
+      if (data && data.analyze_limits) applyTrendsLimits(data.analyze_limits);
+      syncTrendsSearchButton(root);
+      return;
+    }
+    state.trends.searchId = data.search_id;
+    applyTrendsLimits(data.analyze_limits);
+    var tries = 0;
+    while (tries < 20) {
+      tries += 1;
+      await new Promise(function (resolve) { setTimeout(resolve, 700); });
+      var st = await api("eazy-research-trends-search-status", { search_id: data.search_id }).catch(function () { return null; });
+      if (st && st.ok && st.done) {
+        state.trends.keywords = st.keywords || [];
+        applyTrendsLimits(st.analyze_limits);
+        break;
+      }
+    }
+    state.trends.searching = false;
+    renderTrendKeywords(root);
+    syncTrendsSearchButton(root);
   }
 
   async function openDetail(root, asin, marketplace) {
@@ -1232,6 +1531,17 @@
   function applyAnalyzeLimits(limits) {
     if (!limits || typeof limits !== "object") return;
     state.analyzeLimits = {
+      used: Number(limits.used) || 0,
+      remaining: limits.remaining == null ? 5 : Number(limits.remaining) || 0,
+      limit: Number(limits.limit) || 5,
+      busy: Boolean(limits.busy),
+      retry_after_ms: Number(limits.retry_after_ms) || 0,
+    };
+  }
+
+  function applyTrendsLimits(limits) {
+    if (!limits || typeof limits !== "object") return;
+    state.trendsLimits = {
       used: Number(limits.used) || 0,
       remaining: limits.remaining == null ? 5 : Number(limits.remaining) || 0,
       limit: Number(limits.limit) || 5,
@@ -1371,6 +1681,7 @@
     if (state.languagesSelected && state.languagesSelected.length) params.language = state.languagesSelected.join(",");
     if (state.personalizationsSelected && state.personalizationsSelected.length) params.personalization = state.personalizationsSelected.join(",");
     if (state.audiencesSelected && state.audiencesSelected.length) params.audience = state.audiencesSelected.join(",");
+    if (state.opportunitySelected && state.opportunitySelected.length) params.opportunity = state.opportunitySelected.join(",");
     return params;
   }
 
@@ -1424,6 +1735,7 @@
     if (data.facets) state.facets = data.facets;
     if (data.marketplaces) state.marketplaces = data.marketplaces;
     applyAnalyzeLimits(data.analyze_limits);
+    applyTrendsLimits(data.trends_limits);
     state.lastRun = data.last_run || null;
     render(root);
     if (!append) resetGridScroll(root);
@@ -1594,6 +1906,18 @@
         }
       });
     }
+    var trendsQ = root.querySelector("[data-erz-trends-q]");
+    if (trendsQ) {
+      trendsQ.addEventListener("input", function () {
+        state.trends.q = trendsQ.value || "";
+      });
+      trendsQ.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          startTrendsSearch(root);
+        }
+      });
+    }
     var sortBtn = root.querySelector("[data-erz-sort-btn]");
     if (sortBtn) {
       sortBtn.addEventListener("click", function (ev) {
@@ -1679,16 +2003,106 @@
         state.audiencesSelected = readChecked("[data-erz-audience]", "data-erz-audience");
         if (state.searchId || state.view === "watched") render(root);
         else load(root);
+        return;
+      }
+      if (tEl.hasAttribute("data-erz-opportunity")) {
+        state.opportunitySelected = readChecked("[data-erz-opportunity]", "data-erz-opportunity");
+        if (state.searchId || state.view === "watched") render(root);
+        else load(root);
+        return;
+      }
+      if (tEl.hasAttribute("data-erz-trends-topic") || tEl.hasAttribute("data-erz-trends-type") || tEl.hasAttribute("data-erz-trends-volume") || tEl.hasAttribute("data-erz-trends-time")) {
+        state.trends.topics = readChecked("[data-erz-trends-topic]", "data-erz-trends-topic");
+        state.trends.productTypes = readChecked("[data-erz-trends-type]", "data-erz-trends-type");
+        state.trends.volume = readChecked("[data-erz-trends-volume]", "data-erz-trends-volume");
+        var timeEl = root.querySelector("[data-erz-trends-time]:checked");
+        state.trends.time = (timeEl && timeEl.getAttribute("data-erz-trends-time")) || "avg_12m";
+        loadTrends(root);
       }
     });
     root.addEventListener("click", function (ev) {
-      var countryBtn = ev.target.closest("[data-erz-country-btn]");
-      if (countryBtn && root.contains(countryBtn) && !ev.target.closest("[data-erz-platform-wrap]") && !ev.target.closest("[data-erz-analyze-lang-wrap]")) {
+      var tabBtn = ev.target.closest("[data-erz-tab]");
+      if (tabBtn && root.contains(tabBtn)) {
         ev.preventDefault();
-        var wrap = root.querySelector("[data-erz-country-wrap]");
-        var openCountry = !(wrap && wrap.classList.contains("is-open"));
-        closeAllFilterMenus(root, openCountry ? "country" : "");
-        setCountryMenuOpen(root, openCountry);
+        setTab(root, tabBtn.getAttribute("data-erz-tab"));
+        return;
+      }
+      var countryBtn = ev.target.closest("[data-erz-country-btn]");
+      if (countryBtn && root.contains(countryBtn) && !ev.target.closest("[data-erz-platform-wrap]") && !ev.target.closest("[data-erz-analyze-lang-wrap]") && !ev.target.closest("[data-erz-trends-geo-wrap]") && !ev.target.closest("[data-erz-trends-search-geo-wrap]") && !ev.target.closest("[data-erz-trends-search-lang-wrap]")) {
+        ev.preventDefault();
+        closeAllFilterMenus(root, "");
+        openPicker(root, t("creator.research.country", "Country"), countryPickerOptions(), state.marketplace || "all", function (id) {
+          state.marketplace = id || "all";
+          if (!state.searchId) load(root);
+          else render(root);
+        });
+        return;
+      }
+      var platformBtn = ev.target.closest("[data-erz-platform-btn]");
+      if (platformBtn && root.contains(platformBtn)) {
+        ev.preventDefault();
+        closeAllFilterMenus(root, "");
+        openPicker(root, t("creator.research.platform", "Platform"), countryPickerOptions().map(function (o) {
+          return o.id === "all" ? { id: "all", label: t("creator.research.analyze_all", "All"), flag: "" } : o;
+        }), state.analyzeMarketplace || "all", function (id) {
+          state.analyzeMarketplace = id || "all";
+          renderPlatform(root);
+        });
+        return;
+      }
+      var langBtn = ev.target.closest("[data-erz-analyze-lang-btn]");
+      if (langBtn && root.contains(langBtn)) {
+        ev.preventDefault();
+        closeAllFilterMenus(root, "");
+        openPicker(root, t("creator.research.language", "Language"), analyzeLangPickerOptions(), state.analyzeLanguage || "all", function (id) {
+          state.analyzeLanguage = id || "all";
+          renderAnalyzeLang(root);
+        });
+        return;
+      }
+      var trendsGeoBtn = ev.target.closest("[data-erz-trends-geo-btn]");
+      if (trendsGeoBtn && root.contains(trendsGeoBtn)) {
+        ev.preventDefault();
+        openPicker(root, t("creator.research.country", "Country"), trendGeoPickerOptions(), state.trends.geo, function (id) {
+          state.trends.geo = id || "ALL";
+          loadTrends(root);
+        });
+        return;
+      }
+      var trendsSearchGeoBtn = ev.target.closest("[data-erz-trends-search-geo-btn]");
+      if (trendsSearchGeoBtn && root.contains(trendsSearchGeoBtn)) {
+        ev.preventDefault();
+        openPicker(root, t("creator.research.country", "Country"), trendGeoPickerOptions(), state.trends.searchGeo, function (id) {
+          state.trends.searchGeo = id || "ALL";
+          renderTrendGeos(root);
+        });
+        return;
+      }
+      var trendsSearchLangBtn = ev.target.closest("[data-erz-trends-search-lang-btn]");
+      if (trendsSearchLangBtn && root.contains(trendsSearchLangBtn)) {
+        ev.preventDefault();
+        openPicker(root, t("creator.research.language", "Language"), analyzeLangPickerOptions(), state.trends.searchLang, function (id) {
+          state.trends.searchLang = id || "all";
+          renderTrendGeos(root);
+        });
+        return;
+      }
+      var trendsSearchBtn = ev.target.closest("[data-erz-trends-search]");
+      if (trendsSearchBtn && root.contains(trendsSearchBtn)) {
+        ev.preventDefault();
+        startTrendsSearch(root);
+        return;
+      }
+      var trendsCol = ev.target.closest("[data-erz-trends-col]");
+      if (trendsCol && root.contains(trendsCol)) {
+        ev.preventDefault();
+        var col = trendsCol.getAttribute("data-erz-trends-col") || "volume";
+        if (state.trends.sort === col) state.trends.sortDir = state.trends.sortDir === "asc" ? "desc" : "asc";
+        else {
+          state.trends.sort = col;
+          state.trends.sortDir = col === "keyword" ? "asc" : "desc";
+        }
+        loadTrends(root);
         return;
       }
       var countryOpt = ev.target.closest("[data-erz-country-opt]");
@@ -1793,6 +2207,7 @@
         closeAllFilterMenus(root, "");
         applyFiltersSheet(root, false);
         closeDetail(root);
+        closePicker(root);
       }
     });
   }
@@ -1824,6 +2239,20 @@
       if (!btn) return;
       var host = btn.closest("[data-eazy-research]");
       if (host) startAnalyze(host);
+    });
+    document.addEventListener("click", function (ev) {
+      var picker = findPicker(null);
+      if (!picker || picker.hidden) return;
+      if (ev.target.closest("[data-erz-picker-close]") || ev.target === picker.querySelector("[data-erz-picker-close]") || ev.target.classList.contains("eazy-research-picker__backdrop")) {
+        closePicker(null);
+        return;
+      }
+      var opt = ev.target.closest("[data-erz-picker-opt]");
+      if (opt && picker.contains(opt)) {
+        var fn = picker.__erzPick;
+        closePicker(null);
+        if (typeof fn === "function") fn(opt.getAttribute("data-erz-picker-opt"));
+      }
     });
     document.addEventListener("eazCreatorContextReady", function () {
       boot();
