@@ -1,8 +1,13 @@
 /**
  * Shop → creator.eazpire.com session handoff.
- * Shop switch always navigates to /pages/creator-handoff (same-origin Shopify
- * session). The bridge issues a ticket and opens /auth/complete. Tickets from
- * the bridge are reused at most 8s.
+ *
+ * Logged-in switch issues an exchange ticket on the current shop page (prefetch
+ * in the background), then navigates once to creator.eazpire.com/auth/complete.
+ * /auth/complete sets the session cookie and serves the Creator SPA in the same
+ * response, so Safari bounce-tracking cannot drop the cookie.
+ *
+ * /pages/creator-handoff is only for Shopify login return_to and as a last
+ * fallback when ticket issue fails.
  */
 (function () {
   "use strict";
@@ -11,8 +16,8 @@
   var SHOP_ORIGIN = "https://www.eazpire.com";
   var PORTAL_HOME = CREATOR_ORIGIN + "/";
   var BRIDGE_PATH = "/pages/creator-handoff";
-  var ISSUE_TIMEOUT_MS = 20000;
-  var TOKEN_REUSE_MS = 8000;
+  var ISSUE_TIMEOUT_MS = 10000;
+  var TOKEN_REUSE_MS = 90000;
 
   function onShopHost() {
     try {
@@ -169,7 +174,13 @@
       return Promise.resolve({ ok: false, error: "not_logged_in", loginUrl: storefrontLoginUrl() });
     }
     if (inflightIssue && inflightCid === cid && Date.now() - inflightAt < TOKEN_REUSE_MS) {
-      return inflightIssue;
+      return inflightIssue.then(function (result) {
+        if (resultIsFresh(result)) return result;
+        inflightIssue = null;
+        inflightCid = "";
+        inflightAt = 0;
+        return issueExchangeToken(cid);
+      });
     }
     inflightCid = cid;
     inflightAt = Date.now();
@@ -210,16 +221,35 @@
     return shopPath(BRIDGE_PATH + "?next=" + encodeURIComponent(next));
   }
 
-  // Shop switch always lands on the same-origin bridge. Jumping straight to
-  // /auth/complete from www dropped the Creator cookie (Safari bounce tracking)
-  // or skipped complete entirely and opened creator.eazpire.com as a guest.
+  function isRetryableIssue(result) {
+    if (!result) return true;
+    if (result.error === "timeout") return true;
+    return /network/i.test(String(result.error || ""));
+  }
+
+  // Issue the ticket on the current shop page, then go once to /auth/complete.
+  // The Shopify handoff page is only used if issue fails after retries.
   function resolveTargetUrl(opts) {
     opts = opts || {};
     var cid = readCustomerId(opts.customerId);
     if (!cid) {
       return Promise.resolve(storefrontLoginUrl());
     }
-    return Promise.resolve(loggedInFallbackUrl());
+    var attempts = 0;
+    function attempt() {
+      attempts += 1;
+      return issueExchangeToken(cid).then(function (result) {
+        if (result && result.ok && result.url) return result.url;
+        if (result && result.error === "not_logged_in") return storefrontLoginUrl();
+        if (isRetryableIssue(result) && attempts < 2) {
+          return new Promise(function (resolve) {
+            setTimeout(resolve, 280 * attempts);
+          }).then(attempt);
+        }
+        return loggedInFallbackUrl();
+      });
+    }
+    return attempt();
   }
 
   function navigateToPortal(opts) {
@@ -228,6 +258,26 @@
       window.location.replace(url);
       return url;
     });
+  }
+
+  function onHandoffPage() {
+    try {
+      return String(window.location.pathname || "").indexOf(BRIDGE_PATH) === 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function armBackgroundPrefetch() {
+    if (!onShopHost() || onHandoffPage() || !readCustomerId()) return;
+    function run() {
+      prefetchExchangeToken({});
+    }
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(run, { timeout: 2500 });
+    } else {
+      setTimeout(run, 400);
+    }
   }
 
   window.EazCreatorPortalHandoff = {
@@ -239,9 +289,12 @@
     readCustomerId: readCustomerId,
     issueExchangeToken: issueExchangeToken,
     prefetchExchangeToken: prefetchExchangeToken,
+    takeInflightIssue: takeInflightIssue,
     resolveTargetUrl: resolveTargetUrl,
     navigateToPortal: navigateToPortal,
     completeUrl: completeUrl,
     formatIssueError: formatIssueError,
   };
+
+  armBackgroundPrefetch();
 })();

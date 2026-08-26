@@ -190,7 +190,7 @@
         applyAllBadgeValues(fmtHeaderEazc(headerEazcFromPayload(data)));
       }
     } catch (e4) {
-      /* keep loading text */
+      applyAllBadgeValues('0');
     }
   }
 

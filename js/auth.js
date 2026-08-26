@@ -24,8 +24,6 @@
   }
 
   var SSO_GUARD_KEY = "eaz_creator_sso_guard";
-  var SHOP_HANDOFF_URL =
-    "https://www.eazpire.com/pages/creator-handoff?next=" + encodeURIComponent("/dashboard");
 
   function hasSsoGuard() {
     try {
@@ -44,16 +42,28 @@
     return !!(global.__EAZ_AUTH_OK__ || global.__EAZ_FROM_SHOP__);
   }
 
-  function goToShopHandoff() {
+  function stayOnCreatorAsGuest() {
     try {
       sessionStorage.setItem(SSO_GUARD_KEY, String(Date.now()));
     } catch (e) {}
-    global.location.replace(SHOP_HANDOFF_URL);
+    global.__EAZ_SSO_BLOCK__ = true;
+    bootstrapApplied = true;
+    setAuth(false, null);
+    if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
+      global.CreatorPortalThemeBridge.notifyContextReady();
+    }
+    openLoginModal();
   }
 
   function recoverShopSessionAfterGuestBootstrap() {
     var api = global.CreatorPortalApi;
-    if (api && typeof api.me === "function") {
+    var attempts = 0;
+    function tryMe() {
+      attempts += 1;
+      if (!(api && typeof api.me === "function")) {
+        stayOnCreatorAsGuest();
+        return;
+      }
       api
         .me()
         .then(function (me) {
@@ -65,14 +75,21 @@
             }
             return;
           }
-          goToShopHandoff();
+          if (attempts < 4) {
+            setTimeout(tryMe, 280 * attempts);
+            return;
+          }
+          stayOnCreatorAsGuest();
         })
         .catch(function () {
-          goToShopHandoff();
+          if (attempts < 4) {
+            setTimeout(tryMe, 280 * attempts);
+            return;
+          }
+          stayOnCreatorAsGuest();
         });
-      return;
     }
-    goToShopHandoff();
+    tryMe();
   }
 
   // Only recover after a shop switch (auth=ok / from_shop). Direct visits stay guest.
