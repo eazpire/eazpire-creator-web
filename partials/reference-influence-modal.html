@@ -200,6 +200,17 @@
         <div class="reference-influence-modal__preview-wrap" id="reference-influence-preview-wrap">
           <canvas id="reference-influence-crop-canvas" class="reference-influence-modal__crop-canvas" aria-hidden="true"></canvas>
           <img id="reference-influence-preview" class="reference-influence-modal__preview" alt="" />
+          <div class="reference-influence-modal__view-switch" id="reference-influence-view-switch" hidden role="group" aria-label="Original">
+            <button type="button" data-ref-view="original">Original</button>
+            <button type="button" data-ref-view="cropped" class="is-on">Cropped</button>
+          </div>
+          <div class="reference-influence-modal__gen-mode-switch" id="reference-influence-gen-mode-switch" hidden role="group">
+            <button type="button" data-ref-gen-mode="i2i" class="is-on">Image to Image</button>
+            <button type="button" data-ref-gen-mode="t2i">Text to Image</button>
+          </div>
+          <div class="reference-influence-modal__t2i-veil" id="reference-influence-t2i-veil" hidden>
+            <span>Text to Image</span>
+          </div>
         </div>
       </div>
       <div class="reference-influence-modal__controls-col" id="reference-influence-controls">
@@ -416,6 +427,68 @@
     max-height: 100%;
     object-fit: contain;
     display: none;
+  }
+  .reference-influence-modal__view-switch,
+  .reference-influence-modal__gen-mode-switch {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    gap: 0;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(10, 6, 24, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+  .reference-influence-modal__view-switch {
+    top: 10px;
+    left: 10px;
+  }
+  .reference-influence-modal__gen-mode-switch {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .reference-influence-modal__view-switch[hidden],
+  .reference-influence-modal__gen-mode-switch[hidden],
+  .reference-influence-modal__t2i-veil[hidden] {
+    display: none;
+  }
+  .reference-influence-modal__view-switch button,
+  .reference-influence-modal__gen-mode-switch button {
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .reference-influence-modal__view-switch button.is-on,
+  .reference-influence-modal__gen-mode-switch button.is-on {
+    background: #f97316;
+    color: #0b1220;
+  }
+  .reference-influence-modal__t2i-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 6, 24, 0.62);
+    pointer-events: none;
+  }
+  .reference-influence-modal__t2i-veil span {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-align: center;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: rgba(10, 6, 24, 0.55);
   }
   .reference-influence-modal__section {
     margin-bottom: 18px;

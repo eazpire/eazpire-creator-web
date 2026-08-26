@@ -6,6 +6,8 @@
   "use strict";
 
   var WATCH_KEY = "eazy-research-watched";
+  var HANDOFF_KEY = "eazy-research-generator-handoff";
+  var HANDOFF_EVENT = "eazy-research-generator-handoff";
   var FILTER_COLLAPSE_KEY = "eazy-research-filters-collapsed";
   /* true = Abschnitt offen. Topics bleibt offen, der Rest startet zugeklappt. */
   var FILTER_FOLDS_KEY = "eazy-research-filter-folds";
@@ -148,6 +150,7 @@
       hasMore: false,
     },
     trendsLimits: { used: 0, remaining: 5, limit: 5, busy: false },
+    detailProduct: null,
   };
 
   function captureScrollTop(el) {
@@ -504,7 +507,84 @@
     return classifyAudience(p.title, [p.bsr_category, p.latest && p.latest.bsr_category, p.browse_node, p.category].filter(Boolean).join(" "));
   }
 
-  function goGenerator() {
+  function asHandoffTags(raw) {
+    if (Array.isArray(raw)) return raw.map(function (x) { return String(x || "").trim(); }).filter(Boolean);
+    if (typeof raw === "string" && raw.trim()) {
+      return raw.split(/[,;]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+    return [];
+  }
+
+  function buildGeneratorHandoff(product) {
+    var p = product && typeof product === "object" ? product : {};
+    return {
+      v: 1,
+      source: "eazy-research",
+      image_url: String(p.image_url || "").trim(),
+      mode: "i2i",
+      view: "cropped",
+      analysis: {
+        prompt: String(p.prompt || "").trim(),
+        topic: String(p.topic || "").trim(),
+        subtopic: String(p.subtopic || p.sub_niche || "").trim(),
+        tags: asHandoffTags(p.tags),
+        design_type: String(p.design_type || "").trim() || null,
+        language: String(p.language || "").trim() || null,
+        has_text: p.has_text == null ? null : Boolean(p.has_text),
+      },
+      asin: String(p.asin || "").trim(),
+      marketplace: marketplaceHost(p),
+    };
+  }
+
+  function persistGeneratorHandoff(payload) {
+    try {
+      if (global.sessionStorage) {
+        global.sessionStorage.setItem(HANDOFF_KEY, JSON.stringify(payload));
+      }
+    } catch (_e) { /* guest storage may be blocked */ }
+    try {
+      global.dispatchEvent(new CustomEvent(HANDOFF_EVENT, { detail: payload }));
+    } catch (_e2) { /* older hosts */ }
+  }
+
+  function findProductForSend(asin, marketplace) {
+    var host = String(marketplace || "").trim().toLowerCase();
+    var local = (state.products || []).find(function (x) {
+      return x.asin === asin && (!host || marketplaceHost(x) === host);
+    });
+    if (local) return local;
+    if (state.detailProduct && state.detailProduct.asin === asin) return state.detailProduct;
+    return null;
+  }
+
+  function sendProductToGenerator(product) {
+    if (!product) {
+      goGeneratorScreen();
+      return;
+    }
+    persistGeneratorHandoff(buildGeneratorHandoff(product));
+    var root = primaryResearchRoot();
+    if (root) closeDetail(root);
+    goGeneratorScreen();
+    if (global.CreatorGenerator && typeof global.CreatorGenerator.consumeResearchHandoff === "function") {
+      try { global.CreatorGenerator.consumeResearchHandoff(); } catch (_e) {}
+    }
+  }
+
+  function goGeneratorFromEvent(ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest("[data-erz-gen]") : null;
+    if (!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var card = btn.closest(".eazy-research-card");
+    var asin = card ? card.getAttribute("data-asin") : btn.getAttribute("data-asin");
+    var marketplace = card ? card.getAttribute("data-marketplace") : btn.getAttribute("data-marketplace");
+    var product = findProductForSend(asin, marketplace) || state.detailProduct;
+    sendProductToGenerator(product);
+  }
+
+  function goGeneratorScreen() {
     if (global.CreatorDesktopShell && typeof global.CreatorDesktopShell.switchScreen === "function") {
       global.CreatorDesktopShell.switchScreen("generator");
       return;
@@ -521,6 +601,10 @@
     } catch (_e) {
       global.location.hash = "generator";
     }
+  }
+
+  function goGenerator() {
+    goGeneratorScreen();
   }
 
   /**
@@ -1222,6 +1306,15 @@
           '<p class="eazy-research-modal__hint">' +
             esc(t("creator.research.opportunity_hint", "Google search interest versus Amazon listing density for this topic. A bucket, not sales.")) +
           "</p>" +
+          '<div class="eazy-research-modal__actions">' +
+            '<a href="' + esc(amazonUrl(p)) + '" target="_blank" rel="noopener noreferrer">' +
+              esc(t("creator.research.open_source", "Open on Amazon")) +
+            "</a>" +
+            '<button type="button" data-erz-gen data-asin="' + esc(p.asin) +
+              '" data-marketplace="' + esc(marketplaceHost(p)) + '">' +
+              esc(t("creator.research.send_generator", "Send to Generator")) +
+            "</button>" +
+          "</div>" +
         "</div>" +
       "</div>"
     );
@@ -1520,12 +1613,14 @@
         p.latest.bsr_category = local.latest.bsr_category;
       }
     }
+    state.detailProduct = p;
     box.innerHTML = detailHtml(p);
   }
 
   function closeDetail(root) {
     var modal = findResearchModal(root);
     if (modal) modal.hidden = true;
+    state.detailProduct = null;
   }
 
   function applyAnalyzeLimits(limits) {
@@ -2189,7 +2284,7 @@
         return;
       }
       if (ev.target.closest("[data-erz-gen]")) {
-        goGenerator();
+        goGeneratorFromEvent(ev);
       }
     });
   }
@@ -2200,7 +2295,7 @@
     modal.dataset.erzBound = "1";
     modal.addEventListener("click", function (ev) {
       if (ev.target.closest("[data-erz-close]")) closeDetail(root);
-      if (ev.target.closest("[data-erz-gen]")) goGenerator();
+      if (ev.target.closest("[data-erz-gen]")) goGeneratorFromEvent(ev);
     });
     document.addEventListener("keydown", function (ev) {
       if (ev.key === "Escape") {

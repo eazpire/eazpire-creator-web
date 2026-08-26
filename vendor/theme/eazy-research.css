@@ -1513,6 +1513,26 @@
   line-height: 1.4;
 }
 
+.eazy-research-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.eazy-research-modal__actions a,
+.eazy-research-modal__actions button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 8px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .eazy-research__meta {
   font-size: 0.85rem;
   opacity: 0.86;

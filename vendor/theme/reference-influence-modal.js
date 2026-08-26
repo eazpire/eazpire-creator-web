@@ -17,6 +17,11 @@
     innovative: 0.05
   };
   var MODE_ORDER = ['faithful', 'inspired', 'creative', 'innovative'];
+  /** Amazon garment mocks: center-chest print area (see generatorHandoff.js). */
+  var PRINT_AREA = { x: 0.28, y: 0.18, w: 0.44, h: 0.38 };
+  var researchHandoff = false;
+  var currentView = 'cropped';
+  var currentGenMode = 'i2i';
   /** Legacy slider steps → closest mode */
   var LEGACY_STEP_TO_MODE = ['innovative', 'creative', 'inspired', 'inspired', 'faithful', 'faithful'];
 
@@ -253,8 +258,63 @@
     pendingFile = null;
     pendingCallback = null;
     pendingCancelCallback = null;
+    researchHandoff = false;
+    currentView = 'cropped';
+    currentGenMode = 'i2i';
     revokePreviewBlob();
     teardownInlineCrop();
+    syncResearchSwitches();
+  }
+
+  function dispatchProxyUrl(rawUrl) {
+    var base = '';
+    try {
+      base = (window.CREATOR_API_CONFIG && window.CREATOR_API_CONFIG.BASE_URL) || '';
+    } catch (eB) {}
+    var path = '/apps/creator-dispatch?op=artifacts-mint-image-proxy&url=' + encodeURIComponent(rawUrl);
+    return base ? String(base).replace(/\/$/, '') + path : path;
+  }
+
+  function urlsToTryForLoad(urlStr) {
+    var out = [urlStr];
+    try {
+      var host = new URL(urlStr, window.location.href).hostname;
+      if (/(^|\.)media-amazon\.com$|(^|\.)ssl-images-amazon\.com$|(^|\.)images-amazon\.com$/i.test(host)) {
+        out.unshift(dispatchProxyUrl(urlStr));
+      }
+    } catch (eU) {}
+    return out;
+  }
+
+  function loadImageFromUrl(urlStr, done) {
+    fetch(urlStr, { mode: 'cors', credentials: 'omit' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('http');
+        return r.blob();
+      })
+      .then(function (blob) {
+        var u = URL.createObjectURL(blob);
+        var img = new Image();
+        img.onload = function () {
+          done(null, { img: img, revoke: function () { URL.revokeObjectURL(u); } });
+        };
+        img.onerror = function () {
+          try { URL.revokeObjectURL(u); } catch (e2) {}
+          done(new Error('load_failed'));
+        };
+        img.src = u;
+      })
+      .catch(function () {
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function () {
+          done(null, { img: img, revoke: function () {} });
+        };
+        img.onerror = function () {
+          done(new Error('cors_or_load'));
+        };
+        img.src = urlStr;
+      });
   }
 
   function loadImageForCrop(fileOrUrl) {
@@ -279,35 +339,19 @@
         reject(new Error('no_url'));
         return;
       }
-      fetch(urlStr, { mode: 'cors', credentials: 'omit' })
-        .then(function (r) {
-          return r.blob();
-        })
-        .then(function (blob) {
-          var u = URL.createObjectURL(blob);
-          var img = new Image();
-          img.onload = function () {
-            resolve({ img: img, revoke: function () { URL.revokeObjectURL(u); } });
-          };
-          img.onerror = function () {
-            try {
-              URL.revokeObjectURL(u);
-            } catch (e2) {}
-            reject(new Error('load_failed'));
-          };
-          img.src = u;
-        })
-        .catch(function () {
-          var img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = function () {
-            resolve({ img: img, revoke: function () {} });
-          };
-          img.onerror = function () {
-            reject(new Error('cors_or_load'));
-          };
-          img.src = urlStr;
+      var list = urlsToTryForLoad(urlStr);
+      var i = 0;
+      function next() {
+        if (i >= list.length) {
+          reject(new Error('cors_or_load'));
+          return;
+        }
+        loadImageFromUrl(list[i++], function (err, loaded) {
+          if (err || !loaded) next();
+          else resolve(loaded);
         });
+      }
+      next();
     });
   }
 
@@ -402,6 +446,59 @@
     ctx.restore();
   }
 
+  function printAreaSel(ox, oy, dw, dh) {
+    var sel = {
+      x: ox + dw * PRINT_AREA.x,
+      y: oy + dh * PRINT_AREA.y,
+      w: dw * PRINT_AREA.w,
+      h: dh * PRINT_AREA.h
+    };
+    return clampSel(sel, ox, oy, dw, dh);
+  }
+
+  function applyViewToCrop() {
+    if (!cropState) return;
+    var ox = cropState.ox;
+    var oy = cropState.oy;
+    var dw = cropState.dw;
+    var dh = cropState.dh;
+    if (currentView === 'cropped') {
+      cropState.sel = printAreaSel(ox, oy, dw, dh);
+    } else {
+      cropState.sel = clampSel({ x: ox, y: oy, w: dw, h: dh }, ox, oy, dw, dh);
+    }
+    drawCropCanvas();
+  }
+
+  function setSwitchOn(root, attr, value) {
+    if (!root) return;
+    var buttons = root.querySelectorAll('button[' + attr + ']');
+    for (var i = 0; i < buttons.length; i++) {
+      var on = buttons[i].getAttribute(attr) === value;
+      buttons[i].classList.toggle('is-on', on);
+    }
+  }
+
+  function syncResearchSwitches() {
+    var viewEl = document.getElementById('reference-influence-view-switch');
+    var modeEl = document.getElementById('reference-influence-gen-mode-switch');
+    var veil = document.getElementById('reference-influence-t2i-veil');
+    if (viewEl) {
+      if (researchHandoff) viewEl.removeAttribute('hidden');
+      else viewEl.setAttribute('hidden', '');
+      setSwitchOn(viewEl, 'data-ref-view', currentView);
+    }
+    if (modeEl) {
+      if (researchHandoff) modeEl.removeAttribute('hidden');
+      else modeEl.setAttribute('hidden', '');
+      setSwitchOn(modeEl, 'data-ref-gen-mode', currentGenMode);
+    }
+    if (veil) {
+      if (researchHandoff && currentGenMode === 't2i') veil.removeAttribute('hidden');
+      else veil.setAttribute('hidden', '');
+    }
+  }
+
   function layoutCropFromWrap() {
     if (!cropState) return;
     var wrap = cropState.wrap;
@@ -442,7 +539,11 @@
     cropState.oy = oy;
     cropState.dw = idw;
     cropState.dh = idh;
-    cropState.sel = norm ? normToSel(norm, ox, oy, idw, idh) : clampSel({ x: ox, y: oy, w: idw, h: idh }, ox, oy, idw, idh);
+    cropState.sel = norm
+      ? normToSel(norm, ox, oy, idw, idh)
+      : (researchHandoff && currentView === 'cropped'
+          ? printAreaSel(ox, oy, idw, idh)
+          : clampSel({ x: ox, y: oy, w: idw, h: idh }, ox, oy, idw, idh));
 
     drawCropCanvas();
   }
@@ -704,8 +805,12 @@
     pendingCallback = options.onApply || null;
     pendingCancelCallback = typeof options.onCancel === 'function' ? options.onCancel : null;
     currentMode = resolveInitialMode(options || {});
+    researchHandoff = !!(options && options.researchHandoff);
+    currentView = researchHandoff && options.initialView === 'original' ? 'original' : (researchHandoff ? 'cropped' : 'original');
+    currentGenMode = researchHandoff && options.initialGenMode === 't2i' ? 't2i' : 'i2i';
     resetElementsToInclude();
     updateUI();
+    syncResearchSwitches();
 
     var source = pendingFile || options.imageUrl || null;
     if (!source) {
@@ -726,9 +831,21 @@
     loadImageForCrop(source)
       .then(function (loaded) {
         initInlineCrop(loaded);
+        if (researchHandoff && currentView === 'cropped') {
+          try { applyViewToCrop(); } catch (eCrop) {
+            currentView = 'original';
+            applyViewToCrop();
+            syncResearchSwitches();
+          }
+        }
       })
       .catch(function () {
-        window.alert('Could not load image. If it is from another site, download it and upload from your device.');
+        if (researchHandoff) {
+          /* Crop/load fallback: still open so the user can switch to Original after a retry. */
+          window.alert('Could not load image. If it is from another site, download it and upload from your device.');
+        } else {
+          window.alert('Could not load image. If it is from another site, download it and upload from your device.');
+        }
         handleCancel();
       });
   }
@@ -743,16 +860,15 @@
       include_elements: el.include_elements,
       exclude_elements: el.exclude_elements,
       file: file,
-      imageUrl: imageUrl
+      imageUrl: imageUrl,
+      gen_mode: currentGenMode,
+      view: currentView,
+      researchHandoff: researchHandoff
     };
   }
 
   function handleApply() {
-    exportCroppedFile(function (err, file) {
-      if (err || !file) {
-        window.alert('Could not apply crop. Try another image.');
-        return;
-      }
+    function finish(file) {
       revokePreviewBlob();
       var nu = URL.createObjectURL(file);
       writeStoredMode(currentMode);
@@ -766,9 +882,27 @@
       var modal = getModal();
       if (modal && modal.close) modal.close();
       restoreAutomationLayer();
-      if (cb) {
-        cb(result);
+      if (cb) cb(result);
+    }
+    exportCroppedFile(function (err, file) {
+      if (!err && file) {
+        finish(file);
+        return;
       }
+      /* Crop failed → original full frame, still apply. */
+      if (cropState) {
+        currentView = 'original';
+        applyViewToCrop();
+        exportCroppedFile(function (err2, file2) {
+          if (err2 || !file2) {
+            window.alert('Could not apply crop. Try another image.');
+            return;
+          }
+          finish(file2);
+        });
+        return;
+      }
+      window.alert('Could not apply crop. Try another image.');
     });
   }
 
@@ -836,6 +970,25 @@
         if (includeSeed && includeSeed.textContent) controls.dataset.includeLabel = includeSeed.textContent.trim();
         if (excludeSeed && excludeSeed.textContent) controls.dataset.excludeLabel = excludeSeed.textContent.trim();
       }
+    }
+    var viewEl = document.getElementById('reference-influence-view-switch');
+    if (viewEl) {
+      viewEl.addEventListener('click', function (ev) {
+        var btn = ev.target && ev.target.closest ? ev.target.closest('[data-ref-view]') : null;
+        if (!btn) return;
+        currentView = btn.getAttribute('data-ref-view') === 'original' ? 'original' : 'cropped';
+        applyViewToCrop();
+        syncResearchSwitches();
+      });
+    }
+    var modeEl = document.getElementById('reference-influence-gen-mode-switch');
+    if (modeEl) {
+      modeEl.addEventListener('click', function (ev) {
+        var btn = ev.target && ev.target.closest ? ev.target.closest('[data-ref-gen-mode]') : null;
+        if (!btn) return;
+        currentGenMode = btn.getAttribute('data-ref-gen-mode') === 't2i' ? 't2i' : 'i2i';
+        syncResearchSwitches();
+      });
     }
   }
 

@@ -481,7 +481,127 @@
       if (picked.elements) row.elements = picked.elements;
       if (picked.include_elements) row.include_elements = picked.include_elements;
       if (picked.exclude_elements) row.exclude_elements = picked.exclude_elements;
+      if (picked.gen_mode) row.researchMode = picked.gen_mode;
+      if (picked.view) row.researchView = picked.view;
+      if (picked.researchHandoff) row.researchHandoff = true;
+      row.skipAttach = row.researchMode === 't2i';
       return row;
+    }
+
+    var RESEARCH_HANDOFF_KEY = 'eazy-research-generator-handoff';
+    var pendingResearchHandoff = null;
+
+    function genLabel(key, fallback) {
+      var i18n = window.CreatorI18n || {};
+      if (i18n[key]) return i18n[key];
+      var short = key.replace(/^creator\./, '').replace(/\./g, '_');
+      if (i18n[short]) return i18n[short];
+      if (typeof i18n.t === 'function') {
+        var v = i18n.t(key);
+        if (v) return v;
+      }
+      return fallback;
+    }
+
+    function buildT2iPrompt(analysis) {
+      var a = analysis && typeof analysis === 'object' ? analysis : {};
+      var parts = [];
+      if (a.prompt) parts.push(String(a.prompt).trim());
+      if (a.topic) parts.push('Topic: ' + String(a.topic).trim());
+      if (a.subtopic) parts.push('Subtopic: ' + String(a.subtopic).trim());
+      var tags = Array.isArray(a.tags) ? a.tags.filter(Boolean) : [];
+      if (tags.length) parts.push('Tags: ' + tags.join(', '));
+      if (a.design_type) parts.push('Design type: ' + String(a.design_type).replace(/_/g, ' '));
+      if (a.language && String(a.language).toLowerCase() !== 'none') {
+        parts.push('Language: ' + String(a.language));
+      }
+      return parts.join('\n');
+    }
+
+    function fillPromptFromAnalysis(analysis) {
+      var textarea = document.getElementById('genPrompt');
+      var text = buildT2iPrompt(analysis);
+      if (!textarea || !text) return;
+      if (!String(textarea.value || '').trim()) textarea.value = text;
+    }
+
+    function readResearchHandoff() {
+      try {
+        var raw = sessionStorage.getItem(RESEARCH_HANDOFF_KEY);
+        if (!raw) return null;
+        var data = JSON.parse(raw);
+        if (!data || data.source !== 'eazy-research') return null;
+        return data;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function clearResearchHandoff() {
+      try { sessionStorage.removeItem(RESEARCH_HANDOFF_KEY); } catch (eC) {}
+      pendingResearchHandoff = null;
+    }
+
+    function consumeResearchHandoff() {
+      var payload = readResearchHandoff();
+      if (!payload) return;
+      pendingResearchHandoff = payload;
+      fillPromptFromAnalysis(payload.analysis);
+      var url = payload.image_url && String(payload.image_url).trim();
+      if (!url) {
+        clearResearchHandoff();
+        return;
+      }
+      if (!(window.ReferenceInfluenceModal && typeof window.ReferenceInfluenceModal.open === 'function')) {
+        selectedImages.push({
+          file: null,
+          dataUrl: url,
+          originalDataUrl: url,
+          croppedDataUrl: url,
+          researchHandoff: true,
+          researchView: payload.view || 'cropped',
+          researchMode: payload.mode || 'i2i',
+          skipAttach: payload.mode === 't2i',
+          analysis: payload.analysis || null,
+          similarity: 0.6,
+          canvasStrokes: null
+        });
+        renderSelectedGrid();
+        clearResearchHandoff();
+        return;
+      }
+      window.ReferenceInfluenceModal.open({
+        imageUrl: url,
+        researchHandoff: true,
+        initialView: payload.view || 'cropped',
+        initialGenMode: payload.mode || 'i2i',
+        onApply: function (result) {
+          if (!result) {
+            clearResearchHandoff();
+            return;
+          }
+          var outUrl = (result.imageUrl && String(result.imageUrl)) || url;
+          var row = attachInfluenceFromPicked({
+            file: result.file || null,
+            dataUrl: outUrl,
+            originalDataUrl: url,
+            croppedDataUrl: outUrl,
+            researchHandoff: true,
+            researchView: result.view || 'cropped',
+            researchMode: result.gen_mode || 'i2i',
+            skipAttach: result.gen_mode === 't2i',
+            analysis: payload.analysis || null,
+            canvasStrokes: null
+          }, result);
+          selectedImages.push(row);
+          if (row.researchMode === 't2i') fillPromptFromAnalysis(payload.analysis);
+          renderSelectedGrid();
+          clearResearchHandoff();
+        },
+        onCancel: function () {
+          clearResearchHandoff();
+        }
+      });
     }
 
     function updateUploadText() {
@@ -506,11 +626,34 @@
       selectedImages.forEach(function (item, index) {
         var wrap = document.createElement('div');
         var letter = String.fromCharCode(65 + index);
-        wrap.className = 'gen-selected-images__item';
+        wrap.className = 'gen-selected-images__item' + (item.researchHandoff ? ' is-research' : '') +
+          (item.researchMode === 't2i' ? ' is-t2i' : '');
         var drawLabel = window.CreatorI18n && window.CreatorI18n.generator_draw ? window.CreatorI18n.generator_draw : 'Draw';
+        var origLabel = genLabel('creator.generator.view_original', 'Original');
+        var cropLabel = genLabel('creator.generator.view_cropped', 'Cropped');
+        var i2iLabel = genLabel('creator.generator.mode_image_to_image', 'Image to Image');
+        var t2iLabel = genLabel('creator.generator.mode_text_to_image', 'Text to Image');
+        var researchChrome = item.researchHandoff
+          ? '<div class="gen-selected-images__view-switch" role="group">' +
+              '<button type="button" data-research-view="original" data-index="' + index + '"' +
+                (item.researchView === 'original' ? ' class="is-on"' : '') + '>' + origLabel + '</button>' +
+              '<button type="button" data-research-view="cropped" data-index="' + index + '"' +
+                (item.researchView !== 'original' ? ' class="is-on"' : '') + '>' + cropLabel + '</button>' +
+            '</div>' +
+            '<div class="gen-selected-images__mode-switch" role="group">' +
+              '<button type="button" data-research-mode="i2i" data-index="' + index + '"' +
+                (item.researchMode !== 't2i' ? ' class="is-on"' : '') + '>' + i2iLabel + '</button>' +
+              '<button type="button" data-research-mode="t2i" data-index="' + index + '"' +
+                (item.researchMode === 't2i' ? ' class="is-on"' : '') + '>' + t2iLabel + '</button>' +
+            '</div>' +
+            (item.researchMode === 't2i'
+              ? '<span class="gen-selected-images__t2i-veil"><span>' + t2iLabel + '</span></span>'
+              : '')
+          : '';
         wrap.innerHTML =
           '<span class="gen-selected-images__thumb" data-index="' + index + '" role="button" tabindex="0">' +
           '<img src="' + item.dataUrl + '" alt="">' +
+          researchChrome +
           '<button type="button" class="gen-selected-images__draw" data-index="' + index + '" aria-label="' + drawLabel + '" title="' + drawLabel + '">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></button>' +
           '<button type="button" class="gen-selected-images__remove" data-index="' + index + '" aria-label="Remove">' +
@@ -764,10 +907,17 @@
       var menu = document.getElementById('genHistoryMenu');
       if (!btn || !menu || !window.CreatorGenerateSettingsHistory) return;
       function closeMenu() { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
-      function openMenu() {
-        var hist = window.CreatorGenerateSettingsHistory;
-        var list = hist.list();
+      function renderHistoryList(hist, list) {
         menu.innerHTML = '';
+        if (hist.isLoginRequired && hist.isLoginRequired()) {
+          var login = document.createElement('div');
+          login.className = 'cgl-history-empty';
+          login.textContent = hist.t('liveGenHistoryLogin', 'Sign in to use settings history.');
+          login.style.padding = '8px 10px';
+          login.style.fontSize = '13px';
+          menu.appendChild(login);
+          return;
+        }
         if (!list.length) {
           var empty = document.createElement('div');
           empty.className = 'cgl-history-empty';
@@ -787,8 +937,18 @@
             menu.appendChild(b);
           });
         }
+      }
+      function openMenu() {
+        var hist = window.CreatorGenerateSettingsHistory;
+        menu.innerHTML = '';
         menu.hidden = false;
         btn.setAttribute('aria-expanded', 'true');
+        var pending = (hist.listAsync || hist.refresh || hist.list).call(hist);
+        Promise.resolve(pending).then(function (list) {
+          renderHistoryList(hist, Array.isArray(list) ? list : hist.list());
+        }).catch(function () {
+          renderHistoryList(hist, hist.list());
+        });
       }
       btn.addEventListener('click', function (e) {
         e.preventDefault();
@@ -863,6 +1023,33 @@
           removeImage(parseInt(removeBtn.dataset.index, 10));
           return;
         }
+        var viewBtn = e.target.closest('[data-research-view]');
+        if (viewBtn && viewBtn.dataset.index !== undefined) {
+          e.stopPropagation();
+          var vIdx = parseInt(viewBtn.dataset.index, 10);
+          var vItem = selectedImages[vIdx];
+          if (vItem && vItem.researchHandoff) {
+            vItem.researchView = viewBtn.getAttribute('data-research-view') === 'original' ? 'original' : 'cropped';
+            vItem.dataUrl = vItem.researchView === 'original'
+              ? (vItem.originalDataUrl || vItem.dataUrl)
+              : (vItem.croppedDataUrl || vItem.dataUrl);
+            renderSelectedGrid();
+          }
+          return;
+        }
+        var modeBtn = e.target.closest('[data-research-mode]');
+        if (modeBtn && modeBtn.dataset.index !== undefined) {
+          e.stopPropagation();
+          var mIdx = parseInt(modeBtn.dataset.index, 10);
+          var mItem = selectedImages[mIdx];
+          if (mItem && mItem.researchHandoff) {
+            mItem.researchMode = modeBtn.getAttribute('data-research-mode') === 't2i' ? 't2i' : 'i2i';
+            mItem.skipAttach = mItem.researchMode === 't2i';
+            if (mItem.researchMode === 't2i') fillPromptFromAnalysis(mItem.analysis);
+            renderSelectedGrid();
+          }
+          return;
+        }
         var thumbWrap = e.target.closest('.gen-selected-images__thumb');
         if (thumbWrap && thumbWrap.dataset.index !== undefined && !e.target.closest('button')) {
           e.preventDefault();
@@ -923,6 +1110,13 @@
         addFiles(input.files);
       }
     });
+
+    window.CreatorGenerator = window.CreatorGenerator || {};
+    window.CreatorGenerator.consumeResearchHandoff = consumeResearchHandoff;
+    window.addEventListener('eazy-research-generator-handoff', function () {
+      consumeResearchHandoff();
+    });
+    consumeResearchHandoff();
 
     window.__creatorGenApplyRemixDetail = function (detail) {
       if (!detail || !Array.isArray(selectedImages)) return false;
@@ -1536,9 +1730,26 @@
 
       var prompt = (textarea && textarea.value) ? textarea.value.trim() : '';
       var selectedImages = window.__creatorGenSelectedImages || [];
+      if (!prompt) {
+        var t2iItem = selectedImages.find(function (it) {
+          return it && (it.researchMode === 't2i' || it.skipAttach) && it.analysis;
+        });
+        if (t2iItem && t2iItem.analysis) {
+          var a = t2iItem.analysis;
+          var parts = [];
+          if (a.prompt) parts.push(String(a.prompt).trim());
+          if (a.topic) parts.push('Topic: ' + String(a.topic).trim());
+          var tags = Array.isArray(a.tags) ? a.tags.filter(Boolean) : [];
+          if (tags.length) parts.push('Tags: ' + tags.join(', '));
+          if (a.design_type) parts.push('Design type: ' + String(a.design_type).replace(/_/g, ' '));
+          prompt = parts.join('\n');
+          if (textarea && prompt) textarea.value = prompt;
+        }
+      }
 
       Promise.all(
         selectedImages.map(function (item, index) {
+          if (item.skipAttach || item.researchMode === 't2i') return Promise.resolve(null);
           var url = item.dataUrl || item.url;
           if (!url) return Promise.resolve(null);
           return resolveReferenceUrlForSubmit(url).then(function (resolved) {
@@ -1796,6 +2007,7 @@
                 background: uiState.background,
                 language: uiState.language,
                 referenceStrength: uiState.referenceStrength,
+                origin: 'creator',
                 refs: window.__creatorGenSelectedImages || []
               });
             } catch (_hist) {}
