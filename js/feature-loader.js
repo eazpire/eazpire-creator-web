@@ -17,7 +17,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "t2i-hidden-prompt-20260826";
+  var PORTAL_ASSET_V = "design-canvas-20260826d";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -142,6 +142,7 @@
       "/vendor/theme/creator-mobile-gen-language-modal.css",
       "/vendor/theme/creator-mobile-gen-color-modal.css",
       "/vendor/theme/creator-canvas-sketch-modal.css",
+      "/vendor/theme/creator-design-canvas-modal.css",
       "/vendor/theme/creator-inspiration-modal.css",
       "/vendor/theme/creator-design-studio-modal.css",
       "/vendor/theme/creator-generate-live-dock.css",
@@ -197,6 +198,7 @@
       await Promise.all([
         injectPartial("creator-mobile-filter-modal.html"),
         injectPartial("creator-design-upload-modal.html"),
+        injectPartial("creator-design-canvas-modal.html"),
         injectPartial("my-creations-upload-source-modal.html"),
         injectPartial("creator-phone-upload-modal.html"),
         injectPartial("creator-design-merge-modal.html"),
@@ -254,6 +256,7 @@
         asset("creator-upload-remove-background.js"),
         asset("creator-upload-crop.js"),
         asset("creator-design-upload-modal.js"),
+        asset("creator-design-canvas-modal.js"),
         asset("creator-phone-upload-modal.js"),
         asset("my-creations-upload-source-modal.js"),
         asset("creator-design-merge-modal.js"),

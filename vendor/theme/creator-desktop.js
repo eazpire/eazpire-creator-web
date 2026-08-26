@@ -1171,6 +1171,7 @@
       'creator-design-modal',
       'creator-detail-modal',
       'my-creations-upload-source-modal',
+      'creator-design-canvas-modal',
       'design-upload-modal-creator-mobile',
       'design-merge-modal',
       'genRefImageOverlay',

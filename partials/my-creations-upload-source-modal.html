@@ -205,6 +205,11 @@
         <span class="my-creations-upload-source-modal__label" data-t="creator.my_creations.upload_from_mobile">Mobile</span>
         <small class="my-creations-upload-source-modal__desc" data-t="creator.my_creations.upload_from_mobile_desc">Scan the QR code with your phone, then continue with title and options here</small>
       </button>
+      <button type="button" class="my-creations-upload-source-modal__option" data-my-creations-upload-source="canvas">
+        <span class="my-creations-upload-source-modal__icon" aria-hidden="true">&#128396;</span>
+        <span class="my-creations-upload-source-modal__label" data-t="creator.my_creations.upload_from_canvas">Canvas</span>
+        <small class="my-creations-upload-source-modal__desc" data-t="creator.my_creations.upload_from_canvas_desc">Create a design on a blank transparent canvas</small>
+      </button>
     </div>
   </div>
 </dialog>
@@ -273,5 +278,10 @@
   body.creator-mode .my-creations-upload-source-modal__lead,
   body[data-creator-mode="true"] .my-creations-upload-source-modal__lead {
     color: #9ca3af;
+  }
+  @media (max-width: 899px) {
+    .my-creations-upload-source-modal__option[data-my-creations-upload-source="mobile"] {
+      display: none;
+    }
   }
 </style>

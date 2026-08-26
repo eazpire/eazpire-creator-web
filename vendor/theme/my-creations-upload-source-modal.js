@@ -1,13 +1,12 @@
 /**
- * Device vs Mobile (desktop ≥900px), then design upload modal.
+ * Device / Mobile (desktop) / Canvas, then design upload modal.
  * Used on /pages/creator-dashboard Creations tab (openCreationsUploadSourceChoice).
- * Narrow screens: file picker → design upload modal (same as before).
+ * Narrow screens hide Mobile (QR) and still show Device + Canvas.
  */
 (function () {
   'use strict';
 
   var MODAL_ID = 'my-creations-upload-source-modal';
-  var DESKTOP_MIN_PX = 900;
 
   function getSectionIdFromButton(btn) {
     var m = btn && btn.id && /^creations-upload-btn-(.+)$/.exec(btn.id);
@@ -118,6 +117,10 @@
         }
         if (source === 'mobile') {
           openPhoneUpload(sectionId);
+          return;
+        }
+        if (source === 'canvas') {
+          openCanvasEditor(sectionId);
         }
       });
     });
@@ -134,6 +137,19 @@
       });
       modal.addEventListener('cancel', closeChoiceModal);
     }
+  }
+
+  function openCanvasEditor(sectionId) {
+    if (window.DesignCanvasModal && typeof window.DesignCanvasModal.open === 'function') {
+      window.DesignCanvasModal.open({
+        sectionId: sectionId,
+        onCancel: function () {
+          openChoiceModal(sectionId);
+        }
+      });
+      return;
+    }
+    openFilePickerThenDesignModal(sectionId);
   }
 
   function openChoiceModal(sectionId) {
@@ -160,11 +176,7 @@
         e.preventDefault();
         var sectionId = getSectionIdFromButton(btn);
         if (!sectionId) return;
-        if (window.matchMedia('(min-width: ' + DESKTOP_MIN_PX + 'px)').matches) {
-          openChoiceModal(sectionId);
-        } else {
-          openFilePickerThenDesignModal(sectionId);
-        }
+        openChoiceModal(sectionId);
       });
     });
 
@@ -173,11 +185,7 @@
 
   function openCreationsUploadSourceChoice(sectionId) {
     if (!sectionId) return;
-    if (window.matchMedia('(min-width: ' + DESKTOP_MIN_PX + 'px)').matches) {
-      openChoiceModal(sectionId);
-    } else {
-      openFilePickerThenDesignModal(sectionId);
-    }
+    openChoiceModal(sectionId);
   }
   window.openCreationsUploadSourceChoice = openCreationsUploadSourceChoice;
 
