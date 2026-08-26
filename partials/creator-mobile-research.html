@@ -1,8 +1,70 @@
 <div class="eazy-research" data-eazy-research="1">
-  <div class="eazy-research__tabs" role="tablist" data-erz-tabs>
-    <button type="button" class="eazy-research__tab is-on" data-erz-tab="ideas" role="tab" aria-selected="true" data-t="creator.research.tab_design_ideas">Design Ideas</button>
-    <button type="button" class="eazy-research__tab" data-erz-tab="trends" role="tab" aria-selected="false" data-t="creator.research.tab_trends">Trends</button>
-  </div>
+  <header class="eazy-research__page-head" data-erz-page-head>
+    <div class="eazy-research__tabs" role="tablist" data-erz-tabs>
+      <button type="button" class="eazy-research__tab is-on" data-erz-tab="ideas" role="tab" aria-selected="true" data-t="creator.research.tab_design_ideas">Design Ideas</button>
+      <button type="button" class="eazy-research__tab" data-erz-tab="trends" role="tab" aria-selected="false" data-t="creator.research.tab_trends">Trends</button>
+    </div>
+    <div class="eazy-research__head-cluster" data-erz-head-ideas>
+      <div class="eazy-research__analyze-selects">
+        <div class="eazy-research__select eazy-research__country eazy-research__platform" data-erz-platform-wrap>
+          <span class="visually-hidden" data-t="creator.research.platform">Platform</span>
+          <select data-erz-platform class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
+            <option value="all" data-t="creator.research.analyze_all">All</option>
+          </select>
+          <button type="button" class="eazy-research__country-btn" data-erz-platform-btn aria-haspopup="dialog" aria-expanded="false">
+            <span class="eazy-research__flag is-empty" data-erz-platform-flag aria-hidden="true" hidden></span>
+            <span data-erz-platform-label data-t="creator.research.analyze_all">All</span>
+          </button>
+        </div>
+        <div class="eazy-research__select eazy-research__country eazy-research__analyze-lang" data-erz-analyze-lang-wrap>
+          <span class="visually-hidden" data-t="creator.research.language">Language</span>
+          <select data-erz-analyze-lang class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
+            <option value="all" data-t="creator.research.analyze_all">All</option>
+          </select>
+          <button type="button" class="eazy-research__country-btn" data-erz-analyze-lang-btn aria-haspopup="dialog" aria-expanded="false">
+            <span class="eazy-research__flag is-empty" data-erz-analyze-lang-flag aria-hidden="true" hidden></span>
+            <span data-erz-analyze-lang-label data-t="creator.research.analyze_all">All</span>
+          </button>
+        </div>
+      </div>
+      <p class="eazy-research__analyze-used" data-erz-analyze-used hidden></p>
+      <div class="eazy-research__toolbar" data-erz-toolbar>
+        <label class="eazy-research__search">
+          <span class="visually-hidden" data-t="creator.research.search_placeholder">Search reprint-safe products</span>
+          <input type="search" name="q" autocomplete="off" data-erz-q data-t-placeholder="creator.research.search_placeholder" placeholder="Search reprint-safe products">
+        </label>
+        <button type="button" class="eazy-research__analyze" data-erz-analyze data-t="creator.research.analyze">Analyze</button>
+      </div>
+    </div>
+    <div class="eazy-research__head-cluster" data-erz-head-trends hidden>
+      <div class="eazy-research__analyze-selects">
+        <div class="eazy-research__select eazy-research__country" data-erz-trends-search-geo-wrap>
+          <span class="visually-hidden" data-t="creator.research.country">Country</span>
+          <select data-erz-trends-search-geo class="eazy-research__country-native" tabindex="-1" aria-hidden="true"></select>
+          <button type="button" class="eazy-research__country-btn" data-erz-trends-search-geo-btn aria-haspopup="dialog" aria-expanded="false">
+            <span class="eazy-research__flag is-empty" data-erz-trends-search-geo-flag aria-hidden="true" hidden></span>
+            <span data-erz-trends-search-geo-label data-t="creator.research.analyze_all">All</span>
+          </button>
+        </div>
+        <div class="eazy-research__select eazy-research__country" data-erz-trends-search-lang-wrap>
+          <span class="visually-hidden" data-t="creator.research.language">Language</span>
+          <select data-erz-trends-search-lang class="eazy-research__country-native" tabindex="-1" aria-hidden="true"></select>
+          <button type="button" class="eazy-research__country-btn" data-erz-trends-search-lang-btn aria-haspopup="dialog" aria-expanded="false">
+            <span class="eazy-research__flag is-empty" data-erz-trends-search-lang-flag aria-hidden="true" hidden></span>
+            <span data-erz-trends-search-lang-label data-t="creator.research.analyze_all">All</span>
+          </button>
+        </div>
+      </div>
+      <p class="eazy-research__analyze-used" data-erz-trends-used hidden></p>
+      <div class="eazy-research__toolbar">
+        <label class="eazy-research__search">
+          <span class="visually-hidden" data-t="creator.research.trends_search_placeholder">Search a topic or keyword</span>
+          <input type="search" autocomplete="off" data-erz-trends-q data-t-placeholder="creator.research.trends_search_placeholder" placeholder="Search a topic or keyword">
+        </label>
+        <button type="button" class="eazy-research__analyze" data-erz-trends-search data-t="creator.research.trends_search">Search</button>
+      </div>
+    </div>
+  </header>
   <div class="eazy-research__filters-backdrop" data-erz-filters-backdrop hidden></div>
   <div class="eazy-research__layout" data-erz-pane="ideas">
     <aside class="eazy-research__filters-wrap" data-erz-filters-wrap>
@@ -127,41 +189,7 @@
           </div>
         </section>
         </div>
-        <footer class="eazy-research__filters-foot" data-erz-analyze-foot>
-          <div class="eazy-research__analyze-selects">
-            <div class="eazy-research__select eazy-research__country eazy-research__platform" data-erz-platform-wrap>
-              <span class="visually-hidden" data-t="creator.research.platform">Platform</span>
-              <select data-erz-platform class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
-                <option value="all" data-t="creator.research.analyze_all">All</option>
-              </select>
-              <button type="button" class="eazy-research__country-btn" data-erz-platform-btn aria-haspopup="listbox" aria-expanded="false">
-                <span class="eazy-research__flag is-empty" data-erz-platform-flag aria-hidden="true" hidden></span>
-                <span data-erz-platform-label data-t="creator.research.analyze_all">All</span>
-              </button>
-              <div class="eazy-research__country-menu" data-erz-platform-menu hidden role="listbox"></div>
-            </div>
-            <div class="eazy-research__select eazy-research__country eazy-research__analyze-lang" data-erz-analyze-lang-wrap>
-              <span class="visually-hidden" data-t="creator.research.language">Language</span>
-              <select data-erz-analyze-lang class="eazy-research__country-native" tabindex="-1" aria-hidden="true">
-                <option value="all" data-t="creator.research.analyze_all">All</option>
-              </select>
-              <button type="button" class="eazy-research__country-btn" data-erz-analyze-lang-btn aria-haspopup="listbox" aria-expanded="false">
-                <span class="eazy-research__flag is-empty" data-erz-analyze-lang-flag aria-hidden="true" hidden></span>
-                <span data-erz-analyze-lang-label data-t="creator.research.analyze_all">All</span>
-              </button>
-              <div class="eazy-research__country-menu" data-erz-analyze-lang-menu hidden role="listbox"></div>
-            </div>
-          </div>
-          <p class="eazy-research__analyze-used" data-erz-analyze-used hidden></p>
-          <div class="eazy-research__toolbar" data-erz-toolbar>
-            <label class="eazy-research__search">
-              <span class="visually-hidden" data-t="creator.research.search_placeholder">Search reprint-safe products</span>
-              <input type="search" name="q" autocomplete="off" data-erz-q data-t-placeholder="creator.research.search_placeholder" placeholder="Search reprint-safe products">
-            </label>
-            <button type="button" class="eazy-research__analyze" data-erz-analyze data-t="creator.research.analyze">Analyze</button>
-          </div>
-        </footer>
-      </div>
+</div>
       <button
         type="button"
         class="eazy-research__filter-rail"
@@ -294,37 +322,12 @@
           </div>
         </section>
         </div>
-        <footer class="eazy-research__filters-foot" data-erz-trends-foot>
-          <div class="eazy-research__analyze-selects">
-            <div class="eazy-research__select eazy-research__country" data-erz-trends-search-geo-wrap>
-              <span class="visually-hidden" data-t="creator.research.country">Country</span>
-              <select data-erz-trends-search-geo class="eazy-research__country-native" tabindex="-1" aria-hidden="true"></select>
-              <button type="button" class="eazy-research__country-btn" data-erz-trends-search-geo-btn aria-haspopup="dialog" aria-expanded="false">
-                <span class="eazy-research__flag is-empty" data-erz-trends-search-geo-flag aria-hidden="true" hidden></span>
-                <span data-erz-trends-search-geo-label data-t="creator.research.analyze_all">All</span>
-              </button>
-            </div>
-            <div class="eazy-research__select eazy-research__country" data-erz-trends-search-lang-wrap>
-              <span class="visually-hidden" data-t="creator.research.language">Language</span>
-              <select data-erz-trends-search-lang class="eazy-research__country-native" tabindex="-1" aria-hidden="true"></select>
-              <button type="button" class="eazy-research__country-btn" data-erz-trends-search-lang-btn aria-haspopup="dialog" aria-expanded="false">
-                <span class="eazy-research__flag is-empty" data-erz-trends-search-lang-flag aria-hidden="true" hidden></span>
-                <span data-erz-trends-search-lang-label data-t="creator.research.analyze_all">All</span>
-              </button>
-            </div>
-          </div>
-          <p class="eazy-research__analyze-used" data-erz-trends-used hidden></p>
-          <div class="eazy-research__toolbar">
-            <label class="eazy-research__search">
-              <span class="visually-hidden" data-t="creator.research.trends_search_placeholder">Search a topic or keyword</span>
-              <input type="search" autocomplete="off" data-erz-trends-q data-t-placeholder="creator.research.trends_search_placeholder" placeholder="Search a topic or keyword">
-            </label>
-            <button type="button" class="eazy-research__analyze" data-erz-trends-search data-t="creator.research.trends_search">Search</button>
-          </div>
-        </footer>
       </div>
     </aside>
     <div class="eazy-research__stage" data-erz-trends-stage>
+      <div class="eazy-research__mobile-bar">
+        <button type="button" class="eazy-research__mobile-toggle" data-erz-filters-open data-t="creator.research.filter_open">Open filters</button>
+      </div>
       <div class="eazy-research__grid-scroll" data-erz-trends-scroll>
         <p class="eazy-research__filters-hint" data-t="creator.research.trends_note">Estimated monthly searches from Google Keyword Planner. Not Amazon unit sales.</p>
         <div class="eazy-research__kw-table" data-erz-trends-table></div>

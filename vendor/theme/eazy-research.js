@@ -18,6 +18,10 @@
     design_type: false,
     language: false,
     opportunity: false,
+    trends_topics: true,
+    trends_type: false,
+    trends_time: false,
+    trends_volume: false,
   };
   var HEART_SVG =
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
@@ -999,7 +1003,7 @@
   }
 
   function closeAllFilterMenus(root, except) {
-    ["country", "platform", "analyze-lang", "sort"].forEach(function (prefix) {
+    ["country", "platform", "analyze-lang", "sort", "trends-sort"].forEach(function (prefix) {
       if (prefix !== except) setMenuOpen(root, prefix, false);
     });
   }
@@ -1100,6 +1104,49 @@
     renderSort(root);
     if (state.searchId || state.view === "watched") renderGrid(root);
     else load(root);
+  }
+
+  function trendSortFieldLabel(id) {
+    if (id === "keyword") return t("creator.research.sort_keyword", "Keyword");
+    if (id === "competition") return t("creator.research.sort_competition", "Competition");
+    if (id === "trend") return t("creator.research.sort_trend", "Trend");
+    return t("creator.research.sort_volume", "Search volume");
+  }
+
+  function defaultTrendSortDir(id) {
+    var opt = TREND_SORT_OPTIONS.find(function (o) { return o.id === id; });
+    return (opt && opt.defDir) || "desc";
+  }
+
+  function renderTrendsSort(root) {
+    var wrap = root.querySelector("[data-erz-trends-sort-wrap]");
+    var labelEl = root.querySelector("[data-erz-trends-sort-label]");
+    var menu = root.querySelector("[data-erz-trends-sort-menu]");
+    var dir = state.trends.sortDir === "asc" ? "asc" : "desc";
+    if (wrap) wrap.classList.toggle("is-desc", dir === "desc");
+    if (labelEl) labelEl.textContent = trendSortFieldLabel(state.trends.sort);
+    if (!menu) return;
+    var html = TREND_SORT_OPTIONS.map(function (opt) {
+      var on = state.trends.sort === opt.id;
+      var optDir = on ? dir : opt.defDir;
+      return '<button type="button" class="eazy-research__sort-opt' + (on ? " is-on" : "") +
+        (optDir === "desc" ? " is-desc" : "") +
+        '" data-erz-trends-sort-opt="' + esc(opt.id) + '" role="option" aria-selected="' + (on ? "true" : "false") + '">' +
+        "<span>" + esc(trendSortFieldLabel(opt.id)) + "</span>" + SORT_ARROW_SVG + "</button>";
+    }).join("");
+    if (menu.innerHTML !== html) menu.innerHTML = html;
+  }
+
+  function applyTrendsSortChange(root, nextId) {
+    if (state.trends.sort === nextId) {
+      state.trends.sortDir = state.trends.sortDir === "asc" ? "desc" : "asc";
+    } else {
+      state.trends.sort = nextId;
+      state.trends.sortDir = defaultTrendSortDir(nextId);
+    }
+    closeAllFilterMenus(root, "");
+    renderTrendsSort(root);
+    loadTrends(root);
   }
 
   function renderFacets(root) {
@@ -1418,6 +1465,10 @@
     var trends = root.querySelector('[data-erz-pane="trends"]');
     if (ideas) ideas.hidden = state.tab !== "ideas";
     if (trends) trends.hidden = state.tab !== "trends";
+    var headIdeas = root.querySelector("[data-erz-head-ideas]");
+    var headTrends = root.querySelector("[data-erz-head-trends]");
+    if (headIdeas) headIdeas.hidden = state.tab !== "ideas";
+    if (headTrends) headTrends.hidden = state.tab !== "trends";
     if (state.tab === "trends") loadTrends(root);
   }
 
@@ -1545,6 +1596,7 @@
     }
     renderTrendGeos(root);
     renderTrendTopics(root);
+    renderTrendsSort(root);
     renderTrendKeywords(root);
     syncTrendsSearchButton(root);
   }
@@ -1890,6 +1942,11 @@
     if (id === "custom_design") return (state.personalizationsSelected || []).length;
     if (id === "design_type") return (state.designTypesSelected || []).length;
     if (id === "language") return (state.languagesSelected || []).length;
+    if (id === "opportunity") return (state.opportunitySelected || []).length;
+    if (id === "trends_topics") return (state.trends.topics || []).length;
+    if (id === "trends_type") return (state.trends.productTypes || []).length;
+    if (id === "trends_volume") return (state.trends.volume || []).length;
+    if (id === "trends_time") return state.trends.time && state.trends.time !== "avg_12m" ? 1 : 0;
     return 0;
   }
 
@@ -1947,8 +2004,9 @@
     root.classList.toggle("is-filters-open", !!open);
     var backdrop = root.querySelector("[data-erz-filters-backdrop]");
     if (backdrop) backdrop.hidden = !open;
-    var openBtn = root.querySelector("[data-erz-filters-open]");
-    if (openBtn) openBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    root.querySelectorAll("[data-erz-filters-open]").forEach(function (btn) {
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
   }
 
   function toggleTopic(key) {
@@ -2023,6 +2081,16 @@
         setMenuOpen(root, "sort", open);
       });
     }
+    var trendsSortBtn = root.querySelector("[data-erz-trends-sort-btn]");
+    if (trendsSortBtn) {
+      trendsSortBtn.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        var wrap = root.querySelector("[data-erz-trends-sort-wrap]");
+        var open = !(wrap && wrap.classList.contains("is-open"));
+        closeAllFilterMenus(root, open ? "trends-sort" : "");
+        setMenuOpen(root, "trends-sort", open);
+      });
+    }
     var analyzeBtn = root.querySelector("[data-erz-analyze]");
     if (analyzeBtn) {
       analyzeBtn.addEventListener("click", function () { startAnalyze(root); });
@@ -2045,10 +2113,9 @@
         applyFiltersCollapsed(root, !(wrap && wrap.classList.contains("is-collapsed")));
       });
     }
-    var openBtn = root.querySelector("[data-erz-filters-open]");
-    if (openBtn) {
-      openBtn.addEventListener("click", function () { applyFiltersSheet(root, true); });
-    }
+    root.querySelectorAll("[data-erz-filters-open]").forEach(function (btn) {
+      btn.addEventListener("click", function () { applyFiltersSheet(root, true); });
+    });
     var backdrop = root.querySelector("[data-erz-filters-backdrop]");
     if (backdrop) {
       backdrop.addEventListener("click", function () { applyFiltersSheet(root, false); });
@@ -2113,6 +2180,7 @@
         var timeEl = root.querySelector("[data-erz-trends-time]:checked");
         state.trends.time = (timeEl && timeEl.getAttribute("data-erz-trends-time")) || "avg_12m";
         loadTrends(root);
+        applyFilterFolds(root);
       }
     });
     root.addEventListener("click", function (ev) {
@@ -2247,9 +2315,15 @@
         return;
       }
       var sortOpt = ev.target.closest("[data-erz-sort-opt]");
-      if (sortOpt && root.contains(sortOpt)) {
+      if (sortOpt && root.contains(sortOpt) && !sortOpt.hasAttribute("data-erz-trends-sort-opt")) {
         ev.preventDefault();
         applySortChange(root, sortOpt.getAttribute("data-erz-sort-opt") || "review_growth");
+        return;
+      }
+      var trendsSortOpt = ev.target.closest("[data-erz-trends-sort-opt]");
+      if (trendsSortOpt && root.contains(trendsSortOpt)) {
+        ev.preventDefault();
+        applyTrendsSortChange(root, trendsSortOpt.getAttribute("data-erz-trends-sort-opt") || "volume");
         return;
       }
       if (
