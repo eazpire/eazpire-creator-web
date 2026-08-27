@@ -227,7 +227,14 @@
   }
 
   function creatorGuestBypassDesktop() {
-    return window.__CREATOR_IS_LOGGED_IN === false && !window.__DEV_BYPASS;
+    if (window.__DEV_BYPASS) return false;
+    if (window.__CREATOR_IS_LOGGED_IN === true) return false;
+    try {
+      var auth = window.CreatorPortalAuth && window.CreatorPortalAuth.state;
+      if (auth && (auth.loggedIn || auth.ownerId)) return false;
+    } catch (_auth) {}
+    if (window.__EAZ_OWNER_ID) return false;
+    return true;
   }
 
   function removeDesktopGuestNavLocks() {
@@ -3224,7 +3231,11 @@
   }
 
   function buildGuestLoginHref(cfg) {
-    if (!cfg || !cfg.loginBase) return '#';
+    if (window.__CREATOR_PORTAL_HOST__) {
+      var next = (window.location && window.location.pathname) || '/dashboard';
+      return '/auth/login?next=' + encodeURIComponent(next);
+    }
+    if (!cfg || !cfg.loginBase) return '/account/login';
     if (!cfg.returnUrl) return String(cfg.loginBase);
     var join = String(cfg.loginBase).indexOf('?') >= 0 ? '&' : '?';
     return String(cfg.loginBase) + join + 'redirect=' + encodeURIComponent(String(cfg.returnUrl));

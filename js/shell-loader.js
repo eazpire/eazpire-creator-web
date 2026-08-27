@@ -10,7 +10,7 @@
     "https://cdn.shopify.com/s/files/1/0739/5203/5098/files/eazpire-creator-logo.png?v=1763666950";
   // Bumped for guest-first dashboard (same as feature-loader PORTAL_ASSET_V).
   // Must stay in lockstep with index.html `shell-loader.js?v=` so browsers drop the 7-day vendor cache.
-  var RUNTIME_V = "guest-dashboard-20260827";
+  var RUNTIME_V = "guest-dashboard-20260827b";
   var secondaryScreensPromise = null;
   var enhancementsPromise = null;
 

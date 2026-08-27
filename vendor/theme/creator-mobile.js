@@ -512,26 +512,33 @@
   const MIN_SWIPE = 50;
   const LOGIN_URL = '/account/login?redirect=' + encodeURIComponent('/');
 
+  function creatorPortalLoginUrl() {
+    if (window.__CREATOR_PORTAL_HOST__) {
+      return "/auth/login?next=" + encodeURIComponent((window.location && window.location.pathname) || "/dashboard");
+    }
+    return LOGIN_URL;
+  }
+
   function buildCreatorGuestLockOverlay() {
-    var title = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLockedTitle) || 'Log in to chat';
-    var textBody = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLockedText) || 'Sign in to use this feature.';
-    var cta = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLoginCta) || 'Log in';
-    var wrap = document.createElement('div');
-    wrap.className = 'creator-generator-lock creator-guest-nav-lock';
+    var title = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLockedTitle) || "Log in to continue";
+    var textBody = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLockedText) || "Sign in to use this feature.";
+    var cta = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLoginCta) || "Log in";
+    var wrap = document.createElement("div");
+    wrap.className = "creator-generator-lock creator-guest-nav-lock";
     wrap.innerHTML =
       '<div class="creator-generator-lock__card">' +
       '<h3 class="creator-generator-lock__title">' +
       title +
-      '</h3>' +
+      "</h3>" +
       '<p class="creator-generator-lock__text">' +
       textBody +
-      '</p>' +
+      "</p>" +
       '<a class="creator-generator-lock__cta" href="' +
-      LOGIN_URL +
+      creatorPortalLoginUrl() +
       '">' +
       cta +
-      '</a>' +
-      '</div>';
+      "</a>" +
+      "</div>";
     return wrap;
   }
 
@@ -547,7 +554,7 @@
   function syncCreatorGuestNavLocksMobile() {
     removeMobileGuestNavLocks();
     if (!viewport || !track) return;
-    var guestStrict = window.__CREATOR_IS_LOGGED_IN === false && !window.__DEV_BYPASS;
+    var guestStrict = !isCreatorSessionLoggedIn();
     if (!guestStrict) return;
     if (currentIndex === 0 || currentIndex === 2) return;
     var section = document.querySelector('.creator-screen[data-screen="' + currentIndex + '"]');
@@ -569,8 +576,7 @@
   }
 
   function isCreatorKnownGuest() {
-    if (isCreatorSessionLoggedIn()) return false;
-    return window.__CREATOR_IS_LOGGED_IN === false && !window.__DEV_BYPASS;
+    return !isCreatorSessionLoggedIn();
   }
 
   function refreshCreatorGuestLocksAfterBypass() {
@@ -652,7 +658,7 @@
     var title = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLockedTitle) || 'Log in to continue';
     var text = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLockedText) || 'Sign in to use this feature.';
     var cta = (window.CreatorMobileI18n && window.CreatorMobileI18n.generatorLoginCta) || 'Login';
-    var loginHref = window.__CREATOR_PORTAL_HOST__ ? '/auth/login' : LOGIN_URL;
+    var loginHref = creatorPortalLoginUrl();
 
     var lock = document.createElement('div');
     lock.className = 'creator-generator-lock';
@@ -687,14 +693,7 @@
   }
 
   function syncCreatorGeneratorGuestLock() {
-    if (isCreatorSessionLoggedIn()) {
-      setGeneratorLocked(false);
-      return;
-    }
-    if (isCreatorKnownGuest()) {
-      setGeneratorLocked(true);
-      return;
-    }
+    // Guests keep Dashboard (0) and Generator (2) open — same as Android.
     setGeneratorLocked(false);
   }
   window.syncCreatorGeneratorGuestLock = syncCreatorGeneratorGuestLock;
