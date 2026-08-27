@@ -312,6 +312,15 @@
           global.syncCreatorGuestNavLocksMobile();
         } catch (_navLock) {}
       }
+      try {
+        if (
+          typeof global.syncCreatorGuestDesktopLock === "function" &&
+          global.CreatorDesktopShell &&
+          typeof global.CreatorDesktopShell.getActiveScreen === "function"
+        ) {
+          global.syncCreatorGuestDesktopLock(global.CreatorDesktopShell.getActiveScreen());
+        }
+      } catch (_deskLock) {}
     },
     assetUrl: function (file) {
       return "/vendor/theme/" + file;

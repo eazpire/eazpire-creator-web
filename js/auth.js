@@ -52,7 +52,6 @@
     if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.notifyContextReady === "function") {
       global.CreatorPortalThemeBridge.notifyContextReady();
     }
-    openLoginModal();
   }
 
   function recoverShopSessionAfterGuestBootstrap() {

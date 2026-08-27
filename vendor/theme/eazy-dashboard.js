@@ -392,12 +392,70 @@
     return list[0] || null;
   }
 
+  function guestFallbackPayload() {
+    function w(id, x, y, width, height) {
+      return { id: id, x: x, y: y, w: width, h: height, visible: true };
+    }
+    var layout = {
+      id: "guest-mission-control",
+      title: "Mission Control",
+      desktop: { columns: 12, widgets: [w("designs", 0, 0, 3, 2), w("products", 3, 0, 3, 2), w("heroes", 6, 0, 3, 2), w("sales", 9, 0, 3, 2), w("creator-journey", 0, 2, 6, 4), w("performance", 6, 2, 6, 4), w("quick-actions", 0, 6, 4, 4), w("skill-unlock", 4, 6, 4, 3), w("publish-grow", 8, 6, 4, 3)] },
+      tablet: { columns: 8, widgets: [w("designs", 0, 0, 2, 2), w("products", 2, 0, 2, 2), w("heroes", 4, 0, 2, 2), w("sales", 6, 0, 2, 2), w("creator-journey", 0, 2, 8, 5), w("performance", 0, 7, 8, 4), w("quick-actions", 0, 11, 4, 4), w("skill-unlock", 4, 11, 4, 4)] },
+      mobile: { columns: 4, widgets: [w("designs", 0, 0, 2, 2), w("products", 2, 0, 2, 2), w("heroes", 0, 2, 2, 2), w("sales", 2, 2, 2, 2), w("creator-journey", 0, 4, 4, 5), w("quick-actions", 0, 9, 4, 3)] },
+    };
+    return {
+      ok: true,
+      activeLayoutId: layout.id,
+      layouts: [layout],
+      registry: {
+        widgets: [
+          { id: "designs", titleKey: "creator.overview.designs" },
+          { id: "products", titleKey: "creator.overview.products" },
+          { id: "heroes", titleKey: "creator.overview.heroes" },
+          { id: "sales", titleKey: "creator.overview.sales" },
+          { id: "creator-journey", titleKey: "creator.overview.journey" },
+          { id: "performance", titleKey: "creator.dashboard.performance", trackingRequired: true },
+          { id: "quick-actions", titleKey: "creator.dashboard.quick_actions" },
+          { id: "skill-unlock", titleKey: "creator.dashboard.skill_unlock" },
+          { id: "publish-grow", titleKey: "creator.dashboard.publish_grow" },
+        ],
+        quickActionItems: [
+          { id: "generator", titleKey: "creator.overview.action_generator_title", goto: "2" },
+          { id: "designs", titleKey: "creator.overview.action_designs_title", goto: "3", creationsTab: "designs" },
+          { id: "products", titleKey: "creator.overview.action_products_title", goto: "3", creationsTab: "products" },
+          { id: "content", titleKey: "creator.overview.action_content_title", goto: "4", marketingSubtab: "content-creation" },
+          { id: "automations", titleKey: "creator.overview.action_automations_title", goto: "5" },
+        ],
+      },
+      data: {},
+    };
+  }
+
+  function showGuestJourneyCta(root) {
+    if (ownerId()) return;
+    var cta = root.querySelector("#creator-desktop-journey-guest-cta");
+    if (!cta) return;
+    cta.hidden = false;
+    if (!cta.innerHTML.trim()) {
+      var loginHref = global.__CREATOR_PORTAL_HOST__ ? "/auth/login?next=/dashboard" : "/account/login";
+      cta.innerHTML =
+        "<p>" +
+        escHtml(t("creator.dashboard.guest_cta", "Sign in to track your journey and use Creator tools.")) +
+        '</p><a class="eazy-dashboard__toolbar-btn" href="' +
+        loginHref +
+        '">' +
+        escHtml(t("creator.common.login", "Log in")) +
+        "</a>";
+    }
+  }
+
   function paint(root, payload) {
     var surface = detectSurface(root);
     var layout = activeLayout(payload);
     payload.activeLayout = layout;
     var cols = (layout && layout[surface] && layout[surface].columns) || (surface === "mobile" ? 4 : surface === "tablet" ? 8 : 12);
     var canvas = root.querySelector("[data-ed-canvas]");
+    if (!canvas) return;
     canvas.style.setProperty("--ed-cols", String(cols));
     canvas.innerHTML = "";
     var widgets = (layout && layout[surface] && layout[surface].widgets) || [];
@@ -422,6 +480,7 @@
     root._edPayload = payload;
     root._edSurface = surface;
     bindWidgetChrome(root);
+    showGuestJourneyCta(root);
   }
 
   function currentWidgets(root) {
@@ -1086,11 +1145,15 @@
     var oid = ownerId();
     apiGet("get-dashboard-v5", oid ? { owner_id: oid } : {})
       .then(function (payload) {
-        if (!payload || !payload.ok) return;
+        if (!payload || !payload.ok) {
+          paint(root, guestFallbackPayload());
+          return;
+        }
         paint(root, payload);
       })
       .catch(function (err) {
         console.warn("[eazy-dashboard] load failed", err);
+        paint(root, guestFallbackPayload());
       })
       .finally(function () {
         root._edBusy = false;

@@ -17,7 +17,7 @@
   };
   var partialsHostId = "creatorPortalModals";
   /** Bump on portal JS/CSS/partial changes. /vendor + /partials are cached ~7d. */
-  var PORTAL_ASSET_V = "research-header-20260826";
+  var PORTAL_ASSET_V = "guest-dashboard-20260827";
   global.__CREATOR_PORTAL_ASSET_V = PORTAL_ASSET_V;
 
   function asset(file) {
@@ -289,7 +289,6 @@
 
   async function ensureGenerator() {
     if (state.generator) return state.generator;
-    if (!requireLogin()) return null;
 
     state.generator = (async function () {
       if (global.CreatorPortalThemeBridge && typeof global.CreatorPortalThemeBridge.applyOwnerFromAuth === "function") {
@@ -703,6 +702,19 @@
     });
   }
 
+  function refreshGuestLocks(name) {
+    try {
+      if (typeof global.syncCreatorGuestNavLocksMobile === "function") {
+        global.syncCreatorGuestNavLocksMobile();
+      }
+    } catch (_m) {}
+    try {
+      if (typeof global.syncCreatorGuestDesktopLock === "function") {
+        global.syncCreatorGuestDesktopLock(name);
+      }
+    } catch (_d) {}
+  }
+
   function onRoute(name) {
     if (global.CreatorPortalEazy && typeof global.CreatorPortalEazy.ensure === "function") {
       global.CreatorPortalEazy.ensure();
@@ -717,6 +729,7 @@
     }
     if (name === "marketing") ensureMarketing();
     if (name === "automations") ensureAutomations();
+    refreshGuestLocks(name);
   }
 
   bindSettingsTriggers();
