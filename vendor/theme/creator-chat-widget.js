@@ -4917,6 +4917,10 @@
       if (window.EazyQuickInspirationsPanel && typeof window.EazyQuickInspirationsPanel.init === "function") {
         window.EazyQuickInspirationsPanel.init();
       }
+    } else if (name === "design-requests") {
+      if (window.EazyDesignRequestsPanel && typeof window.EazyDesignRequestsPanel.init === "function") {
+        window.EazyDesignRequestsPanel.init();
+      }
     }
 
     if (_genActiveJobId) {
