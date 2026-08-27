@@ -66,8 +66,23 @@
 }
 
 .eazy-dashboard__widget.is-dragging {
-  opacity: 0.88;
-  z-index: 4;
+  opacity: 0.92;
+  z-index: 6;
+}
+
+.eazy-dashboard__widget.is-drag-ready {
+  transform: scale(1.04);
+  z-index: 5;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 2px rgba(255, 157, 0, 0.55),
+    0 0 22px rgba(255, 157, 0, 0.28);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.eazy-dashboard__widget.is-drag-ready .eazy-dashboard__handle {
+  color: var(--ed-accent);
+  transform: scale(1.12);
 }
 
 .eazy-dashboard.is-editing .eazy-dashboard__widget {

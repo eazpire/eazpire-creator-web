@@ -7,6 +7,8 @@
   var CELL = 56;
   var GAP = 10;
   var DRAFT_KEY = "eazy-dashboard-draft-v1";
+  var WIDGET_LONG_PRESS_MS = 300;
+  var WIDGET_DRAG_SLOP = 10;
 
   function t(key, fallback) {
     var i18n = global.CreatorI18n || global.CreatorPortalI18n;
@@ -596,42 +598,85 @@
     if (!canvas || canvas._edDragBound) return;
     canvas._edDragBound = true;
     var dragging = null;
+    var pending = null;
+
+    function clearPending() {
+      if (!pending) return;
+      if (pending.timer) clearTimeout(pending.timer);
+      if (pending.el) pending.el.classList.remove("is-drag-ready", "is-dragging");
+      pending = null;
+    }
+
+    function armDrag(hold) {
+      var widget = hold.el;
+      var origin = hold.origin;
+      var snapshot = hold.snapshot;
+      var rect = canvas.getBoundingClientRect();
+      var cols = Number(getComputedStyle(canvas).getPropertyValue("--ed-cols")) || 12;
+      dragging = {
+        el: widget,
+        id: origin.id,
+        startX: hold.startX,
+        startY: hold.startY,
+        colW: (rect.width - GAP * (cols - 1)) / cols,
+        origin: Object.assign({}, origin),
+        snapshot: snapshot,
+        resolved: null,
+        dx: 0,
+        dy: 0,
+        cols: cols,
+        pointerId: hold.pointerId,
+      };
+      widget.classList.add("is-drag-ready", "is-dragging");
+      try {
+        if (navigator.vibrate) navigator.vibrate(30);
+      } catch (_v) {}
+      try {
+        widget.setPointerCapture(hold.pointerId);
+      } catch (_e) {}
+    }
+
     canvas.addEventListener("pointerdown", function (ev) {
       var handle = ev.target.closest(".eazy-dashboard__handle");
       if (!handle) return;
       var widget = ev.target.closest("[data-ed-id]");
       if (!widget) return;
-      ev.preventDefault();
       closeWidgetMenu();
       var snapshot = currentWidgets(root);
       var origin = snapshot.filter(function (w) {
         return w.id === widget.getAttribute("data-ed-id");
       })[0];
       if (!origin) return;
-      var rect = canvas.getBoundingClientRect();
-      var cols = Number(getComputedStyle(canvas).getPropertyValue("--ed-cols")) || 12;
-      dragging = {
+      clearPending();
+      pending = {
         el: widget,
-        id: origin.id,
-        startX: ev.clientX,
-        startY: ev.clientY,
-        colW: (rect.width - GAP * (cols - 1)) / cols,
-        origin: Object.assign({}, origin),
+        origin: origin,
         snapshot: snapshot.map(function (w) {
           return Object.assign({}, w);
         }),
-        resolved: null,
-        dx: 0,
-        dy: 0,
-        cols: cols,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        pointerId: ev.pointerId,
+        timer: setTimeout(function () {
+          var hold = pending;
+          pending = null;
+          if (!hold) return;
+          armDrag(hold);
+        }, WIDGET_LONG_PRESS_MS),
       };
-      widget.classList.add("is-dragging");
-      try {
-        widget.setPointerCapture(ev.pointerId);
-      } catch (_e) {}
     });
     canvas.addEventListener("pointermove", function (ev) {
+      if (pending && pending.pointerId === ev.pointerId) {
+        var pdx = ev.clientX - pending.startX;
+        var pdy = ev.clientY - pending.startY;
+        if (Math.hypot(pdx, pdy) > WIDGET_DRAG_SLOP) {
+          clearPending();
+        }
+        return;
+      }
       if (!dragging) return;
+      if (dragging.pointerId != null && ev.pointerId !== dragging.pointerId) return;
+      ev.preventDefault();
       dragging.dx = Math.round((ev.clientX - dragging.startX) / (dragging.colW + GAP));
       dragging.dy = Math.round((ev.clientY - dragging.startY) / (CELL + GAP));
       var next = dragging.snapshot.map(function (w) {
@@ -645,15 +690,25 @@
       dragging.resolved = resolveWidgetCollisions(next, dragging.id, dragging.cols);
       applyWidgetGrid(canvas, dragging.resolved);
     });
-    canvas.addEventListener("pointerup", function () {
+    function onPointerUp(ev) {
+      if (pending && (!ev || pending.pointerId === ev.pointerId)) {
+        clearPending();
+        return;
+      }
       if (!dragging) return;
+      if (ev && dragging.pointerId != null && ev.pointerId !== dragging.pointerId) return;
       var moved = dragging.dx || dragging.dy;
       var widgets = dragging.resolved || currentWidgets(root);
-      dragging.el.classList.remove("is-dragging");
+      dragging.el.classList.remove("is-dragging", "is-drag-ready");
+      try {
+        dragging.el.releasePointerCapture(dragging.pointerId);
+      } catch (_e) {}
       dragging = null;
       if (moved) writeWidgets(root, widgets);
       else paint(root, root._edPayload);
-    });
+    }
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointercancel", onPointerUp);
   }
 
   function mutate(action, extra) {

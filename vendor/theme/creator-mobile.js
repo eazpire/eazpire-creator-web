@@ -454,7 +454,6 @@
 
   const viewport = document.getElementById('creatorMobileSwipeViewport') || document.getElementById('swipeViewport');
   const track = viewport?.querySelector('.creator-swipe-track');
-  const dots = document.querySelectorAll('.creator-dot');
   const headerTitle = document.querySelector('.creator-header__title');
   const drawerBtn = document.getElementById('creatorMobileDrawerBtn') || document.getElementById('drawerBtn');
   const drawer = document.getElementById('creatorMobileDrawer') || document.getElementById('drawer');
@@ -467,6 +466,21 @@
     : ['Dashboard', 'Research', 'Generator', 'Designs', 'Marketing', 'Automations'];
   const TOTAL = 6;
   const CREATOR_SHELL_HASH_SCREENS = ['dashboard', 'research', 'generator', 'creations', 'marketing', 'automations'];
+
+  function ensureHeaderDots() {
+    var host = document.querySelector('.creator-header__dots');
+    if (!host) return [];
+    var existing = host.querySelectorAll('.creator-dot');
+    if (existing.length === TOTAL) return Array.prototype.slice.call(existing);
+    host.textContent = '';
+    for (var i = 0; i < TOTAL; i++) {
+      var span = document.createElement('span');
+      span.className = 'creator-dot' + (i === 0 ? ' creator-dot--active' : '');
+      span.setAttribute('data-dot', String(i));
+      host.appendChild(span);
+    }
+    return Array.prototype.slice.call(host.querySelectorAll('.creator-dot'));
+  }
 
   function creatorShellPathSupportsDashboardTabHash() {
     try {
@@ -764,6 +778,8 @@
   scheduleGeneratorLockSync();
 
   if (!viewport || !track) return;
+
+  var dots = ensureHeaderDots();
 
   function goTo(index) {
     index = Math.max(0, Math.min(index, TOTAL - 1));
