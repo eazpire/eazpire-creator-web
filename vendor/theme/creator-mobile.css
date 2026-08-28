@@ -2185,10 +2185,12 @@ body.creator-video-character-modal-open .creator-swipe-viewport {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-/* Share Icons – untereinander */
+/* Share — single icon (share also copies the link) */
 .creator-level-share-row {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
   flex-shrink: 0;
 }

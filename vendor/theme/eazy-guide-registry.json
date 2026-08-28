@@ -936,7 +936,7 @@
   },
   "chrome.share": {
     "title": "Share",
-    "summary": "Shares your creator link via the device share sheet or a fallback.",
+    "summary": "Shares your creator link and copies it so you can paste it anywhere.",
     "tips": [
       "Great for inviting fans and partners.",
       "Works best when you are logged in."
@@ -944,7 +944,7 @@
     "pages": [
       {
         "category": "Overview",
-        "body": "Shares your creator link via the device share sheet or a fallback."
+        "body": "Shares your creator link and copies it so you can paste it anywhere."
       },
       {
         "category": "How to use",

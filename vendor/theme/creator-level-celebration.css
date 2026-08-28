@@ -30,6 +30,11 @@
   cursor: pointer;
 }
 
+/* Pulse is the level-up signal — keep XP numbers fully visible like the compact web pill. */
+.creator-level-badge--pulse .creator-level-badge__xp-hint {
+  display: none;
+}
+
 /* Full-screen overlay */
 .creator-level-celebration {
   position: fixed;

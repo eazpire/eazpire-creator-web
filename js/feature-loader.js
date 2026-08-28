@@ -546,12 +546,13 @@
       ]);
 
       global.CreatorCelebrationI18n = global.CreatorCelebrationI18n || {
-        blocked_title: "Level up blocked",
-        blocked_body: "Complete the required steps to level up.",
-        celebrate_title: "Level up!",
-        celebrate_subtitle: "You reached a new creator level.",
+        blocked_title: "Activate a Creator Code",
+        blocked_body:
+          "You have enough XP for Level 2. Redeem a Creator Code first to unlock your Creator tier and continue leveling.",
+        celebrate_title: "LEVEL UP!",
+        celebrate_subtitle: "You reached a new level!",
         cta_creator_codes: "Open Creator Codes",
-        badge_ready_aria: "Level badge ready",
+        badge_ready_aria: "Level up available — press to continue.",
       };
 
       // Settings modal is large ? load on first open only (not on dashboard boot).

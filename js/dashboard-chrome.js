@@ -423,4 +423,36 @@
       return lastChrome;
     },
   };
+
+  function initCreatorLevelShare() {
+    var shareBtn = document.getElementById("creator-share-btn");
+    if (!shareBtn || shareBtn.dataset.shareInit === "1") return;
+    shareBtn.dataset.shareInit = "1";
+    var shareBaseUrl =
+      (global.location && global.location.origin ? global.location.origin : "") +
+      "/pages/creator-dashboard";
+    function resolveShareUrl() {
+      if (typeof global.ShareButtonResolveShareUrl === "function") {
+        return global.ShareButtonResolveShareUrl(shareBaseUrl);
+      }
+      return Promise.resolve(shareBaseUrl);
+    }
+    shareBtn.addEventListener("click", function () {
+      resolveShareUrl().then(function (url) {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+          navigator.clipboard.writeText(url).catch(function () {});
+        }
+        if (navigator.share) {
+          return navigator.share({ title: "Creator Dashboard", url: url }).catch(function () {});
+        }
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCreatorLevelShare);
+  } else {
+    initCreatorLevelShare();
+  }
+  global.addEventListener("eazDashboardChromeReady", initCreatorLevelShare);
 })(typeof window !== "undefined" ? window : globalThis);
