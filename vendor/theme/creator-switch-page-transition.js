@@ -564,6 +564,10 @@
     function go(url) {
       if (navigated || !url) return;
       navigated = true;
+      if (window.EazStayInWeb && typeof window.EazStayInWeb.replace === 'function') {
+        window.EazStayInWeb.replace(url);
+        return;
+      }
       try {
         window.location.replace(url);
       } catch (_e) {
@@ -598,6 +602,10 @@
     }
     if (!transitionAnimEnabled(mode)) {
       resolveTargetUrl(targetUrl).then(function (url) {
+        if (window.EazStayInWeb && typeof window.EazStayInWeb.replace === 'function') {
+          window.EazStayInWeb.replace(url);
+          return;
+        }
         try {
           window.location.replace(url);
         } catch (_e) {

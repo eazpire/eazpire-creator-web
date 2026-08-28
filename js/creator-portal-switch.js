@@ -69,6 +69,8 @@
     }
     if (global.CreatorSwitchPageTransition && typeof global.CreatorSwitchPageTransition.start === "function") {
       global.CreatorSwitchPageTransition.start(url, transitionDir);
+    } else if (global.EazStayInWeb && typeof global.EazStayInWeb.assign === "function") {
+      global.EazStayInWeb.assign(url);
     } else {
       global.location.href = url;
     }

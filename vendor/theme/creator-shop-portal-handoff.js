@@ -252,10 +252,30 @@
     return attempt();
   }
 
+  function navigateKeepWeb(url, replace) {
+    if (!url) return;
+    if (window.EazStayInWeb) {
+      if (replace && typeof window.EazStayInWeb.replace === "function") {
+        window.EazStayInWeb.replace(url);
+        return;
+      }
+      if (typeof window.EazStayInWeb.assign === "function") {
+        window.EazStayInWeb.assign(url);
+        return;
+      }
+    }
+    try {
+      if (replace) window.location.replace(url);
+      else window.location.href = url;
+    } catch (e) {
+      window.location.href = url;
+    }
+  }
+
   function navigateToPortal(opts) {
     opts = opts || {};
     return resolveTargetUrl(opts).then(function (url) {
-      window.location.replace(url);
+      navigateKeepWeb(url, true);
       return url;
     });
   }

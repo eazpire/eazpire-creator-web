@@ -337,6 +337,7 @@
       loadScript("/vendor/theme/eazy-dashboard.js"),
       loadScript("/vendor/theme/creator-daily-limits-subheader.js"),
     ]);
+    await loadScript("/vendor/theme/eaz-stay-in-web.js");
     await Promise.all([
       loadScript("/vendor/theme/creator-shop-portal-handoff.js"),
       loadScript("/vendor/theme/creator-switch-page-transition.js"),
