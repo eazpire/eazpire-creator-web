@@ -1867,6 +1867,7 @@
     var headTrends = root.querySelector("[data-erz-head-trends]");
     if (headIdeas) headIdeas.hidden = state.tab !== "ideas";
     if (headTrends) headTrends.hidden = state.tab !== "trends";
+    if (root.classList.contains("is-filters-open")) applyFiltersSheet(root, true);
     if (state.tab === "trends") loadTrends(root);
   }
 
@@ -2451,7 +2452,7 @@
   function applyFilterFolds(root) {
     if (!root) return;
     var folds = loadFilterFolds();
-    root.querySelectorAll("[data-erz-fold]").forEach(function (section) {
+    researchQueryAll(root, "[data-erz-fold]").forEach(function (section) {
       var id = section.getAttribute("data-erz-fold") || "";
       if (!Object.prototype.hasOwnProperty.call(FILTER_FOLD_DEFAULTS, id)) return;
       var open = !!folds[id];
@@ -2498,13 +2499,109 @@
     } catch (_store) { /* guest storage may be blocked */ }
   }
 
+  function isMobileResearchChrome() {
+    return typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 899px)").matches;
+  }
+
+  function rememberHome(el) {
+    if (!el || el.__erzHome) return;
+    el.__erzHome = { parent: el.parentNode, next: el.nextSibling };
+  }
+
+  function moveToBody(el) {
+    rememberHome(el);
+    if (el && document.body && el.parentNode !== document.body) document.body.appendChild(el);
+  }
+
+  function restoreHome(el) {
+    var home = el && el.__erzHome;
+    if (!el || !home || !home.parent) return;
+    if (el.parentNode === home.parent) return;
+    if (home.next && home.next.parentNode === home.parent) home.parent.insertBefore(el, home.next);
+    else home.parent.appendChild(el);
+  }
+
+  function findFiltersBackdrop(root) {
+    return document.querySelector("[data-erz-filters-backdrop]") ||
+      (root && root.querySelector("[data-erz-filters-backdrop]"));
+  }
+
+  function findFiltersWrap(root, tab) {
+    var sel = tab === "trends" ? "[data-erz-trends-filters-wrap]" : "[data-erz-filters-wrap]";
+    return document.querySelector(sel) || (root && root.querySelector(sel));
+  }
+
+  function closeSheetWrap(wrap) {
+    if (!wrap) return;
+    wrap.classList.remove("is-sheet-open", "is-sheet-ready");
+    restoreHome(wrap);
+  }
+
+  function belongsToResearch(root, el) {
+    if (!root || !el) return false;
+    if (root.contains(el)) return true;
+    if (!el.closest) return false;
+    return !!(
+      el.closest("[data-erz-filters-wrap]") ||
+      el.closest("[data-erz-trends-filters-wrap]") ||
+      el.closest("[data-erz-filters-backdrop]") ||
+      el.closest("[data-erz-analyze-modal]") ||
+      el.closest("[data-erz-trends-analyze-modal]") ||
+      el.closest("[data-erz-picker]") ||
+      el.closest("[data-erz-modal]") ||
+      el.closest("[data-erz-done-toast]")
+    );
+  }
+
+  function researchQueryAll(root, selector) {
+    var seen = [];
+    function add(el) {
+      if (el && seen.indexOf(el) === -1) seen.push(el);
+    }
+    if (root && root.querySelectorAll) {
+      Array.prototype.forEach.call(root.querySelectorAll(selector), add);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(selector), function (el) {
+      if (belongsToResearch(root, el)) add(el);
+    });
+    return seen;
+  }
+
   function applyFiltersSheet(root, open) {
+    if (!root) return;
+    var mobile = isMobileResearchChrome();
     root.classList.toggle("is-filters-open", !!open);
-    var backdrop = root.querySelector("[data-erz-filters-backdrop]");
-    if (backdrop) backdrop.hidden = !open;
+    document.documentElement.classList.toggle("erz-filters-sheet-open", !!(open && mobile));
+    var backdrop = findFiltersBackdrop(root);
+    var ideasWrap = findFiltersWrap(root, "ideas");
+    var trendsWrap = findFiltersWrap(root, "trends");
+    var activeWrap = state.tab === "trends" ? trendsWrap : ideasWrap;
+    var idleWrap = state.tab === "trends" ? ideasWrap : trendsWrap;
     root.querySelectorAll("[data-erz-funnel]").forEach(function (btn) {
       btn.setAttribute("aria-expanded", open ? "true" : "false");
     });
+    closeSheetWrap(idleWrap);
+    if (mobile && open && activeWrap) {
+      if (backdrop) {
+        backdrop.hidden = false;
+        backdrop.classList.add("is-sheet-open");
+        moveToBody(backdrop);
+      }
+      moveToBody(activeWrap);
+      activeWrap.classList.add("is-sheet-open");
+      activeWrap.classList.remove("is-sheet-ready");
+      requestAnimationFrame(function () {
+        activeWrap.classList.add("is-sheet-ready");
+      });
+      return;
+    }
+    if (backdrop) {
+      backdrop.hidden = true;
+      backdrop.classList.remove("is-sheet-open");
+      restoreHome(backdrop);
+    }
+    closeSheetWrap(ideasWrap);
+    closeSheetWrap(trendsWrap);
   }
 
   function toggleTopic(key) {
@@ -2613,9 +2710,14 @@
     applyFiltersCollapsed(root, isFiltersCollapsedStored());
     applyFilterFolds(root);
     applyFiltersSheet(root, false);
-    root.addEventListener("click", function (ev) {
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", function () {
+        if (root.classList.contains("is-filters-open")) applyFiltersSheet(root, true);
+      });
+    }
+    document.addEventListener("click", function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest("[data-erz-fold-toggle]");
-      if (!btn || !root.contains(btn)) return;
+      if (!btn || !belongsToResearch(root, btn)) return;
       var section = btn.closest("[data-erz-fold]");
       if (!section) return;
       ev.preventDefault();
@@ -2632,6 +2734,9 @@
     if (backdrop) {
       backdrop.addEventListener("click", function () { applyFiltersSheet(root, false); });
     }
+    root.querySelectorAll("[data-erz-sheet-close]").forEach(function (btn) {
+      btn.addEventListener("click", function () { applyFiltersSheet(root, false); });
+    });
     var country = root.querySelector("[data-erz-country]");
     if (country) {
       country.addEventListener("change", function () {
@@ -2642,13 +2747,13 @@
       });
     }
     function readChecked(selector, attr) {
-      return Array.prototype.map.call(root.querySelectorAll(selector + ":checked"), function (el) {
+      return researchQueryAll(root, selector + ":checked").map(function (el) {
         return el.getAttribute(attr);
       }).filter(Boolean);
     }
-    root.addEventListener("change", function (ev) {
+    document.addEventListener("change", function (ev) {
       var tEl = ev.target;
-      if (!tEl) return;
+      if (!tEl || !belongsToResearch(root, tEl)) return;
       if (tEl.hasAttribute("data-erz-niche") || (tEl.closest && tEl.closest("[data-erz-chips]"))) {
         state.nichesSelected = readChecked("[data-erz-niche]", "data-erz-niche");
         persistIdeaFilters();
@@ -2695,22 +2800,24 @@
         state.trends.topics = readChecked("[data-erz-trends-topic]", "data-erz-trends-topic");
         state.trends.productTypes = readChecked("[data-erz-trends-type]", "data-erz-trends-type");
         state.trends.volume = readChecked("[data-erz-trends-volume]", "data-erz-trends-volume");
-        var timeEl = root.querySelector("[data-erz-trends-time]:checked");
+        var timeEl = researchQueryAll(root, "[data-erz-trends-time]:checked")[0];
         state.trends.time = (timeEl && timeEl.getAttribute("data-erz-trends-time")) || "avg_12m";
         loadTrends(root);
         persistTrendFilters();
         applyFilterFolds(root);
       }
     });
-    root.addEventListener("click", function (ev) {
+    document.addEventListener("click", function (ev) {
+      if (!ev.target || !ev.target.closest) return;
+      if (!belongsToResearch(root, ev.target) && !ev.target.closest("[data-erz-tab]")) return;
       var tabBtn = ev.target.closest("[data-erz-tab]");
-      if (tabBtn && root.contains(tabBtn)) {
+      if (tabBtn && belongsToResearch(root, tabBtn)) {
         ev.preventDefault();
         setTab(root, tabBtn.getAttribute("data-erz-tab"));
         return;
       }
       var countryBtn = ev.target.closest("[data-erz-country-btn]");
-      if (countryBtn && root.contains(countryBtn) && !ev.target.closest("[data-erz-platform-wrap]") && !ev.target.closest("[data-erz-analyze-lang-wrap]") && !ev.target.closest("[data-erz-head-lang-wrap]") && !ev.target.closest("[data-erz-trends-geo-wrap]") && !ev.target.closest("[data-erz-trends-lang-wrap]") && !ev.target.closest("[data-erz-trends-search-geo-wrap]") && !ev.target.closest("[data-erz-trends-search-lang-wrap]")) {
+      if (countryBtn && belongsToResearch(root, countryBtn) && !ev.target.closest("[data-erz-platform-wrap]") && !ev.target.closest("[data-erz-analyze-lang-wrap]") && !ev.target.closest("[data-erz-head-lang-wrap]") && !ev.target.closest("[data-erz-trends-geo-wrap]") && !ev.target.closest("[data-erz-trends-lang-wrap]") && !ev.target.closest("[data-erz-trends-search-geo-wrap]") && !ev.target.closest("[data-erz-trends-search-lang-wrap]")) {
         ev.preventDefault();
         closeAllFilterMenus(root, "");
         openPicker(root, t("creator.research.country", "Country"), countryPickerOptions(), state.marketplace || "all", function (id) {
@@ -2722,7 +2829,7 @@
         return;
       }
       var headLangBtn = ev.target.closest("[data-erz-head-lang-btn]");
-      if (headLangBtn && root.contains(headLangBtn)) {
+      if (headLangBtn && belongsToResearch(root, headLangBtn)) {
         ev.preventDefault();
         closeAllFilterMenus(root, "");
         openPicker(root, t("creator.research.language", "Language"), analyzeLangPickerOptions().concat([{ id: "none", label: t("creator.quick_inspirations.language_none", "None"), flag: "" }]), (state.languagesSelected && state.languagesSelected[0]) || "all", function (id) {
@@ -2734,7 +2841,7 @@
         return;
       }
       var trendsLangBtn = ev.target.closest("[data-erz-trends-lang-btn]");
-      if (trendsLangBtn && root.contains(trendsLangBtn)) {
+      if (trendsLangBtn && belongsToResearch(root, trendsLangBtn)) {
         ev.preventDefault();
         closeAllFilterMenus(root, "");
         openPicker(root, t("creator.research.language", "Language"), analyzeLangPickerOptions(), state.trends.language || "all", function (id) {
@@ -2745,7 +2852,7 @@
         return;
       }
       var platformBtn = ev.target.closest("[data-erz-platform-btn]");
-      if (platformBtn && root.contains(platformBtn)) {
+      if (platformBtn && belongsToResearch(root, platformBtn)) {
         ev.preventDefault();
         closeAllFilterMenus(root, "");
         openPicker(root, t("creator.research.platform", "Platform"), countryPickerOptions().map(function (o) {
@@ -2757,7 +2864,7 @@
         return;
       }
       var langBtn = ev.target.closest("[data-erz-analyze-lang-btn]");
-      if (langBtn && root.contains(langBtn)) {
+      if (langBtn && belongsToResearch(root, langBtn)) {
         ev.preventDefault();
         closeAllFilterMenus(root, "");
         openPicker(root, t("creator.research.language", "Language"), analyzeLangPickerOptions(), state.analyzeLanguage || "all", function (id) {
@@ -2767,7 +2874,7 @@
         return;
       }
       var trendsGeoBtn = ev.target.closest("[data-erz-trends-geo-btn]");
-      if (trendsGeoBtn && root.contains(trendsGeoBtn)) {
+      if (trendsGeoBtn && belongsToResearch(root, trendsGeoBtn)) {
         ev.preventDefault();
         openPicker(root, t("creator.research.country", "Country"), trendGeoPickerOptions(), state.trends.geo, function (id) {
           state.trends.geo = id || "ALL";
@@ -2776,7 +2883,7 @@
         return;
       }
       var trendsSearchGeoBtn = ev.target.closest("[data-erz-trends-search-geo-btn]");
-      if (trendsSearchGeoBtn && root.contains(trendsSearchGeoBtn)) {
+      if (trendsSearchGeoBtn && belongsToResearch(root, trendsSearchGeoBtn)) {
         ev.preventDefault();
         openPicker(root, t("creator.research.country", "Country"), trendGeoPickerOptions(), state.trends.searchGeo, function (id) {
           state.trends.searchGeo = id || "ALL";
@@ -2785,7 +2892,7 @@
         return;
       }
       var trendsSearchLangBtn = ev.target.closest("[data-erz-trends-search-lang-btn]");
-      if (trendsSearchLangBtn && root.contains(trendsSearchLangBtn)) {
+      if (trendsSearchLangBtn && belongsToResearch(root, trendsSearchLangBtn)) {
         ev.preventDefault();
         openPicker(root, t("creator.research.language", "Language"), analyzeLangPickerOptions(), state.trends.searchLang, function (id) {
           state.trends.searchLang = id || "all";
@@ -2794,13 +2901,13 @@
         return;
       }
       var trendsSearchBtn = ev.target.closest("[data-erz-trends-search]");
-      if (trendsSearchBtn && root.contains(trendsSearchBtn)) {
+      if (trendsSearchBtn && belongsToResearch(root, trendsSearchBtn)) {
         ev.preventDefault();
         startTrendsSearch(root);
         return;
       }
       var trendsCol = ev.target.closest("[data-erz-trends-col]");
-      if (trendsCol && root.contains(trendsCol)) {
+      if (trendsCol && belongsToResearch(root, trendsCol)) {
         ev.preventDefault();
         var col = trendsCol.getAttribute("data-erz-trends-col") || "volume";
         if (state.trends.sort === col) state.trends.sortDir = state.trends.sortDir === "asc" ? "desc" : "asc";
@@ -2812,10 +2919,10 @@
         return;
       }
       var countryOpt = ev.target.closest("[data-erz-country-opt]");
-      if (countryOpt && root.contains(countryOpt) && !countryOpt.hasAttribute("data-erz-platform-opt") && !countryOpt.hasAttribute("data-erz-analyze-lang-opt")) {
+      if (countryOpt && belongsToResearch(root, countryOpt) && !countryOpt.hasAttribute("data-erz-platform-opt") && !countryOpt.hasAttribute("data-erz-analyze-lang-opt")) {
         ev.preventDefault();
         var host = countryOpt.getAttribute("data-erz-country-opt") || "all";
-        var select = root.querySelector("[data-erz-country]");
+        var select = researchQueryAll(root, "[data-erz-country]")[0];
         state.marketplace = host;
         if (select) select.value = host;
         closeAllFilterMenus(root, "");
@@ -2824,7 +2931,7 @@
         return;
       }
       var platformBtn = ev.target.closest("[data-erz-platform-btn]");
-      if (platformBtn && root.contains(platformBtn)) {
+      if (platformBtn && belongsToResearch(root, platformBtn)) {
         ev.preventDefault();
         var pWrap = root.querySelector("[data-erz-platform-wrap]");
         var openPlat = !(pWrap && pWrap.classList.contains("is-open"));
@@ -2833,7 +2940,7 @@
         return;
       }
       var platformOpt = ev.target.closest("[data-erz-platform-opt]");
-      if (platformOpt && root.contains(platformOpt)) {
+      if (platformOpt && belongsToResearch(root, platformOpt)) {
         ev.preventDefault();
         state.analyzeMarketplace = platformOpt.getAttribute("data-erz-platform-opt") || "all";
         closeAllFilterMenus(root, "");
@@ -2841,7 +2948,7 @@
         return;
       }
       var langBtn = ev.target.closest("[data-erz-analyze-lang-btn]");
-      if (langBtn && root.contains(langBtn)) {
+      if (langBtn && belongsToResearch(root, langBtn)) {
         ev.preventDefault();
         var lWrap = root.querySelector("[data-erz-analyze-lang-wrap]");
         var openLang = !(lWrap && lWrap.classList.contains("is-open"));
@@ -2850,7 +2957,7 @@
         return;
       }
       var langOpt = ev.target.closest("[data-erz-analyze-lang-opt]");
-      if (langOpt && root.contains(langOpt)) {
+      if (langOpt && belongsToResearch(root, langOpt)) {
         ev.preventDefault();
         state.analyzeLanguage = langOpt.getAttribute("data-erz-analyze-lang-opt") || "all";
         closeAllFilterMenus(root, "");
@@ -2858,13 +2965,13 @@
         return;
       }
       var sortOpt = ev.target.closest("[data-erz-sort-opt]");
-      if (sortOpt && root.contains(sortOpt) && !sortOpt.hasAttribute("data-erz-trends-sort-opt")) {
+      if (sortOpt && belongsToResearch(root, sortOpt) && !sortOpt.hasAttribute("data-erz-trends-sort-opt")) {
         ev.preventDefault();
         applySortChange(root, sortOpt.getAttribute("data-erz-sort-opt") || "review_growth");
         return;
       }
       var trendsSortOpt = ev.target.closest("[data-erz-trends-sort-opt]");
-      if (trendsSortOpt && root.contains(trendsSortOpt)) {
+      if (trendsSortOpt && belongsToResearch(root, trendsSortOpt)) {
         ev.preventDefault();
         applyTrendsSortChange(root, trendsSortOpt.getAttribute("data-erz-trends-sort-opt") || "volume");
         return;

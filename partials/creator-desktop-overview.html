@@ -476,10 +476,6 @@
       <section class="creator-desktop-stage__panel creator-desktop-stage__panel--research" id="creatorDesktopPanelResearch" data-desktop-screen="research" role="tabpanel" aria-labelledby="creatorDesktopNavResearch" aria-label="Research" hidden>
         <div class="creator-desktop-research-host" id="creatorDesktopResearchHost"><div class="eazy-research" data-eazy-research="1">
   <header class="eazy-research__page-head" data-erz-page-head>
-    <div class="eazy-research__tabs" role="tablist" data-erz-tabs>
-      <button type="button" class="eazy-research__tab is-on" data-erz-tab="ideas" role="tab" aria-selected="true" data-t="creator.research.tab_design_ideas">Design Ideas</button>
-      <button type="button" class="eazy-research__tab" data-erz-tab="trends" role="tab" aria-selected="false" data-t="creator.research.tab_trends">Trends</button>
-    </div>
     <button
       type="button"
       class="eazy-research__funnel"
@@ -492,6 +488,10 @@
         <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
       </svg>
     </button>
+    <div class="eazy-research__tabs" role="tablist" data-erz-tabs>
+      <button type="button" class="eazy-research__tab is-on" data-erz-tab="ideas" role="tab" aria-selected="true" data-t="creator.research.tab_design_ideas">Design Ideas</button>
+      <button type="button" class="eazy-research__tab" data-erz-tab="trends" role="tab" aria-selected="false" data-t="creator.research.tab_trends">Trends</button>
+    </div>
   </header>
   <div class="eazy-research__chips-row" data-erz-chips-row hidden></div>
   <div class="eazy-research__filters-backdrop" data-erz-filters-backdrop hidden></div>
@@ -500,6 +500,10 @@
       <div class="eazy-research__filters" data-erz-filters>
         <div class="eazy-research__filters-scroll" data-erz-filters-scroll>
         <header class="eazy-research__drawer-head" data-erz-drawer-head>
+          <div class="eazy-research__sheet-bar">
+            <h2 class="eazy-research__sheet-title" data-t="creator.research.filter_funnel">Filters</h2>
+            <button type="button" class="eazy-research__sheet-close" data-erz-sheet-close aria-label="Close filters" aria-label="Close filters">×</button>
+          </div>
           <div class="eazy-research__analyze-selects">
             <div class="eazy-research__select eazy-research__country" data-erz-country-wrap>
               <span class="visually-hidden" data-t="creator.research.country">Country</span>
@@ -687,6 +691,10 @@
       <div class="eazy-research__filters" data-erz-trends-filters>
         <div class="eazy-research__filters-scroll" data-erz-trends-filters-scroll>
         <header class="eazy-research__drawer-head" data-erz-trends-drawer-head>
+          <div class="eazy-research__sheet-bar">
+            <h2 class="eazy-research__sheet-title" data-t="creator.research.filter_funnel">Filters</h2>
+            <button type="button" class="eazy-research__sheet-close" data-erz-sheet-close aria-label="Close filters" aria-label="Close filters">×</button>
+          </div>
           <div class="eazy-research__analyze-selects">
             <div class="eazy-research__select eazy-research__country" data-erz-trends-geo-wrap>
               <span class="visually-hidden" data-t="creator.research.country">Country</span>

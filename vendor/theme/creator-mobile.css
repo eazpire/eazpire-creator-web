@@ -1522,10 +1522,8 @@ body.creator-mobile-page .creator-mobile-app {
    ============================================ */
 .creator-swipe-viewport {
   position: absolute;
-  top: max(
-    var(--creator-content-top, calc(182px + env(safe-area-inset-top))),
-    calc(172px + env(safe-area-inset-top))
-  );
+  /* Trust measured header+limits height. A min-floor here left a nebula gap under the stats strip. */
+  top: var(--creator-content-top, calc(182px + env(safe-area-inset-top)));
   left: 0;
   right: 0;
   bottom: max(48px, calc(40px + env(safe-area-inset-bottom)));
@@ -1580,9 +1578,8 @@ body.creator-video-character-modal-open .creator-swipe-viewport {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-left: 0;
-  padding-right: 0;
-  padding-bottom: 0;
+  /* Viewport already starts at --creator-content-top (flush under daily-limits). */
+  padding: 0;
 }
 
 .creator-screen[data-screen="2"] {

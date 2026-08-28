@@ -69,14 +69,17 @@
   flex: none;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 8px 12px;
-  padding: 8px 12px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 10px 8px;
+  margin: 0;
   z-index: 5;
+  border-top: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background:
     radial-gradient(80% 120% at 0% 0%, rgba(147, 112, 219, 0.18), transparent 55%),
     radial-gradient(70% 100% at 100% 0%, rgba(249, 115, 22, 0.12), transparent 50%),
-    linear-gradient(180deg, rgba(16, 18, 42, 0.82), rgba(8, 10, 26, 0.72));
+    linear-gradient(180deg, rgba(16, 18, 42, 0.94), rgba(8, 10, 26, 0.92));
 }
 
 .eazy-research__funnel {
@@ -84,13 +87,38 @@
   flex: none;
   width: 40px;
   height: 40px;
-  margin-left: auto;
+  margin: 0;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
   background: rgba(124, 92, 255, 0.22);
   color: inherit;
+  cursor: pointer;
+}
+
+.eazy-research__sheet-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eazy-research__sheet-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.eazy-research__sheet-close {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-size: 22px;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -1544,7 +1572,9 @@
 }
 
 .eazy-research-modal [data-erz-detail] {
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: auto;
 }
 
 .eazy-research-picker[hidden] { display: none; }
@@ -1751,10 +1781,6 @@
   .eazy-research__kw-row > :nth-child(5) { grid-area: comp; }
   .eazy-research__kw-row > :nth-child(6) { grid-area: type; }
 }
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-}
 
 .eazy-research-modal__layout {
   display: grid;
@@ -1856,6 +1882,16 @@
   clip: rect(0 0 0 0);
 }
 
+@keyframes erz-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+html.erz-filters-sheet-open,
+html.erz-filters-sheet-open body {
+  overflow: hidden;
+}
+
 @media (max-width: 899px) {
   .eazy-research {
     overflow: hidden;
@@ -1867,11 +1903,19 @@
   .eazy-research__page-head {
     flex-direction: row;
     align-items: center;
-    padding: 8px 10px 10px;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 6px 10px 8px;
+    margin: 0;
   }
 
   .eazy-research__funnel {
     display: inline-flex;
+    margin: 0;
+  }
+
+  .eazy-research__sheet-bar {
+    display: flex;
   }
 
   .eazy-research__head-cluster {
@@ -1890,6 +1934,7 @@
     overflow: hidden;
     min-height: 0;
     height: 100%;
+    flex: 1 1 auto;
   }
 
   .eazy-research__mobile-bar {
@@ -1901,31 +1946,36 @@
     display: none;
   }
 
+  /* Keep the rail out of page flow so country/sort never leak under the tabs. */
   .eazy-research__filters-wrap {
-    display: flex;
+    display: none;
     flex-direction: column;
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: auto;
-    width: min(92vw, 360px);
-    height: auto;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
     max-height: none;
-    z-index: 24;
-    border-radius: 16px 0 0 16px;
+    z-index: 10050;
+    border-radius: 0;
     overflow: hidden;
-    transform: translateX(110%);
     opacity: 0;
     pointer-events: none;
-    box-shadow: -16px 0 40px rgba(0, 0, 0, 0.45);
-    transition: transform 0.28s ease, opacity 0.2s ease;
+    transform: translateY(100%);
+    background: #120c22;
+    box-shadow: none;
   }
 
-  .eazy-research.is-filters-open .eazy-research__filters-wrap {
-    transform: none;
+  .eazy-research__filters-wrap.is-sheet-open {
+    display: flex;
     opacity: 1;
     pointer-events: auto;
+    transform: translateY(100%);
+  }
+
+  .eazy-research__filters-wrap.is-sheet-open.is-sheet-ready {
+    transform: translateY(0);
+    animation: erz-sheet-up 0.32s ease-out;
   }
 
   .eazy-research__filters {
@@ -1941,14 +1991,37 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .eazy-research__filters-scroll {
-    padding: 14px 12px 10px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 14px 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #f97316 rgba(255, 255, 255, 0.08);
   }
 
-  .eazy-research__filters-foot {
-    padding: 8px 12px 14px;
+  .eazy-research__filters-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    display: block;
+  }
+
+  .eazy-research__filters-scroll::-webkit-scrollbar-thumb {
+    background: #f97316;
+    border-radius: 999px;
+  }
+
+  .eazy-research__filters-foot,
+  .eazy-research__analyze-foot {
+    flex: none;
+    padding: 8px 14px 12px;
   }
 
   .eazy-research__filters-wrap.is-collapsed .eazy-research__filters {
@@ -1956,6 +2029,8 @@
     max-width: none;
     flex-basis: auto;
     padding: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     opacity: 1;
     pointer-events: auto;
     overflow: hidden;
@@ -1963,13 +2038,13 @@
 
   .eazy-research__filters-backdrop {
     display: none;
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: 20;
-    background: rgba(8, 6, 20, 0.55);
+    z-index: 10049;
+    background: rgba(8, 6, 20, 0.62);
   }
 
-  .eazy-research.is-filters-open .eazy-research__filters-backdrop {
+  .eazy-research__filters-backdrop.is-sheet-open {
     display: block;
   }
 
@@ -1977,7 +2052,7 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
-    padding: 8px 8px 20px;
+    padding: 8px 8px 12px;
   }
 
   .eazy-research__grid-scroll {
@@ -1985,6 +2060,16 @@
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .eazy-research__grid-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .eazy-research-card {
+    min-height: 0;
   }
 
   .eazy-research__toolbar {
