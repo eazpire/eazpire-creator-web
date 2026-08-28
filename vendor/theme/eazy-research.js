@@ -11,6 +11,13 @@
   var FILTER_COLLAPSE_KEY = "eazy-research-filters-collapsed";
   /* true = Abschnitt offen. Topics bleibt offen, der Rest startet zugeklappt. */
   var FILTER_FOLDS_KEY = "eazy-research-filter-folds";
+  var JOB_KEY = "eazy-research-analyze-job";
+  var TRENDS_JOB_KEY = "eazy-research-trends-job";
+  var FILTERS_IDEAS_KEY = "eazy-research-filters-ideas";
+  var FILTERS_TRENDS_KEY = "eazy-research-filters-trends";
+  var JUST_ADDED_MS = 30000;
+  var DONE_TOAST_MS = 4000;
+  var ANALYZE_SLOT_CAP = 20;
   var FILTER_FOLD_DEFAULTS = {
     topics: true,
     audience: false,
@@ -106,6 +113,8 @@
     preview: false,
     lastRun: null,
     q: "",
+    draftQ: "",
+    analyzeQ: "",
     nichesSelected: [],
     designTypesSelected: [],
     languagesSelected: [],
@@ -127,6 +136,8 @@
     searchEmptyReason: "",
     searchAmazonReturned: 0,
     searchBlocked: 0,
+    justAdded: {},
+    doneToastTimer: null,
     pollTimer: null,
     watched: [],
     hasMore: false,
@@ -143,6 +154,8 @@
       sort: "volume",
       sortDir: "desc",
       q: "",
+      draftQ: "",
+      analyzeQ: "",
       searchGeo: "ALL",
       searchLang: "all",
       topicsList: [],
@@ -151,6 +164,7 @@
       loading: false,
       searchId: "",
       searching: false,
+      justAdded: {},
       hasMore: false,
     },
     trendsLimits: { used: 0, remaining: 5, limit: 5, busy: false },
@@ -405,6 +419,304 @@
     }
   }
 
+  function isJustAdded(p) {
+    var id = watchId(p);
+    var at = state.justAdded[id];
+    if (!at) return false;
+    return Date.now() - Number(at) < JUST_ADDED_MS;
+  }
+
+  function markJustAdded(prevIds, nextProducts) {
+    var now = Date.now();
+    (nextProducts || []).forEach(function (p) {
+      var id = watchId(p);
+      if (prevIds.indexOf(id) === -1) state.justAdded[id] = now;
+    });
+    setTimeout(function () { render(); }, JUST_ADDED_MS + 50);
+  }
+
+  function persistJson(key, value) {
+    try {
+      if (global.localStorage) global.localStorage.setItem(key, JSON.stringify(value));
+    } catch (_e) { /* guest storage may be blocked */ }
+  }
+
+  function readJson(key) {
+    try {
+      var raw = global.localStorage && global.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function persistAnalyzeJob() {
+    persistJson(JOB_KEY, {
+      search_id: state.searchId || "",
+      q: state.analyzeQ || "",
+      analyzing: !!state.analyzing,
+      started_at: Date.now(),
+    });
+  }
+
+  function persistTrendsJob() {
+    persistJson(TRENDS_JOB_KEY, {
+      search_id: state.trends.searchId || "",
+      q: state.trends.analyzeQ || state.trends.q || "",
+      searching: !!state.trends.searching,
+      started_at: Date.now(),
+    });
+  }
+
+  function persistIdeaFilters() {
+    persistJson(FILTERS_IDEAS_KEY, {
+      q: state.q,
+      marketplace: state.marketplace,
+      nichesSelected: state.nichesSelected,
+      designTypesSelected: state.designTypesSelected,
+      languagesSelected: state.languagesSelected,
+      personalizationsSelected: state.personalizationsSelected,
+      audiencesSelected: state.audiencesSelected,
+      opportunitySelected: state.opportunitySelected,
+      sort: state.sort,
+      sortDir: state.sortDir,
+    });
+  }
+
+  function persistTrendFilters() {
+    persistJson(FILTERS_TRENDS_KEY, {
+      q: state.trends.q,
+      geo: state.trends.geo,
+      language: state.trends.language,
+      topics: state.trends.topics,
+      productTypes: state.trends.productTypes,
+      volume: state.trends.volume,
+      time: state.trends.time,
+      sort: state.trends.sort,
+      sortDir: state.trends.sortDir,
+    });
+  }
+
+  function restorePersistedFilters() {
+    var ideas = readJson(FILTERS_IDEAS_KEY);
+    if (ideas && typeof ideas === "object") {
+      if (typeof ideas.q === "string") state.q = ideas.q;
+      if (ideas.marketplace) state.marketplace = ideas.marketplace;
+      if (Array.isArray(ideas.nichesSelected)) state.nichesSelected = ideas.nichesSelected;
+      if (Array.isArray(ideas.designTypesSelected)) state.designTypesSelected = ideas.designTypesSelected;
+      if (Array.isArray(ideas.languagesSelected)) state.languagesSelected = ideas.languagesSelected;
+      if (Array.isArray(ideas.personalizationsSelected)) state.personalizationsSelected = ideas.personalizationsSelected;
+      if (Array.isArray(ideas.audiencesSelected)) state.audiencesSelected = ideas.audiencesSelected;
+      if (Array.isArray(ideas.opportunitySelected)) state.opportunitySelected = ideas.opportunitySelected;
+      if (ideas.sort) state.sort = ideas.sort;
+      if (ideas.sortDir) state.sortDir = ideas.sortDir;
+    }
+    var trends = readJson(FILTERS_TRENDS_KEY);
+    if (trends && typeof trends === "object") {
+      if (typeof trends.q === "string") state.trends.q = trends.q;
+      if (trends.geo) state.trends.geo = trends.geo;
+      if (trends.language) state.trends.language = trends.language;
+      if (Array.isArray(trends.topics)) state.trends.topics = trends.topics;
+      if (Array.isArray(trends.productTypes)) state.trends.productTypes = trends.productTypes;
+      if (Array.isArray(trends.volume)) state.trends.volume = trends.volume;
+      if (trends.time) state.trends.time = trends.time;
+      if (trends.sort) state.trends.sort = trends.sort;
+      if (trends.sortDir) state.trends.sortDir = trends.sortDir;
+    }
+  }
+
+  function isResearchScreenVisible() {
+    try {
+      if (global.CreatorDesktopShell && typeof global.CreatorDesktopShell.getActiveScreen === "function") {
+        return global.CreatorDesktopShell.getActiveScreen() === "research";
+      }
+    } catch (_e) {}
+    var vp = document.querySelector(".creator-swipe-viewport");
+    if (vp && vp.classList.contains("slide-1")) return true;
+    var path = String((global.location && global.location.pathname) || "");
+    return /\/research\/?$/.test(path);
+  }
+
+  function goToResearchScreen() {
+    if (global.CreatorPortalRouter && typeof global.CreatorPortalRouter.showScreen === "function") {
+      global.CreatorPortalRouter.showScreen("research");
+      return;
+    }
+    if (global.CreatorDesktopShell && typeof global.CreatorDesktopShell.switchScreen === "function") {
+      global.CreatorDesktopShell.switchScreen("research");
+      return;
+    }
+    if (typeof global.__creatorGoTo === "function") {
+      global.__creatorGoTo(1);
+    }
+  }
+
+  function setAnalyzeLock(root, on) {
+    eachBoundRoot(function (el) {
+      el.classList.toggle("is-analyzing", !!on);
+      var lock = el.querySelector("[data-erz-lock]");
+      if (lock) lock.hidden = !on;
+    });
+  }
+
+  function portalResearchChrome(root) {
+    ["[data-erz-analyze-modal]", "[data-erz-trends-analyze-modal]", "[data-erz-done-toast]"].forEach(function (sel) {
+      var el = root && root.querySelector(sel);
+      if (el && el.parentNode !== document.body) document.body.appendChild(el);
+    });
+  }
+
+  function showDoneToast(kind, query, count) {
+    var toast = document.querySelector("[data-erz-done-toast]");
+    if (!toast) return;
+    if (toast.parentNode !== document.body) document.body.appendChild(toast);
+    var msg = toast.querySelector("[data-erz-done-msg]");
+    var go = toast.querySelector("[data-erz-goto-research]");
+    var onResearch = isResearchScreenVisible();
+    var text = t("creator.research.analyze_done", "Analyze \"{q}\" finished, {n} results found.")
+      .replace("{q}", query || "")
+      .replace("{n}", String(count || 0));
+    if (msg) msg.textContent = text;
+    if (go) go.hidden = onResearch;
+    toast.hidden = false;
+    toast.classList.add("is-on");
+    if (state.doneToastTimer) clearTimeout(state.doneToastTimer);
+    if (onResearch) {
+      state.doneToastTimer = setTimeout(function () { hideDoneToast(); }, DONE_TOAST_MS);
+    }
+  }
+
+  function hideDoneToast() {
+    var toast = document.querySelector("[data-erz-done-toast]");
+    if (!toast) return;
+    toast.hidden = true;
+    toast.classList.remove("is-on");
+  }
+
+  function openAnalyzeModal(root, kind) {
+    var sel = kind === "trends" ? "[data-erz-trends-analyze-modal]" : "[data-erz-analyze-modal]";
+    var modal = document.querySelector(sel) || (root && root.querySelector(sel));
+    if (!modal) return;
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.hidden = false;
+    var input = modal.querySelector(kind === "trends" ? "[data-erz-trends-analyze-q]" : "[data-erz-analyze-q]");
+    if (input) {
+      if (kind === "trends") input.value = state.trends.analyzeQ || "";
+      else input.value = state.analyzeQ || "";
+      try { input.focus(); } catch (_e) {}
+    }
+  }
+
+  function closeAnalyzeModal(kind) {
+    var sel = kind === "trends" ? "[data-erz-trends-analyze-modal]" : "[data-erz-analyze-modal]";
+    var modal = document.querySelector(sel);
+    if (modal) modal.hidden = true;
+  }
+
+  function activeFilterChips() {
+    var chips = [];
+    if (state.q) chips.push(state.q);
+    if (state.marketplace && state.marketplace !== "all") chips.push(countryOptionLabel(state.marketplace));
+    selectedTopics().forEach(function (key) { chips.push(nicheLabel(key) || key); });
+    (state.audiencesSelected || []).forEach(function (id) { chips.push(id); });
+    (state.designTypesSelected || []).forEach(function (id) { chips.push(id.replace(/_/g, " ")); });
+    (state.languagesSelected || []).forEach(function (id) { chips.push(id); });
+    (state.personalizationsSelected || []).forEach(function (id) { chips.push(id); });
+    (state.opportunitySelected || []).forEach(function (id) { chips.push(id.replace(/_/g, " ")); });
+    return chips;
+  }
+
+  function renderActiveChips(root) {
+    var row = root.querySelector("[data-erz-chips-row]");
+    if (!row) return;
+    var chips = state.tab === "trends" ? trendsFilterChips() : activeFilterChips();
+    if (!chips.length) {
+      row.hidden = true;
+      row.innerHTML = "";
+      return;
+    }
+    row.hidden = false;
+    row.innerHTML = chips.map(function (label) {
+      return '<span class="eazy-research__chip">' + esc(label) + "</span>";
+    }).join("");
+  }
+
+  function trendsFilterChips() {
+    var chips = [];
+    if (state.trends.q) chips.push(state.trends.q);
+    if (state.trends.geo && state.trends.geo !== "ALL") chips.push(state.trends.geo);
+    if (state.trends.language && state.trends.language !== "all") chips.push(state.trends.language);
+    (state.trends.topics || []).forEach(function (k) { chips.push(k.replace(/_/g, " ")); });
+    (state.trends.productTypes || []).forEach(function (k) { chips.push(k); });
+    (state.trends.volume || []).forEach(function (k) { chips.push(k.replace(/_/g, " ")); });
+    if (state.trends.time && state.trends.time !== "avg_12m") chips.push(state.trends.time.replace(/_/g, " "));
+    return chips;
+  }
+
+  function renderSelectedSummary(root) {
+    var el = root.querySelector("[data-erz-selected]");
+    if (el) {
+      var chips = activeFilterChips();
+      el.hidden = !chips.length;
+      el.textContent = chips.join(" · ");
+    }
+    var tel = root.querySelector("[data-erz-trends-selected]");
+    if (tel) {
+      var tchips = trendsFilterChips();
+      tel.hidden = !tchips.length;
+      tel.textContent = tchips.join(" · ");
+    }
+  }
+
+  function applyDraftSearch(root) {
+    var qEl = root.querySelector("[data-erz-q]");
+    state.q = String((qEl && qEl.value) || state.draftQ || "").trim();
+    persistIdeaFilters();
+    applyFiltersSheet(root, false);
+    if (state.searchId) render(root);
+    else load(root);
+  }
+
+  function applyTrendsDraftSearch(root) {
+    var qEl = root.querySelector("[data-erz-trends-q]");
+    state.trends.q = String((qEl && qEl.value) || state.trends.draftQ || "").trim();
+    persistTrendFilters();
+    applyFiltersSheet(root, false);
+    loadTrends(root);
+  }
+
+  function clearIdeaFilters(root) {
+    state.q = "";
+    state.draftQ = "";
+    state.marketplace = "all";
+    state.nichesSelected = [];
+    state.designTypesSelected = [];
+    state.languagesSelected = [];
+    state.personalizationsSelected = [];
+    state.audiencesSelected = [];
+    state.opportunitySelected = [];
+    var qEl = root.querySelector("[data-erz-q]");
+    if (qEl) qEl.value = "";
+    persistIdeaFilters();
+    render(root);
+    if (!state.searchId) load(root);
+  }
+
+  function clearTrendFilters(root) {
+    state.trends.q = "";
+    state.trends.draftQ = "";
+    state.trends.geo = "ALL";
+    state.trends.language = "all";
+    state.trends.topics = [];
+    state.trends.productTypes = [];
+    state.trends.volume = [];
+    state.trends.time = "avg_12m";
+    var qEl = root.querySelector("[data-erz-trends-q]");
+    if (qEl) qEl.value = "";
+    persistTrendFilters();
+    loadTrends(root);
+  }
+
   function saveWatched(asins) {
     state.watched = asins.slice();
     try {
@@ -614,18 +926,67 @@
   /**
    * Catalog grid is server-filtered. Client only trims live Analyze results
    * and the local watchlist — never a larger unfiltered cache.
+   * Live Analyze rows still AND with the user's current filters + search.
    */
-  function visibleProducts() {
-    var liveSearch = !!state.searchId;
-    var out = (state.products || []).slice();
+  function applyListFilters(rows) {
+    var out = Array.isArray(rows) ? rows.slice() : [];
     out = out.filter(function (p) { return p.reprint_ok === true || Number(p.reprint_ok) === 1; });
-    if (liveSearch && state.marketplace && state.marketplace !== "all") {
+    if (state.marketplace && state.marketplace !== "all") {
       out = out.filter(function (p) { return marketplaceHost(p) === state.marketplace; });
     }
-    if (!liveSearch && state.view === "watched") {
+    var topics = selectedTopics();
+    if (topics.length) {
+      out = out.filter(function (p) { return topics.indexOf(topicKeyOf(p)) !== -1; });
+    }
+    if (state.designTypesSelected && state.designTypesSelected.length) {
+      out = out.filter(function (p) {
+        return state.designTypesSelected.indexOf(String(p.design_type || "").toLowerCase()) !== -1;
+      });
+    }
+    if (state.languagesSelected && state.languagesSelected.length) {
+      out = out.filter(function (p) {
+        return state.languagesSelected.indexOf(String(p.language || "").toLowerCase()) !== -1;
+      });
+    }
+    if (state.personalizationsSelected && state.personalizationsSelected.length === 1) {
+      var wantPers = state.personalizationsSelected[0];
+      out = out.filter(function (p) {
+        var key = Number(p.personalizable) === 1 || p.personalization === "personalizable" ? "personalizable" : "standard";
+        return key === wantPers;
+      });
+    }
+    if (state.audiencesSelected && state.audiencesSelected.length) {
+      out = out.filter(function (p) { return state.audiencesSelected.indexOf(String(p.audience || "")) !== -1; });
+    }
+    if (state.opportunitySelected && state.opportunitySelected.length) {
+      out = out.filter(function (p) {
+        return state.opportunitySelected.indexOf(String(p.opportunity_bucket || "")) !== -1;
+      });
+    }
+    var q = String(state.q || "").trim().toLowerCase();
+    if (q) {
+      out = out.filter(function (p) {
+        var hay = [p.title, p.brand, p.asin, p.niche_key, p.topic, p.subtopic, p.prompt]
+          .concat(Array.isArray(p.tags) ? p.tags : [])
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.indexOf(q) !== -1;
+      });
+    }
+    if (!state.searchId && state.view === "watched") {
       out = out.filter(function (p) { return isWatched(p); });
     }
+    if (state.searchId) {
+      out.sort(function (a, b) {
+        return (Number(b.search_ingested_at) || 0) - (Number(a.search_ingested_at) || 0);
+      });
+    }
     return out;
+  }
+
+  function visibleProducts() {
+    return applyListFilters(state.products || []);
   }
 
   function filterClient(rows) {
@@ -768,9 +1129,14 @@
         esc(t("creator.research.opportunity", "Opportunity") + " · " + bucketLabel(p.opportunity_bucket)) +
         "</span></div>"
       : "";
+    var justAdded = isJustAdded(p)
+      ? '<span class="eazy-research-card__just-added" data-t="creator.research.just_added">' +
+        esc(t("creator.research.just_added", "Just added")) + "</span>"
+      : "";
     return (
       '<article class="eazy-research-card" data-asin="' + esc(p.asin) +
         '" data-marketplace="' + esc(marketplaceHost(p)) + '">' +
+        justAdded +
         '<button type="button" class="eazy-research-card__watch' + (watched ? " is-on" : "") +
           '" data-erz-watch="' + esc(p.asin) + '" data-marketplace="' + esc(marketplaceHost(p)) +
           '" aria-pressed="' + (watched ? "true" : "false") +
@@ -1003,7 +1369,7 @@
   }
 
   function closeAllFilterMenus(root, except) {
-    ["country", "platform", "analyze-lang", "sort", "trends-sort"].forEach(function (prefix) {
+    ["country", "platform", "analyze-lang", "head-lang", "sort", "trends-sort", "trends-lang"].forEach(function (prefix) {
       if (prefix !== except) setMenuOpen(root, prefix, false);
     });
   }
@@ -1037,15 +1403,6 @@
     setFlagOn(flagEl, picked && picked.flag);
   }
 
-  function renderPlatform(root) {
-    var options = [{ id: "all", label: t("creator.research.analyze_all", "All"), flag: "" }].concat(
-      marketplaceHosts().map(function (host) {
-        return { id: host, label: countryOptionLabel(host), flag: flagForMarketplace(host) };
-      })
-    );
-    renderFlagSelect(root, "platform", state.analyzeMarketplace, options);
-  }
-
   function renderAnalyzeLang(root) {
     var options = [{ id: "all", label: t("creator.research.analyze_all", "All"), flag: "" }].concat(
       ANALYZE_LANGS.map(function (row) {
@@ -1053,6 +1410,31 @@
       })
     );
     renderFlagSelect(root, "analyze-lang", state.analyzeLanguage, options);
+    if (document.body && root !== document.body) renderFlagSelect(document.body, "analyze-lang", state.analyzeLanguage, options);
+  }
+
+  function renderHeadLang(root) {
+    var current = (state.languagesSelected && state.languagesSelected.length === 1)
+      ? state.languagesSelected[0]
+      : "all";
+    var options = [{ id: "all", label: t("creator.research.analyze_all", "All"), flag: "" }].concat(
+      [{ id: "none", label: t("creator.quick_inspirations.language_none", "None"), flag: "" }].concat(
+        ANALYZE_LANGS.map(function (row) {
+          return { id: row.id, label: t(row.key, row.fallback), flag: row.flag };
+        })
+      )
+    );
+    renderFlagSelect(root, "head-lang", current, options);
+  }
+
+  function renderPlatform(root) {
+    var options = [{ id: "all", label: t("creator.research.analyze_all", "All"), flag: "" }].concat(
+      marketplaceHosts().map(function (host) {
+        return { id: host, label: countryOptionLabel(host), flag: flagForMarketplace(host) };
+      })
+    );
+    renderFlagSelect(root, "platform", state.analyzeMarketplace, options);
+    if (document.body && root !== document.body) renderFlagSelect(document.body, "platform", state.analyzeMarketplace, options);
   }
 
   function renderAnalyzeUsed(root) {
@@ -1176,7 +1558,7 @@
     var grid = root.querySelector("[data-erz-grid]");
     var empty = root.querySelector("[data-erz-empty]");
     if (!grid) return;
-    var showSkeleton = (state.loading && !state.products.length) || (state.analyzing && !state.products.length);
+    var showSkeleton = state.loading && !state.products.length && !state.analyzing;
     if (showSkeleton) {
       withResearchScroll(root, function () {
         grid.innerHTML = Array.from({ length: 8 }).map(function () {
@@ -1188,6 +1570,19 @@
       return;
     }
     var rows = visibleProducts();
+    if (state.analyzing) {
+      var slots = ANALYZE_SLOT_CAP;
+      var cards = rows.map(function (p, i) { return productCard(p, i); });
+      while (cards.length < slots) {
+        cards.push('<div class="eazy-research-card is-skeleton" aria-hidden="true"></div>');
+      }
+      withResearchScroll(root, function () {
+        grid.innerHTML = cards.join("");
+        grid.removeAttribute("data-erz-sig");
+      });
+      if (empty) empty.hidden = true;
+      return;
+    }
     if (!rows.length) {
       withResearchScroll(root, function () {
         grid.innerHTML = "";
@@ -1273,6 +1668,9 @@
     renderGridOne(root);
     renderStatus(root);
     syncAnalyzeButton(root);
+    renderActiveChips(root);
+    renderSelectedSummary(root);
+    renderHeadLang(root);
   }
 
   function render(_root) {
@@ -1494,14 +1892,21 @@
     if (state.trends.topics.length) params.topic = state.trends.topics.join(",");
     if (state.trends.productTypes.length) params.product_type = state.trends.productTypes.join(",");
     if (state.trends.volume.length) params.volume = state.trends.volume.join(",");
+    var tq = String(state.trends.q || "").trim();
+    if (tq) params.q = tq;
     if (state.trends.searchId) params.search_id = state.trends.searchId;
     return params;
   }
 
   function renderTrendGeos(root) {
     renderFlagSelect(root, "trends-geo", state.trends.geo, trendGeoPickerOptions());
+    renderFlagSelect(root, "trends-lang", state.trends.language || "all", analyzeLangPickerOptions());
     renderFlagSelect(root, "trends-search-geo", state.trends.searchGeo, trendGeoPickerOptions());
     renderFlagSelect(root, "trends-search-lang", state.trends.searchLang, analyzeLangPickerOptions());
+    if (document.body && root !== document.body) {
+      renderFlagSelect(document.body, "trends-search-geo", state.trends.searchGeo, trendGeoPickerOptions());
+      renderFlagSelect(document.body, "trends-search-lang", state.trends.searchLang, analyzeLangPickerOptions());
+    }
   }
 
   function renderTrendTopics(root) {
@@ -1603,10 +2008,16 @@
 
   async function startTrendsSearch(root) {
     if (!isLoggedIn()) return;
-    var input = root.querySelector("[data-erz-trends-q]");
-    var q = ((input && input.value) || state.trends.q || "").trim();
+    var modal = document.querySelector("[data-erz-trends-analyze-modal]");
+    var input = (modal && modal.querySelector("[data-erz-trends-analyze-q]")) || root.querySelector("[data-erz-trends-analyze-q]");
+    var q = ((input && input.value) || state.trends.analyzeQ || "").trim();
     if (!q) return;
+    closeAnalyzeModal("trends");
+    applyFiltersSheet(root, false);
+    state.trends.analyzeQ = q;
     state.trends.searching = true;
+    setAnalyzeLock(root, true);
+    persistTrendsJob();
     syncTrendsSearchButton(root);
     var data = await api("eazy-research-trends-search", {}, {
       method: "POST",
@@ -1614,26 +2025,70 @@
     }).catch(function () { return null; });
     if (!data || !data.ok) {
       state.trends.searching = false;
+      setAnalyzeLock(root, false);
+      persistTrendsJob();
       if (data && data.analyze_limits) applyTrendsLimits(data.analyze_limits);
       syncTrendsSearchButton(root);
       return;
     }
     state.trends.searchId = data.search_id;
     applyTrendsLimits(data.analyze_limits);
+    persistTrendsJob();
     var tries = 0;
     while (tries < 20) {
       tries += 1;
       await new Promise(function (resolve) { setTimeout(resolve, 700); });
-      var st = await api("eazy-research-trends-search-status", { search_id: data.search_id }).catch(function () { return null; });
-      if (st && st.ok && st.done) {
-        state.trends.keywords = st.keywords || [];
-        applyTrendsLimits(st.analyze_limits);
-        break;
+      var st = await api("eazy-research-trends-search-status", Object.assign(trendsListParams(0), { search_id: data.search_id })).catch(function () { return null; });
+      if (st && st.ok) {
+        if (st.keywords && st.keywords.length) {
+          state.trends.keywords = st.keywords;
+          renderTrendKeywords(root);
+        }
+        if (st.done) {
+          state.trends.keywords = st.keywords || [];
+          applyTrendsLimits(st.analyze_limits);
+          break;
+        }
       }
     }
     state.trends.searching = false;
+    setAnalyzeLock(root, false);
+    persistTrendsJob();
     renderTrendKeywords(root);
     syncTrendsSearchButton(root);
+    showDoneToast("trends", q, (state.trends.keywords || []).length);
+  }
+
+  async function resumeTrendsJob(root) {
+    var job = readJson(TRENDS_JOB_KEY) || {};
+    var storedId = String(job.search_id || "").trim();
+    var data = await api("eazy-research-trends-search-status", storedId ? { search_id: storedId } : {}).catch(function () { return null; });
+    if (!data || !data.ok || !data.search_id) return;
+    state.trends.searchId = data.search_id;
+    state.trends.analyzeQ = data.query || job.q || "";
+    if (data.keywords) state.trends.keywords = data.keywords;
+    if (!data.done && data.status === "running") {
+      state.trends.searching = true;
+      setAnalyzeLock(root, true);
+      persistTrendsJob();
+      var tries = 0;
+      while (tries < 20 && state.trends.searching) {
+        tries += 1;
+        await new Promise(function (resolve) { setTimeout(resolve, 700); });
+        var st = await api("eazy-research-trends-search-status", { search_id: data.search_id }).catch(function () { return null; });
+        if (st && st.ok) {
+          if (st.keywords) state.trends.keywords = st.keywords;
+          if (st.done) {
+            applyTrendsLimits(st.analyze_limits);
+            break;
+          }
+        }
+      }
+      state.trends.searching = false;
+      setAnalyzeLock(root, false);
+      persistTrendsJob();
+    }
+    renderTrendKeywords(root);
   }
 
   async function openDetail(root, asin, marketplace) {
@@ -1698,16 +2153,25 @@
   }
 
   function syncAnalyzeButton(root) {
+    var lim = state.analyzeLimits || { remaining: 5, limit: 5 };
+    var quota = t("creator.research.analyze_quota", "{remaining}/{limit}")
+      .replace("{remaining}", String(lim.remaining))
+      .replace("{limit}", String(lim.limit));
+    root.querySelectorAll("[data-erz-analyze-quota]").forEach(function (el) {
+      el.textContent = quota;
+    });
+    var tLim = state.trendsLimits || { remaining: 5, limit: 5 };
+    var tQuota = t("creator.research.analyze_quota", "{remaining}/{limit}")
+      .replace("{remaining}", String(tLim.remaining))
+      .replace("{limit}", String(tLim.limit));
+    root.querySelectorAll("[data-erz-trends-quota]").forEach(function (el) {
+      el.textContent = tQuota;
+    });
     var btn = root.querySelector("[data-erz-analyze]");
+    if (!btn) btn = document.querySelector("[data-erz-analyze]");
     if (!btn) return;
     var logged = isLoggedIn();
-    var lim = state.analyzeLimits || { remaining: 5, limit: 5 };
     btn.disabled = state.analyzing;
-    btn.textContent = state.analyzing
-      ? t("creator.research.analyze_loading", "Analyzing…")
-      : t("creator.research.analyze_remaining", "Analyze ({remaining}/{limit})")
-          .replace("{remaining}", String(lim.remaining))
-          .replace("{limit}", String(lim.limit));
     if (!logged) btn.setAttribute("title", t("creator.research.analyze_login", "Log in to run a live catalog search."));
     else if (lim.busy) btn.setAttribute("title", t("creator.research.analyze_busy", "Another Analyze is running. Please wait a few seconds."));
     else btn.removeAttribute("title");
@@ -1721,25 +2185,32 @@
   }
 
   function applySearchProducts(root, products) {
+    var prev = (state.products || []).map(function (p) { return watchId(p); });
     state.products = Array.isArray(products) ? products : [];
+    markJustAdded(prev, state.products);
     renderGrid(root);
   }
 
   async function pollSearch(root) {
     if (!state.searchId || !state.analyzing) return;
-    var data = await api("eazy-research-search-status", { search_id: state.searchId }).catch(function () { return null; });
+    var data = await api("eazy-research-search-status", Object.assign(catalogListParams(0), { search_id: state.searchId })).catch(function () { return null; });
     if (!state.analyzing || !state.searchId) return;
     if (data && data.ok) {
       applySearchProducts(root, data.products || []);
       state.searchEmptyReason = data.empty_reason || "";
       state.searchAmazonReturned = Number(data.amazon_returned) || 0;
       state.searchBlocked = Number(data.blocked) || 0;
+      if (data.query) state.analyzeQ = data.query;
+      persistAnalyzeJob();
       if (data.done || data.status === "done" || data.status === "error") {
         state.analyzing = false;
         stopSearchPoll();
+        setAnalyzeLock(root, false);
+        persistAnalyzeJob();
         if (data.status === "error") {
           state.searchEmptyReason = "error";
         }
+        showDoneToast("ideas", state.analyzeQ, visibleProducts().length);
         render(root);
         return;
       }
@@ -1755,16 +2226,19 @@
       if (status) status.textContent = t("creator.research.analyze_login", "Log in to run a live catalog search.");
       return;
     }
-    var qEl = root.querySelector("[data-erz-q]");
-    var q = String((qEl && qEl.value) || state.q || "").trim();
+    var modal = document.querySelector("[data-erz-analyze-modal]");
+    var qEl = (modal && modal.querySelector("[data-erz-analyze-q]")) || root.querySelector("[data-erz-analyze-q]");
+    var q = String((qEl && qEl.value) || state.analyzeQ || "").trim();
     var placeholder = String((qEl && qEl.getAttribute("placeholder")) || "").trim();
     if (placeholder && q.toLowerCase() === placeholder.toLowerCase()) q = "";
-    state.q = q;
+    state.analyzeQ = q;
     if (!q) {
       var emptyStatus = root.querySelector("[data-erz-status]");
       if (emptyStatus) emptyStatus.textContent = t("creator.research.analyze_empty_query", "Type a search before Analyze.");
       return;
     }
+    closeAnalyzeModal("ideas");
+    applyFiltersSheet(root, false);
     stopSearchPoll();
     state.analyzing = true;
     state.searchId = "";
@@ -1772,13 +2246,12 @@
     state.searchAmazonReturned = 0;
     state.searchBlocked = 0;
     state.products = [];
+    state.justAdded = {};
     state.loading = false;
-    state.nichesSelected = [];
-    state.designTypesSelected = [];
-    state.languagesSelected = [];
-    state.personalizationsSelected = [];
-    state.audiencesSelected = [];
-    state.view = "opportunities";
+    state.sort = "newest";
+    state.sortDir = "desc";
+    setAnalyzeLock(root, true);
+    persistAnalyzeJob();
     render(root);
     var body = { q: q };
     if (state.analyzeMarketplace && state.analyzeMarketplace !== "all") body.marketplace = state.analyzeMarketplace;
@@ -1791,6 +2264,8 @@
     });
     if (!data || !data.ok) {
       state.analyzing = false;
+      setAnalyzeLock(root, false);
+      persistAnalyzeJob();
       var msg = t("creator.research.analyze_error", "Live catalog search could not start.");
       if (data && data.error === "login_required") msg = t("creator.research.analyze_login", "Log in to run a live catalog search.");
       if (data && data.error === "cooldown") msg = t("creator.research.analyze_cooldown", "Please wait before another live search.");
@@ -1808,7 +2283,30 @@
     state.analyzeResolvedMarketplace = data.marketplace || "";
     state.analyzeResolvedLanguage = data.language || "";
     applyAnalyzeLimits(data.daily);
+    persistAnalyzeJob();
     pollSearch(root);
+  }
+
+  async function resumeAnalyzeJob(root) {
+    var job = readJson(JOB_KEY) || {};
+    var storedId = String(job.search_id || "").trim();
+    var data = await api("eazy-research-search-status", storedId ? { search_id: storedId } : {}).catch(function () { return null; });
+    if (!data || !data.ok || !data.search_id) return;
+    state.searchId = data.search_id;
+    state.analyzeQ = data.query || job.q || state.analyzeQ;
+    state.analyzeResolvedMarketplace = data.marketplace || "";
+    state.analyzeResolvedLanguage = data.language || "";
+    applySearchProducts(root, data.products || []);
+    if (!data.done && data.status === "running") {
+      state.analyzing = true;
+      setAnalyzeLock(root, true);
+      persistAnalyzeJob();
+      pollSearch(root);
+    } else {
+      state.analyzing = false;
+      setAnalyzeLock(root, false);
+    }
+    render(root);
   }
 
   function catalogListParams(offset) {
@@ -2004,7 +2502,7 @@
     root.classList.toggle("is-filters-open", !!open);
     var backdrop = root.querySelector("[data-erz-filters-backdrop]");
     if (backdrop) backdrop.hidden = !open;
-    root.querySelectorAll("[data-erz-filters-open]").forEach(function (btn) {
+    root.querySelectorAll("[data-erz-funnel]").forEach(function (btn) {
       btn.setAttribute("aria-expanded", open ? "true" : "false");
     });
   }
@@ -2034,7 +2532,6 @@
   }
 
   function bind(root) {
-    var qTimer = null;
     var toolbar = root.querySelector("[data-erz-toolbar]");
     if (toolbar) {
       toolbar.addEventListener("submit", function (ev) {
@@ -2044,30 +2541,27 @@
     }
     var q = root.querySelector("[data-erz-q]");
     if (q) {
+      q.value = state.q || "";
       q.addEventListener("input", function () {
-        state.q = q.value || "";
-        clearTimeout(qTimer);
-        qTimer = setTimeout(function () {
-          if (state.searchId || state.view === "watched") renderGrid(root);
-          else load(root);
-        }, 180);
+        state.draftQ = q.value || "";
       });
       q.addEventListener("keydown", function (ev) {
         if (ev.key === "Enter") {
           ev.preventDefault();
-          startAnalyze(root);
+          applyDraftSearch(root);
         }
       });
     }
     var trendsQ = root.querySelector("[data-erz-trends-q]");
     if (trendsQ) {
+      trendsQ.value = state.trends.q || "";
       trendsQ.addEventListener("input", function () {
-        state.trends.q = trendsQ.value || "";
+        state.trends.draftQ = trendsQ.value || "";
       });
       trendsQ.addEventListener("keydown", function (ev) {
         if (ev.key === "Enter") {
           ev.preventDefault();
-          startTrendsSearch(root);
+          applyTrendsDraftSearch(root);
         }
       });
     }
@@ -2095,6 +2589,27 @@
     if (analyzeBtn) {
       analyzeBtn.addEventListener("click", function () { startAnalyze(root); });
     }
+    var funnel = root.querySelector("[data-erz-funnel]");
+    if (funnel) {
+      funnel.addEventListener("click", function () {
+        var open = !root.classList.contains("is-filters-open");
+        applyFiltersSheet(root, open);
+      });
+    }
+    var applyBtn = root.querySelector("[data-erz-apply]");
+    if (applyBtn) applyBtn.addEventListener("click", function () { applyDraftSearch(root); });
+    var trendsApply = root.querySelector("[data-erz-trends-apply]");
+    if (trendsApply) trendsApply.addEventListener("click", function () { applyTrendsDraftSearch(root); });
+    var clearBtn = root.querySelector("[data-erz-clear]");
+    if (clearBtn) clearBtn.addEventListener("click", function () { clearIdeaFilters(root); });
+    var trendsClear = root.querySelector("[data-erz-trends-clear]");
+    if (trendsClear) trendsClear.addEventListener("click", function () { clearTrendFilters(root); });
+    root.querySelectorAll("[data-erz-analyze-open]").forEach(function (btn) {
+      btn.addEventListener("click", function () { openAnalyzeModal(root, "ideas"); });
+    });
+    root.querySelectorAll("[data-erz-trends-analyze-open]").forEach(function (btn) {
+      btn.addEventListener("click", function () { openAnalyzeModal(root, "trends"); });
+    });
     applyFiltersCollapsed(root, isFiltersCollapsedStored());
     applyFilterFolds(root);
     applyFiltersSheet(root, false);
@@ -2113,9 +2628,6 @@
         applyFiltersCollapsed(root, !(wrap && wrap.classList.contains("is-collapsed")));
       });
     }
-    root.querySelectorAll("[data-erz-filters-open]").forEach(function (btn) {
-      btn.addEventListener("click", function () { applyFiltersSheet(root, true); });
-    });
     var backdrop = root.querySelector("[data-erz-filters-backdrop]");
     if (backdrop) {
       backdrop.addEventListener("click", function () { applyFiltersSheet(root, false); });
@@ -2139,36 +2651,42 @@
       if (!tEl) return;
       if (tEl.hasAttribute("data-erz-niche") || (tEl.closest && tEl.closest("[data-erz-chips]"))) {
         state.nichesSelected = readChecked("[data-erz-niche]", "data-erz-niche");
+        persistIdeaFilters();
         if (state.searchId || state.view === "watched") render(root);
         else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-type")) {
         state.designTypesSelected = readChecked("[data-erz-type]", "data-erz-type");
+        persistIdeaFilters();
         if (state.searchId || state.view === "watched") render(root);
         else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-lang")) {
         state.languagesSelected = readChecked("[data-erz-lang]", "data-erz-lang");
+        persistIdeaFilters();
         if (state.searchId || state.view === "watched") render(root);
         else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-pers")) {
         state.personalizationsSelected = readChecked("[data-erz-pers]", "data-erz-pers");
+        persistIdeaFilters();
         if (state.searchId || state.view === "watched") render(root);
         else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-audience")) {
         state.audiencesSelected = readChecked("[data-erz-audience]", "data-erz-audience");
+        persistIdeaFilters();
         if (state.searchId || state.view === "watched") render(root);
         else load(root);
         return;
       }
       if (tEl.hasAttribute("data-erz-opportunity")) {
         state.opportunitySelected = readChecked("[data-erz-opportunity]", "data-erz-opportunity");
+        persistIdeaFilters();
         if (state.searchId || state.view === "watched") render(root);
         else load(root);
         return;
@@ -2180,6 +2698,7 @@
         var timeEl = root.querySelector("[data-erz-trends-time]:checked");
         state.trends.time = (timeEl && timeEl.getAttribute("data-erz-trends-time")) || "avg_12m";
         loadTrends(root);
+        persistTrendFilters();
         applyFilterFolds(root);
       }
     });
@@ -2191,13 +2710,37 @@
         return;
       }
       var countryBtn = ev.target.closest("[data-erz-country-btn]");
-      if (countryBtn && root.contains(countryBtn) && !ev.target.closest("[data-erz-platform-wrap]") && !ev.target.closest("[data-erz-analyze-lang-wrap]") && !ev.target.closest("[data-erz-trends-geo-wrap]") && !ev.target.closest("[data-erz-trends-search-geo-wrap]") && !ev.target.closest("[data-erz-trends-search-lang-wrap]")) {
+      if (countryBtn && root.contains(countryBtn) && !ev.target.closest("[data-erz-platform-wrap]") && !ev.target.closest("[data-erz-analyze-lang-wrap]") && !ev.target.closest("[data-erz-head-lang-wrap]") && !ev.target.closest("[data-erz-trends-geo-wrap]") && !ev.target.closest("[data-erz-trends-lang-wrap]") && !ev.target.closest("[data-erz-trends-search-geo-wrap]") && !ev.target.closest("[data-erz-trends-search-lang-wrap]")) {
         ev.preventDefault();
         closeAllFilterMenus(root, "");
         openPicker(root, t("creator.research.country", "Country"), countryPickerOptions(), state.marketplace || "all", function (id) {
           state.marketplace = id || "all";
+          persistIdeaFilters();
           if (!state.searchId) load(root);
           else render(root);
+        });
+        return;
+      }
+      var headLangBtn = ev.target.closest("[data-erz-head-lang-btn]");
+      if (headLangBtn && root.contains(headLangBtn)) {
+        ev.preventDefault();
+        closeAllFilterMenus(root, "");
+        openPicker(root, t("creator.research.language", "Language"), analyzeLangPickerOptions().concat([{ id: "none", label: t("creator.quick_inspirations.language_none", "None"), flag: "" }]), (state.languagesSelected && state.languagesSelected[0]) || "all", function (id) {
+          state.languagesSelected = !id || id === "all" ? [] : [id];
+          persistIdeaFilters();
+          render(root);
+          if (!state.searchId) load(root);
+        });
+        return;
+      }
+      var trendsLangBtn = ev.target.closest("[data-erz-trends-lang-btn]");
+      if (trendsLangBtn && root.contains(trendsLangBtn)) {
+        ev.preventDefault();
+        closeAllFilterMenus(root, "");
+        openPicker(root, t("creator.research.language", "Language"), analyzeLangPickerOptions(), state.trends.language || "all", function (id) {
+          state.trends.language = id || "all";
+          persistTrendFilters();
+          loadTrends(root);
         });
         return;
       }
@@ -2348,6 +2891,7 @@
       var tab = ev.target.closest("[data-erz-view]");
       if (tab) {
         state.view = tab.getAttribute("data-erz-view") || "opportunities";
+        persistIdeaFilters();
         if (state.searchId || state.view === "watched") render(root);
         else load(root);
         return;
@@ -2377,6 +2921,8 @@
         applyFiltersSheet(root, false);
         closeDetail(root);
         closePicker(root);
+        closeAnalyzeModal("ideas");
+        closeAnalyzeModal("trends");
       }
     });
   }
@@ -2394,20 +2940,75 @@
     }
     bindModal(root);
     bindDocumentUi();
+    portalResearchChrome(root);
     syncAnalyzeButton(root);
   }
 
   var catalogLoadStarted = false;
+  var resumeStarted = false;
 
   var docUiBound = false;
   function bindDocumentUi() {
     if (docUiBound) return;
     docUiBound = true;
     document.addEventListener("click", function (ev) {
+      if (ev.target.closest("[data-erz-analyze-dismiss]")) {
+        closeAnalyzeModal("ideas");
+        return;
+      }
+      if (ev.target.closest("[data-erz-trends-analyze-dismiss]")) {
+        closeAnalyzeModal("trends");
+        return;
+      }
+      if (ev.target.closest("[data-erz-goto-research]")) {
+        hideDoneToast();
+        goToResearchScreen();
+        return;
+      }
+      var openBtn = ev.target.closest("[data-erz-analyze-open]");
+      if (openBtn) {
+        openAnalyzeModal(primaryResearchRoot() || openBtn.closest("[data-eazy-research]"), "ideas");
+        return;
+      }
+      var trendsOpen = ev.target.closest("[data-erz-trends-analyze-open]");
+      if (trendsOpen) {
+        openAnalyzeModal(primaryResearchRoot() || trendsOpen.closest("[data-eazy-research]"), "trends");
+        return;
+      }
+      var platformBtn = ev.target.closest("[data-erz-platform-btn]");
+      if (platformBtn) {
+        var host = primaryResearchRoot();
+        if (host) {
+          openPicker(host, t("creator.research.platform", "Platform"), countryPickerOptions().map(function (o) {
+            return o.id === "all" ? { id: "all", label: t("creator.research.analyze_all", "All"), flag: "" } : o;
+          }), state.analyzeMarketplace || "all", function (id) {
+            state.analyzeMarketplace = id || "all";
+            renderPlatform(host);
+            renderPlatform(document.body);
+          });
+        }
+        return;
+      }
+      var langBtn = ev.target.closest("[data-erz-analyze-lang-btn]");
+      if (langBtn) {
+        var host2 = primaryResearchRoot();
+        if (host2) {
+          openPicker(host2, t("creator.research.language", "Language"), analyzeLangPickerOptions(), state.analyzeLanguage || "all", function (id) {
+            state.analyzeLanguage = id || "all";
+            renderAnalyzeLang(host2);
+          });
+        }
+        return;
+      }
       var btn = ev.target.closest("[data-erz-analyze]");
-      if (!btn) return;
-      var host = btn.closest("[data-eazy-research]");
-      if (host) startAnalyze(host);
+      if (btn) {
+        startAnalyze(primaryResearchRoot() || btn.closest("[data-eazy-research]") || document.querySelector("[data-eazy-research]"));
+        return;
+      }
+      var trendsSearch = ev.target.closest("[data-erz-trends-search]");
+      if (trendsSearch) {
+        startTrendsSearch(primaryResearchRoot() || document.querySelector("[data-eazy-research]"));
+      }
     });
     document.addEventListener("click", function (ev) {
       var picker = findPicker(null);
@@ -2429,12 +3030,22 @@
   }
 
   function boot() {
+    restorePersistedFilters();
     document.querySelectorAll("[data-eazy-research]").forEach(mount);
     if (!catalogLoadStarted) {
       var root = primaryResearchRoot();
       if (root) {
         catalogLoadStarted = true;
+        var qEl = root.querySelector("[data-erz-q]");
+        if (qEl && state.q) qEl.value = state.q;
+        var tq = root.querySelector("[data-erz-trends-q]");
+        if (tq && state.trends.q) tq.value = state.trends.q;
         load(root);
+        if (!resumeStarted) {
+          resumeStarted = true;
+          resumeAnalyzeJob(root);
+          resumeTrendsJob(root);
+        }
       }
     } else {
       render();
@@ -2448,6 +3059,7 @@
     boot: boot,
     load: load,
     startAnalyze: startAnalyze,
+    resumeAnalyzeJob: resumeAnalyzeJob,
     isLoggedIn: isLoggedIn,
     preserveScrollTop: function (el, mutate) {
       var top = captureScrollTop(el);
