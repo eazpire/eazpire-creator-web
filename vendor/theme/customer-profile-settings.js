@@ -39,6 +39,15 @@
   function setGender(root, value) {
     var hidden = root.querySelector('[data-cps-input="gender"]');
     if (hidden) hidden.value = value || "";
+    try {
+      if (value === "female" || value === "male") {
+        localStorage.setItem("eaz_account_gender", value);
+      } else {
+        localStorage.removeItem("eaz_account_gender");
+      }
+    } catch (e) {
+      /* ignore */
+    }
 
     var buttons = root.querySelectorAll("[data-cps-gender-btn]");
     for (var i = 0; i < buttons.length; i++) {
